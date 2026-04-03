@@ -33,91 +33,15 @@ import {
 import { IpdScoreBadge } from "@/components/dirigentes/ipd-score-badge";
 import { PlatformIcon } from "@/components/social/platform-icon";
 import { formatRelativeTime, formatDate } from "@/lib/utils";
-import type { DirigenteFilters, SocialPlatform } from "@/lib/api/types";
+import type { DirigenteFilters } from "@/lib/api/types";
 import {
   Search,
   Plus,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Users,
-  Filter,
 } from "lucide-react";
 
-/* ---- Mock data ---- */
-const MOCK_DIRIGENTES = [
-  {
-    id: 1, nombre: "Ana", apellido_paterno: "Martinez", apellido_materno: "Vega",
-    cargo: "Diputada Federal", partido: "MORENA", estado: "CDMX",
-    ipd_score: 9.2, platforms: ["twitter", "instagram", "facebook"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 1800000).toISOString(),
-    created_at: "2024-01-15", updated_at: "2024-12-01",
-  },
-  {
-    id: 2, nombre: "Carlos", apellido_paterno: "Ruiz", apellido_materno: "Lopez",
-    cargo: "Senador", partido: "PAN", estado: "Jalisco",
-    ipd_score: 8.7, platforms: ["twitter", "facebook", "youtube"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 7200000).toISOString(),
-    created_at: "2024-02-10", updated_at: "2024-11-28",
-  },
-  {
-    id: 3, nombre: "Maria", apellido_paterno: "Lopez", apellido_materno: "Gomez",
-    cargo: "Gobernadora", partido: "PRI", estado: "Estado de Mexico",
-    ipd_score: 8.1, platforms: ["twitter", "instagram", "tiktok", "facebook"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 3600000).toISOString(),
-    created_at: "2024-03-05", updated_at: "2024-12-02",
-  },
-  {
-    id: 4, nombre: "Jose", apellido_paterno: "Garcia", apellido_materno: "Hernandez",
-    cargo: "Alcalde", partido: "MC", estado: "Nuevo Leon",
-    ipd_score: 7.8, platforms: ["twitter", "instagram"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 14400000).toISOString(),
-    created_at: "2024-01-20", updated_at: "2024-11-30",
-  },
-  {
-    id: 5, nombre: "Laura", apellido_paterno: "Sanchez", apellido_materno: "Torres",
-    cargo: "Diputada Local", partido: "MORENA", estado: "Puebla",
-    ipd_score: 7.5, platforms: ["facebook", "tiktok"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 28800000).toISOString(),
-    created_at: "2024-04-12", updated_at: "2024-11-25",
-  },
-  {
-    id: 6, nombre: "Pedro", apellido_paterno: "Hernandez", apellido_materno: "Diaz",
-    cargo: "Senador", partido: "PVEM", estado: "Veracruz",
-    ipd_score: 7.2, platforms: ["twitter", "youtube"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 43200000).toISOString(),
-    created_at: "2024-05-08", updated_at: "2024-11-20",
-  },
-  {
-    id: 7, nombre: "Sofia", apellido_paterno: "Torres",
-    cargo: "Presidenta Municipal", partido: "PAN", estado: "Guanajuato",
-    ipd_score: 6.9, platforms: ["instagram", "facebook", "tiktok"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 86400000).toISOString(),
-    created_at: "2024-06-01", updated_at: "2024-11-15",
-  },
-  {
-    id: 8, nombre: "Roberto", apellido_paterno: "Diaz", apellido_materno: "Flores",
-    cargo: "Diputado Federal", partido: "PT", estado: "Oaxaca",
-    ipd_score: 6.5, platforms: ["twitter", "facebook"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 172800000).toISOString(),
-    created_at: "2024-02-28", updated_at: "2024-11-10",
-  },
-  {
-    id: 9, nombre: "Isabel", apellido_paterno: "Morales",
-    cargo: "Regidora", partido: "PRI", estado: "Sonora",
-    ipd_score: 3.1, platforms: ["facebook"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 604800000).toISOString(),
-    created_at: "2024-07-15", updated_at: "2024-10-30",
-  },
-  {
-    id: 10, nombre: "Miguel", apellido_paterno: "Flores", apellido_materno: "Reyes",
-    cargo: "Delegado", partido: "MC", estado: "CDMX",
-    ipd_score: 2.4, platforms: ["twitter"] as SocialPlatform[],
-    last_activity: new Date(Date.now() - 1209600000).toISOString(),
-    created_at: "2024-08-01", updated_at: "2024-10-15",
-  },
-];
-
+// TODO: Fetch partido/estado options from API if a dedicated endpoint becomes available
 const PARTIDOS = ["MORENA", "PAN", "PRI", "MC", "PVEM", "PT"];
 const ESTADOS = ["CDMX", "Jalisco", "Estado de Mexico", "Nuevo Leon", "Puebla", "Veracruz", "Guanajuato", "Oaxaca", "Sonora"];
 
@@ -129,10 +53,10 @@ export default function DirigentesPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { data, isLoading } = useDirigentes(filters);
+  const { data, isLoading, isError } = useDirigentes(filters);
 
-  const dirigentes = data?.items ?? MOCK_DIRIGENTES;
-  const total = data?.total ?? MOCK_DIRIGENTES.length;
+  const dirigentes = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   const filtered = search
     ? dirigentes.filter(
@@ -229,6 +153,13 @@ export default function DirigentesPage() {
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Users className="mb-3 h-10 w-10 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                Error al cargar dirigentes. Intenta de nuevo.
+              </p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">

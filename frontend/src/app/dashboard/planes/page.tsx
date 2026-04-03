@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { usePlanes, useGeneratePlan, useApprovePlan, useRejectPlan } from "@/lib/api/hooks/use-planes";
+import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,42 +39,6 @@ import {
   Rocket,
 } from "lucide-react";
 
-/* ---- Mock data ---- */
-const MOCK_PLANS: PlanIA[] = [
-  {
-    id: 1, dirigente_id: 1, dirigente_nombre: "Ana Martinez",
-    tipo: "crecimiento", titulo: "Estrategia de Crecimiento Digital Q2 2025",
-    contenido: `## Objetivo\nIncrementar la presencia digital de Ana Martinez en un 25% durante Q2 2025.\n\n## Estrategias\n\n### 1. Contenido de Alto Impacto\n- Publicar 3 videos semanales en TikTok con temas de proximidad ciudadana\n- Crear serie de Instagram Stories "Un dia con la Diputada"\n- Threads de Twitter analizando temas legislativos con lenguaje accesible\n\n### 2. Engagement Comunitario\n- Sesiones en vivo semanales respondiendo preguntas ciudadanas\n- Colaboraciones con creadores de contenido locales\n- Hashtag campaign #CoyoacanDecide\n\n### 3. Metricas Objetivo\n| Plataforma | Meta Seguidores | Meta Engagement |\n|---|---|---|\n| Twitter | +15K | 4.5% |\n| Instagram | +20K | 5.2% |\n| TikTok | +50K (nueva) | 8.0% |\n\n### 4. Timeline\n- **Semana 1-2:** Setup de TikTok, definicion de content pillars\n- **Semana 3-4:** Lanzamiento de series, primeros lives\n- **Mes 2:** Evaluacion y ajuste de estrategia\n- **Mes 3:** Escalamiento de lo que funciona`,
-    status: "approved", created_at: "2025-03-15", updated_at: "2025-03-18",
-    approved_by: "Director General", approved_at: "2025-03-18",
-  },
-  {
-    id: 2, dirigente_id: 2, dirigente_nombre: "Carlos Ruiz",
-    tipo: "crisis", titulo: "Plan de Respuesta: Crisis por Declaraciones Presupuestales",
-    contenido: `## Contexto\nDeclaraciones sobre el recorte presupuestal generaron reaccion negativa en redes.\n\n## Acciones Inmediatas\n1. Comunicado oficial aclarando postura\n2. Video explicativo de 2 minutos para redes\n3. Entrevista en medio de alta credibilidad\n\n## Timeline\n- **0-4h:** Comunicado + primer tweet de respuesta\n- **4-12h:** Video + difusion en todas las plataformas\n- **12-24h:** Monitoreo y respuesta a comentarios clave\n- **24-48h:** Entrevista en medio tradicional`,
-    status: "executed", created_at: "2025-02-28", updated_at: "2025-03-01",
-  },
-  {
-    id: 3, dirigente_id: 3, dirigente_nombre: "Maria Lopez",
-    tipo: "engagement", titulo: "Estrategia de Engagement Multi-Plataforma",
-    contenido: `## Diagnostico\nEngagement actual: 2.8% promedio. Meta: 4.5%\n\n## Tacticas\n- Polls y encuestas interactivas en Stories\n- Respuesta activa a menciones en primeras 2 horas\n- User-generated content campaigns`,
-    status: "draft", created_at: "2025-03-25", updated_at: "2025-03-25",
-  },
-  {
-    id: 4, dirigente_id: 1, dirigente_nombre: "Ana Martinez",
-    tipo: "posicionamiento", titulo: "Posicionamiento como Lider en Temas Hidricos",
-    contenido: `## Tema Central\nEstablecer a Ana Martinez como la voz principal en politica hidrica.\n\n## Pilares de Contenido\n1. Datos duros sobre la crisis hidrica\n2. Propuestas legislativas concretas\n3. Testimonios de comunidades afectadas`,
-    status: "rejected", created_at: "2025-01-10", updated_at: "2025-01-12",
-  },
-];
-
-const DIRIGENTES_FOR_SELECT = [
-  { id: 1, name: "Ana Martinez" },
-  { id: 2, name: "Carlos Ruiz" },
-  { id: 3, name: "Maria Lopez" },
-  { id: 4, name: "Jose Garcia" },
-];
-
 const PLAN_TYPES: { value: PlanType; label: string }[] = [
   { value: "crecimiento", label: "Crecimiento" },
   { value: "crisis", label: "Crisis" },
@@ -91,7 +56,6 @@ const STATUS_CONFIG: Record<
   rejected: { label: "Rechazado", variant: "danger", icon: XCircle },
   executed: { label: "Ejecutado", variant: "default", icon: Rocket },
 };
-/* ---- End mock data ---- */
 
 export default function PlanesPage() {
   const [generateOpen, setGenerateOpen] = useState(false);
@@ -103,11 +67,13 @@ export default function PlanesPage() {
   const { data, isLoading } = usePlanes(
     filterStatus === "all" ? undefined : filterStatus
   );
+  const { data: dirigentesData } = useDirigentes({ per_page: 50 });
   const generateMutation = useGeneratePlan();
   const approveMutation = useApprovePlan();
   const rejectMutation = useRejectPlan();
 
-  const plans = data?.items ?? MOCK_PLANS;
+  const plans = data?.items ?? [];
+  const dirigentesForSelect = dirigentesData?.items ?? [];
   const filteredPlans =
     filterStatus === "all"
       ? plans
@@ -282,9 +248,9 @@ export default function PlanesPage() {
                   <SelectValue placeholder="Seleccionar dirigente" />
                 </SelectTrigger>
                 <SelectContent>
-                  {DIRIGENTES_FOR_SELECT.map((d) => (
+                  {dirigentesForSelect.map((d) => (
                     <SelectItem key={d.id} value={String(d.id)}>
-                      {d.name}
+                      {d.nombre} {d.apellido_paterno}
                     </SelectItem>
                   ))}
                 </SelectContent>

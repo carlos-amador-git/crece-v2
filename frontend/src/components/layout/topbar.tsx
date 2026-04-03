@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { useSidebarStore } from "@/lib/store";
+import { useAlerts } from "@/lib/api/hooks/use-overview";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,8 @@ export function Topbar() {
   const { setMobileOpen } = useSidebarStore();
   const breadcrumbs = useBreadcrumbs();
   const [darkMode, setDarkMode] = useState(false);
-  const hasNotifications = true; // hardcoded indicator
+  const { data: unreadAlerts } = useAlerts(true);
+  const hasNotifications = (unreadAlerts?.length ?? 0) > 0;
 
   useEffect(() => {
     const stored = localStorage.getItem("crece_theme");

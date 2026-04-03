@@ -3,6 +3,8 @@
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useDirigente } from "@/lib/api/hooks/use-dirigentes";
+import { useSentimentTrend } from "@/lib/api/hooks/use-social";
+import { usePlanes } from "@/lib/api/hooks/use-planes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,8 +16,7 @@ import { EngagementBarChart } from "@/components/charts/engagement-bar-chart";
 import { PostCard } from "@/components/social/post-card";
 import { SentimentBadge } from "@/components/social/sentiment-badge";
 import { formatNumber, formatDate } from "@/lib/utils";
-import type { DirigenteDetail, SocialPost, SentimentTrend } from "@/lib/api/types";
-import { ArrowLeft, TrendingUp, MessageSquare, Users, Brain } from "lucide-react";
+import { ArrowLeft, MessageSquare, Users, Brain } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -24,98 +25,20 @@ const ElectoralMap = dynamic(
   { ssr: false, loading: () => <Skeleton className="h-[400px] w-full rounded-lg" /> }
 );
 
-/* ---- Mock data for development ---- */
-const MOCK_DIRIGENTE: DirigenteDetail = {
-  id: 1,
-  nombre: "Ana",
-  apellido_paterno: "Martinez",
-  apellido_materno: "Vega",
-  cargo: "Diputada Federal",
-  partido: "MORENA",
-  estado: "CDMX",
-  municipio: "Coyoacan",
-  avatar_url: undefined,
-  ipd_score: 9.2,
-  platforms: ["twitter", "instagram", "facebook"],
-  last_activity: new Date(Date.now() - 1800000).toISOString(),
-  created_at: "2024-01-15",
-  updated_at: "2024-12-01",
-  bio: "Diputada Federal por el Distrito 10 de CDMX. Enfocada en politicas de desarrollo social y participacion ciudadana.",
-  social_accounts: [
-    { platform: "twitter", username: "anamartinez_mx", url: "https://twitter.com/anamartinez_mx", followers: 245000, verified: true },
-    { platform: "instagram", username: "ana.martinez.oficial", url: "https://instagram.com/ana.martinez.oficial", followers: 180000, verified: true },
-    { platform: "facebook", username: "AnaMartinezOficial", url: "https://facebook.com/AnaMartinezOficial", followers: 320000, verified: false },
-  ],
-  ipd_breakdown: {
-    twitter: 9.5,
-    instagram: 8.8,
-    facebook: 9.0,
-    tiktok: 0,
-    youtube: 0,
-    engagement: 9.4,
-  },
-  secciones: [
-    { id: 1, seccion_id: "0901", estado: "CDMX", municipio: "Coyoacan", a_favor: 68, en_contra: 18, indeciso: 14, total_encuestas: 450 },
-    { id: 2, seccion_id: "0902", estado: "CDMX", municipio: "Coyoacan", a_favor: 72, en_contra: 15, indeciso: 13, total_encuestas: 380 },
-  ],
-  recent_posts: [
-    {
-      id: 1, dirigente_id: 1, platform: "twitter",
-      content: "Hoy visitamos las comunidades rurales del distrito. Escuchamos sus necesidades y comprometimos acciones concretas.",
-      url: "https://twitter.com/example/1", sentiment: "positive", sentiment_score: 0.87,
-      likes: 1420, comments: 89, shares: 234, views: 45200,
-      published_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-      collected_at: new Date().toISOString(),
-    },
-    {
-      id: 2, dirigente_id: 1, platform: "instagram",
-      content: "Inauguracion del programa de becas para jovenes de nuestra comunidad. 500 beneficiarios en la primera etapa.",
-      url: "https://instagram.com/p/2", sentiment: "positive", sentiment_score: 0.92,
-      likes: 5200, comments: 312, shares: 145,
-      published_at: new Date(Date.now() - 12 * 3600000).toISOString(),
-      collected_at: new Date().toISOString(),
-    },
-    {
-      id: 3, dirigente_id: 1, platform: "facebook",
-      content: "Es inaceptable que el presupuesto para educacion se recorte un 15%. Presentaremos una contrapropuesta el lunes.",
-      url: "https://facebook.com/p/3", sentiment: "negative", sentiment_score: 0.65,
-      likes: 890, comments: 256, shares: 412,
-      published_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-      collected_at: new Date().toISOString(),
-    },
-  ],
-  stats: {
-    total_posts_7d: 28,
-    total_engagement_7d: 124500,
-    sentiment_avg_7d: 0.72,
-    follower_growth_30d: 3.2,
-  },
-};
-
-const MOCK_SENTIMENT_TREND: SentimentTrend[] = Array.from({ length: 30 }, (_, i) => {
-  const d = new Date();
-  d.setDate(d.getDate() - (29 - i));
-  return {
-    date: d.toISOString().slice(0, 10),
-    positive: Math.floor(50 + Math.random() * 25),
-    negative: Math.floor(5 + Math.random() * 15),
-    neutral: Math.floor(15 + Math.random() * 10),
-  };
-});
-
-const MOCK_PLANS = [
-  { id: 1, titulo: "Plan de Crecimiento Q1 2025", tipo: "crecimiento", status: "approved", created_at: "2025-01-05" },
-  { id: 2, titulo: "Respuesta a Crisis Presupuestal", tipo: "crisis", status: "executed", created_at: "2025-02-12" },
-  { id: 3, titulo: "Estrategia de Engagement TikTok", tipo: "engagement", status: "draft", created_at: "2025-03-20" },
-];
-/* ---- End mock data ---- */
+/* No mock data — all data fetched from API */
 
 export default function DirigenteDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { data, isLoading } = useDirigente(id);
+  const { data: dirigente, isLoading, isError } = useDirigente(id);
+  const { data: sentimentTrendData } = useSentimentTrend(30, dirigente?.id);
+  const { data: planesData } = usePlanes(undefined, 1);
 
-  const dirigente = data ?? MOCK_DIRIGENTE;
+  const sentimentTrend = sentimentTrendData ?? [];
+  // Filter plans for this dirigente
+  const dirigentePlans = (planesData?.items ?? []).filter(
+    (p) => p.dirigente_id === Number(id)
+  );
 
   if (isLoading) {
     return (
@@ -127,6 +50,28 @@ export default function DirigenteDetailPage() {
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (isError || !dirigente) {
+    return (
+      <div className="space-y-6">
+        <Link href="/dashboard/dirigentes">
+          <Button variant="ghost" size="sm" className="gap-1.5">
+            <ArrowLeft className="h-4 w-4" />
+            Volver a Dirigentes
+          </Button>
+        </Link>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <Users className="mb-3 h-10 w-10 text-muted-foreground/50" />
+            <p className="font-medium">No se pudo cargar el dirigente</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Verifica que el ID sea correcto o intenta de nuevo
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -212,7 +157,7 @@ export default function DirigenteDetailPage() {
                 <CardTitle>Sentimiento (30 dias)</CardTitle>
               </CardHeader>
               <CardContent>
-                <SentimentLineChart data={MOCK_SENTIMENT_TREND} />
+                <SentimentLineChart data={sentimentTrend} />
               </CardContent>
             </Card>
           </div>
@@ -236,7 +181,7 @@ export default function DirigenteDetailPage() {
                 <CardTitle>Sentimiento en el Tiempo</CardTitle>
               </CardHeader>
               <CardContent>
-                <SentimentLineChart data={MOCK_SENTIMENT_TREND} />
+                <SentimentLineChart data={sentimentTrend} />
               </CardContent>
             </Card>
             <Card>
@@ -333,7 +278,7 @@ export default function DirigenteDetailPage() {
 
         {/* Plans Tab */}
         <TabsContent value="planes" className="space-y-4">
-          {MOCK_PLANS.length === 0 ? (
+          {dirigentePlans.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Brain className="mb-3 h-10 w-10 text-muted-foreground/50" />
@@ -343,7 +288,7 @@ export default function DirigenteDetailPage() {
               </CardContent>
             </Card>
           ) : (
-            MOCK_PLANS.map((plan) => (
+            dirigentePlans.map((plan) => (
               <Card key={plan.id}>
                 <CardContent className="flex items-center justify-between p-4">
                   <div>

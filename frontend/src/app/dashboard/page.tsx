@@ -8,9 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
 import { EngagementBarChart } from "@/components/charts/engagement-bar-chart";
 import { PostCard } from "@/components/social/post-card";
-import { useKpiOverview, useTopDirigentes } from "@/lib/api/hooks/use-overview";
+import { useKpiOverview, useTopDirigentes, useSystemStatus } from "@/lib/api/hooks/use-overview";
 import { useSentimentTrend, useSocialPosts } from "@/lib/api/hooks/use-social";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, formatRelativeTime } from "@/lib/utils";
 import {
   Users,
   TrendingUp,
@@ -30,94 +30,17 @@ const ElectoralMap = dynamic(
   { ssr: false, loading: () => <Skeleton className="h-[300px] w-full rounded-lg" /> }
 );
 
-/* ---- Mock data for development while API is not connected ---- */
-const MOCK_KPI = {
-  total_dirigentes: 142,
-  avg_ipd_score: 6.4,
-  posts_monitored_24h: 3847,
-  active_alerts: 7,
-  dirigentes_change: 5.2,
-  ipd_change: 0.3,
-  posts_change: 12.1,
-  alerts_change: -2,
+/* Default values shown while API loads */
+const DEFAULT_KPI = {
+  total_dirigentes: 0,
+  avg_ipd_score: 0,
+  posts_monitored_24h: 0,
+  active_alerts: 0,
+  dirigentes_change: 0,
+  ipd_change: 0,
+  posts_change: 0,
+  alerts_change: 0,
 };
-
-const MOCK_SENTIMENT_TREND = Array.from({ length: 30 }, (_, i) => {
-  const d = new Date();
-  d.setDate(d.getDate() - (29 - i));
-  return {
-    date: d.toISOString().slice(0, 10),
-    positive: Math.floor(40 + Math.random() * 30),
-    negative: Math.floor(10 + Math.random() * 20),
-    neutral: Math.floor(20 + Math.random() * 15),
-  };
-});
-
-const MOCK_TOP_DIRIGENTES = [
-  { name: "Ana Martinez", value: 9.2 },
-  { name: "Carlos Ruiz", value: 8.7 },
-  { name: "Maria Lopez", value: 8.1 },
-  { name: "Jose Garcia", value: 7.8 },
-  { name: "Laura Sanchez", value: 7.5 },
-  { name: "Pedro Hernandez", value: 7.2 },
-  { name: "Sofia Torres", value: 6.9 },
-  { name: "Roberto Diaz", value: 6.5 },
-  { name: "Isabel Morales", value: 6.1 },
-  { name: "Miguel Flores", value: 5.8 },
-];
-
-const MOCK_POSTS = [
-  {
-    id: 1,
-    dirigente_id: 1,
-    dirigente_nombre: "Ana Martinez",
-    platform: "twitter" as const,
-    content:
-      "Hoy visitamos las comunidades rurales del distrito. Escuchamos sus necesidades y comprometimos acciones concretas para mejorar la infraestructura hidrica.",
-    url: "https://twitter.com/example/status/1",
-    sentiment: "positive" as const,
-    sentiment_score: 0.87,
-    likes: 1420,
-    comments: 89,
-    shares: 234,
-    views: 45200,
-    published_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-    collected_at: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    dirigente_id: 2,
-    dirigente_nombre: "Carlos Ruiz",
-    platform: "facebook" as const,
-    content:
-      "La reforma presupuestal no considera las necesidades reales de los municipios. Exigimos una revision inmediata del proyecto de ley.",
-    url: "https://facebook.com/example/posts/2",
-    sentiment: "negative" as const,
-    sentiment_score: 0.72,
-    likes: 890,
-    comments: 156,
-    shares: 312,
-    published_at: new Date(Date.now() - 5 * 3600000).toISOString(),
-    collected_at: new Date().toISOString(),
-  },
-  {
-    id: 3,
-    dirigente_id: 3,
-    dirigente_nombre: "Maria Lopez",
-    platform: "instagram" as const,
-    content:
-      "Inauguracion del nuevo centro comunitario en la colonia San Miguel. Un espacio que la comunidad merecia desde hace anos.",
-    url: "https://instagram.com/p/example3",
-    sentiment: "positive" as const,
-    sentiment_score: 0.91,
-    likes: 3200,
-    comments: 201,
-    shares: 89,
-    published_at: new Date(Date.now() - 8 * 3600000).toISOString(),
-    collected_at: new Date().toISOString(),
-  },
-];
-/* ---- End mock data ---- */
 
 const TIME_FILTERS = [
   { label: "Hoy", value: "today" },
@@ -185,18 +108,17 @@ function CurrentDateTime() {
 export default function OverviewPage() {
   const [activeFilter, setActiveFilter] = useState<string>("30d");
 
-  const { data: kpi } = useKpiOverview();
-  const { data: sentimentData } = useSentimentTrend(30);
-  const { data: topDirigentes } = useTopDirigentes(10);
-  const { data: postsData } = useSocialPosts({ per_page: 5 });
+  const { data: kpi, isLoading: kpiLoading } = useKpiOverview();
+  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(30);
+  const { data: topDirigentes, isLoading: topLoading } = useTopDirigentes(10);
+  const { data: postsData, isLoading: postsLoading } = useSocialPosts({ per_page: 5 });
+  const { data: systemStatus } = useSystemStatus();
 
-  // Use real data if available, otherwise fall back to mock
-  const kpiData = kpi ?? MOCK_KPI;
-  const trendData = sentimentData ?? MOCK_SENTIMENT_TREND;
+  const kpiData = kpi ?? DEFAULT_KPI;
+  const trendData = sentimentData ?? [];
   const topData =
-    topDirigentes?.map((d) => ({ name: d.nombre, value: d.ipd_score })) ??
-    MOCK_TOP_DIRIGENTES;
-  const posts = postsData?.items ?? MOCK_POSTS;
+    topDirigentes?.map((d) => ({ name: d.nombre, value: d.ipd_score })) ?? [];
+  const posts = postsData?.items ?? [];
 
   const hasActiveAlerts = kpiData.active_alerts > 0;
 
@@ -235,63 +157,72 @@ export default function OverviewPage() {
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Indicadores clave"
       >
-        {kpiCards.map((card) => {
-          const value = kpiData[card.key];
-          const change = kpiData[card.changeKey];
-          const isPositive = change >= 0;
-          const showPulse = card.isAlerts && hasActiveAlerts;
+        {kpiLoading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="card-elevated">
+                <CardContent className="p-5">
+                  <Skeleton className="h-4 w-24 mb-3" />
+                  <Skeleton className="h-8 w-16" />
+                </CardContent>
+              </Card>
+            ))
+          : kpiCards.map((card) => {
+              const value = kpiData[card.key];
+              const change = kpiData[card.changeKey];
+              const isPositive = change >= 0;
+              const showPulse = card.isAlerts && hasActiveAlerts;
 
-          return (
-            <Card
-              key={card.key}
-              className={`card-elevated ${
-                card.isAlerts ? "accent-bar-left" : ""
-              }`}
-              data-active={card.isAlerts && hasActiveAlerts ? "true" : undefined}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <div className="relative">
-                    <card.icon className="h-4.5 w-4.5 text-muted-foreground" />
-                    {showPulse && (
+              return (
+                <Card
+                  key={card.key}
+                  className={`card-elevated ${
+                    card.isAlerts ? "accent-bar-left" : ""
+                  }`}
+                  data-active={card.isAlerts && hasActiveAlerts ? "true" : undefined}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        {card.title}
+                      </p>
+                      <div className="relative">
+                        <card.icon className="h-4.5 w-4.5 text-muted-foreground" />
+                        {showPulse && (
+                          <span
+                            className="absolute -right-0.5 -top-0.5 block h-2 w-2 rounded-full bg-red-500 pulse-dot"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-end justify-between">
+                      <p
+                        className="tabular-nums font-heading text-2xl font-bold"
+                        data-numeric="true"
+                      >
+                        {card.format(value)}
+                      </p>
                       <span
-                        className="absolute -right-0.5 -top-0.5 block h-2 w-2 rounded-full bg-red-500 pulse-dot"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </div>
-                </div>
-                <div className="mt-2 flex items-end justify-between">
-                  <p
-                    className="tabular-nums font-heading text-2xl font-bold"
-                    data-numeric="true"
-                  >
-                    {card.format(value)}
-                  </p>
-                  <span
-                    className={`flex items-center text-xs font-medium ${
-                      isPositive
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-red-600 dark:text-red-400"
-                    }`}
-                  >
-                    {isPositive ? (
-                      <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" />
-                    ) : (
-                      <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" />
-                    )}
-                    <span data-numeric="true" className="tabular-nums">
-                      {Math.abs(change)}%
-                    </span>
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                        className={`flex items-center text-xs font-medium ${
+                          isPositive
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {isPositive ? (
+                          <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" />
+                        ) : (
+                          <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" />
+                        )}
+                        <span data-numeric="true" className="tabular-nums">
+                          {Math.abs(change)}%
+                        </span>
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
       </section>
 
       {/* ── Quick Status Bar ────────────────────────────────── */}
@@ -302,21 +233,54 @@ export default function OverviewPage() {
       >
         <span className="flex items-center gap-1.5">
           <Clock className="h-3 w-3" />
-          Ultima sincronizacion: <span className="font-medium text-foreground/80">hace 5 min</span>
+          Ultima sincronizacion:{" "}
+          <span className="font-medium text-foreground/80">
+            {systemStatus?.last_sync
+              ? formatRelativeTime(systemStatus.last_sync)
+              : "---"}
+          </span>
         </span>
         <span className="flex items-center gap-1.5">
           <Cpu className="h-3 w-3" />
           Workers:
-          <span className="font-medium text-foreground/80" data-numeric="true">3/3</span>
+          <span className="font-medium text-foreground/80" data-numeric="true">
+            {systemStatus
+              ? `${systemStatus.workers_active}/${systemStatus.workers_total}`
+              : "---"}
+          </span>
           activos
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" aria-label="Workers activos" />
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-full ${
+              systemStatus && systemStatus.workers_active > 0
+                ? "bg-emerald-500"
+                : "bg-muted-foreground/30"
+            }`}
+            aria-label={
+              systemStatus && systemStatus.workers_active > 0
+                ? "Workers activos"
+                : "Workers inactivos"
+            }
+          />
         </span>
         <span className="flex items-center gap-1.5">
           <Activity className="h-3 w-3" />
           Scrapers:
-          <span className="font-medium text-foreground/80" data-numeric="true">2</span>
+          <span className="font-medium text-foreground/80" data-numeric="true">
+            {systemStatus?.scrapers_running ?? "---"}
+          </span>
           ejecutando
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" aria-label="Scrapers activos" />
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-full ${
+              systemStatus && systemStatus.scrapers_running > 0
+                ? "bg-emerald-500"
+                : "bg-muted-foreground/30"
+            }`}
+            aria-label={
+              systemStatus && systemStatus.scrapers_running > 0
+                ? "Scrapers activos"
+                : "Scrapers inactivos"
+            }
+          />
         </span>
       </div>
 
@@ -329,7 +293,15 @@ export default function OverviewPage() {
             <CardDescription>Ultimos 30 dias</CardDescription>
           </CardHeader>
           <CardContent>
-            <SentimentLineChart data={trendData} />
+            {sentimentLoading ? (
+              <Skeleton className="h-[300px] w-full" />
+            ) : trendData.length === 0 ? (
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                Sin datos de sentimiento disponibles
+              </div>
+            ) : (
+              <SentimentLineChart data={trendData} />
+            )}
           </CardContent>
         </Card>
 
@@ -339,31 +311,43 @@ export default function OverviewPage() {
             <CardTitle>Top Penetracion Digital</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {topData.slice(0, 10).map((item, index) => (
-                <div
-                  key={item.name}
-                  className="flex items-center gap-3"
-                >
-                  <span
-                    className="tabular-nums flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
-                    data-numeric="true"
-                    aria-label={`Posicion ${index + 1}`}
+            {topLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-6 w-full" />
+                ))}
+              </div>
+            ) : topData.length === 0 ? (
+              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                Sin datos de dirigentes
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {topData.slice(0, 10).map((item, index) => (
+                  <div
+                    key={item.name}
+                    className="flex items-center gap-3"
                   >
-                    {index + 1}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {item.name}
-                  </span>
-                  <span
-                    className="tabular-nums text-sm font-semibold"
-                    data-numeric="true"
-                  >
-                    {item.value.toFixed(1)}
-                  </span>
-                </div>
-              ))}
-            </div>
+                    <span
+                      className="tabular-nums flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
+                      data-numeric="true"
+                      aria-label={`Posicion ${index + 1}`}
+                    >
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {item.name}
+                    </span>
+                    <span
+                      className="tabular-nums text-sm font-semibold"
+                      data-numeric="true"
+                    >
+                      {item.value.toFixed(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -375,7 +359,11 @@ export default function OverviewPage() {
           <h2 className="font-heading text-lg font-semibold">
             Publicaciones Recientes
           </h2>
-          {posts.length === 0 ? (
+          {postsLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-lg" />
+            ))
+          ) : posts.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <MessageSquare className="mb-3 h-10 w-10 text-muted-foreground/50" />

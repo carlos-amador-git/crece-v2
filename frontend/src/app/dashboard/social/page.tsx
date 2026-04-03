@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useSocialPosts, useSentimentDistribution } from "@/lib/api/hooks/use-social";
+import { useCrisisAlerts } from "@/lib/api/hooks/use-overview";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -16,64 +16,16 @@ import {
 import { PostCard } from "@/components/social/post-card";
 import { SentimentPieChart } from "@/components/charts/sentiment-pie-chart";
 import { SentimentBadge } from "@/components/social/sentiment-badge";
-import type { SocialFilters, SocialPost, SentimentDistribution } from "@/lib/api/types";
-import { AlertTriangle, MessageSquare, Search, TrendingUp } from "lucide-react";
+import type { SocialFilters } from "@/lib/api/types";
+import { AlertTriangle, MessageSquare, Search } from "lucide-react";
 
-/* ---- Mock data ---- */
-const MOCK_POSTS: SocialPost[] = [
-  {
-    id: 1, dirigente_id: 1, dirigente_nombre: "Ana Martinez",
-    platform: "twitter", content: "Hoy visitamos las comunidades rurales del distrito. Escuchamos sus necesidades y comprometimos acciones concretas para mejorar la infraestructura hidrica.",
-    url: "#", sentiment: "positive", sentiment_score: 0.87,
-    likes: 1420, comments: 89, shares: 234, views: 45200,
-    published_at: new Date(Date.now() - 2 * 3600000).toISOString(), collected_at: new Date().toISOString(),
-  },
-  {
-    id: 2, dirigente_id: 2, dirigente_nombre: "Carlos Ruiz",
-    platform: "facebook", content: "La reforma presupuestal no considera las necesidades reales de los municipios. Exigimos una revision inmediata del proyecto de ley.",
-    url: "#", sentiment: "negative", sentiment_score: 0.72,
-    likes: 890, comments: 156, shares: 312,
-    published_at: new Date(Date.now() - 5 * 3600000).toISOString(), collected_at: new Date().toISOString(),
-  },
-  {
-    id: 3, dirigente_id: 3, dirigente_nombre: "Maria Lopez",
-    platform: "instagram", content: "Inauguracion del nuevo centro comunitario en la colonia San Miguel. Un espacio que la comunidad merecia desde hace anos.",
-    url: "#", sentiment: "positive", sentiment_score: 0.91,
-    likes: 3200, comments: 201, shares: 89,
-    published_at: new Date(Date.now() - 8 * 3600000).toISOString(), collected_at: new Date().toISOString(),
-  },
-  {
-    id: 4, dirigente_id: 4, dirigente_nombre: "Jose Garcia",
-    platform: "tiktok", content: "Video explicando los avances del programa de becas deportivas para jovenes del municipio.",
-    url: "#", sentiment: "positive", sentiment_score: 0.78,
-    likes: 8900, comments: 445, shares: 1200, views: 125000,
-    published_at: new Date(Date.now() - 12 * 3600000).toISOString(), collected_at: new Date().toISOString(),
-  },
-  {
-    id: 5, dirigente_id: 5, dirigente_nombre: "Laura Sanchez",
-    platform: "twitter", content: "El transporte publico sigue siendo un tema pendiente. No podemos seguir ignorando las quejas de los ciudadanos.",
-    url: "#", sentiment: "negative", sentiment_score: 0.68,
-    likes: 560, comments: 78, shares: 145,
-    published_at: new Date(Date.now() - 16 * 3600000).toISOString(), collected_at: new Date().toISOString(),
-  },
-  {
-    id: 6, dirigente_id: 1, dirigente_nombre: "Ana Martinez",
-    platform: "facebook", content: "Sesion ordinaria en la Camara de Diputados. Presentamos iniciativa para proteger los derechos de los trabajadores del campo.",
-    url: "#", sentiment: "neutral", sentiment_score: 0.52,
-    likes: 780, comments: 45, shares: 67,
-    published_at: new Date(Date.now() - 20 * 3600000).toISOString(), collected_at: new Date().toISOString(),
-  },
-];
-
-const MOCK_DISTRIBUTION: SentimentDistribution = {
-  positive: 156, negative: 67, neutral: 89, total: 312,
+/* Default empty distribution shown while API loads */
+const DEFAULT_DISTRIBUTION = {
+  positive: 0,
+  negative: 0,
+  neutral: 0,
+  total: 0,
 };
-
-const MOCK_CRISIS_ALERT = {
-  active: true,
-  message: "Incremento del 340% en menciones negativas para Carlos Ruiz en las ultimas 4 horas",
-};
-/* ---- End mock data ---- */
 
 export default function SocialPage() {
   const [filters, setFilters] = useState<SocialFilters>({
@@ -83,9 +35,12 @@ export default function SocialPage() {
 
   const { data: postsData, isLoading } = useSocialPosts(filters);
   const { data: distData } = useSentimentDistribution();
+  const { data: crisisAlerts } = useCrisisAlerts();
 
-  const posts = postsData?.items ?? MOCK_POSTS;
-  const distribution = distData ?? MOCK_DISTRIBUTION;
+  const posts = postsData?.items ?? [];
+  const distribution = distData ?? DEFAULT_DISTRIBUTION;
+
+  const activeCrisis = crisisAlerts?.find((a) => a.active);
 
   const topPosts = [...posts].sort(
     (a, b) => (b.likes + b.comments + b.shares) - (a.likes + a.comments + a.shares)
@@ -101,7 +56,7 @@ export default function SocialPage() {
       </div>
 
       {/* Crisis alert banner */}
-      {MOCK_CRISIS_ALERT.active && (
+      {activeCrisis && (
         <div
           className="flex items-center gap-3 rounded-lg border border-red-500/20 bg-red-500/10 p-4"
           role="alert"
@@ -112,7 +67,7 @@ export default function SocialPage() {
               Alerta de Crisis
             </p>
             <p className="text-sm text-red-600/80 dark:text-red-400/80">
-              {MOCK_CRISIS_ALERT.message}
+              {activeCrisis.message}
             </p>
           </div>
         </div>
