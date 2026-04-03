@@ -40,6 +40,12 @@ htmlcov/
 .mypy_cache/
 coverage/
 
+# ── Playwright ────────────────────────────────────────────────
+frontend/e2e/test-results/
+frontend/e2e/screenshots/
+playwright-report/
+blob-report/
+
 # ── IDE ───────────────────────────────────────────────────────
 .idea/
 .vscode/

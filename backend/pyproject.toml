@@ -33,6 +33,8 @@ dependencies = [
 nlp = [
     "pysentimiento>=0.7.0",
     "spacy>=3.8.0",
+    "transformers>=4.40.0",
+    "torch>=2.2.0",
 ]
 dev = [
     "pytest>=8.3.0",
