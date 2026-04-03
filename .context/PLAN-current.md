@@ -1,71 +1,95 @@
-# CRECE v2.0 — Plan de Implementación Fase 1 (Completar Gaps)
+# CRECE v2.0 — Plan BATCH 3: Data Model Upgrade + Multi-tenant + Business Logic
 
 ## Estado: EN EJECUCIÓN
 ## Fecha: 2026-04-03
-## Clasificación: ESTRATÉGICA (ST aplicado)
+## Clasificación: CRÍTICA — sin estos campos no hay migración Oracle → CRECE v2
 
 ---
 
-## Resumen Ejecutivo
-Completar los gaps identificados en la auditoría de Fase 1 para tener un sistema funcional end-to-end.
+## Diagnóstico (validado con revisión Gemini)
 
-## Sprints
+### Problema central
+BATCH 1+2 resolvió scrapers, NLP y tests pero dejó modelos de datos demasiado
+simplificados. El sistema Oracle APEX actual ya tiene los campos que faltan —
+sin ellos, MC no puede migrar.
 
-### BATCH 1 — Ejecución Paralela (4 agentes)
+### Gaps críticos identificados
 
-#### Sprint 1A: Scrapers Twitter + Instagram
-- **Agente**: python-expert
-- **Archivos**: `backend/app/scrapers/twitter.py`, `backend/app/scrapers/instagram.py`
-- **Entregable**: Scrapers funcionales con twscrape e instaloader
-- **Criterio**: fetch_raw() retorna datos parseados, store persiste en DB
+**Ciudadano** (9 campos faltantes):
+- `intencion_voto` — el dato más importante del sistema
+- `programas_sociales` (JSONB) — correlación voto-programas
+- `problematicas` (JSONB) — detección de campo
+- `ubicacion` GEOGRAPHY(POINT, 4326) — geolocalización PostGIS
+- `colonia`, `codigo_postal` — análisis por zona
+- `escolaridad` — variable de segmentación
+- `foto_ine_url` — captura desde app móvil
+- `org_id` — multi-tenant
 
-#### Sprint 1B: Scrapers Facebook + TikTok + YouTube
-- **Agente**: python-expert
-- **Archivos**: `backend/app/scrapers/facebook.py`, `backend/app/scrapers/tiktok.py`, `backend/app/scrapers/youtube.py`
-- **Entregable**: Scrapers funcionales con facebook-scraper, TikTok-Api, YouTube Data API v3
-- **Criterio**: fetch_raw() retorna datos, parse() normaliza a SocialPost schema
+**Evento** (5 campos faltantes):
+- `recursos` (JSONB) — logística
+- `nuevos_simpatizantes` — tracking adeptos
+- `costo_total` / `costo_por_adquisicion` — ROI
+- `org_id` — multi-tenant
 
-#### Sprint 1C: Nuevos Modelos de Datos + Migración
-- **Agente**: backend-architect
-- **Archivos nuevos**:
-  - `backend/app/models/ciudadano.py` — Padrón de ciudadanos por sección
-  - `backend/app/models/evento.py` — Eventos y actividades
-  - `backend/app/models/programa_social.py` — Programas sociales por sección
-- **Entregable**: Modelos SQLAlchemy, schemas Pydantic, endpoints CRUD, migración Alembic, seed actualizado
+**Tablas completamente ausentes:**
+- `organizaciones` — multi-tenant foundation
+- `encuestas` — captura intención de voto en campo (distinto a IntencionVoto por sección)
+- `metricas_sociales` — snapshots periódicos followers
 
-#### Sprint 1D: Test Suite Backend
-- **Agente**: quality-engineer
-- **Archivos**: `backend/tests/`
-- **Entregable**: Tests para auth, dirigentes CRUD, diagnostico IPD, sentiment service, electoral endpoints
-- **Criterio**: pytest pasa con >80% de endpoints cubiertos
-
-### BATCH 2 — Ejecución Paralela (2 agentes, post-Batch 1)
-
-#### Sprint 2A: NLP Pipeline Upgrade
-- **Agente**: python-expert
-- **Archivos**: `backend/app/nlp/analyzer.py`, nuevo `backend/app/nlp/huggingface_models.py`
-- **Entregable**: Integrar PlanTL-GOB-ES controversy detection, toxic political tweets classifier
-- **Criterio**: analyze() retorna controversy_score y toxicity de múltiples modelos
-
-#### Sprint 2B: Validación Visual con Playwright
-- **Agente**: quality-engineer (Playwright)
-- **Archivos**: `frontend/tests/` (e2e)
-- **Entregable**: Screenshots de login, dashboard, dirigentes, electoral, planes
-- **Criterio**: Todas las páginas renderizan sin errores de consola
+**Business logic ausente:**
+- Modo veda electoral
+- Vector tiles ST_AsMVT()
 
 ---
 
-## Verificación Interna
-1. Post-Batch 1: `pytest` backend + `next build` frontend
-2. Post-Batch 2: Playwright screenshots + review visual
-3. Final: Commit consolidado + status update
+## Sprints de ejecución
 
-## Asignación de Recursos
-| Agente | Tipo | Sprint |
-|--------|------|--------|
-| Agent A | python-expert | 1A (scrapers TW+IG) |
-| Agent B | python-expert | 1B (scrapers FB+TT+YT) |
-| Agent C | backend-architect | 1C (modelos + migración) |
-| Agent D | quality-engineer | 1D (tests) |
-| Agent E | python-expert | 2A (NLP upgrade) |
-| Agent F | quality-engineer | 2B (Playwright) |
+### BATCH 3A — Models + Schemas + Endpoints (2 agentes paralelos)
+
+#### Sprint 3A-1: All Model Files (python-expert, worktree)
+**Archivos a crear/modificar:**
+- `backend/app/models/organizacion.py` — NUEVO: Organizacion table
+- `backend/app/models/ciudadano.py` — UPGRADE: +9 campos
+- `backend/app/models/evento.py` — UPGRADE: +5 campos
+- `backend/app/models/user.py` — ADD: org_id FK
+- `backend/app/models/dirigente.py` — ADD: org_id FK
+- `backend/app/models/encuesta.py` — NUEVO: encuestas de campo
+- `backend/app/models/metrica_social.py` — NUEVO: snapshots followers
+- `backend/app/models/__init__.py` — UPDATE: importar nuevos modelos
+
+#### Sprint 3A-2: All Schemas + Endpoints + Business Logic (python-expert, worktree)
+**Archivos a crear/modificar:**
+- `backend/app/schemas/organizacion.py` — NUEVO
+- `backend/app/schemas/ciudadano.py` — UPGRADE
+- `backend/app/schemas/evento.py` — UPGRADE
+- `backend/app/schemas/encuesta.py` — NUEVO
+- `backend/app/schemas/metrica_social.py` — NUEVO
+- `backend/app/api/v1/endpoints/organizaciones.py` — NUEVO
+- `backend/app/api/v1/endpoints/encuestas.py` — NUEVO
+- `backend/app/api/v1/endpoints/metricas_sociales.py` — NUEVO
+- `backend/app/api/v1/endpoints/geo.py` — NUEVO: vector tiles
+- `backend/app/api/v1/endpoints/ciudadanos.py` — UPGRADE
+- `backend/app/api/v1/endpoints/eventos.py` — UPGRADE
+- `backend/app/api/v1/__init__.py` — UPDATE: nuevos routers
+- `backend/app/core/veda.py` — NUEVO: modo veda middleware
+- `backend/app/core/config.py` — ADD: VEDA_ELECTORAL_ACTIVE setting
+
+### BATCH 3B — Frontend Cleanup (1 agente, post-merge BATCH 3A)
+- Identificar y eliminar datos mock del dashboard
+- Conectar componentes a API real
+- Verificar con Playwright screenshots
+
+---
+
+## Verificación interna
+1. Post-BATCH 3A: merge manual de worktrees, syntax check
+2. Post-merge: commit consolidado
+3. Post-BATCH 3B: Playwright screenshots de validación
+4. Final: status update
+
+## Asignación de recursos
+| Agente | Tipo | Sprint | Aislamiento |
+|--------|------|--------|-------------|
+| Agent A | python-expert | 3A-1 (Models) | worktree |
+| Agent B | python-expert | 3A-2 (Schemas+Endpoints+Logic) | worktree |
+| Agent C | frontend-architect | 3B (Frontend cleanup) | worktree |

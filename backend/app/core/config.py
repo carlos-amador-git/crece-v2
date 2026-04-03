@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     # ── CORS ──────────────────────────────────────────────
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # ── Veda Electoral ───────────────────────────────────
+    VEDA_ELECTORAL_ACTIVE: bool = False
+    VEDA_ELECTORAL_INICIO: str = ""
+    VEDA_ELECTORAL_FIN: str = ""
+
     # ── App ───────────────────────────────────────────────
     APP_ENV: str = "development"
     APP_DEBUG: bool = True

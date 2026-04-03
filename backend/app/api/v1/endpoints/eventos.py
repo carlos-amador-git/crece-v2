@@ -18,6 +18,7 @@ from app.schemas.evento import (
     EventoCompletarPayload,
     EventoCreate,
     EventoResponse,
+    EventoROIResponse,
     EventoUpdate,
 )
 
@@ -40,6 +41,7 @@ async def list_eventos(
     estado: EstadoEvento | None = None,
     tipo: str | None = None,
     search: str | None = None,
+    org_id: int | None = None,
 ) -> PaginatedResponse[EventoResponse]:
     """List eventos with filtering and pagination."""
     query = select(Evento)
@@ -51,6 +53,9 @@ async def list_eventos(
     if tipo is not None:
         query = query.where(Evento.tipo == tipo)
         count_query = count_query.where(Evento.tipo == tipo)
+    if org_id is not None:
+        query = query.where(Evento.org_id == org_id)
+        count_query = count_query.where(Evento.org_id == org_id)
     if search:
         query = query.where(Evento.titulo.ilike(f"%{search}%"))
         count_query = count_query.where(Evento.titulo.ilike(f"%{search}%"))
@@ -108,6 +113,43 @@ async def list_upcoming_eventos(
         page=page,
         page_size=page_size,
         pages=(total + page_size - 1) // page_size if total > 0 else 0,
+    )
+
+
+@router.get("/stats/roi", response_model=EventoROIResponse)
+async def stats_roi(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _current_user: Annotated[User, Depends(get_current_user)],
+    org_id: int | None = None,
+) -> EventoROIResponse:
+    """Return ROI metrics for events that have costo_total data."""
+    base_filter = Evento.costo_total.isnot(None)
+    if org_id is not None:
+        base_filter = base_filter & (Evento.org_id == org_id)
+
+    query = select(
+        func.count(Evento.id).label("total_eventos"),
+        func.coalesce(func.sum(Evento.costo_total), 0).label("costo_total_sum"),
+        func.coalesce(func.sum(Evento.asistentes_reales), 0).label("asistentes_reales_sum"),
+        func.coalesce(func.sum(Evento.nuevos_simpatizantes), 0).label("nuevos_simpatizantes_sum"),
+    ).where(base_filter)
+
+    result = await db.execute(query)
+    row = result.one()
+
+    total_eventos = row.total_eventos
+    costo_total_sum = float(row.costo_total_sum)
+    asistentes_sum = int(row.asistentes_reales_sum)
+    simpatizantes_sum = int(row.nuevos_simpatizantes_sum)
+
+    return EventoROIResponse(
+        total_eventos=total_eventos,
+        costo_total_sum=costo_total_sum,
+        asistentes_reales_sum=asistentes_sum,
+        nuevos_simpatizantes_sum=simpatizantes_sum,
+        costo_promedio_por_evento=costo_total_sum / total_eventos if total_eventos > 0 else 0,
+        costo_promedio_por_asistente=costo_total_sum / asistentes_sum if asistentes_sum > 0 else None,
+        costo_promedio_por_simpatizante=costo_total_sum / simpatizantes_sum if simpatizantes_sum > 0 else None,
     )
 
 

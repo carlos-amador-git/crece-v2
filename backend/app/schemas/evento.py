@@ -20,6 +20,11 @@ class EventoCreate(BaseModel):
     dirigente_id: int | None = None
     asistentes_esperados: int | None = None
     notas: str | None = None
+    # ── New fields ──────────────────────────────────────
+    recursos: dict | None = None
+    nuevos_simpatizantes: int | None = None
+    costo_total: float | None = None
+    org_id: int | None = None
 
     @field_validator("latitud")
     @classmethod
@@ -51,6 +56,11 @@ class EventoUpdate(BaseModel):
     asistentes_reales: int | None = None
     estado: EstadoEvento | None = None
     notas: str | None = None
+    # ── New fields ──────────────────────────────────────
+    recursos: dict | None = None
+    nuevos_simpatizantes: int | None = None
+    costo_total: float | None = None
+    org_id: int | None = None
 
     @field_validator("latitud")
     @classmethod
@@ -82,6 +92,12 @@ class EventoResponse(BaseModel):
     asistentes_reales: int | None
     estado: EstadoEvento
     notas: str | None
+    # ── New fields ──────────────────────────────────────
+    recursos: dict | None
+    nuevos_simpatizantes: int | None
+    costo_total: float | None
+    costo_por_adquisicion: float | None
+    org_id: int | None
     created_at: datetime
     updated_at: datetime
 
@@ -106,3 +122,15 @@ class EventoAsistenteResponse(BaseModel):
 class EventoCompletarPayload(BaseModel):
     asistentes_reales: int | None = None
     notas: str | None = None
+
+
+class EventoROIResponse(BaseModel):
+    """Aggregated ROI metrics for events with cost data."""
+
+    total_eventos: int
+    costo_total_sum: float
+    asistentes_reales_sum: int
+    nuevos_simpatizantes_sum: int
+    costo_promedio_por_evento: float
+    costo_promedio_por_asistente: float | None
+    costo_promedio_por_simpatizante: float | None

@@ -4,7 +4,8 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -63,6 +64,24 @@ class Evento(Base):
     )
     asistentes_esperados: Mapped[int | None] = mapped_column(Integer, nullable=True)
     asistentes_reales: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Logistics
+    recursos: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Political tracking
+    nuevos_simpatizantes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # ROI calculation
+    costo_total: Mapped[float | None] = mapped_column(Float, nullable=True)
+    costo_por_adquisicion: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Multi-tenant
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizaciones.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
     estado: Mapped[EstadoEvento] = mapped_column(
         Enum(EstadoEvento, name="estado_evento", native_enum=True),
         default=EstadoEvento.PROGRAMADO,
@@ -85,6 +104,7 @@ class Evento(Base):
     seccion = relationship("SeccionElectoral", lazy="selectin")
     dirigente = relationship("Dirigente", lazy="selectin")
     organizador = relationship("User", lazy="selectin")
+    organizacion = relationship("Organizacion", lazy="selectin")
     asistentes = relationship(
         "EventoAsistente",
         back_populates="evento",

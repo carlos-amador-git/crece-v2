@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
+from geoalchemy2 import Geometry
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -30,6 +32,27 @@ class NivelInteres(StrEnum):
     MEDIO = "medio"
     BAJO = "bajo"
     DESCONOCIDO = "desconocido"
+
+
+class IntencionVotoCiudadano(StrEnum):
+    MC = "mc"
+    MORENA = "morena"
+    PAN = "pan"
+    PRI = "pri"
+    PVEM = "pvem"
+    PT = "pt"
+    OTRO = "otro"
+    INDECISO = "indeciso"
+    NO_RESPONDE = "no_responde"
+
+
+class Escolaridad(StrEnum):
+    SIN_ESTUDIOS = "sin_estudios"
+    PRIMARIA = "primaria"
+    SECUNDARIA = "secundaria"
+    PREPARATORIA = "preparatoria"
+    UNIVERSIDAD = "universidad"
+    POSGRADO = "posgrado"
 
 
 class Ciudadano(Base):
@@ -68,6 +91,39 @@ class Ciudadano(Base):
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
+
+    # Political intelligence fields
+    intencion_voto: Mapped[IntencionVotoCiudadano | None] = mapped_column(
+        Enum(IntencionVotoCiudadano, name="intencion_voto_ciudadano", native_enum=True),
+        nullable=True,
+    )
+    programas_sociales: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    problematicas: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Geographic fields
+    ubicacion: Mapped[str | None] = mapped_column(
+        Geometry(geometry_type="POINT", srid=4326),
+        nullable=True,
+    )
+    colonia: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    codigo_postal: Mapped[str | None] = mapped_column(String(5), nullable=True)
+
+    # Demographic segmentation
+    escolaridad: Mapped[Escolaridad | None] = mapped_column(
+        Enum(Escolaridad, name="escolaridad", native_enum=True),
+        nullable=True,
+    )
+
+    # Field capture
+    foto_ine_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # Multi-tenant
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizaciones.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
@@ -83,6 +139,7 @@ class Ciudadano(Base):
     # relationships
     seccion = relationship("SeccionElectoral", lazy="selectin")
     registrado_por = relationship("User", lazy="selectin")
+    organizacion = relationship("Organizacion", lazy="selectin")
     asistencias = relationship(
         "EventoAsistente",
         back_populates="ciudadano",

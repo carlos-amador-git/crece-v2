@@ -8,12 +8,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user
-from app.models.ciudadano import Ciudadano
+from app.models.ciudadano import Ciudadano, Escolaridad, IntencionVotoCiudadano
 from app.models.user import User
 from app.schemas.ciudadano import CiudadanoCreate, CiudadanoResponse, CiudadanoUpdate
 from app.schemas.common import PaginatedResponse
+from app.schemas.encuesta import EncuestaResumen
 
 router = APIRouter()
+
+
+def _build_geometry_wkt(lat: float | None, lon: float | None) -> str | None:
+    """Build a WKT POINT string from lat/lon, or return None."""
+    if lat is not None and lon is not None:
+        return f"SRID=4326;POINT({lon} {lat})"
+    return None
 
 
 @router.get("/", response_model=PaginatedResponse[CiudadanoResponse])
@@ -25,6 +33,11 @@ async def list_ciudadanos(
     seccion_id: int | None = None,
     es_promotor: bool | None = None,
     search: str | None = None,
+    intencion_voto: IntencionVotoCiudadano | None = None,
+    colonia: str | None = None,
+    codigo_postal: str | None = None,
+    escolaridad: Escolaridad | None = None,
+    org_id: int | None = None,
 ) -> PaginatedResponse[CiudadanoResponse]:
     """List ciudadanos with filtering and pagination."""
     query = select(Ciudadano)
@@ -36,6 +49,21 @@ async def list_ciudadanos(
     if es_promotor is not None:
         query = query.where(Ciudadano.es_promotor == es_promotor)
         count_query = count_query.where(Ciudadano.es_promotor == es_promotor)
+    if intencion_voto is not None:
+        query = query.where(Ciudadano.intencion_voto == intencion_voto)
+        count_query = count_query.where(Ciudadano.intencion_voto == intencion_voto)
+    if colonia is not None:
+        query = query.where(Ciudadano.colonia == colonia)
+        count_query = count_query.where(Ciudadano.colonia == colonia)
+    if codigo_postal is not None:
+        query = query.where(Ciudadano.codigo_postal == codigo_postal)
+        count_query = count_query.where(Ciudadano.codigo_postal == codigo_postal)
+    if escolaridad is not None:
+        query = query.where(Ciudadano.escolaridad == escolaridad)
+        count_query = count_query.where(Ciudadano.escolaridad == escolaridad)
+    if org_id is not None:
+        query = query.where(Ciudadano.org_id == org_id)
+        count_query = count_query.where(Ciudadano.org_id == org_id)
     if search:
         pattern = f"%{search}%"
         search_filter = (
@@ -94,6 +122,41 @@ async def list_promotores(
         page=page,
         page_size=page_size,
         pages=(total + page_size - 1) // page_size if total > 0 else 0,
+    )
+
+
+@router.get("/stats/by-seccion/{seccion_id}", response_model=EncuestaResumen)
+async def stats_by_seccion(
+    seccion_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _current_user: Annotated[User, Depends(get_current_user)],
+) -> EncuestaResumen:
+    """Return aggregated intencion_voto breakdown for ciudadanos in a section."""
+    query = (
+        select(
+            Ciudadano.intencion_voto,
+            func.count(Ciudadano.id).label("cnt"),
+        )
+        .where(
+            Ciudadano.seccion_id == seccion_id,
+            Ciudadano.intencion_voto.isnot(None),
+        )
+        .group_by(Ciudadano.intencion_voto)
+    )
+    result = await db.execute(query)
+    rows = result.all()
+
+    breakdown: dict[str, int] = {}
+    total = 0
+    for row in rows:
+        key = row.intencion_voto.value if row.intencion_voto else "sin_dato"
+        breakdown[key] = row.cnt
+        total += row.cnt
+
+    return EncuestaResumen(
+        seccion_id=seccion_id,
+        total_encuestas=total,
+        intencion_voto_breakdown=breakdown,
     )
 
 
@@ -156,10 +219,14 @@ async def create_ciudadano(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> Ciudadano:
     """Create a new ciudadano. Requires at least field_operator role."""
-    ciudadano = Ciudadano(
-        **payload.model_dump(),
-        registrado_por_id=current_user.id,
-    )
+    data = payload.model_dump(exclude={"latitud", "longitud"})
+    data["registrado_por_id"] = current_user.id
+
+    geometry_wkt = _build_geometry_wkt(payload.latitud, payload.longitud)
+    if geometry_wkt:
+        data["ubicacion"] = geometry_wkt
+
+    ciudadano = Ciudadano(**data)
     db.add(ciudadano)
     await db.flush()
     await db.refresh(ciudadano)
@@ -182,7 +249,14 @@ async def update_ciudadano(
     if ciudadano is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ciudadano not found")
 
-    update_data = payload.model_dump(exclude_unset=True)
+    update_data = payload.model_dump(exclude_unset=True, exclude={"latitud", "longitud"})
+
+    # Handle geometry update if lat/lon provided
+    if payload.latitud is not None or payload.longitud is not None:
+        geometry_wkt = _build_geometry_wkt(payload.latitud, payload.longitud)
+        if geometry_wkt:
+            update_data["ubicacion"] = geometry_wkt
+
     for field, value in update_data.items():
         setattr(ciudadano, field, value)
 
