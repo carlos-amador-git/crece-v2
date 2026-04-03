@@ -37,7 +37,7 @@ export function PostCard({ post }: PostCardProps) {
             <p className="mb-3 line-clamp-3 text-sm text-foreground/90">
               {post.content}
             </p>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground tabular-nums">
               <span className="flex items-center gap-1" aria-label={`${formatNumber(post.likes)} me gusta`}>
                 <Heart className="h-3.5 w-3.5" />
                 {formatNumber(post.likes)}

@@ -153,14 +153,17 @@ export default function DirigentesPage() {
             {total} dirigentes registrados
           </p>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
+        <Button
+          onClick={() => setAddOpen(true)}
+          className="bg-cta text-cta-foreground hover:bg-cta/90"
+        >
           <Plus className="h-4 w-4" />
           Agregar Dirigente
         </Button>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="card-elevated">
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -260,7 +263,7 @@ export default function DirigentesPage() {
                     <TableCell>
                       <Badge variant="secondary">{d.partido}</Badge>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center tabular-nums">
                       <IpdScoreBadge score={d.ipd_score} size="sm" />
                     </TableCell>
                     <TableCell>
@@ -339,7 +342,7 @@ export default function DirigentesPage() {
               </Select>
             </div>
             <div className="pt-4">
-              <Button className="w-full">Guardar Dirigente</Button>
+              <Button className="w-full bg-cta text-cta-foreground hover:bg-cta/90">Guardar Dirigente</Button>
             </div>
           </div>
         </SheetContent>

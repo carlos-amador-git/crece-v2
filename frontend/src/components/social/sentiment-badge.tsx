@@ -30,7 +30,7 @@ export function SentimentBadge({
       {showIcon && <Icon className="h-3 w-3" />}
       {config.label}
       {score != null && (
-        <span className="ml-0.5 opacity-70">{(score * 100).toFixed(0)}%</span>
+        <span className="ml-0.5 tabular-nums opacity-70">{(score * 100).toFixed(0)}%</span>
       )}
     </Badge>
   );

@@ -22,6 +22,8 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
+  --color-cta: hsl(var(--cta));
+  --color-cta-foreground: hsl(var(--cta-foreground));
   --color-chart-positive: hsl(var(--chart-positive));
   --color-chart-negative: hsl(var(--chart-negative));
   --color-chart-neutral: hsl(var(--chart-neutral));
@@ -29,12 +31,13 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 /*
  * CRECE v2.0 — Political Intelligence Platform
- * Palette: Deep Navy primary, Teal accent, Slate neutrals
- * 60-30-10 rule applied
+ * Palette: Deep Navy primary, Teal accent, MC Orange CTA, Slate neutrals
+ * 60-30-10: 60% slate neutrals, 30% navy, 10% teal/orange
  */
 
 :root {
@@ -61,6 +64,10 @@
 
   --accent: 199 89% 48%;
   --accent-foreground: 0 0% 100%;
+
+  /* MC Orange — CTA and brand moments */
+  --cta: 24 95% 53%;
+  --cta-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
@@ -101,6 +108,9 @@
   --accent: 199 89% 48%;
   --accent-foreground: 215 50% 6%;
 
+  --cta: 24 95% 53%;
+  --cta-foreground: 0 0% 100%;
+
   --destructive: 0 70% 50%;
   --destructive-foreground: 0 0% 100%;
 
@@ -113,6 +123,8 @@
   --chart-neutral: 45 85% 55%;
   --chart-accent: 199 89% 55%;
 }
+
+/* ── Base resets ──────────────────────────────────────────── */
 
 * {
   border-color: hsl(var(--border));
@@ -128,9 +140,105 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading), sans-serif;
+  text-wrap: balance;
 }
 
-/* MapLibre overrides */
+p {
+  text-wrap: pretty;
+}
+
+/* Tabular numbers for data displays */
+[data-numeric],
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Focus ring ──────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* ── Glass card utility ──────────────────────────────────── */
+/* Use sparingly on small surfaces per baseline-ui */
+
+.glass-card {
+  background: hsl(var(--card) / 0.7);
+  border: 1px solid hsl(var(--border) / 0.5);
+  box-shadow:
+    0 1px 2px hsl(var(--foreground) / 0.04),
+    0 4px 16px hsl(var(--foreground) / 0.06);
+}
+
+.dark .glass-card {
+  background: hsl(var(--card) / 0.6);
+  border-color: hsl(var(--border) / 0.4);
+  box-shadow:
+    0 1px 2px hsl(0 0% 0% / 0.2),
+    0 4px 16px hsl(0 0% 0% / 0.3);
+}
+
+/* ── Elevated card — for KPI cards and CTAs ──────────────── */
+
+.card-elevated {
+  box-shadow:
+    0 1px 3px hsl(var(--foreground) / 0.04),
+    0 6px 24px hsl(var(--foreground) / 0.08);
+  transition: box-shadow 150ms ease-out, transform 150ms ease-out;
+}
+
+.card-elevated:hover {
+  box-shadow:
+    0 2px 4px hsl(var(--foreground) / 0.06),
+    0 8px 32px hsl(var(--foreground) / 0.1);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-elevated:hover {
+    transform: none;
+  }
+}
+
+/* ── Accent bar — left border highlight ──────────────────── */
+
+.accent-bar-left {
+  position: relative;
+}
+
+.accent-bar-left::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: hsl(var(--accent));
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.accent-bar-left:hover::before,
+.accent-bar-left[data-active="true"]::before {
+  opacity: 1;
+}
+
+/* ── MapLibre overrides ──────────────────────────────────── */
+
 .maplibregl-map {
   font-family: var(--font-body), sans-serif;
 }
@@ -139,7 +247,7 @@ h1, h2, h3, h4, h5, h6 {
   background: hsl(var(--card));
   color: hsl(var(--card-foreground));
   border-radius: var(--radius);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 24px hsl(var(--foreground) / 0.12);
   padding: 12px 16px;
   border: 1px solid hsl(var(--border));
 }
@@ -148,7 +256,8 @@ h1, h2, h3, h4, h5, h6 {
   border-top-color: hsl(var(--card));
 }
 
-/* Scrollbar styling */
+/* ── Scrollbar styling ───────────────────────────────────── */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -165,4 +274,31 @@ h1, h2, h3, h4, h5, h6 {
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* ── Skeleton pulse — custom timing ──────────────────────── */
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.skeleton-animate {
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── Login dot grid pulses ─────────────────────────────────── */
+
+@keyframes dotGlow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dot-pulse-teal {
+    animation: dotGlow 4s ease-in-out infinite;
+  }
+  .dot-pulse-orange {
+    animation: dotGlow 4s ease-in-out 2s infinite;
+  }
 }

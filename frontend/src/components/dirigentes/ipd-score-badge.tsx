@@ -15,7 +15,7 @@ export function IpdScoreBadge({ score, size = "md" }: IpdScoreBadgeProps) {
   return (
     <div
       className={cn(
-        "inline-flex items-center justify-center rounded-md border font-semibold",
+        "inline-flex items-center justify-center rounded-md border font-semibold tabular-nums",
         getIpdColor(score),
         sizeClasses[size]
       )}
