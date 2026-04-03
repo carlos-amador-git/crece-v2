@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     CLAUDE_API_KEY: str = ""
     CLAUDE_MODEL: str = "claude-sonnet-4-20250514"
 
+    # ── YouTube Data API v3 ──────────────────────────────
+    YOUTUBE_API_KEY: str = ""
+
+    # ── TikTok ───────────────────────────────────────────
+    TIKTOK_MS_TOKEN: str = ""
+
+    # ── Facebook ─────────────────────────────────────────
+    FACEBOOK_COOKIES_FILE: str = ""
+
     # ── CORS ──────────────────────────────────────────────
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 

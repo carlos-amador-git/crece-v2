@@ -76,4 +76,4 @@ celerybeat.pid
 *.bin
 *.pt
 *.onnx
-models/
+/models/

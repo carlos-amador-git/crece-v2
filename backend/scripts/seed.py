@@ -24,6 +24,9 @@ from app.models.social import SocialProfile, SocialPost, Platform, PostType, Sen
 from app.models.electoral import SeccionElectoral, IntencionVoto
 from app.models.benchmark import Competidor, CompetidorSocialProfile
 from app.models.plan_ia import PlanIA, PlanTipo
+from app.models.ciudadano import Ciudadano, RangoEdad, Genero, NivelInteres
+from app.models.evento import Evento, EventoAsistente, TipoEvento, EstadoEvento
+from app.models.programa_social import ProgramaSocial, ProgramaBeneficiario, NivelGobierno
 
 
 async def seed():
@@ -370,6 +373,220 @@ async def seed():
         )
         session.add(plan)
 
+        # ── Ciudadanos (sample CDMX) ─────────────────────────────
+        ciudadanos_data = [
+            Ciudadano(
+                nombre="María",
+                apellido_paterno="González",
+                apellido_materno="López",
+                seccion_id=secciones[0].id,
+                direccion="Av. Azcapotzalco 123, Col. Centro",
+                telefono="5551234567",
+                email="maria.gonzalez@example.com",
+                edad_rango=RangoEdad.E_36_45,
+                genero=Genero.F,
+                nivel_interes=NivelInteres.ALTO,
+                es_simpatizante_mc=True,
+                es_promotor=True,
+                registrado_por_id=field_op.id,
+            ),
+            Ciudadano(
+                nombre="José",
+                apellido_paterno="Hernández",
+                apellido_materno="Martínez",
+                seccion_id=secciones[0].id,
+                telefono="5559876543",
+                edad_rango=RangoEdad.E_46_55,
+                genero=Genero.M,
+                nivel_interes=NivelInteres.MEDIO,
+                es_simpatizante_mc=True,
+                es_promotor=False,
+                registrado_por_id=field_op.id,
+            ),
+            Ciudadano(
+                nombre="Ana",
+                apellido_paterno="Ramírez",
+                seccion_id=secciones[1].id,
+                email="ana.ramirez@example.com",
+                edad_rango=RangoEdad.E_26_35,
+                genero=Genero.F,
+                nivel_interes=NivelInteres.ALTO,
+                es_simpatizante_mc=False,
+                es_promotor=False,
+                registrado_por_id=analyst.id,
+            ),
+            Ciudadano(
+                nombre="Pedro",
+                apellido_paterno="Sánchez",
+                apellido_materno="Díaz",
+                seccion_id=secciones[2].id,
+                direccion="Calle Industrias 456, GAM",
+                edad_rango=RangoEdad.E_56_65,
+                genero=Genero.M,
+                nivel_interes=NivelInteres.BAJO,
+                es_simpatizante_mc=False,
+                es_promotor=False,
+                registrado_por_id=field_op.id,
+            ),
+            Ciudadano(
+                nombre="Luisa",
+                apellido_paterno="Torres",
+                apellido_materno="Vega",
+                seccion_id=secciones[3].id,
+                telefono="5553456789",
+                email="luisa.torres@example.com",
+                edad_rango=RangoEdad.E_18_25,
+                genero=Genero.F,
+                nivel_interes=NivelInteres.ALTO,
+                es_simpatizante_mc=True,
+                es_promotor=True,
+                registrado_por_id=field_op.id,
+            ),
+        ]
+        session.add_all(ciudadanos_data)
+        await session.flush()
+
+        # ── Eventos (sample CDMX) ────────────────────────────────
+        evento_mitin = Evento(
+            titulo="Mitin MC Azcapotzalco — Jornada ciudadana",
+            descripcion="Jornada de afiliación y escucha ciudadana en la explanada de Azcapotzalco.",
+            tipo=TipoEvento.MITIN,
+            fecha_inicio=now + timedelta(days=7),
+            fecha_fin=now + timedelta(days=7, hours=3),
+            lugar="Explanada Azcapotzalco, CDMX",
+            geometry="SRID=4326;POINT(-99.1847 19.4869)",
+            seccion_id=secciones[0].id,
+            dirigente_id=pina.id,
+            organizador_id=admin.id,
+            asistentes_esperados=150,
+            estado=EstadoEvento.PROGRAMADO,
+        )
+        evento_reunion = Evento(
+            titulo="Reunión de estructura — Coyoacán",
+            descripcion="Reunión de coordinación con promotores de la sección.",
+            tipo=TipoEvento.REUNION,
+            fecha_inicio=now + timedelta(days=3),
+            fecha_fin=now + timedelta(days=3, hours=2),
+            lugar="Casa de Cultura Coyoacán",
+            geometry="SRID=4326;POINT(-99.1626 19.3500)",
+            seccion_id=secciones[1].id,
+            dirigente_id=pina.id,
+            organizador_id=analyst.id,
+            asistentes_esperados=30,
+            estado=EstadoEvento.PROGRAMADO,
+        )
+        evento_recorrido = Evento(
+            titulo="Recorrido Iztapalapa — Escucha activa",
+            descripcion="Recorrido puerta a puerta en colonias de Iztapalapa.",
+            tipo=TipoEvento.RECORRIDO,
+            fecha_inicio=now - timedelta(days=2),
+            fecha_fin=now - timedelta(days=2, hours=-4),
+            lugar="Central de Abasto, Iztapalapa",
+            geometry="SRID=4326;POINT(-99.0870 19.3727)",
+            seccion_id=secciones[3].id,
+            dirigente_id=pina.id,
+            organizador_id=field_op.id,
+            asistentes_esperados=50,
+            asistentes_reales=43,
+            estado=EstadoEvento.COMPLETADO,
+        )
+        evento_capacitacion = Evento(
+            titulo="Capacitación promotores — Tlalpan",
+            tipo=TipoEvento.CAPACITACION,
+            fecha_inicio=now + timedelta(days=14),
+            lugar="Oficinas MC Tlalpan",
+            seccion_id=secciones[4].id,
+            organizador_id=admin.id,
+            asistentes_esperados=25,
+            estado=EstadoEvento.PROGRAMADO,
+        )
+        session.add_all([evento_mitin, evento_reunion, evento_recorrido, evento_capacitacion])
+        await session.flush()
+
+        # ── Evento Asistentes ─────────────────────────────────────
+        asistentes_data = [
+            EventoAsistente(
+                evento_id=evento_recorrido.id,
+                ciudadano_id=ciudadanos_data[0].id,
+                confirmado=True,
+                asistio=True,
+            ),
+            EventoAsistente(
+                evento_id=evento_recorrido.id,
+                ciudadano_id=ciudadanos_data[4].id,
+                confirmado=True,
+                asistio=True,
+            ),
+            EventoAsistente(
+                evento_id=evento_mitin.id,
+                ciudadano_id=ciudadanos_data[0].id,
+                confirmado=True,
+                asistio=False,
+            ),
+            EventoAsistente(
+                evento_id=evento_mitin.id,
+                ciudadano_id=ciudadanos_data[1].id,
+                confirmado=False,
+                asistio=False,
+            ),
+        ]
+        session.add_all(asistentes_data)
+
+        # ── Programas Sociales (SAMPLE DATA — not real government figures) ──
+        # NOTE: These are CLEARLY LABELED sample records for development only.
+        # Real data must come from CONEVAL, Bienestar, or official government sources.
+        prog_bienestar = ProgramaSocial(
+            nombre="[SAMPLE] Programa de Bienestar Social",
+            descripcion="Dato de ejemplo para desarrollo. NO es un programa real. Los datos reales deben cargarse desde fuentes oficiales (CONEVAL, Bienestar).",
+            dependencia="Secretaría de Bienestar (SAMPLE)",
+            nivel_gobierno=NivelGobierno.FEDERAL,
+            presupuesto_anual=None,  # No inventar cifras
+        )
+        prog_educacion = ProgramaSocial(
+            nombre="[SAMPLE] Beca Educativa Municipal",
+            descripcion="Dato de ejemplo para desarrollo. NO es un programa real. Los datos reales deben cargarse desde fuentes oficiales.",
+            dependencia="Alcaldía (SAMPLE)",
+            nivel_gobierno=NivelGobierno.MUNICIPAL,
+            presupuesto_anual=None,
+        )
+        prog_salud = ProgramaSocial(
+            nombre="[SAMPLE] Programa Estatal de Salud Comunitaria",
+            descripcion="Dato de ejemplo para desarrollo. NO es un programa real.",
+            dependencia="Secretaría de Salud CDMX (SAMPLE)",
+            nivel_gobierno=NivelGobierno.ESTATAL,
+            presupuesto_anual=None,
+        )
+        session.add_all([prog_bienestar, prog_educacion, prog_salud])
+        await session.flush()
+
+        # ── Programa Beneficiarios (SAMPLE — synthetic counts) ────
+        for i, seccion in enumerate(secciones):
+            session.add(ProgramaBeneficiario(
+                programa_id=prog_bienestar.id,
+                seccion_id=seccion.id,
+                beneficiarios_count=100 + (i * 50),  # SAMPLE synthetic count
+                periodo="2026-Q1",
+                fecha_actualizacion=date(2026, 3, 1),
+                fuente_datos="SAMPLE_DEV_DATA",
+            ))
+        # Only some sections for the other programs
+        session.add(ProgramaBeneficiario(
+            programa_id=prog_educacion.id,
+            seccion_id=secciones[1].id,
+            beneficiarios_count=45,
+            periodo="2026-Q1",
+            fecha_actualizacion=date(2026, 3, 1),
+            fuente_datos="SAMPLE_DEV_DATA",
+        ))
+        session.add(ProgramaBeneficiario(
+            programa_id=prog_salud.id,
+            seccion_id=secciones[3].id,
+            beneficiarios_count=200,
+            periodo="2026-Q1",
+            fecha_actualizacion=date(2026, 3, 1),
+            fuente_datos="SAMPLE_DEV_DATA",
+        ))
+
         await session.commit()
         print("\n✅ Seed completado exitosamente!")
         print("   - 3 usuarios (admin, analista, campo)")
@@ -380,6 +597,11 @@ async def seed():
         print("   - 5 registros de intención de voto")
         print("   - 2 competidores")
         print("   - 1 plan IA de ejemplo")
+        print("   - 5 ciudadanos (2 promotores)")
+        print("   - 4 eventos (1 completado, 3 programados)")
+        print("   - 4 registros de asistencia")
+        print("   - 3 programas sociales [SAMPLE]")
+        print("   - 7 registros de beneficiarios [SAMPLE]")
 
     await engine.dispose()
 
