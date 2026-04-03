@@ -1,0 +1,79 @@
+# ══════════════════════════════════════════════════════════════
+# CRECE v2.0 — Git Ignore
+# ══════════════════════════════════════════════════════════════
+
+# ── Environment Variables ─────────────────────────────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# ── Node.js ───────────────────────────────────────────────────
+node_modules/
+.pnp/
+.pnp.js
+.next/
+out/
+tsconfig.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Testing ───────────────────────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+coverage/
+
+# ── IDE ───────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Docker ────────────────────────────────────────────────────
+docker/nginx/certs/
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Database dumps ────────────────────────────────────────────
+*.sql.gz
+*.dump
+
+# ── Temporary files ───────────────────────────────────────────
+tmp/
+temp/
+*.tmp
+
+# ── Celery ────────────────────────────────────────────────────
+celerybeat-schedule
+celerybeat.pid
+
+# ── ML Models (downloaded at runtime) ─────────────────────────
+*.bin
+*.pt
+*.onnx
+models/

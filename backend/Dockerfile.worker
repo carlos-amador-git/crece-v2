@@ -1,0 +1,70 @@
+# CRECE v2.0 — Celery Worker Dockerfile (with NLP models)
+# Larger image: includes pysentimiento (~500MB) + spaCy models (~300MB)
+# Build: docker build -f Dockerfile.worker -t crece-worker ./backend
+
+# ── Stage 1: Builder ──────────────────────────────────────────
+FROM python:3.12-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+        libgeos-dev \
+        libproj-dev \
+        gdal-bin \
+        libgdal-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install base + NLP dependencies
+COPY pyproject.toml ./
+RUN pip install --prefix=/install ".[nlp]"
+
+# Download spaCy Spanish models
+RUN /install/bin/python -m spacy download es_core_news_lg || \
+    pip install --prefix=/install https://github.com/explosion/spacy-models/releases/download/es_core_news_lg-3.8.0/es_core_news_lg-3.8.0-py3-none-any.whl
+
+# ── Stage 2: Runtime ─────────────────────────────────────────
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/install/bin:$PATH" \
+    PYTHONPATH="/install/lib/python3.12/site-packages:$PYTHONPATH" \
+    # Limit torch threads for container efficiency
+    OMP_NUM_THREADS=2 \
+    MKL_NUM_THREADS=2
+
+WORKDIR /app
+
+# Install runtime libraries
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libpq5 \
+        libgeos-c1v5 \
+        libproj25 \
+        gdal-bin \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages from builder
+COPY --from=builder /install /install
+
+# Create non-root user
+RUN groupadd -r crece && useradd -r -g crece -d /app -s /sbin/nologin crece
+
+# Copy application code
+COPY --chown=crece:crece . .
+
+USER crece
+
+# No port exposure — workers communicate via Redis broker
+
+CMD ["celery", "-A", "app.workers.celery_app", "worker", "-l", "info", "--concurrency=2", "-Q", "default,scrapers,nlp"]

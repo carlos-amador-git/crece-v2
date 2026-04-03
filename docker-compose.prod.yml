@@ -1,0 +1,148 @@
+# CRECE v2.0 — Production Overrides
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  # ── Database ────────────────────────────────────────────────
+  db:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 512M
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in production}
+
+  # ── Redis ───────────────────────────────────────────────────
+  redis:
+    restart: always
+    command: >
+      redis-server
+        --appendonly yes
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+        --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required in production}
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: "1.0"
+
+  # ── MinIO ───────────────────────────────────────────────────
+  minio:
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+  # ── Backend ─────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8000
+        --workers 4
+        --loop uvloop
+        --http httptools
+        --no-access-log
+    restart: always
+    volumes: []  # No source mount in prod
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "2.0"
+        reservations:
+          memory: 256M
+
+  # ── Celery Worker ───────────────────────────────────────────
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+      target: runtime
+    command: >
+      celery -A app.workers.celery_app worker
+        -l warning
+        --concurrency=4
+        -Q default,scrapers,nlp
+        --max-tasks-per-child=100
+    restart: always
+    volumes: []
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+        reservations:
+          memory: 1G
+
+  # ── Celery Beat ─────────────────────────────────────────────
+  celery-beat:
+    restart: always
+    volumes: []
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+
+  # ── Flower ──────────────────────────────────────────────────
+  flower:
+    restart: always
+    environment:
+      FLOWER_BASIC_AUTH: ${FLOWER_USER:-admin}:${FLOWER_PASSWORD:?FLOWER_PASSWORD is required}
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+
+  # ── Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    command: ["node", "server.js"]
+    restart: always
+    volumes: []
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+  # ── Nginx Reverse Proxy (prod only) ─────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: crece-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+      - frontend
+      - flower
+    networks:
+      - crece-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"

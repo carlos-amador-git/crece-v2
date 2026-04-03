@@ -1,0 +1,201 @@
+# CRECE v2.0 — Coolify Deployment Compose
+# This file is adapted for Coolify's container orchestration.
+# Coolify manages networking, SSL, and reverse proxy automatically.
+#
+# Deployment steps:
+# 1. Create a new project in Coolify
+# 2. Add this repo as a Docker Compose resource
+# 3. Set the compose file path to: docker/coolify/docker-compose.coolify.yml
+# 4. Configure environment variables in Coolify's UI
+# 5. Deploy
+
+services:
+  # ── Database ────────────────────────────────────────────────
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+
+  # ── Redis ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+        --appendonly yes
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+        --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: always
+
+  # ── MinIO ───────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # ── Backend ─────────────────────────────────────────────────
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+      target: runtime
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8000
+        --workers 4
+        --loop uvloop
+        --http httptools
+        --no-access-log
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    # Coolify will handle the port mapping and SSL
+    expose:
+      - "8000"
+    labels:
+      - "coolify.managed=true"
+      - "coolify.port=8000"
+
+  # ── Celery Worker ───────────────────────────────────────────
+  celery-worker:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile.worker
+      target: runtime
+    command: >
+      celery -A app.workers.celery_app worker
+        -l warning
+        --concurrency=4
+        -Q default,scrapers,nlp
+        --max-tasks-per-child=100
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  # ── Celery Beat ─────────────────────────────────────────────
+  celery-beat:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+      target: runtime
+    command: >
+      celery -A app.workers.celery_app beat
+        -l info
+        --schedule=/tmp/celerybeat-schedule
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+  # ── Flower ──────────────────────────────────────────────────
+  flower:
+    image: mher/flower:2.0
+    command: >
+      celery
+        --broker=${CELERY_BROKER_URL}
+        flower
+        --port=5555
+        --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+    expose:
+      - "5555"
+
+  # ── Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_MAPLIBRE_STYLE: ${NEXT_PUBLIC_MAPLIBRE_STYLE}
+    depends_on:
+      - backend
+    restart: always
+    expose:
+      - "3000"
+    labels:
+      - "coolify.managed=true"
+      - "coolify.port=3000"
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

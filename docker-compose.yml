@@ -1,0 +1,198 @@
+# CRECE v2.0 — Development Environment
+# Usage: docker compose up -d
+# Docs:  make help
+
+x-backend-common: &backend-common
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+    target: runtime
+  env_file:
+    - .env
+  networks:
+    - crece-net
+  restart: unless-stopped
+
+services:
+  # ── Database ────────────────────────────────────────────────
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: crece-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-crece}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crece_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-crece}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crece} -d ${POSTGRES_DB:-crece}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - crece-net
+    restart: unless-stopped
+
+  # ── Redis ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: crece-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - crece-net
+    restart: unless-stopped
+
+  # ── MinIO (S3-compatible storage) ───────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: crece-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - crece-net
+    restart: unless-stopped
+
+  # ── FastAPI Backend ─────────────────────────────────────────
+  backend:
+    <<: *backend-common
+    container_name: crece-backend
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8000
+        --reload
+        --reload-dir /app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Worker ───────────────────────────────────────────
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+      target: runtime
+    container_name: crece-celery-worker
+    command: >
+      celery -A app.workers.celery_app worker
+        -l info
+        --concurrency=2
+        -Q default,scrapers,nlp
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - crece-net
+    restart: unless-stopped
+
+  # ── Celery Beat (Scheduler) ─────────────────────────────────
+  celery-beat:
+    <<: *backend-common
+    container_name: crece-celery-beat
+    command: >
+      celery -A app.workers.celery_app beat
+        -l info
+        --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Flower (Celery Monitoring) ──────────────────────────────
+  flower:
+    image: mher/flower:2.0
+    container_name: crece-flower
+    command: >
+      celery
+        --broker=${CELERY_BROKER_URL:-redis://redis:6379/1}
+        flower
+        --port=5555
+        --broker_api=${CELERY_BROKER_URL:-redis://redis:6379/1}
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - crece-net
+    restart: unless-stopped
+
+  # ── Next.js Frontend ────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: crece-frontend
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+      NEXT_PUBLIC_MAPLIBRE_STYLE: ${NEXT_PUBLIC_MAPLIBRE_STYLE:-https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json}
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - crece-net
+    restart: unless-stopped
+
+networks:
+  crece-net:
+    driver: bridge
+    name: crece-net
+
+volumes:
+  postgres_data:
+    name: crece-postgres-data
+  redis_data:
+    name: crece-redis-data
+  minio_data:
+    name: crece-minio-data
