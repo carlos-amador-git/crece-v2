@@ -1,0 +1,217 @@
+# =============================================================================
+# CRECE v2.0 — Docker Compose for Coolify
+# Server: 163.245.208.96 (same Coolify instance as ChatMX)
+# Domain: crece.mdconsultoria-ti.org (configured in Coolify UI)
+#
+# Coolify handles: reverse proxy (Traefik), SSL (Let's Encrypt), domain routing
+# We handle: FastAPI + Next.js + PostgreSQL/PostGIS + Redis + Celery + MinIO
+#
+# Deploy steps:
+#   1. In Coolify: New Project → Docker Compose → GitHub (MarxCha/crece-v2) → this file
+#   2. Set environment variables (see .env.coolify.example)
+#   3. Configure domain on frontend service: crece.mdconsultoria-ti.org:3000
+#   4. Configure domain on backend service: api-crece.mdconsultoria-ti.org:8000
+#   5. Enable SSL + Force HTTPS on both
+#   6. Deploy
+#
+# Carlos (carlos-amador-git): Same pattern as ChatMX deployment.
+# Key differences: 2 public services (frontend + backend) vs 1 (chatwoot)
+# =============================================================================
+
+services:
+
+  # PostgreSQL 16 + PostGIS 3.4 (electoral maps, canvassing routes, citizen geolocation)
+  db:
+    image: postgis/postgis:16-3.4
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-crece}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-crece_production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crece} -d ${POSTGRES_DB:-crece_production}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    command: >
+      postgres
+        -c shared_buffers=256MB
+        -c effective_cache_size=512MB
+        -c max_connections=100
+        -c work_mem=8MB
+
+  # Redis — app cache + Celery broker + Celery results
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: >
+      redis-server
+        --appendonly yes
+        --appendfsync everysec
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+        --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # MinIO — S3-compatible storage (INE photos, campaign assets, reports)
+  minio:
+    image: minio/minio:latest
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # FastAPI Backend — "EL CEREBRO"
+  # In Coolify: set domain api-crece.mdconsultoria-ti.org → port 8000
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crece_production}
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crece_production}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-20250514}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+      TIKTOK_MS_TOKEN: ${TIKTOK_MS_TOKEN:-}
+      FACEBOOK_COOKIES_FILE: ""
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: crece-files
+      MINIO_SECURE: "false"
+      CORS_ORIGINS: '["https://crece.mdconsultoria-ti.org","http://localhost:3000"]'
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TITLE: "CRECE v2.0"
+      APP_VERSION: "2.0.0"
+      VEDA_ELECTORAL_ACTIVE: "false"
+      TOPE_CAMPANA_MXN: "500000"
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        uvicorn app.main:app
+          --host 0.0.0.0
+          --port 8000
+          --workers 4
+          --loop uvloop
+          --http httptools
+          --no-access-log
+      "
+
+  # Celery Worker — scrapers, NLP analysis, voter scoring
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    restart: always
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crece_production}
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crece_production}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4-20250514}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: crece-files
+      MINIO_SECURE: "false"
+      APP_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A app.workers.celery_app worker
+        -l warning
+        --concurrency=4
+        -Q default,scrapers,nlp
+        --max-tasks-per-child=100
+
+  # Celery Beat — scheduled scraping, metrics snapshots
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    restart: always
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crece_production}
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-crece_production}
+      REDIS_URL: redis://redis:6379/0
+      APP_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A app.workers.celery_app beat
+        -l warning
+        --schedule=/tmp/celerybeat-schedule
+
+  # Next.js Frontend — Dashboard
+  # In Coolify: set domain crece.mdconsultoria-ti.org → port 3000
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: https://api-crece.mdconsultoria-ti.org/api/v1
+      NEXT_PUBLIC_MAPLIBRE_STYLE: https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: ["node", "server.js"]
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
