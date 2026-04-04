@@ -43,6 +43,9 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        emerald: {
+          DEFAULT: "hsl(var(--emerald))",
+        },
         chart: {
           positive: "hsl(var(--chart-positive))",
           negative: "hsl(var(--chart-negative))",

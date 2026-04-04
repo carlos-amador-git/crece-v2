@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, DM_Sans } from "next/font/google";
+import { Instrument_Sans, DM_Sans } from "next/font/google";
 import { QueryProvider } from "@/lib/query-provider";
 import "./globals.css";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const instrumentSans = Instrument_Sans({
   subsets: ["latin"],
   variable: "--font-heading",
   display: "swap",
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const dmSans = DM_Sans({
@@ -32,7 +32,7 @@ export default function RootLayout({
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${plusJakartaSans.variable} ${dmSans.variable}`}
+      className={`${instrumentSans.variable} ${dmSans.variable}`}
     >
       <body className="min-h-screen bg-background font-body antialiased">
         <QueryProvider>{children}</QueryProvider>

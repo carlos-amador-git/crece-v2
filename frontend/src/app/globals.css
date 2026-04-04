@@ -24,6 +24,7 @@
   --color-card-foreground: hsl(var(--card-foreground));
   --color-cta: hsl(var(--cta));
   --color-cta-foreground: hsl(var(--cta-foreground));
+  --color-emerald: hsl(var(--emerald));
   --color-chart-positive: hsl(var(--chart-positive));
   --color-chart-negative: hsl(var(--chart-negative));
   --color-chart-neutral: hsl(var(--chart-neutral));
@@ -43,27 +44,29 @@
 :root {
   --radius: 0.5rem;
 
-  /* Light theme */
+  /* Light theme — MD Design System */
   --background: 210 20% 98%;
-  --foreground: 215 50% 10%;
+  --foreground: 212 52% 15%;
 
   --card: 0 0% 100%;
-  --card-foreground: 215 50% 10%;
+  --card-foreground: 212 52% 15%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 215 50% 10%;
+  --popover-foreground: 212 52% 15%;
 
-  --primary: 215 70% 12%;
+  /* Deep Blue — #1e3a5f */
+  --primary: 212 52% 25%;
   --primary-foreground: 210 20% 98%;
 
-  --secondary: 214 20% 92%;
-  --secondary-foreground: 215 50% 10%;
+  --secondary: 212 18% 92%;
+  --secondary-foreground: 212 52% 15%;
 
-  --muted: 214 20% 94%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 212 18% 94%;
+  --muted-foreground: 212 16% 47%;
 
-  --accent: 199 89% 48%;
-  --accent-foreground: 0 0% 100%;
+  /* Warm Amber — #d4a853 */
+  --accent: 40 62% 58%;
+  --accent-foreground: 212 52% 10%;
 
   /* MC Orange — CTA and brand moments */
   --cta: 24 95% 53%;
@@ -72,41 +75,44 @@
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 214 20% 88%;
-  --input: 214 20% 88%;
-  --ring: 199 89% 48%;
+  --border: 212 18% 88%;
+  --input: 212 18% 88%;
+  --ring: 40 62% 58%;
+
+  /* Emerald — #10b981 */
+  --emerald: 160 84% 39%;
 
   /* Charts */
-  --chart-positive: 152 60% 42%;
+  --chart-positive: 160 84% 39%;
   --chart-negative: 0 84% 60%;
-  --chart-neutral: 45 93% 47%;
-  --chart-accent: 199 89% 48%;
+  --chart-neutral: 40 62% 58%;
+  --chart-accent: 212 52% 25%;
 
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 68px;
 }
 
 .dark {
-  --background: 215 50% 6%;
+  --background: 212 50% 6%;
   --foreground: 210 20% 95%;
 
-  --card: 215 45% 9%;
+  --card: 212 45% 9%;
   --card-foreground: 210 20% 95%;
 
-  --popover: 215 45% 9%;
+  --popover: 212 45% 9%;
   --popover-foreground: 210 20% 95%;
 
-  --primary: 199 89% 48%;
-  --primary-foreground: 215 50% 6%;
+  --primary: 40 62% 58%;
+  --primary-foreground: 212 50% 6%;
 
-  --secondary: 215 30% 16%;
+  --secondary: 212 30% 16%;
   --secondary-foreground: 210 20% 90%;
 
-  --muted: 215 30% 14%;
-  --muted-foreground: 215 16% 56%;
+  --muted: 212 30% 14%;
+  --muted-foreground: 212 16% 56%;
 
-  --accent: 199 89% 48%;
-  --accent-foreground: 215 50% 6%;
+  --accent: 40 62% 58%;
+  --accent-foreground: 212 50% 6%;
 
   --cta: 24 95% 53%;
   --cta-foreground: 0 0% 100%;
@@ -114,14 +120,16 @@
   --destructive: 0 70% 50%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 215 30% 18%;
-  --input: 215 30% 18%;
-  --ring: 199 89% 48%;
+  --border: 212 30% 18%;
+  --input: 212 30% 18%;
+  --ring: 40 62% 58%;
 
-  --chart-positive: 152 55% 48%;
+  --emerald: 160 76% 45%;
+
+  --chart-positive: 160 76% 45%;
   --chart-negative: 0 70% 55%;
-  --chart-neutral: 45 85% 55%;
-  --chart-accent: 199 89% 55%;
+  --chart-neutral: 40 55% 62%;
+  --chart-accent: 212 52% 40%;
 }
 
 /* ── Base resets ──────────────────────────────────────────── */

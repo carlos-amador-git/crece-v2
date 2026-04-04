@@ -25,6 +25,10 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  FileText,
+  Shield,
+  Send,
+  MapPin,
 } from "lucide-react";
 
 const sections = [
@@ -42,6 +46,17 @@ const sections = [
     items: [
       { href: "/dashboard/benchmark", label: "Benchmarks", icon: BarChart3 },
       { href: "/dashboard/planes", label: "Planes IA", icon: Brain },
+    ],
+  },
+  {
+    label: "Fase 2",
+    items: [
+      { href: "/dashboard/scoring", label: "Scoring", icon: BarChart3 },
+      { href: "/dashboard/contenido", label: "Contenido", icon: FileText },
+      { href: "/dashboard/compliance", label: "Compliance", icon: Shield },
+      { href: "/dashboard/campanas", label: "Campanas", icon: Send },
+      { href: "/dashboard/canvassing", label: "Canvassing", icon: MapPin },
+      { href: "/dashboard/participacion", label: "Participacion", icon: Users },
     ],
   },
   {
