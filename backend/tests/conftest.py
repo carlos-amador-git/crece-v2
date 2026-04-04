@@ -14,18 +14,34 @@ from app.main import app
 from app.models.user import User
 
 # Use a separate test database — append _test suffix
-TEST_DATABASE_URL = settings.DATABASE_URL.replace("/crece_v2", "/crece_v2_test")
+# Derive test DB URL — handle both /crece and /crece_v2 naming
+_db_name = settings.DATABASE_URL.rsplit("/", 1)[-1]
+TEST_DATABASE_URL = settings.DATABASE_URL.rsplit("/", 1)[0] + f"/{_db_name}_test"
 
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-test_session_factory = async_sessionmaker(
-    test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+_test_engine = None
+_test_session_factory = None
+
+
+def _get_test_engine():
+    global _test_engine
+    if _test_engine is None:
+        _test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    return _test_engine
+
+
+def _get_test_session_factory():
+    global _test_session_factory
+    if _test_session_factory is None:
+        _test_session_factory = async_sessionmaker(
+            _get_test_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
+    return _test_session_factory
 
 
 async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with test_session_factory() as session:
+    async with _get_test_session_factory()() as session:
         try:
             yield session
             await session.commit()
@@ -45,17 +61,24 @@ def anyio_backend() -> str:
 @pytest.fixture(autouse=True)
 async def setup_database() -> AsyncGenerator[None, None]:
     """Create all tables before each test and drop them after."""
-    async with test_engine.begin() as conn:
+    global _test_engine, _test_session_factory
+    _test_engine = None
+    _test_session_factory = None
+    engine = _get_test_engine()
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
-    async with test_engine.begin() as conn:
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+    _test_engine = None
+    _test_session_factory = None
 
 
 @pytest.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """Provide a clean database session for tests."""
-    async with test_session_factory() as session:
+    async with _get_test_session_factory()() as session:
         yield session
 
 

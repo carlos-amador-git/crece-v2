@@ -23,7 +23,7 @@ from app.models.dirigente import Dirigente
 from app.models.social import SocialProfile, SocialPost, Platform, PostType, SentimentLabel
 from app.models.electoral import SeccionElectoral, IntencionVoto
 from app.models.benchmark import Competidor, CompetidorSocialProfile
-from app.models.plan_ia import PlanIA, PlanTipo
+from app.models.plan_ia import PlanIA, TipoPlan
 from app.models.ciudadano import Ciudadano, RangoEdad, Genero, NivelInteres
 from app.models.evento import Evento, EventoAsistente, TipoEvento, EstadoEvento
 from app.models.programa_social import ProgramaSocial, ProgramaBeneficiario, NivelGobierno
@@ -39,21 +39,21 @@ async def seed():
             email="admin@consultoriamd.com",
             hashed_password=hash_password("crece2026!"),
             full_name="Marx Chávez",
-            role=Role.admin,
+            role=Role.ADMIN,
             is_active=True,
         )
         analyst = User(
             email="analista@consultoriamd.com",
             hashed_password=hash_password("analista2026!"),
             full_name="Ana García",
-            role=Role.analyst,
+            role=Role.ANALYST,
             is_active=True,
         )
         field_op = User(
             email="campo@consultoriamd.com",
             hashed_password=hash_password("campo2026!"),
             full_name="Carlos López",
-            role=Role.field_operator,
+            role=Role.FIELD_OPERATOR,
             is_active=True,
         )
         session.add_all([admin, analyst, field_op])
@@ -82,7 +82,7 @@ async def seed():
         # ── Social Profiles: Piña ─────────────────────────────────
         pina_twitter = SocialProfile(
             dirigente_id=pina.id,
-            platform=Platform.twitter,
+            platform=Platform.TWITTER,
             handle="@Alejandro_Pinha",
             url="https://x.com/Alejandro_Pinha",
             followers_count=3100,
@@ -91,7 +91,7 @@ async def seed():
         )
         pina_instagram = SocialProfile(
             dirigente_id=pina.id,
-            platform=Platform.instagram,
+            platform=Platform.INSTAGRAM,
             handle="@alejandro.pinha",
             url="https://instagram.com/alejandro.pinha",
             followers_count=2231,
@@ -100,7 +100,7 @@ async def seed():
         )
         pina_facebook = SocialProfile(
             dirigente_id=pina.id,
-            platform=Platform.facebook,
+            platform=Platform.FACEBOOK,
             handle="alejandropinamedina",
             url="https://facebook.com/alejandropinamedina",
             followers_count=1800,
@@ -111,7 +111,7 @@ async def seed():
         # ── Social Profiles: Solano ───────────────────────────────
         solano_instagram = SocialProfile(
             dirigente_id=solano.id,
-            platform=Platform.instagram,
+            platform=Platform.INSTAGRAM,
             handle="@rafasolanoperez",
             url="https://instagram.com/rafasolanoperez",
             followers_count=450,
@@ -120,7 +120,7 @@ async def seed():
         )
         solano_linkedin = SocialProfile(
             dirigente_id=solano.id,
-            platform=Platform.twitter,  # closest mapping
+            platform=Platform.TWITTER,  # closest mapping
             handle="@rafasolanoperez",
             url="https://x.com/rafasolanoperez",
             followers_count=170,
@@ -141,7 +141,7 @@ async def seed():
                 profile_id=pina_twitter.id,
                 platform_post_id="tw_pina_001",
                 content="La Ciudad de México necesita un transporte digno. Desde @MovCiudadanoCMX seguimos trabajando por soluciones reales. #CDMX #TransporteDigno",
-                post_type=PostType.text,
+                post_type=PostType.TEXT,
                 published_at=now - timedelta(days=1),
                 likes=45,
                 comments=8,
@@ -149,14 +149,14 @@ async def seed():
                 views=2300,
                 engagement_rate=2.82,
                 sentiment_score=0.72,
-                sentiment_label=SentimentLabel.positive,
+                sentiment_label=SentimentLabel.POSITIVE,
                 is_political=True,
             ),
             SocialPost(
                 profile_id=pina_twitter.id,
                 platform_post_id="tw_pina_002",
                 content="La inseguridad en CDMX no se resuelve con discursos. Se resuelve con presupuesto, coordinación y voluntad política. El gobierno actual nos debe respuestas.",
-                post_type=PostType.text,
+                post_type=PostType.TEXT,
                 published_at=now - timedelta(days=3),
                 likes=89,
                 comments=23,
@@ -164,14 +164,14 @@ async def seed():
                 views=5100,
                 engagement_rate=2.86,
                 sentiment_score=-0.45,
-                sentiment_label=SentimentLabel.negative,
+                sentiment_label=SentimentLabel.NEGATIVE,
                 is_political=True,
             ),
             SocialPost(
                 profile_id=pina_twitter.id,
                 platform_post_id="tw_pina_003",
                 content="Gran jornada de afiliación en Iztapalapa. MC crece porque la ciudadanía quiere opciones reales, no promesas vacías. 🍊",
-                post_type=PostType.text,
+                post_type=PostType.TEXT,
                 published_at=now - timedelta(days=5),
                 likes=67,
                 comments=15,
@@ -179,14 +179,14 @@ async def seed():
                 views=3800,
                 engagement_rate=2.89,
                 sentiment_score=0.85,
-                sentiment_label=SentimentLabel.positive,
+                sentiment_label=SentimentLabel.POSITIVE,
                 is_political=True,
             ),
             SocialPost(
                 profile_id=pina_instagram.id,
                 platform_post_id="ig_pina_001",
                 content="Recorrido por la colonia Roma. Escuchando a los vecinos, entendiendo sus problemas. Así se construye ciudadanía. #MovimientoCiudadano",
-                post_type=PostType.image,
+                post_type=PostType.IMAGE,
                 published_at=now - timedelta(days=2),
                 likes=156,
                 comments=12,
@@ -194,14 +194,14 @@ async def seed():
                 views=1800,
                 engagement_rate=7.74,
                 sentiment_score=0.65,
-                sentiment_label=SentimentLabel.positive,
+                sentiment_label=SentimentLabel.POSITIVE,
                 is_political=True,
             ),
             SocialPost(
                 profile_id=pina_facebook.id,
                 platform_post_id="fb_pina_001",
                 content="Hoy presentamos nuestra propuesta de movilidad sustentable para la CDMX en el foro organizado por la sociedad civil. El futuro es naranja.",
-                post_type=PostType.text,
+                post_type=PostType.TEXT,
                 published_at=now - timedelta(days=4),
                 likes=22,
                 comments=4,
@@ -209,7 +209,7 @@ async def seed():
                 views=800,
                 engagement_rate=1.61,
                 sentiment_score=0.55,
-                sentiment_label=SentimentLabel.positive,
+                sentiment_label=SentimentLabel.POSITIVE,
                 is_political=True,
             ),
         ]
@@ -221,7 +221,7 @@ async def seed():
                 profile_id=solano_instagram.id,
                 platform_post_id="ig_solano_001",
                 content="Fin de semana en familia. A veces hay que desconectarse para reconectarse con lo que importa.",
-                post_type=PostType.image,
+                post_type=PostType.IMAGE,
                 published_at=now - timedelta(days=2),
                 likes=45,
                 comments=8,
@@ -229,7 +229,7 @@ async def seed():
                 views=320,
                 engagement_rate=11.76,
                 sentiment_score=0.80,
-                sentiment_label=SentimentLabel.positive,
+                sentiment_label=SentimentLabel.POSITIVE,
                 is_political=False,
             ),
         ]
@@ -242,36 +242,36 @@ async def seed():
             SeccionElectoral(
                 seccion="0901-0001",
                 estado="Ciudad de México",
-                distrito_federal=1,
-                distrito_local=1,
+                distrito_federal="1",
+                distrito_local="1",
                 municipio="Azcapotzalco",
             ),
             SeccionElectoral(
                 seccion="0901-0050",
                 estado="Ciudad de México",
-                distrito_federal=3,
-                distrito_local=5,
+                distrito_federal="3",
+                distrito_local="5",
                 municipio="Coyoacán",
             ),
             SeccionElectoral(
                 seccion="0901-0100",
                 estado="Ciudad de México",
-                distrito_federal=5,
-                distrito_local=10,
+                distrito_federal="5",
+                distrito_local="10",
                 municipio="Gustavo A. Madero",
             ),
             SeccionElectoral(
                 seccion="0901-0200",
                 estado="Ciudad de México",
-                distrito_federal=8,
-                distrito_local=15,
+                distrito_federal="8",
+                distrito_local="15",
                 municipio="Iztapalapa",
             ),
             SeccionElectoral(
                 seccion="0901-0300",
                 estado="Ciudad de México",
-                distrito_federal=10,
-                distrito_local=20,
+                distrito_federal="10",
+                distrito_local="20",
                 municipio="Tlalpan",
             ),
         ]
@@ -312,7 +312,7 @@ async def seed():
 
         comp_profile = CompetidorSocialProfile(
             competidor_id=morena_cdmx.id,
-            platform=Platform.twitter,
+            platform=Platform.TWITTER,
             handle="@martlobo",
             url="https://x.com/martlobo",
             followers_count=285000,
@@ -324,7 +324,7 @@ async def seed():
         # ── Sample AI Plan ────────────────────────────────────────
         plan = PlanIA(
             dirigente_id=pina.id,
-            tipo=PlanTipo.consolidacion,
+            tipo=TipoPlan.CONSOLIDACION,
             contenido="""# Plan de Consolidación Digital — 90 Días
 ## Alejandro Piña Medina | MC CDMX
 
