@@ -258,7 +258,7 @@ async def test_trigger_scrape(
     mock_task = MagicMock()
     mock_task.id = "fake-task-id-123"
 
-    with patch("app.services.scraper_manager.scrape_profile") as mock_scrape:
+    with patch("app.workers.tasks.scrape_profile") as mock_scrape:
         mock_scrape.delay.return_value = mock_task
 
         resp = await client.post(
@@ -281,7 +281,7 @@ async def test_trigger_scrape_no_profiles(
     db_session.add(dirigente)
     await db_session.commit()
 
-    with patch("app.services.scraper_manager.scrape_profile"):
+    with patch("app.workers.tasks.scrape_profile"):
         resp = await client.post(
             f"/api/v1/social/scrape/{dirigente.id}",
             headers=auth_headers(admin_token),
