@@ -13,6 +13,8 @@ from app.core.database import Base
 # Import all models so Alembic sees them
 from app.models import (  # noqa: F401
     benchmark,
+    campana,
+    canvassing,
     ciudadano,
     dirigente,
     electoral,
@@ -25,6 +27,7 @@ from app.models import (  # noqa: F401
     gasto_electoral,
     programa_social,
     social,
+    solicitud,
     user,
     voter_score,
 )

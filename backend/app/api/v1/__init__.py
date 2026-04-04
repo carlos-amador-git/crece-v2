@@ -6,6 +6,8 @@ from app.api.v1.endpoints import (
     auth,
     benchmark,
     blindaje,
+    campanas,
+    canvassing,
     ciudadanos,
     contenido,
     dirigentes,
@@ -16,6 +18,7 @@ from app.api.v1.endpoints import (
     health,
     metricas_sociales,
     organizaciones,
+    participacion,
     planes,
     programas,
     social,
@@ -41,3 +44,6 @@ api_router.include_router(geo.router, prefix="/geo", tags=["geo"])
 api_router.include_router(voter_scoring.router, prefix="/voter-scoring", tags=["voter-scoring"])
 api_router.include_router(contenido.router, prefix="/contenido", tags=["contenido"])
 api_router.include_router(blindaje.router, prefix="/blindaje", tags=["blindaje"])
+api_router.include_router(campanas.router, prefix="/campanas", tags=["campanas"])
+api_router.include_router(canvassing.router, prefix="/canvassing", tags=["canvassing"])
+api_router.include_router(participacion.router, prefix="/participacion", tags=["participacion"])
