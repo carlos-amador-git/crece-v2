@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "CRECE Campo",
+    "slug": "crece-campo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "crece",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1e3a5f"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mdconsultoria.crececampo",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicacion para registrar encuestas y seguir rutas de canvassing.",
+        "NSLocationAlwaysUsageDescription": "Necesitamos tu ubicacion para seguir rutas de canvassing en segundo plano.",
+        "NSCameraUsageDescription": "Necesitamos acceso a la camara para fotografiar credenciales INE."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1e3a5f"
+      },
+      "package": "com.mdconsultoria.crececampo",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Necesitamos tu ubicacion para registrar encuestas y seguir rutas."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Necesitamos acceso a la camara para fotografiar credenciales INE."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

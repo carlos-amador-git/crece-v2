@@ -1,0 +1,46 @@
+{
+  "name": "n8n-nodes-crece",
+  "version": "0.1.0",
+  "description": "n8n nodes for CRECE v2.0 political intelligence platform",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "crece",
+    "political-intelligence"
+  ],
+  "license": "MIT",
+  "author": "MD Consultoría SC",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "nodes": [
+      "dist/nodes/CreceSegmentar/CreceSegmentar.node.js",
+      "dist/nodes/CreceSentimiento/CreceSentimiento.node.js",
+      "dist/nodes/CreceContenido/CreceContenido.node.js",
+      "dist/nodes/CreceCanvassing/CreceCanvassing.node.js",
+      "dist/nodes/CreceVoterScore/CreceVoterScore.node.js"
+    ],
+    "credentials": [
+      "dist/credentials/CreceApi.credentials.js"
+    ]
+  },
+  "peerDependencies": {
+    "n8n-workflow": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "n8n-workflow": "^1.60.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
