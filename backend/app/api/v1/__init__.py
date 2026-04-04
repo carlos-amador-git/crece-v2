@@ -3,13 +3,18 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    alerts_integration,
+    api_keys,
     auth,
     benchmark,
     blindaje,
     campanas,
+    campaigns_integration,
     canvassing,
     ciudadanos,
     contenido,
+    content_factory_integration,
+    crm_integration,
     dirigentes,
     electoral,
     encuestas,
@@ -23,6 +28,7 @@ from app.api.v1.endpoints import (
     programas,
     social,
     voter_scoring,
+    webhooks_integration,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -47,3 +53,9 @@ api_router.include_router(blindaje.router, prefix="/blindaje", tags=["blindaje"]
 api_router.include_router(campanas.router, prefix="/campanas", tags=["campanas"])
 api_router.include_router(canvassing.router, prefix="/canvassing", tags=["canvassing"])
 api_router.include_router(participacion.router, prefix="/participacion", tags=["participacion"])
+api_router.include_router(campaigns_integration.router, prefix="/campaigns", tags=["campaigns"])
+api_router.include_router(content_factory_integration.router, prefix="/content", tags=["content-factory"])
+api_router.include_router(alerts_integration.router, prefix="/alerts", tags=["alerts"])
+api_router.include_router(crm_integration.router, prefix="/crm", tags=["crm"])
+api_router.include_router(webhooks_integration.router, prefix="/webhooks", tags=["webhooks"])
+api_router.include_router(api_keys.router, prefix="/api-keys", tags=["api-keys"])

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Annotated, Any
 
 import bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,9 @@ from app.core.config import settings
 from app.core.database import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/auth/login", auto_error=False
+)
 
 
 class Role(StrEnum):
@@ -111,3 +115,56 @@ class RoleChecker:
                 detail="Insufficient permissions",
             )
         return current_user
+
+
+# ── API Key + JWT dual auth ──────────────────────────────
+
+
+async def get_current_user_or_api_key(
+    request: Request,
+    token: Annotated[str | None, Depends(oauth2_scheme_optional)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Any:
+    """Authenticate via JWT token OR X-API-Key header.
+
+    JWT: Standard bearer token auth for web dashboard.
+    API Key: For n8n and external integrations via X-API-Key header.
+    """
+    from app.models.api_key import ApiKey  # avoid circular import
+    from app.models.user import User  # avoid circular import
+
+    # 1. Check X-API-Key header first
+    api_key_raw = request.headers.get("X-API-Key")
+    if api_key_raw:
+        key_hash = hashlib.sha256(api_key_raw.encode()).hexdigest()
+        result = await db.execute(
+            select(ApiKey).where(
+                ApiKey.key_hash == key_hash,
+                ApiKey.is_active.is_(True),
+            )
+        )
+        api_key_record = result.scalar_one_or_none()
+        if api_key_record is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid API key",
+            )
+        # Update last_used_at
+        api_key_record.last_used_at = datetime.now(UTC)
+        # Return the user associated with this key
+        user = await db.get(User, api_key_record.user_id)
+        if user is None or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User associated with API key is inactive",
+            )
+        return user
+
+    # 2. Fall back to JWT
+    if token:
+        return await get_current_user(token=token, db=db)
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication required",
+    )

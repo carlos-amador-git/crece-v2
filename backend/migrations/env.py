@@ -12,10 +12,15 @@ from app.core.database import Base
 
 # Import all models so Alembic sees them
 from app.models import (  # noqa: F401
+    alerta_crisis,
+    api_key,
     benchmark,
     campana,
+    campaign_integration,
     canvassing,
     ciudadano,
+    contenido_pieza,
+    crm_interaccion,
     dirigente,
     electoral,
     encuesta,
@@ -25,11 +30,13 @@ from app.models import (  # noqa: F401
     plan_ia,
     contenido,
     gasto_electoral,
+    ia_content_registry,
     programa_social,
     social,
     solicitud,
     user,
     voter_score,
+    voter_score_integration,
 )
 
 config = context.config

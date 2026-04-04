@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     # ── Blindaje Legal ───────────────────────────────────
     TOPE_CAMPANA_MXN: float = 500_000.0
 
+    # ── Webhooks ─────────────────────────────────────────
+    N8N_WEBHOOK_SECRET: str = ""
+
     # ── App ───────────────────────────────────────────────
     APP_ENV: str = "development"
     APP_DEBUG: bool = True
