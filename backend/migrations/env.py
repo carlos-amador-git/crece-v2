@@ -21,9 +21,12 @@ from app.models import (  # noqa: F401
     metrica_social,
     organizacion,
     plan_ia,
+    contenido,
+    gasto_electoral,
     programa_social,
     social,
     user,
+    voter_score,
 )
 
 config = context.config

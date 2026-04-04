@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     VEDA_ELECTORAL_INICIO: str = ""
     VEDA_ELECTORAL_FIN: str = ""
 
+    # ── Blindaje Legal ───────────────────────────────────
+    TOPE_CAMPANA_MXN: float = 500_000.0
+
     # ── App ───────────────────────────────────────────────
     APP_ENV: str = "development"
     APP_DEBUG: bool = True

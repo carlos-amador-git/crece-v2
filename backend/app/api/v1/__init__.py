@@ -5,7 +5,9 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth,
     benchmark,
+    blindaje,
     ciudadanos,
+    contenido,
     dirigentes,
     electoral,
     encuestas,
@@ -17,6 +19,7 @@ from app.api.v1.endpoints import (
     planes,
     programas,
     social,
+    voter_scoring,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -35,3 +38,6 @@ api_router.include_router(organizaciones.router, prefix="/organizaciones", tags=
 api_router.include_router(encuestas.router, prefix="/encuestas", tags=["encuestas"])
 api_router.include_router(metricas_sociales.router, prefix="/metricas-sociales", tags=["metricas-sociales"])
 api_router.include_router(geo.router, prefix="/geo", tags=["geo"])
+api_router.include_router(voter_scoring.router, prefix="/voter-scoring", tags=["voter-scoring"])
+api_router.include_router(contenido.router, prefix="/contenido", tags=["contenido"])
+api_router.include_router(blindaje.router, prefix="/blindaje", tags=["blindaje"])

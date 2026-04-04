@@ -36,6 +36,10 @@ nlp = [
     "transformers>=4.40.0",
     "torch>=2.2.0",
 ]
+ml = [
+    "scikit-learn>=1.5.0",
+    "joblib>=1.4.0",
+]
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
