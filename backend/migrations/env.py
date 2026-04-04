@@ -41,6 +41,9 @@ target_metadata = Base.metadata
 
 def include_object(object, name, type_, reflected, compare_to):
     """Exclude PostGIS internal tables from autogenerate."""
+    # Skip GeoAlchemy2 auto-created spatial indexes (they're created with the table)
+    if type_ == "index" and name and name.startswith("idx_") and reflected:
+        return False
     if type_ == "table" and name in (
         "spatial_ref_sys", "topology", "layer",
         # Tiger geocoder tables
