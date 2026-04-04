@@ -1,0 +1,54 @@
+{
+  "project": "crece-v2",
+  "version": "2.0.0",
+  "lastSession": "2026-04-03/04",
+  "state": "FASE_1_2_COMPLETE_DEPLOY_READY",
+  "repo": "https://github.com/MarxCha/crece-v2",
+  "deploy": {
+    "target": "Coolify on 163.245.208.96",
+    "compose": "docker-compose.coolify.yml",
+    "domains": {
+      "frontend": "crece.mdconsultoria-ti.org",
+      "backend": "api-crece.mdconsultoria-ti.org"
+    },
+    "responsible": "carlos-amador-git",
+    "status": "config_ready_pending_deploy"
+  },
+  "backend": {
+    "framework": "FastAPI",
+    "python": "3.12",
+    "models": 36,
+    "routes": 145,
+    "services": 12,
+    "tables": 37,
+    "tests": 123,
+    "testStatus": "all_green"
+  },
+  "frontend": {
+    "framework": "Next.js 14",
+    "pages": 16,
+    "buildStatus": "clean",
+    "designTokens": "md-design-system"
+  },
+  "mobile": {
+    "framework": "Expo SDK 51",
+    "screens": 8,
+    "status": "scaffold"
+  },
+  "integrations": {
+    "n8nNodes": 5,
+    "chatwootWebhook": true,
+    "apiKeyAuth": true
+  },
+  "knownIssues": [
+    "CrmInteraccion endpoint uses registrado_por_id but model has promotor_id — tests work around this with mock",
+    "ContentPieceResponse UUID→str coercion needs field_validator in production",
+    "Docker PostGIS image is linux/amd64 on ARM Mac — works but shows warning"
+  ],
+  "credentials": {
+    "adminEmail": "admin@consultoriamd.com",
+    "adminPassword": "crece2026!",
+    "dbPort": 5438,
+    "note": "local dev uses Docker PostGIS on port 5438 (local PG on 5432)"
+  }
+}
