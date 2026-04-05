@@ -93,6 +93,8 @@ services:
     networks:
       - default
       - coolify
+    labels:
+      - "traefik.docker.network=coolify"
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@crece-db:5432/${POSTGRES_DB:-crece_production}
       DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@crece-db:5432/${POSTGRES_DB:-crece_production}
@@ -196,6 +198,8 @@ services:
     networks:
       - default
       - coolify
+    labels:
+      - "traefik.docker.network=coolify"
     environment:
       NEXT_PUBLIC_API_URL: https://api-crece.mdconsultoria-ti.org/api/v1
       NEXT_PUBLIC_MAPLIBRE_STYLE: https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json
