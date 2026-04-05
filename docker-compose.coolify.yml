@@ -35,8 +35,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crece} -d ${POSTGRES_DB:-crece_production}"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 60s
     command: >
       postgres
         -c shared_buffers=256MB
