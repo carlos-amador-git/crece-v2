@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     CLAUDE_API_KEY: str = ""
     CLAUDE_MODEL: str = "claude-sonnet-4-20250514"
 
+    # ── Ollama (local AI) ────────────────────────────────
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "gemma4:27b"
+    AI_PROVIDER: str = "claude"  # "claude" | "ollama"
+
     # ── YouTube Data API v3 ──────────────────────────────
     YOUTUBE_API_KEY: str = ""
 

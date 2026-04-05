@@ -5,6 +5,7 @@ import logging
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 
+import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -98,7 +99,7 @@ async def _gather_context(db: AsyncSession, dirigente: Dirigente) -> dict:
 
 
 def _build_prompt(tipo: TipoPlan, context: dict, extra: str | None = None) -> str:
-    """Build a structured prompt from real data for Claude."""
+    """Build a structured prompt from real data."""
     context_json = json.dumps(context, indent=2, ensure_ascii=False, default=str)
 
     tipo_instructions = {
@@ -150,34 +151,113 @@ mexicano. Tu cliente es un dirigente del partido Movimiento Ciudadano (MC).
     return prompt
 
 
+# ── Provider: Claude API ─────────────────────────────────────────────
+
+
+async def _generate_claude(prompt: str) -> str:
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
+    message = client.messages.create(
+        model=settings.CLAUDE_MODEL,
+        max_tokens=4096,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return message.content[0].text
+
+
+async def _stream_claude(prompt: str) -> AsyncGenerator[str, None]:
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
+    with client.messages.stream(
+        model=settings.CLAUDE_MODEL,
+        max_tokens=4096,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        for text in stream.text_stream:
+            yield text
+
+
+# ── Provider: Ollama (Gemma 4 local) ────────────────────────────────
+
+
+async def _generate_ollama(prompt: str) -> str:
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        resp = await client.post(
+            f"{settings.OLLAMA_BASE_URL}/api/generate",
+            json={
+                "model": settings.OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+            },
+        )
+        resp.raise_for_status()
+        return resp.json()["response"]
+
+
+async def _stream_ollama(prompt: str) -> AsyncGenerator[str, None]:
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        async with client.stream(
+            "POST",
+            f"{settings.OLLAMA_BASE_URL}/api/generate",
+            json={
+                "model": settings.OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": True,
+            },
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if line:
+                    chunk = json.loads(line)
+                    if chunk.get("response"):
+                        yield chunk["response"]
+
+
+# ── Provider router ──────────────────────────────────────────────────
+
+
+def _get_provider() -> str:
+    return settings.AI_PROVIDER
+
+
+def _get_model_name() -> str:
+    provider = _get_provider()
+    if provider == "ollama":
+        return f"ollama/{settings.OLLAMA_MODEL}"
+    return settings.CLAUDE_MODEL
+
+
+# ── Public API ───────────────────────────────────────────────────────
+
+
 async def generate_plan(
     db: AsyncSession,
     dirigente: Dirigente,
     tipo: TipoPlan,
     user: User,
     contexto_adicional: str | None = None,
+    provider_override: str | None = None,
 ) -> PlanIA:
-    """Generate an AI plan using Claude and persist it."""
-    import anthropic
-
+    """Generate an AI plan and persist it. Uses configured provider or override."""
     context = await _gather_context(db, dirigente)
     prompt = _build_prompt(tipo, context, contexto_adicional)
 
-    client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
+    provider = provider_override or _get_provider()
 
-    message = client.messages.create(
-        model=settings.CLAUDE_MODEL,
-        max_tokens=4096,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    if provider == "ollama":
+        contenido = await _generate_ollama(prompt)
+    else:
+        contenido = await _generate_claude(prompt)
 
-    contenido = message.content[0].text
+    model_name = f"ollama/{settings.OLLAMA_MODEL}" if provider == "ollama" else settings.CLAUDE_MODEL
 
     plan = PlanIA(
         dirigente_id=dirigente.id,
         tipo=tipo,
         contenido=contenido,
-        modelo_ia=settings.CLAUDE_MODEL,
+        modelo_ia=model_name,
         prompt_usado=prompt,
         datos_entrada=context,
         generado_por_id=user.id,
@@ -194,32 +274,31 @@ async def generate_plan_stream(
     tipo: TipoPlan,
     user: User,
     contexto_adicional: str | None = None,
+    provider_override: str | None = None,
 ) -> AsyncGenerator[str, None]:
     """Stream plan generation via SSE-compatible chunks."""
-    import anthropic
-
     context = await _gather_context(db, dirigente)
     prompt = _build_prompt(tipo, context, contexto_adicional)
 
-    client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
-
+    provider = provider_override or _get_provider()
     collected_text = ""
 
-    with client.messages.stream(
-        model=settings.CLAUDE_MODEL,
-        max_tokens=4096,
-        messages=[{"role": "user", "content": prompt}],
-    ) as stream:
-        for text in stream.text_stream:
-            collected_text += text
-            yield f"data: {json.dumps({'text': text})}\n\n"
+    if provider == "ollama":
+        stream_fn = _stream_ollama(prompt)
+    else:
+        stream_fn = _stream_claude(prompt)
 
-    # Persist the completed plan
+    async for text in stream_fn:
+        collected_text += text
+        yield f"data: {json.dumps({'text': text})}\n\n"
+
+    model_name = f"ollama/{settings.OLLAMA_MODEL}" if provider == "ollama" else settings.CLAUDE_MODEL
+
     plan = PlanIA(
         dirigente_id=dirigente.id,
         tipo=tipo,
         contenido=collected_text,
-        modelo_ia=settings.CLAUDE_MODEL,
+        modelo_ia=model_name,
         prompt_usado=prompt,
         datos_entrada=context,
         generado_por_id=user.id,
