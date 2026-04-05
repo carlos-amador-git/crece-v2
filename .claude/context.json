@@ -1,8 +1,8 @@
 {
   "project": "crece-v2",
   "version": "2.0.0",
-  "lastSession": "2026-04-03/04",
-  "state": "FASE_1_2_COMPLETE_DEPLOY_READY",
+  "lastSession": "2026-04-05",
+  "state": "FASE_1_2_COMPLETE_OLLAMA_INTEGRATED",
   "repo": "https://github.com/MarxCha/crece-v2",
   "deploy": {
     "target": "Coolify on 163.245.208.96",
@@ -22,7 +22,8 @@
     "services": 12,
     "tables": 37,
     "tests": 123,
-    "testStatus": "all_green"
+    "testStatus": "all_green",
+    "aiProviders": ["claude", "ollama"]
   },
   "frontend": {
     "framework": "Next.js 14",
@@ -38,7 +39,13 @@
   "integrations": {
     "n8nNodes": 5,
     "chatwootWebhook": true,
-    "apiKeyAuth": true
+    "apiKeyAuth": true,
+    "ollamaLocal": true
+  },
+  "aiEcosystem": {
+    "claude": "architecture, planning, complex decisions (subscription)",
+    "gemini": "codebase analysis 1M tokens, cross-audit (API free tier)",
+    "ollama": "Gemma 4 27B local — copywriting, sensitive data, $0 cost"
   },
   "knownIssues": [
     "CrmInteraccion endpoint uses registrado_por_id but model has promotor_id — tests work around this with mock",

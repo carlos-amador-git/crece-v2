@@ -61,7 +61,7 @@ export default function DirigentesPage() {
   const filtered = search
     ? dirigentes.filter(
         (d) =>
-          `${d.nombre} ${d.apellido_paterno}`
+          d.full_name
             .toLowerCase()
             .includes(search.toLowerCase()) ||
           d.cargo.toLowerCase().includes(search.toLowerCase())
@@ -185,8 +185,7 @@ export default function DirigentesPage() {
                 {filtered.map((d) => (
                   <TableRow key={d.id}>
                     <TableCell className="font-medium">
-                      {d.nombre} {d.apellido_paterno}
-                      {d.apellido_materno ? ` ${d.apellido_materno}` : ""}
+                      {d.full_name}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {d.cargo}
@@ -195,18 +194,18 @@ export default function DirigentesPage() {
                       <Badge variant="secondary">{d.partido}</Badge>
                     </TableCell>
                     <TableCell className="text-center tabular-nums">
-                      <IpdScoreBadge score={d.ipd_score} size="sm" />
+                      <IpdScoreBadge score={d.ipd_score ?? 0} size="sm" />
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1.5">
-                        {d.platforms.map((p) => (
-                          <PlatformIcon key={p} platform={p} size={14} />
+                        {d.social_profiles?.map((sp) => (
+                          <PlatformIcon key={sp.platform} platform={sp.platform} size={14} />
                         ))}
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {d.last_activity
-                        ? formatRelativeTime(d.last_activity)
+                      {d.updated_at
+                        ? formatRelativeTime(d.updated_at)
                         : "Sin actividad"}
                     </TableCell>
                     <TableCell>

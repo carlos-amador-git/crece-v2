@@ -10,10 +10,13 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ dirigente }: ProfileHeaderProps) {
-  const initials = `${dirigente.nombre[0]}${dirigente.apellido_paterno[0]}`;
-  const fullName = `${dirigente.nombre} ${dirigente.apellido_paterno}${
-    dirigente.apellido_materno ? ` ${dirigente.apellido_materno}` : ""
-  }`;
+  const initials = dirigente.full_name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const fullName = dirigente.full_name;
 
   return (
     <div className="rounded-lg border bg-card p-6">
@@ -31,7 +34,7 @@ export function ProfileHeader({ dirigente }: ProfileHeaderProps) {
               <h1 className="font-heading text-2xl font-bold">{fullName}</h1>
               <p className="text-muted-foreground">{dirigente.cargo}</p>
             </div>
-            <IpdScoreBadge score={dirigente.ipd_score} size="lg" />
+            <IpdScoreBadge score={dirigente.ipd_score ?? 0} size="lg" />
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">

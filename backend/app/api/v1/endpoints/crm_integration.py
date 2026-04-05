@@ -41,7 +41,7 @@ async def create_interaction(
         notas=payload.notas,
         referencia_tipo=payload.referencia_tipo,
         referencia_id=payload.referencia_id,
-        registrado_por_id=current_user.id,
+        promotor_id=current_user.id,
         org_id=current_user.org_id,
     )
     db.add(interaccion)

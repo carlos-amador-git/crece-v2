@@ -6,8 +6,8 @@
 export interface User {
   id: number;
   email: string;
-  nombre: string;
-  rol: "admin" | "analista" | "consultor";
+  full_name: string;
+  role: "admin" | "analyst" | "field_operator" | "viewer";
   avatar_url?: string;
   is_active: boolean;
 }
@@ -25,17 +25,15 @@ export interface LoginCredentials {
 
 export interface Dirigente {
   id: number;
-  nombre: string;
-  apellido_paterno: string;
-  apellido_materno?: string;
+  full_name: string;
   cargo: string;
   partido: string;
   estado: string;
   municipio?: string;
+  seccion_electoral?: string;
+  social_profiles: SocialAccount[];
   avatar_url?: string;
-  ipd_score: number;
-  platforms: SocialPlatform[];
-  last_activity?: string;
+  ipd_score?: number;
   created_at: string;
   updated_at: string;
 }

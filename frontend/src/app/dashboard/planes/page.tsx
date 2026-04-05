@@ -250,7 +250,7 @@ export default function PlanesPage() {
                 <SelectContent>
                   {dirigentesForSelect.map((d) => (
                     <SelectItem key={d.id} value={String(d.id)}>
-                      {d.nombre} {d.apellido_paterno}
+                      {d.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>

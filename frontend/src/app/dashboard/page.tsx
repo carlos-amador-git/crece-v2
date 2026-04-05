@@ -117,7 +117,7 @@ export default function OverviewPage() {
   const kpiData = kpi ?? DEFAULT_KPI;
   const trendData = sentimentData ?? [];
   const topData =
-    topDirigentes?.map((d) => ({ name: d.nombre, value: d.ipd_score })) ?? [];
+    topDirigentes?.map((d) => ({ name: d.full_name, value: d.ipd_score ?? 0 })) ?? [];
   const posts = postsData?.items ?? [];
 
   const hasActiveAlerts = kpiData.active_alerts > 0;
@@ -342,7 +342,7 @@ export default function OverviewPage() {
                       className="tabular-nums text-sm font-semibold"
                       data-numeric="true"
                     >
-                      {item.value.toFixed(1)}
+                      {(item.value ?? 0).toFixed(1)}
                     </span>
                   </div>
                 ))}

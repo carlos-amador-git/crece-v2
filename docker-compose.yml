@@ -23,7 +23,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crece_dev}
       POSTGRES_DB: ${POSTGRES_DB:-crece}
     ports:
-      - "5432:5432"
+      - "5438:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
@@ -43,7 +43,7 @@ services:
     container_name: crece-redis
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
-      - "6379:6379"
+      - "6383:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -64,8 +64,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9006:9000"
+      - "9007:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -89,7 +89,14 @@ services:
         --reload
         --reload-dir /app
     ports:
-      - "8000:8000"
+      - "8002:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://crece:crece_dev@db:5432/crece
+      DATABASE_URL_SYNC: postgresql://crece:crece_dev@db:5432/crece
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
     volumes:
       - ./backend:/app
     depends_on:
@@ -112,6 +119,13 @@ services:
         -Q default,scrapers,nlp
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://crece:crece_dev@db:5432/crece
+      DATABASE_URL_SYNC: postgresql://crece:crece_dev@db:5432/crece
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
     volumes:
       - ./backend:/app
     depends_on:
@@ -131,6 +145,12 @@ services:
       celery -A app.workers.celery_app beat
         -l info
         --schedule=/tmp/celerybeat-schedule
+    environment:
+      DATABASE_URL: postgresql+asyncpg://crece:crece_dev@db:5432/crece
+      DATABASE_URL_SYNC: postgresql://crece:crece_dev@db:5432/crece
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
     volumes:
       - ./backend:/app
     depends_on:
@@ -169,7 +189,7 @@ services:
     container_name: crece-frontend
     command: npm run dev
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
       NEXT_PUBLIC_MAPLIBRE_STYLE: ${NEXT_PUBLIC_MAPLIBRE_STYLE:-https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json}

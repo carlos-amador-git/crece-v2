@@ -22,7 +22,8 @@ export function SentimentBadge({
   score,
   showIcon = true,
 }: SentimentBadgeProps) {
-  const config = sentimentConfig[sentiment];
+  const key = sentiment?.toLowerCase() as SentimentType;
+  const config = sentimentConfig[key] ?? sentimentConfig.neutral;
   const Icon = config.icon;
 
   return (
