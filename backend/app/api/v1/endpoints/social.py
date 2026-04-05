@@ -28,8 +28,8 @@ async def list_posts(
     db: Annotated[AsyncSession, Depends(get_db)],
     _current_user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int | None = None,
-    platform: Platform | None = None,
-    sentiment: SentimentLabel | None = None,
+    platform: str | None = None,
+    sentiment: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     is_political: bool | None = None,
@@ -43,13 +43,17 @@ async def list_posts(
         .join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
     )
 
+    # Normalize case-insensitive enum params
+    platform_enum = Platform(platform.upper()) if platform else None
+    sentiment_enum = SentimentLabel(sentiment.upper()) if sentiment else None
+
     filters = []
     if dirigente_id is not None:
         filters.append(SocialProfile.dirigente_id == dirigente_id)
-    if platform is not None:
-        filters.append(SocialProfile.platform == platform)
-    if sentiment is not None:
-        filters.append(SocialPost.sentiment_label == sentiment)
+    if platform_enum is not None:
+        filters.append(SocialProfile.platform == platform_enum)
+    if sentiment_enum is not None:
+        filters.append(SocialPost.sentiment_label == sentiment_enum)
     if date_from is not None:
         filters.append(SocialPost.published_at >= date_from)
     if date_to is not None:
