@@ -14,6 +14,7 @@ from app.models.alerta_crisis import AlertaCrisis
 from app.models.dirigente import Dirigente
 from app.models.social import SocialPost
 from app.models.user import User
+from app.services.diagnostico import calculate_ipd
 
 router = APIRouter()
 
@@ -62,15 +63,20 @@ async def get_overview(
         total_result = await db.execute(select(func.count(Dirigente.id)))
         total_dirigentes = total_result.scalar() or 0
 
-    # Avg IPD proxy
+    # Avg IPD — real calculation via diagnostico service
     avg_ipd = 0.0
     if total_dirigentes > 0:
-        profile_query = select(func.count(SocialProfile.id))
+        dirigente_query = select(Dirigente)
         if user_dirigente_id:
-            profile_query = profile_query.where(SocialProfile.dirigente_id == user_dirigente_id)
-        total_profiles = await db.execute(profile_query)
-        n_profiles = total_profiles.scalar() or 0
-        avg_ipd = round(min(n_profiles / 6.0 * 10.0, 10.0), 1)
+            dirigente_query = dirigente_query.where(Dirigente.id == user_dirigente_id)
+        dirigentes_result = await db.execute(dirigente_query)
+        dirigentes_list = list(dirigentes_result.scalars().all())
+        if dirigentes_list:
+            ipd_sum = 0.0
+            for d in dirigentes_list:
+                diag = await calculate_ipd(db, d)
+                ipd_sum += diag.ipd_score
+            avg_ipd = round(ipd_sum / len(dirigentes_list), 1)
 
     # Posts last 24h (scoped)
     posts_query = select(func.count(SocialPost.id)).where(SocialPost.scraped_at >= last_24h)
