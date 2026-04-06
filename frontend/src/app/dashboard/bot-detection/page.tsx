@@ -102,14 +102,19 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 export default function HealthDigitalPage() {
   const [selectedDirigente, setSelectedDirigente] = useState("");
+  const [showAnomalies, setShowAnomalies] = useState(false);
   const { data: dirigentesData } = useDirigentes();
   const dirigentes = dirigentesData?.items ?? [];
 
+  // Auto-select first dirigente (user's own if they have one)
+  const firstDirigenteId = dirigentes.length > 0 ? String(dirigentes[0].id) : "";
+  const effectiveDirigente = selectedDirigente || firstDirigenteId;
+
   const { data: analysis, isLoading, refetch } = useQuery({
-    queryKey: ["health-analysis", selectedDirigente],
+    queryKey: ["health-analysis", effectiveDirigente],
     queryFn: () =>
-      api.get<HealthAnalysis>(`/bot-detection/analyze/${selectedDirigente}`),
-    enabled: !!selectedDirigente,
+      api.get<HealthAnalysis>(`/bot-detection/analyze/${effectiveDirigente}`),
+    enabled: !!effectiveDirigente,
   });
 
   const hasData = analysis && analysis.profiles.length > 0;
@@ -124,7 +129,7 @@ export default function HealthDigitalPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={selectedDirigente} onValueChange={setSelectedDirigente}>
+          <Select value={effectiveDirigente} onValueChange={setSelectedDirigente}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Seleccionar dirigente" />
             </SelectTrigger>
@@ -138,7 +143,7 @@ export default function HealthDigitalPage() {
           </Select>
           <Button
             className="gap-2"
-            disabled={!selectedDirigente || isLoading}
+            disabled={!effectiveDirigente || isLoading}
             onClick={() => refetch()}
           >
             {isLoading ? (
@@ -178,10 +183,49 @@ export default function HealthDigitalPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Puntuacion global de salud digital — {analysis.profiles.length} perfiles analizados
-                  {analysis.anomalies.length > 0 && `, ${analysis.anomalies.length} anomalias detectadas`}
                 </p>
               </div>
+              <div className="ml-auto flex flex-col items-center">
+                <button
+                  onClick={() => analysis.anomalies.length > 0 && setShowAnomalies(!showAnomalies)}
+                  className={`flex flex-col items-center rounded-lg px-4 py-2 transition-colors ${
+                    analysis.anomalies.length > 0
+                      ? "cursor-pointer hover:bg-black/5 dark:hover:bg-white/5"
+                      : ""
+                  }`}
+                >
+                  <span className={`font-heading text-2xl font-bold tabular-nums ${
+                    analysis.anomalies.length > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"
+                  }`}>
+                    {analysis.anomalies.length}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {analysis.anomalies.length === 1 ? "anomalia" : "anomalias"}
+                  </span>
+                </button>
+              </div>
             </div>
+            {showAnomalies && analysis.anomalies.length > 0 && (
+              <div className="mt-4 space-y-2 border-t pt-4">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Anomalias detectadas:</p>
+                {analysis.anomalies.map((a, i) => (
+                  <div key={i} className="flex items-start gap-3 rounded-md bg-red-50 dark:bg-red-950/20 p-3 text-sm">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-red-800 dark:text-red-200">
+                        @{a.handle} ({a.platform})
+                      </p>
+                      <p className="text-red-700 dark:text-red-300 text-xs">{a.description}</p>
+                      {a.content_preview && (
+                        <p className="text-red-600/70 dark:text-red-400/70 text-xs mt-1 italic truncate">
+                          {a.content_preview}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

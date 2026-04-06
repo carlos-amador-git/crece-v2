@@ -88,3 +88,4 @@ celerybeat.pid
 *.db
 !*.db.example
 backend/vendor/
+.vercel
