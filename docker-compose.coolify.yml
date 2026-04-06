@@ -105,7 +105,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: crece-files
       MINIO_SECURE: "false"
-      CORS_ORIGINS: '["https://crece.mdconsultoria-ti.org","http://localhost:3000"]'
+      CORS_ORIGINS: '["https://crece.mdconsultoria-ti.org","https://frontend-zeta-sepia-46.vercel.app","http://localhost:3000"]'
       APP_ENV: production
       APP_DEBUG: "false"
       APP_TITLE: "CRECE v2.0"
@@ -113,6 +113,8 @@ services:
       VEDA_ELECTORAL_ACTIVE: "false"
       TOPE_CAMPANA_MXN: "500000"
       N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
+      OLLAMA_BASE_URL: http://163.245.208.96:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:12b}
     depends_on:
       db:
         condition: service_healthy
