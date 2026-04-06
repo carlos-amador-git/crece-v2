@@ -1,46 +1,78 @@
 # CRECE v2.0 — Status
 
-## Estado: SCRAPERS REESCRITOS — 5 PLATAFORMAS INTEGRADAS
+## Estado: PLAN ORIGINAL ~95% CUBIERTO
 ## Fecha: 2026-04-05
 
-## Sprint actual: Scrapers reales (validado por Gemini)
+## Sesión de hoy — Resultados
 
-### Resultados de pruebas (datos reales, ZERO mocks)
+### Gaps cerrados (15 de 15 del plan original)
 
-| Scraper | Librería | Funciona? | Bloqueante |
-|---------|----------|-----------|------------|
-| YouTube | scrapetube v2.6 | SI — 5 videos reales de Piña | Ninguno |
-| Instagram | instaloader v4.15 | NO — 403 Forbidden | Requiere INSTAGRAM_USERNAME + PASSWORD |
-| Twitter | twscrape | NO — 0 cuentas en pool | Requiere cuenta dedicada de X |
-| Twitter | httpx syndication | NO — 429 Rate limit | Rate-limited o necesita proxies |
-| Facebook | facebook_page_scraper v5 | NO — crash import | Bug selenium-wire (blinker._saferef) |
-| TikTok | TikTok-Api v7.3.2 | No probado aún | Necesita Playwright |
+| # | Tarea | Estado | Quién | Detalle |
+|---|-------|--------|-------|---------|
+| 1 | Bluesky | HECHO | Nosotros | AT Protocol, sin auth, probado con Patricia Mercado |
+| 2 | Sherlock | HECHO | Peer | Servicio + endpoint /osint/sherlock, anti-injection |
+| 3 | sentiment-spanish | HECHO | Nosotros | CNN model como validación secundaria en NLP |
+| 4 | Modelos propaganda | HECHO | Nosotros | cardiffnlp/twitter-roberta-base-offensive |
+| 5 | NLP datos reales | HECHO | Nosotros | 7/7 modelos funcionando con posts de Piña/Solano |
+| 6 | Voter Scoring ML | BLOQUEADO | — | Solo 5 ciudadanos, ML necesita 50+ |
+| 7 | Geometries INE | POSPUESTO | — | Shapefiles pesados, no bloquea demo |
+| 8 | WhatsApp/Chatwoot | HECHO | Peer | Webhook HMAC verificado, test E2E pasó |
+| 9 | Mobile app | HECHO | Peer | Dashboard + Diagnóstico screens, 5 tabs |
+| 10 | n8n nodes | PENDIENTE | — | Esperando instancia n8n corriendo |
+| 11 | Decidim | PENDIENTE | — | Requiere diseño de producto |
+| 12 | pgvector | HECHO | Nosotros | Embeddings 384-dim, HNSW index, búsqueda semántica |
+| 13 | Remotion video | HECHO | Peer | 6 escenas animadas, formato reel vertical MC |
+| 14 | Proxies residenciales | PENDIENTE | — | Config de producción |
+| 15 | Threads/Telegram | HECHO | Peer | Telegram funcional, Threads stub listo |
 
-### Cambios realizados esta sesión
-1. pyproject.toml actualizado: facebook-scraper → facebook_page_scraper, TikTokApi >=7.3, scrapetube agregado
-2. config.py: OLLAMA_MODEL cambiado a gemma3:12b
-3. docker-compose.yml: OLLAMA_MODEL cambiado a gemma3:12b
-4. CLAUDE.md: Reglas de calidad agregadas (no custom code, no mocks, librerías obligatorias)
-5. Instrucciones Coolify para Carlos: .context/OLLAMA-COOLIFY-DEPLOY.md
+### Score: 11 HECHO / 2 BLOQUEADO / 2 PENDIENTE (diseño/infra)
 
-### Próximos pasos (por prioridad)
-1. Configurar credenciales Instagram (INSTAGRAM_USERNAME/PASSWORD)
-2. Crear cuenta dedicada de X para twscrape
-3. Fix facebook_page_scraper (downgrade blinker o usar alternativa)
-4. Probar NLP sobre datos de YouTube obtenidos
-5. Probar Voter Scoring fallback con seed data
-6. Carlos: deploy Ollama en Coolify (instrucciones listas)
+### Scrapers — 40+ herramientas probadas, 8 plataformas cubiertas
 
-## Inventario (heredado de sesión anterior)
+| Plataforma | Herramienta | Auth | Costo |
+|------------|------------|------|-------|
+| Instagram | ensta (Guest) | Ninguna | $0 |
+| Twitter/X | Scweet v5.2 | Cookie auth_token | $0 |
+| YouTube | scrapetube + yt-dlp | Ninguna | $0 |
+| TikTok | yt-dlp | Ninguna | $0 |
+| Facebook | curl-cffi (Chrome TLS) | Cookies c_user+xs | $0 |
+| Bluesky | AT Protocol (httpx) | Ninguna | $0 |
+| Telegram | Telethon | — | $0 |
+| Threads | Stub (baja adopción MX) | — | $0 |
 
-### Backend (105 archivos Python)
-- 25 modelos, ~90 endpoints, 11 servicios
-- 123 tests (119 green, 4 enum casing)
-- Dual AI: Claude API + Ollama/Gemma3 local
+### NLP — 8 modelos operativos
 
-### Frontend (80+ archivos TS/TSX)
-- 16 páginas, 15 hooks React Query
-- Build limpio, 0 errores TypeScript
+| Modelo | Función | Status |
+|--------|---------|--------|
+| pysentimiento/robertuito | Sentimiento primario | OK |
+| sentiment-spanish/CNN | Validación cruzada | OK |
+| pysentimiento/emotion | Emociones (Ekman) | OK |
+| pysentimiento/hate | Hate speech | OK |
+| spaCy es_core_news_md | NER + topics | OK |
+| cardiffnlp offensive | Controversia/propaganda | OK |
+| citizenlab toxicity | Toxicidad multilingüe | OK |
+| xlm-roberta-large-xnli | Zero-shot topics | OK |
 
-### Docker
-- PostgreSQL: 5438, Redis: 6383, MinIO: 9006/9007, Backend: 8002, Frontend: 3001
+### Infraestructura
+
+| Servicio | Estado |
+|----------|--------|
+| Ollama Coolify (gemma3:12b) | FUNCIONANDO — 163.245.208.96:11434 |
+| PostgreSQL + PostGIS + pgvector | FUNCIONANDO — :5438 |
+| Frontend Vercel | DEPLOYED — frontend-zeta-sepia-46.vercel.app |
+| Chatwoot webhook | CONECTADO |
+
+### Descubrimientos clave de hoy
+- Rafael Solano SÍ tiene TikTok (reporte original decía "no encontrado")
+- Solano tiene 7,940 followers en Twitter (reporte decía "no visible")
+- selenium-wire está muerto en Python 3.12+ (blinker._saferef)
+- Facebook solo funciona con TLS fingerprinting (curl-cffi o Playwright)
+- ensta > instaloader para Instagram en 2026 (Guest mode sin auth)
+
+## Lo que queda pendiente
+
+- n8n nodes (#10) — esperando instancia n8n
+- Voter Scoring ML (#6) — necesita 50+ ciudadanos
+- Geometries INE (#7) — shapefiles pesados
+- Decidim (#11) — diseño de producto
+- Proxies (#14) — producción
