@@ -109,6 +109,15 @@ export default function ScoringPage() {
         </Button>
       </header>
 
+      {/* Data source notice */}
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+        <p className="font-medium">Datos sinteticos — INEGI Censo 2020 CDMX</p>
+        <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+          606 ciudadanos generados con distribuciones demograficas verificables (edad, genero, escolaridad por alcaldia).
+          En produccion, cada dirigente vera solo los ciudadanos de sus secciones electorales asignadas.
+        </p>
+      </div>
+
       {/* KPI Cards */}
       <section
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
