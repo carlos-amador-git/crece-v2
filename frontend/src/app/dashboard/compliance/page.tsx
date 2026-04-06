@@ -27,6 +27,7 @@ import {
   type AlertaSeveridad,
 } from "@/lib/api/hooks/use-compliance";
 import { formatNumber, formatDate } from "@/lib/utils";
+import { ImportGastosDialog } from "@/components/compliance/import-gastos-dialog";
 import {
   Shield,
   DollarSign,
@@ -35,6 +36,7 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Upload,
 } from "lucide-react";
 
 function severityVariant(s: AlertaSeveridad) {
@@ -60,6 +62,7 @@ export default function CompliancePage() {
   const { data: alertas, isLoading: alertasLoading } = useAlertas();
   const runAudit = useRunAudit();
   const [running, setRunning] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const handleRunAudit = async () => {
     setRunning(true);
@@ -87,14 +90,20 @@ export default function CompliancePage() {
             Monitoreo de cumplimiento INE, gastos y deteccion de bots
           </p>
         </div>
-        <Button onClick={handleRunAudit} disabled={running} className="gap-2">
-          {running ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-          Run Audit
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
+            <Upload className="h-4 w-4" />
+            Importar Gastos
+          </Button>
+          <Button onClick={handleRunAudit} disabled={running} className="gap-2">
+            {running ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+            Run Audit
+          </Button>
+        </div>
       </header>
 
       {/* KPI Cards */}
@@ -342,6 +351,8 @@ export default function CompliancePage() {
           </div>
         </CardContent>
       </Card>
+
+      <ImportGastosDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }
