@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
-import { EngagementBarChart } from "@/components/charts/engagement-bar-chart";
 import { PostCard } from "@/components/social/post-card";
 import { useKpiOverview, useTopDirigentes, useSystemStatus } from "@/lib/api/hooks/use-overview";
 import { useSentimentTrend, useSocialPosts } from "@/lib/api/hooks/use-social";
@@ -120,9 +119,29 @@ export default function OverviewPage() {
 
   const kpiData = kpi ?? DEFAULT_KPI;
   const trendData = sentimentData ?? [];
-  const topData =
-    topDirigentes?.map((d: any) => ({ name: d.full_name, value: d.ipd_score ?? 0 })) ?? [];
   const posts = postsData?.items ?? [];
+
+  // Aggregate followers by platform across all visible dirigentes
+  const platformColors: Record<string, string> = {
+    Twitter: "#1DA1F2",
+    Instagram: "#E4405F",
+    Facebook: "#1877F2",
+    TikTok: "#000000",
+    YouTube: "#FF0000",
+    Bluesky: "#0085FF",
+  };
+  const platformData = (() => {
+    const map: Record<string, number> = {};
+    for (const d of topDirigentes ?? []) {
+      for (const p of d.social_profiles ?? []) {
+        const label = p.platform.charAt(0).toUpperCase() + p.platform.slice(1);
+        map[label] = (map[label] ?? 0) + (p.followers ?? 0);
+      }
+    }
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value, fill: platformColors[name] ?? "hsl(var(--chart-accent))" }))
+      .sort((a, b) => b.value - a.value);
+  })();
 
   const hasActiveAlerts = kpiData.active_alerts > 0;
 
@@ -312,47 +331,51 @@ export default function OverviewPage() {
           </CardContent>
         </Card>
 
-        {/* Top dirigentes by IPD */}
+        {/* Followers by platform */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Top Penetracion Digital</CardTitle>
+            <CardTitle>Seguidores por Plataforma</CardTitle>
+            <CardDescription>Audiencia total por red social</CardDescription>
           </CardHeader>
           <CardContent>
             {topLoading ? (
               <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-6 w-full" />
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full" />
                 ))}
               </div>
-            ) : topData.length === 0 ? (
+            ) : platformData.length === 0 ? (
               <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-                Sin datos de dirigentes
+                Sin perfiles sociales
               </div>
             ) : (
               <div className="space-y-3">
-                {topData.slice(0, 10).map((item, index) => (
-                  <div
-                    key={item.name}
-                    className="flex items-center gap-3"
-                  >
-                    <span
-                      className="tabular-nums flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
-                      data-numeric="true"
-                      aria-label={`Posicion ${index + 1}`}
-                    >
-                      {index + 1}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {item.name}
-                    </span>
-                    <span
-                      className="tabular-nums text-sm font-semibold"
-                      data-numeric="true"
-                    >
-                      {(item.value ?? 0).toFixed(1)}
-                    </span>
-                  </div>
-                ))}
+                {platformData.map((p) => {
+                  const max = platformData[0]?.value || 1;
+                  const pct = Math.max((p.value / max) * 100, 4);
+                  return (
+                    <div key={p.name} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{p.name}</span>
+                        <span className="tabular-nums text-muted-foreground" data-numeric="true">
+                          {formatNumber(p.value)}
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-full rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, backgroundColor: p.fill }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="mt-2 pt-2 border-t flex items-center justify-between text-sm">
+                  <span className="font-medium text-muted-foreground">Total</span>
+                  <span className="tabular-nums font-bold" data-numeric="true">
+                    {formatNumber(platformData.reduce((s, p) => s + p.value, 0))}
+                  </span>
+                </div>
               </div>
             )}
           </CardContent>
