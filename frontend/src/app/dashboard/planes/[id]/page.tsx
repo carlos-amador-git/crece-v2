@@ -34,10 +34,74 @@ const TIPO_LABELS: Record<string, { label: string; color: string; description: s
   },
 };
 
+const markdownComponents = {
+  h1: ({ children, ...props }: any) => (
+    <h1 className="mt-8 mb-4 font-heading text-2xl font-extrabold text-foreground border-b border-border pb-3" {...props}>{children}</h1>
+  ),
+  h2: ({ children, ...props }: any) => (
+    <h2 className="mt-8 mb-4 font-heading text-xl font-bold text-foreground border-b border-border pb-2" {...props}>{children}</h2>
+  ),
+  h3: ({ children, ...props }: any) => (
+    <h3 className="mt-6 mb-3 font-heading text-lg font-semibold text-foreground" {...props}>{children}</h3>
+  ),
+  h4: ({ children, ...props }: any) => (
+    <h4 className="mt-4 mb-2 font-heading text-base font-semibold text-foreground" {...props}>{children}</h4>
+  ),
+  p: ({ children, ...props }: any) => (
+    <p className="mb-3 text-sm leading-relaxed text-foreground/80" {...props}>{children}</p>
+  ),
+  strong: ({ children, ...props }: any) => (
+    <strong className="font-semibold text-foreground" {...props}>{children}</strong>
+  ),
+  em: ({ children, ...props }: any) => (
+    <em className="italic text-foreground/70" {...props}>{children}</em>
+  ),
+  ul: ({ children, ...props }: any) => (
+    <ul className="mb-4 ml-1 space-y-1.5 list-none" {...props}>{children}</ul>
+  ),
+  ol: ({ children, ...props }: any) => (
+    <ol className="mb-4 ml-1 space-y-1.5 list-decimal list-inside" {...props}>{children}</ol>
+  ),
+  li: ({ children, ...props }: any) => (
+    <li className="text-sm text-foreground/80 leading-relaxed pl-1" {...props}>
+      <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent mr-2 align-middle" />
+      {children}
+    </li>
+  ),
+  table: ({ children, ...props }: any) => (
+    <div className="my-6 overflow-x-auto rounded-lg border border-border shadow-sm">
+      <table className="w-full text-sm" {...props}>{children}</table>
+    </div>
+  ),
+  thead: ({ children, ...props }: any) => (
+    <thead className="bg-muted/60 border-b border-border" {...props}>{children}</thead>
+  ),
+  tbody: ({ children, ...props }: any) => (
+    <tbody className="divide-y divide-border/50" {...props}>{children}</tbody>
+  ),
+  tr: ({ children, ...props }: any) => (
+    <tr className="hover:bg-muted/30 transition-colors" {...props}>{children}</tr>
+  ),
+  th: ({ children, ...props }: any) => (
+    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground" {...props}>{children}</th>
+  ),
+  td: ({ children, ...props }: any) => (
+    <td className="px-4 py-2.5 text-sm text-foreground/80" {...props}>{children}</td>
+  ),
+  blockquote: ({ children, ...props }: any) => (
+    <blockquote className="my-4 border-l-4 border-accent/50 bg-accent/5 pl-4 py-3 rounded-r-md" {...props}>{children}</blockquote>
+  ),
+  hr: (props: any) => (
+    <hr className="my-6 border-border" {...props} />
+  ),
+};
+
 function PlanMarkdown({ content }: { content: string }) {
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-heading prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-table:text-sm prose-th:bg-muted/50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-border prose-table:border-border">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    <div className="max-w-none">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+        {content}
+      </ReactMarkdown>
     </div>
   );
 }
