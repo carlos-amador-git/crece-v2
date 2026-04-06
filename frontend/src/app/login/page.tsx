@@ -244,35 +244,38 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* Demo access — one-click login */}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full border-accent/30 text-accent hover:bg-accent/10 hover:text-accent transition-colors duration-150"
-            disabled={loading}
-            onClick={async () => {
-              setError(null);
-              setLoading(true);
-              try {
-                await login({ email: "admin@consultoriamd.com", password: "crece2026!" });
-                router.push("/dashboard");
-              } catch (err: unknown) {
-                const message = err instanceof Error ? err.message : "Error al acceder";
-                setError(message);
-              } finally {
-                setLoading(false);
-              }
-            }}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                Accediendo...
-              </>
-            ) : (
-              "Acceso Demo"
-            )}
-          </Button>
+          {/* Demo access buttons */}
+          <div className="space-y-2">
+            <p className="text-center text-xs font-medium text-muted-foreground">Acceso Demo</p>
+            {[
+              { label: "Administrador", email: "admin@consultoriamd.com", password: "crece2026!" },
+              { label: "Alejandro Pina", email: "pina@crece.mx", password: "demo2026!" },
+              { label: "Rafael Solano", email: "solano@crece.mx", password: "demo2026!" },
+            ].map((demo) => (
+              <Button
+                key={demo.email}
+                type="button"
+                variant="outline"
+                className="w-full border-accent/30 text-accent hover:bg-accent/10 hover:text-accent transition-colors duration-150"
+                disabled={loading}
+                onClick={async () => {
+                  setError(null);
+                  setLoading(true);
+                  try {
+                    await login({ email: demo.email, password: demo.password });
+                    router.push("/dashboard");
+                  } catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : "Error al acceder";
+                    setError(message);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                {demo.label}
+              </Button>
+            ))}
+          </div>
 
           {/* Forgot password */}
           <p className="mt-4 text-center text-sm">
