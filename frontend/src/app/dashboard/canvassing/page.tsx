@@ -132,8 +132,8 @@ export default function CanvassingPage() {
           <Card>
             <CardHeader><CardTitle>Mapa de Ruta</CardTitle><CardDescription>{selectedId ? `Ruta #${selectedId}` : "Selecciona una ruta"}</CardDescription></CardHeader>
             <CardContent>
-              <div className="flex h-[280px] items-center justify-center rounded-lg border-2 border-dashed border-muted bg-muted/30">
-                <div className="text-center"><MapPin className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">MapLibre integration TODO</p></div>
+              <div className="flex h-[180px] items-center justify-center rounded-lg border-2 border-dashed border-muted bg-muted/30">
+                <div className="text-center"><MapPin className="mx-auto mb-2 h-6 w-6 text-muted-foreground/40" /><p className="text-xs text-muted-foreground">Mapa disponible proximamente</p></div>
               </div>
             </CardContent>
           </Card>
@@ -142,7 +142,7 @@ export default function CanvassingPage() {
             <CardHeader><CardTitle>Puntos de Visita</CardTitle><CardDescription>{routeDetail ? `${routeDetail.puntos.length} puntos` : "Selecciona una ruta"}</CardDescription></CardHeader>
             <CardContent>
               {!selectedId ? (
-                <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">Selecciona una ruta para ver los puntos</div>
+                <div className="flex h-20 items-center justify-center text-sm text-muted-foreground">Selecciona una ruta para ver los puntos</div>
               ) : !routeDetail ? (
                 <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
               ) : routeDetail.puntos.length === 0 ? (
