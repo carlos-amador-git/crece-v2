@@ -34,7 +34,7 @@ async def dispatch_scrape(
     dispatched: dict[str, str] = {}
     for profile in profiles:
         task = scrape_profile.delay(profile.id, profile.platform.value)
-        dispatched[profile.platform.value] = task.id
+        dispatched[profile.platform.value.lower()] = task.id
         logger.info(
             "Dispatched scrape task %s for profile %s (%s)",
             task.id,

@@ -6,10 +6,11 @@
 export interface User {
   id: number;
   email: string;
-  nombre: string;
-  rol: "admin" | "analista" | "consultor";
+  full_name: string;
+  role: "admin" | "analyst" | "field_operator" | "viewer";
   avatar_url?: string;
   is_active: boolean;
+  dirigente_id?: number | null;
 }
 
 export interface AuthTokens {
@@ -25,17 +26,15 @@ export interface LoginCredentials {
 
 export interface Dirigente {
   id: number;
-  nombre: string;
-  apellido_paterno: string;
-  apellido_materno?: string;
+  full_name: string;
   cargo: string;
   partido: string;
   estado: string;
   municipio?: string;
+  seccion_electoral?: string;
+  social_profiles: SocialAccount[];
   avatar_url?: string;
-  ipd_score: number;
-  platforms: SocialPlatform[];
-  last_activity?: string;
+  ipd_score?: number;
   created_at: string;
   updated_at: string;
 }
@@ -96,9 +95,14 @@ export type SentimentType = "positive" | "negative" | "neutral";
 
 export interface SentimentTrend {
   date: string;
+  avg_sentiment: number;
+  post_count: number;
   positive: number;
+  positive_pct: number;
   negative: number;
+  negative_pct: number;
   neutral: number;
+  neutral_pct: number;
 }
 
 export interface SentimentDistribution {
@@ -143,18 +147,17 @@ export interface ElectoralFeature {
 export interface PlanIA {
   id: number;
   dirigente_id: number;
-  dirigente_nombre?: string;
-  tipo: PlanType;
-  titulo: string;
+  tipo: string;
   contenido: string;
-  status: PlanStatus;
+  modelo_ia: string;
+  prompt_usado: string;
+  datos_entrada: Record<string, unknown> | null;
+  generado_por_id: number;
+  aprobado: boolean;
   created_at: string;
-  updated_at: string;
-  approved_by?: string;
-  approved_at?: string;
 }
 
-export type PlanType = "crecimiento" | "crisis" | "engagement" | "posicionamiento" | "contenido";
+export type PlanType = "DIAGNOSTICO" | "CONSOLIDACION" | "CRISIS" | "CONTENIDO";
 export type PlanStatus = "draft" | "approved" | "rejected" | "executed";
 
 export interface Benchmark {

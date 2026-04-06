@@ -1,13 +1,12 @@
-"""Instagram scraper using instaloader for post and profile data.
+"""Instagram scraper using ensta (Guest mode) with instaloader fallback.
 
 Design decisions:
-- instaloader works synchronously, matching Celery worker context.
-- No login required for public profiles (degraded mode).  When credentials
-  are provided via INSTAGRAM_USERNAME / INSTAGRAM_PASSWORD env vars, the
-  scraper logs in and caches the session file for reuse.
+- Primary: ensta Guest mode — no authentication needed, works reliably in 2026.
+- Fallback: instaloader with auth (INSTAGRAM_USERNAME / INSTAGRAM_PASSWORD env vars)
+  in case ensta is unavailable or fails for a particular profile.
+- Both libraries work synchronously, matching the Celery worker context.
+- Deduplication by platform_post_id (Instagram shortcode).
 - Private profiles are detected and skipped gracefully.
-- instaloader has built-in rate-limit handling (429 retry with backoff).
-  We add our own outer retry for transient network errors.
 """
 
 from __future__ import annotations
@@ -16,7 +15,6 @@ import logging
 import os
 import time
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy import create_engine, select
@@ -34,7 +32,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 _MAX_POSTS_PER_SCRAPE = 50
 _MAX_RETRIES = 3
-_SESSION_DIR = Path.home() / ".config" / "crece" / "instaloader_sessions"
 
 
 def _get_sync_session() -> Session:
@@ -49,37 +46,83 @@ def _get_sync_session() -> Session:
 
 
 class InstagramScraper(BaseScraper):
-    """Instagram scraper powered by instaloader.
+    """Instagram scraper powered by ensta (Guest mode) with instaloader fallback.
 
-    Works without credentials for public profiles.  Set environment
-    variables INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD to enable
-    authenticated mode (needed for private profiles and higher rate limits).
+    Primary mode requires no credentials. Set environment variables
+    INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD to enable the instaloader
+    fallback (used when ensta fails).
     """
 
     platform = "instagram"
 
-    def __init__(self) -> None:
-        self._loader: Any | None = None
-        self._logged_in: bool = False
-
     # ------------------------------------------------------------------
-    # Instaloader lifecycle
+    # ensta (primary)
     # ------------------------------------------------------------------
-    def _get_loader(self) -> Any:
-        """Lazy-init the Instaloader instance with optional login."""
-        if self._loader is not None:
-            return self._loader
+    @staticmethod
+    def _fetch_with_ensta(
+        handle: str, limit: int,
+    ) -> tuple[list[dict[str, Any]], dict[str, int]]:
+        """Fetch posts and profile stats via ensta Guest mode.
 
-        try:
-            import instaloader  # type: ignore[import-untyped]
-        except ImportError:
-            logger.error(
-                "instaloader is not installed. "
-                "Install it with: pip install instaloader"
+        Returns (raw_posts, profile_stats).
+        Raises on any failure so the caller can fall through to the fallback.
+        """
+        from ensta import Guest  # type: ignore[import-untyped]
+
+        guest = Guest()
+        profile = guest.profile(handle)
+
+        profile_stats = {
+            "followers_count": profile.follower_count or 0,
+            "following_count": profile.following_count or 0,
+            "posts_count": profile.total_post_count or 0,
+        }
+
+        if profile.is_private:
+            logger.warning(
+                "Profile @%s is private — returning stats only (no posts)",
+                handle,
             )
-            raise
+            return [], profile_stats
 
-        self._loader = instaloader.Instaloader(
+        raw_posts: list[dict[str, Any]] = []
+        for i, post in enumerate(guest.posts(handle, count=limit)):
+            if i >= limit:
+                break
+            raw_posts.append({
+                "shortcode": post.code or "",
+                "caption": post.caption_text or "",
+                "likes": post.like_count or 0,
+                "comments": post.comment_count or 0,
+                "taken_at": post.taken_at,  # unix timestamp
+            })
+
+        return raw_posts, profile_stats
+
+    # ------------------------------------------------------------------
+    # instaloader (fallback)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _fetch_with_instaloader(
+        handle: str, limit: int,
+    ) -> tuple[list[dict[str, Any]], dict[str, int]]:
+        """Fetch posts and profile stats via instaloader with auth.
+
+        Requires INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD env vars.
+        Raises on any failure.
+        """
+        import instaloader  # type: ignore[import-untyped]
+
+        username = os.environ.get("INSTAGRAM_USERNAME", "").strip()
+        password = os.environ.get("INSTAGRAM_PASSWORD", "").strip()
+
+        if not username or not password:
+            raise RuntimeError(
+                "instaloader fallback requires INSTAGRAM_USERNAME and "
+                "INSTAGRAM_PASSWORD environment variables"
+            )
+
+        loader = instaloader.Instaloader(
             download_pictures=False,
             download_videos=False,
             download_video_thumbnails=False,
@@ -88,51 +131,40 @@ class InstagramScraper(BaseScraper):
             save_metadata=False,
             compress_json=False,
             quiet=True,
-            # Lower request frequency to be polite
             max_connection_attempts=3,
         )
+        loader.login(username, password)
 
-        # Attempt to load saved session or login
-        username = os.environ.get("INSTAGRAM_USERNAME", "").strip()
-        password = os.environ.get("INSTAGRAM_PASSWORD", "").strip()
+        ig_profile = instaloader.Profile.from_username(loader.context, handle)
 
-        if username:
-            session_file = _SESSION_DIR / username
-            if session_file.exists():
-                try:
-                    self._loader.load_session_from_file(username, str(session_file))
-                    self._logged_in = True
-                    logger.info("Loaded Instagram session for @%s", username)
-                    return self._loader
-                except Exception as exc:
-                    logger.warning(
-                        "Failed to load saved session for @%s: %s — attempting fresh login",
-                        username,
-                        exc,
-                    )
+        profile_stats = {
+            "followers_count": ig_profile.followers,
+            "following_count": ig_profile.followees,
+            "posts_count": ig_profile.mediacount,
+        }
 
-            if password:
-                try:
-                    self._loader.login(username, password)
-                    self._logged_in = True
-                    # Persist session for reuse
-                    _SESSION_DIR.mkdir(parents=True, exist_ok=True)
-                    self._loader.save_session_to_file(str(session_file))
-                    logger.info("Logged in to Instagram as @%s (session saved)", username)
-                except Exception as exc:
-                    logger.warning(
-                        "Instagram login failed for @%s: %s — continuing without auth",
-                        username,
-                        exc,
-                    )
-            else:
-                logger.info(
-                    "INSTAGRAM_USERNAME set but no INSTAGRAM_PASSWORD — running unauthenticated"
-                )
-        else:
-            logger.info("No Instagram credentials configured — running in public-only mode")
+        if ig_profile.is_private and not ig_profile.followed_by_viewer:
+            logger.warning(
+                "Profile @%s is private (instaloader fallback) — stats only",
+                handle,
+            )
+            return [], profile_stats
 
-        return self._loader
+        raw_posts: list[dict[str, Any]] = []
+        for i, post in enumerate(ig_profile.get_posts()):
+            if i >= limit:
+                break
+            raw_posts.append({
+                "shortcode": post.shortcode or "",
+                "caption": post.caption or "",
+                "likes": post.likes or 0,
+                "comments": post.comments or 0,
+                "taken_at": (
+                    int(post.date_utc.timestamp()) if post.date_utc else None
+                ),
+            })
+
+        return raw_posts, profile_stats
 
     # ------------------------------------------------------------------
     # BaseScraper interface
@@ -140,10 +172,8 @@ class InstagramScraper(BaseScraper):
     def fetch_raw(self, handle: str, **kwargs: Any) -> list[dict[str, Any]]:
         """Fetch recent posts for an Instagram handle.
 
-        Returns a list of serialized post dicts.
+        Tries ensta Guest mode first, falls back to instaloader with auth.
         """
-        import instaloader  # type: ignore[import-untyped]
-
         handle = handle.lstrip("@").strip()
         limit = kwargs.get("limit", _MAX_POSTS_PER_SCRAPE)
 
@@ -151,93 +181,68 @@ class InstagramScraper(BaseScraper):
             logger.error("Empty handle provided to InstagramScraper.fetch_raw")
             return []
 
-        loader = self._get_loader()
+        # Store profile stats for later use by scrape()
+        self._last_profile_stats: dict[str, int] | None = None
 
         for attempt in range(_MAX_RETRIES):
             try:
-                profile = instaloader.Profile.from_username(loader.context, handle)
-
-                # Check for private profile
-                if profile.is_private and not profile.followed_by_viewer:
-                    logger.warning(
-                        "Profile @%s is private and not followed — skipping posts",
-                        handle,
-                    )
-                    # Still return empty list but log the profile stats
-                    return []
-
-                posts: list[dict[str, Any]] = []
-                for i, post in enumerate(profile.get_posts()):
-                    if i >= limit:
-                        break
-                    posts.append(self._serialize_post(post))
-
+                posts, stats = self._fetch_with_ensta(handle, limit)
+                self._last_profile_stats = stats
                 logger.info(
-                    "Fetched %d posts for @%s (is_private=%s)",
+                    "ensta: fetched %d posts for @%s (attempt %d)",
                     len(posts),
                     handle,
-                    profile.is_private,
+                    attempt + 1,
                 )
                 return posts
 
-            except instaloader.exceptions.ProfileNotExistsException:
-                logger.error("Instagram profile @%s does not exist", handle)
-                return []
-
-            except instaloader.exceptions.ConnectionException as exc:
-                logger.warning(
-                    "Connection error fetching @%s (attempt %d/%d): %s",
-                    handle,
-                    attempt + 1,
-                    _MAX_RETRIES,
-                    exc,
-                )
-                if attempt < _MAX_RETRIES - 1:
-                    # instaloader handles 429 internally, but we retry on connection drops
-                    backoff = 30 * (attempt + 1)
-                    logger.info("Waiting %ds before retry...", backoff)
-                    time.sleep(backoff)
-
-            except instaloader.exceptions.LoginRequiredException:
-                logger.error(
-                    "Instagram requires login to access @%s — configure credentials",
-                    handle,
-                )
-                return []
-
-            except instaloader.exceptions.QueryReturnedBadRequestException as exc:
-                logger.error("Bad request for @%s: %s", handle, exc)
-                return []
-
             except Exception as exc:
-                logger.error(
-                    "Unexpected error fetching @%s (attempt %d/%d): %s",
+                logger.warning(
+                    "ensta failed for @%s (attempt %d/%d): %s",
                     handle,
                     attempt + 1,
                     _MAX_RETRIES,
                     exc,
                 )
                 if attempt < _MAX_RETRIES - 1:
-                    time.sleep(15 * (attempt + 1))
+                    time.sleep(5 * (attempt + 1))
 
-        logger.error("All retries exhausted for Instagram @%s", handle)
+        # All ensta retries exhausted — try instaloader fallback once
+        logger.info("Falling back to instaloader for @%s", handle)
+        try:
+            posts, stats = self._fetch_with_instaloader(handle, limit)
+            self._last_profile_stats = stats
+            logger.info(
+                "instaloader fallback: fetched %d posts for @%s",
+                len(posts),
+                handle,
+            )
+            return posts
+        except Exception as exc:
+            logger.error(
+                "instaloader fallback also failed for @%s: %s", handle, exc,
+            )
+
         return []
 
     def parse(self, raw_data: dict[str, Any]) -> dict[str, Any]:
-        """Parse a serialized Instagram post into normalized SocialPost fields."""
-        # Determine post type
-        post_type = self._determine_post_type(raw_data)
-
-        # Parse published_at
-        published_at = self._parse_post_date(raw_data)
-
-        # Content: Instagram uses caption
+        """Parse a raw Instagram post dict into normalized SocialPost fields."""
         content = raw_data.get("caption") or ""
-
-        # Metrics
         likes = raw_data.get("likes", 0) or 0
         comments = raw_data.get("comments", 0) or 0
-        views = raw_data.get("video_view_count", 0) or 0
+
+        # Parse taken_at (unix timestamp)
+        taken_at = raw_data.get("taken_at")
+        published_at: datetime | None = None
+        if taken_at is not None:
+            try:
+                published_at = datetime.fromtimestamp(int(taken_at), tz=UTC)
+            except (ValueError, TypeError, OSError):
+                published_at = None
+
+        # ensta does not expose post type metadata; default to IMAGE.
+        # Downstream NLP/content pipelines can refine this.
+        post_type = PostType.IMAGE
 
         return {
             "platform_post_id": raw_data.get("shortcode", ""),
@@ -247,74 +252,58 @@ class InstagramScraper(BaseScraper):
             "likes": int(likes),
             "comments": int(comments),
             "shares": 0,  # Instagram does not expose share counts publicly
-            "views": int(views),
+            "views": 0,
             "raw_data": raw_data,
         }
 
     def update_profile_stats(self, handle: str) -> dict[str, int]:
-        """Fetch current profile statistics for an Instagram handle."""
-        import instaloader  # type: ignore[import-untyped]
+        """Return profile statistics.
 
-        handle = handle.lstrip("@").strip()
+        If fetch_raw was called first (normal scrape flow), reuses cached
+        stats to avoid a redundant API call. Otherwise fetches fresh.
+        """
         default = {"followers_count": 0, "following_count": 0, "posts_count": 0}
 
+        # Reuse stats from fetch_raw if available
+        cached = getattr(self, "_last_profile_stats", None)
+        if cached is not None:
+            return cached
+
+        # Standalone call — fetch stats only via ensta
+        handle = handle.lstrip("@").strip()
         if not handle:
             return default
 
-        loader = self._get_loader()
+        try:
+            from ensta import Guest  # type: ignore[import-untyped]
 
-        for attempt in range(_MAX_RETRIES):
-            try:
-                profile = instaloader.Profile.from_username(loader.context, handle)
-                stats = {
-                    "followers_count": profile.followers,
-                    "following_count": profile.followees,
-                    "posts_count": profile.mediacount,
-                }
-                logger.info(
-                    "Instagram stats for @%s: %d followers, %d following, %d posts",
-                    handle,
-                    stats["followers_count"],
-                    stats["following_count"],
-                    stats["posts_count"],
-                )
-                return stats
-
-            except instaloader.exceptions.ProfileNotExistsException:
-                logger.error("Instagram profile @%s does not exist", handle)
-                return default
-
-            except instaloader.exceptions.ConnectionException as exc:
-                logger.warning(
-                    "Connection error getting stats for @%s (attempt %d): %s",
-                    handle,
-                    attempt + 1,
-                    exc,
-                )
-                if attempt < _MAX_RETRIES - 1:
-                    time.sleep(20 * (attempt + 1))
-
-            except Exception as exc:
-                logger.warning(
-                    "Error getting stats for @%s (attempt %d): %s",
-                    handle,
-                    attempt + 1,
-                    exc,
-                )
-                if attempt < _MAX_RETRIES - 1:
-                    time.sleep(10 * (attempt + 1))
-
-        return default
+            guest = Guest()
+            profile = guest.profile(handle)
+            stats = {
+                "followers_count": profile.follower_count or 0,
+                "following_count": profile.following_count or 0,
+                "posts_count": profile.total_post_count or 0,
+            }
+            logger.info(
+                "Instagram stats for @%s: %d followers, %d following, %d posts",
+                handle,
+                stats["followers_count"],
+                stats["following_count"],
+                stats["posts_count"],
+            )
+            return stats
+        except Exception as exc:
+            logger.error("Failed to fetch stats for @%s: %s", handle, exc)
+            return default
 
     def scrape(self, profile_id: int) -> dict[str, Any]:
         """Full scrape pipeline for an Instagram profile.
 
         1. Load profile from DB
-        2. Fetch raw posts
-        3. Parse each post
-        4. Deduplicate by platform_post_id (shortcode)
-        5. Store new posts
-        6. Update profile stats
+        2. Fetch raw posts (ensta -> instaloader fallback)
+        3. Parse and deduplicate by platform_post_id (shortcode)
+        4. Store new posts
+        5. Update profile stats
         """
         errors: list[str] = []
         new_posts_count = 0
@@ -336,7 +325,7 @@ class InstagramScraper(BaseScraper):
                 profile_id,
             )
 
-            # 2. Fetch raw posts
+            # 2. Fetch raw posts (also caches profile stats)
             try:
                 raw_posts = self.fetch_raw(handle)
             except Exception as exc:
@@ -345,9 +334,8 @@ class InstagramScraper(BaseScraper):
                 errors.append(msg)
                 raw_posts = []
 
-            # 3 & 4. Parse and deduplicate
+            # 3 & 4. Parse, deduplicate, and store
             if raw_posts:
-                # Load existing IDs in one query
                 existing_ids_query = (
                     select(SocialPost.platform_post_id)
                     .where(SocialPost.profile_id == profile_id)
@@ -367,7 +355,6 @@ class InstagramScraper(BaseScraper):
                         if parsed["platform_post_id"] in existing_ids:
                             continue
 
-                        # 5. Upsert new post
                         stmt = (
                             pg_insert(SocialPost)
                             .values(
@@ -399,7 +386,7 @@ class InstagramScraper(BaseScraper):
 
                 session.commit()
 
-            # 6. Update profile stats
+            # 5. Update profile stats
             try:
                 stats = self.update_profile_stats(handle)
                 if any(v > 0 for v in stats.values()):
@@ -436,133 +423,3 @@ class InstagramScraper(BaseScraper):
             "updated_profile": updated_profile,
             "errors": errors,
         }
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _serialize_post(post: Any) -> dict[str, Any]:
-        """Convert an instaloader.Post to a plain dict for storage and parsing.
-
-        We extract only the fields we need to avoid serialization issues
-        with instaloader's lazy-loaded objects.
-        """
-        try:
-            caption = post.caption or ""
-        except Exception:
-            caption = ""
-
-        try:
-            likes = post.likes
-        except Exception:
-            likes = 0
-
-        try:
-            comments = post.comments
-        except Exception:
-            comments = 0
-
-        try:
-            video_view_count = post.video_view_count if post.is_video else 0
-        except Exception:
-            video_view_count = 0
-
-        try:
-            is_video = post.is_video
-        except Exception:
-            is_video = False
-
-        try:
-            typename = post.typename
-        except Exception:
-            typename = "GraphImage"
-
-        try:
-            date_utc = post.date_utc.isoformat() if post.date_utc else None
-        except Exception:
-            date_utc = None
-
-        try:
-            shortcode = post.shortcode
-        except Exception:
-            shortcode = ""
-
-        try:
-            url = post.url
-        except Exception:
-            url = ""
-
-        try:
-            media_count = post.mediacount if hasattr(post, "mediacount") else 1
-        except Exception:
-            media_count = 1
-
-        try:
-            hashtags = list(post.caption_hashtags) if post.caption_hashtags else []
-        except Exception:
-            hashtags = []
-
-        try:
-            mentions = list(post.caption_mentions) if post.caption_mentions else []
-        except Exception:
-            mentions = []
-
-        return {
-            "shortcode": shortcode,
-            "caption": caption,
-            "likes": likes,
-            "comments": comments,
-            "video_view_count": video_view_count,
-            "is_video": is_video,
-            "typename": typename,
-            "date_utc": date_utc,
-            "url": url,
-            "media_count": media_count,
-            "hashtags": hashtags,
-            "mentions": mentions,
-        }
-
-    @staticmethod
-    def _determine_post_type(raw_data: dict[str, Any]) -> str:
-        """Determine PostType from Instagram post metadata."""
-        typename = raw_data.get("typename", "")
-        is_video = raw_data.get("is_video", False)
-
-        if typename == "GraphSidecar":
-            return PostType.CAROUSEL
-
-        if is_video:
-            # Instagram Reels have specific indicators, but instaloader
-            # does not always distinguish Reels from regular videos.
-            # We classify as VIDEO; downstream consumers can refine.
-            return PostType.VIDEO
-
-        return PostType.IMAGE
-
-    @staticmethod
-    def _parse_post_date(raw_data: dict[str, Any]) -> datetime | None:
-        """Parse the post publication date."""
-        date_val = raw_data.get("date_utc")
-        if date_val is None:
-            return None
-
-        if isinstance(date_val, datetime):
-            return date_val.replace(tzinfo=UTC) if date_val.tzinfo is None else date_val
-
-        if isinstance(date_val, str):
-            for fmt in (
-                "%Y-%m-%dT%H:%M:%S",
-                "%Y-%m-%dT%H:%M:%S%z",
-                "%Y-%m-%dT%H:%M:%S.%f",
-                "%Y-%m-%dT%H:%M:%S.%f%z",
-                "%Y-%m-%d %H:%M:%S",
-            ):
-                try:
-                    dt = datetime.strptime(date_val, fmt)
-                    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
-                except ValueError:
-                    continue
-
-            logger.debug("Could not parse Instagram date: %s", date_val)
-
-        return None

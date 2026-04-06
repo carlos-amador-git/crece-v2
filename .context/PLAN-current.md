@@ -1,93 +1,43 @@
-# CRECE v2.0 — Plan FASE 2 + Transversales
-
-## Estado: EN EJECUCIÓN
-## Fecha: 2026-04-03
+# CRECE v2.0 — Sprint: Decidim MC + Integración Participación Ciudadana
+## Estado: EN PROGRESO
+## Fecha: 2026-04-05
 
 ---
 
-## BATCH 5A — Core Services (3 agentes paralelos)
+## Contexto
+Decidim MC (#11) era el último módulo PENDIENTE con diseño de producto.
+Se creó proyecto base en ~/Projects/decidim-mc/ con Dockerfile, docker-compose, config.
+Ahora: hacer el build funcional + integrar con CRECE vía GraphQL.
 
-### S1: Voter Scoring Engine
-- `backend/app/services/voter_scoring.py` — scikit-learn pipeline
-  - Features: edad_rango, escolaridad, es_simpatizante_mc, nivel_interes, intencion_voto,
-    programas_sociales count, encuestas count, eventos attended, proximidad_geografica
-  - Output: score 0-100, probabilidad de voto MC, segmento (promotable/persuadible/opositor/indeciso)
-  - Train on encuestas data, predict on all ciudadanos
-- `backend/app/models/voter_score.py` — VoterScore model (ciudadano FK, score, segmento, features JSONB)
-- `backend/app/api/v1/endpoints/voter_scoring.py` — POST /score/run, GET /score/{ciudadano_id}, GET /score/by-seccion/{id}
-- `backend/app/schemas/voter_score.py`
+## Sprint 1: Fix Dockerfile y build funcional (30 min)
+**Objetivo:** Decidim MC buildea y levanta con docker compose.
+**Archivos:**
+- `decidim-mc/Dockerfile` — fix multi-stage build issues
+- `decidim-mc/db/seeds.rb` — seed MC organization
+- `decidim-mc/config/sidekiq.yml` — job queues config
+- `decidim-mc/Makefile` — comandos de conveniencia
+**Criterio:** `docker compose build` exitoso, `docker compose up` levanta health check.
 
-### S2: Content Factory
-- `backend/app/services/content_factory.py` — Claude API multi-format generation
-  - Input: dirigente, topic, platform, tone
-  - Output: text post, reel script, infographic copy, thread
-  - Platform-aware formatting (Twitter 280 chars, Instagram caption, TikTok hook)
-  - compliance: auto-tag with "Contenido generado con IA" per INE rules
-- `backend/app/models/contenido.py` — ContenidoGenerado model
-- `backend/app/api/v1/endpoints/contenido.py` — POST /generate, GET /history, SSE stream
-- `backend/app/schemas/contenido.py`
+## Sprint 2: Cliente GraphQL en CRECE backend (30 min)
+**Objetivo:** CRECE puede consultar Decidim vía GraphQL.
+**Archivos:**
+- `crece-v2/backend/app/services/decidim_service.py` (nuevo)
+- `crece-v2/backend/app/core/config.py` (agregar DECIDIM_URL)
+**Criterio:** DecidimService.get_proposals(), .get_budgets(), .get_stats() funcionales.
 
-### S3: Blindaje Legal + Compliance
-- `backend/app/services/blindaje.py` — compliance engine
-  - Gastos tracking: GastoElectoral model con categorías SIF del INE
-  - Bot detection heuristics on social posts (engagement anomalies, follower ratios)
-  - IA content labeling enforcement
-  - Veda calendar integration (already have middleware, add calendar/notifications)
-- `backend/app/models/gasto_electoral.py` — GastoElectoral, CategoriaGasto
-- `backend/app/api/v1/endpoints/blindaje.py` — gastos CRUD, compliance report, bot analysis
-- `backend/app/schemas/blindaje.py`
+## Sprint 3: Endpoint CRECE API para participación (20 min)
+**Objetivo:** Frontend CRECE puede ver datos de Decidim.
+**Archivos:**
+- `crece-v2/backend/app/api/v1/endpoints/participacion.py` (nuevo)
+- `crece-v2/backend/app/schemas/participacion.py` (nuevo)
+- `crece-v2/backend/app/api/v1/__init__.py` (registrar router)
+**Criterio:** GET /participacion/proposals, /participacion/budgets, /participacion/stats responden.
 
-## BATCH 5B — Campaign & Field (3 agentes paralelos)
+## Sprint 4: Contexto y documentación (10 min)
+**Objetivo:** STATUS.md, DECISIONS.md actualizados.
+**Criterio:** Decidim marcado como HECHO en STATUS.md.
 
-### S4: WhatsApp Campaign Manager (CRECE-side)
-- `backend/app/models/campana.py` — Campana, CampanaSegmento, CampanaMensaje, CampanaResultado
-- `backend/app/services/campaign_manager.py` — segmentation logic, template management
-  - Segment ciudadanos by: seccion, intencion_voto, edad_rango, escolaridad, programas
-  - Campaign states: draft → scheduled → sending → completed → analyzed
-  - Integration point: POST to Chatwoot-MX webhook (not implemented yet, just the interface)
-- `backend/app/api/v1/endpoints/campanas.py` — full CRUD + /send + /results
-- `backend/app/schemas/campana.py`
-
-### S5: Smart Canvassing
-- `backend/app/services/canvassing.py` — route optimization with PostGIS
-  - Input: seccion_id, encuestadores disponibles, ciudadanos target
-  - Output: optimized routes (ST_MakeLine, nearest neighbor heuristic)
-  - Assignment: RutaCanvassing model linking encuestador → ciudadanos → orden
-- `backend/app/models/canvassing.py` — RutaCanvassing, PuntoRuta
-- `backend/app/api/v1/endpoints/canvassing.py` — POST /optimize, GET /routes, PATCH /complete
-- `backend/app/schemas/canvassing.py`
-
-### S6: Participación Ciudadana
-- `backend/app/models/solicitud.py` — SolicitudCiudadana (intake from WhatsApp/web)
-  - tipo: queja, propuesta, solicitud_info, reporte_problema
-  - status: recibida → en_proceso → resuelta → cerrada
-  - Geolocalización del reporte
-- `backend/app/services/participacion.py` — intake processing, categorization, routing
-- `backend/app/api/v1/endpoints/participacion.py` — CRUD + dashboard stats
-- `backend/app/schemas/solicitud.py`
-
-## BATCH 6 — Frontend Pages for Phase 2
-
-### F1: New dashboard pages
-- /dashboard/campanas — campaign management
-- /dashboard/canvassing — route map + assignments
-- /dashboard/contenido — content factory
-- /dashboard/scoring — voter scoring heatmap
-- /dashboard/compliance — blindaje legal dashboard
-- /dashboard/participacion — citizen requests
-
-## BATCH 7 — Transversal
-
-### T1: md-design-system integration
-- Update tailwind.config.ts with MD tokens
-- Replace generic fonts with Instrument Sans / DM Sans
-- Apply color palette: #1e3a5f primary, #d4a853 accent, #10b981 emerald
-
-### T2: React Native scaffold (Expo)
-- `mobile/` directory with Expo app
-- Screens: Login, Encuestas (field survey), Canvassing (route map), Camera (INE photo)
-
-### T3: Production deploy config
-- Dockerfile for backend (multi-stage)
-- docker-compose.prod.yml refinement
-- Coolify deployment config
+## Dependencias
+Sprint 2 depende de Sprint 1 (necesita saber el schema GraphQL real).
+Sprint 3 depende de Sprint 2 (consume DecidimService).
+Sprint 4 es independiente pero se hace al final.

@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/forgot-password"];
+const PUBLIC_PATHS = ["/", "/login", "/forgot-password"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths and static assets
   if (
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    PUBLIC_PATHS.some((p) => pathname === p || (p !== "/" && pathname.startsWith(p))) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.includes(".")
@@ -16,11 +16,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For client-side auth with localStorage we cannot check the token
-  // in middleware directly. We redirect unauthenticated users from
-  // the dashboard layout instead. This middleware handles the root redirect.
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // Server-side auth check: verify token cookie exists for dashboard routes
+  const token = request.cookies.get("crece_access_token")?.value;
+  if (!token) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

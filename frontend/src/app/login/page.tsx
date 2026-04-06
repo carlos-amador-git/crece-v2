@@ -234,8 +234,61 @@ function LoginForm() {
             </Button>
           </form>
 
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-background px-2 text-muted-foreground">o</span>
+            </div>
+          </div>
+
+          {/* Demo access buttons */}
+          <div className="space-y-2">
+            <p className="text-center text-xs font-medium text-muted-foreground">Acceso Demo</p>
+            {[
+              { label: "Administrador", email: "admin@consultoriamd.com", password: "crece2026!" },
+              { label: "Alejandro Pina", email: "pina@crece.mx", password: "demo2026!" },
+              { label: "Rafael Solano", email: "solano@crece.mx", password: "demo2026!" },
+            ].map((demo) => (
+              <Button
+                key={demo.email}
+                type="button"
+                variant="outline"
+                className="w-full border-accent/30 text-accent hover:bg-accent/10 hover:text-accent transition-colors duration-150"
+                disabled={loading}
+                onClick={async () => {
+                  setError(null);
+                  setLoading(true);
+                  try {
+                    await login({ email: demo.email, password: demo.password });
+                    router.push("/dashboard");
+                  } catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : "Error al acceder";
+                    setError(message);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                {demo.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* Forgot password */}
+          <p className="mt-4 text-center text-sm">
+            <a
+              href="/forgot-password"
+              className="text-muted-foreground transition-colors duration-150 hover:text-foreground"
+            >
+              ¿Olvidaste tu contraseña?
+            </a>
+          </p>
+
           {/* Version badge */}
-          <p className="mt-10 text-center text-xs text-muted-foreground">
+          <p className="mt-8 text-center text-xs text-muted-foreground">
             CRECE v2.0
           </p>
         </div>

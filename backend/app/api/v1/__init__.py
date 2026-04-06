@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     contenido,
     content_factory_integration,
     crm_integration,
+    dashboard,
     dirigentes,
     electoral,
     encuestas,
@@ -23,6 +24,7 @@ from app.api.v1.endpoints import (
     health,
     metricas_sociales,
     organizaciones,
+    osint,
     participacion,
     planes,
     programas,
@@ -59,3 +61,5 @@ api_router.include_router(alerts_integration.router, prefix="/alerts", tags=["al
 api_router.include_router(crm_integration.router, prefix="/crm", tags=["crm"])
 api_router.include_router(webhooks_integration.router, prefix="/webhooks", tags=["webhooks"])
 api_router.include_router(api_keys.router, prefix="/api-keys", tags=["api-keys"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(osint.router, prefix="/osint", tags=["osint"])

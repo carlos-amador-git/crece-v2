@@ -36,6 +36,33 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-background font-body antialiased">
         <QueryProvider>{children}</QueryProvider>
+        {/* Chatwoot widget — CRECE inbox */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(d,t) {
+                var BASE_URL="https://chatmx.mdconsultoria-ti.org";
+                var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+                g.src=BASE_URL+"/packs/js/sdk.js";
+                g.defer=true;
+                g.async=true;
+                s.parentNode.insertBefore(g,s);
+                g.onload=function(){
+                  window.chatwootSettings = {
+                    hideMessageBubble: false,
+                    position: "right",
+                    locale: "es",
+                    type: "standard"
+                  };
+                  window.chatwootSDK.run({
+                    websiteToken: "rVsDDzAbVn8Lq7foP1tHrJAG",
+                    baseUrl: BASE_URL
+                  });
+                }
+              })(document,"script");
+            `,
+          }}
+        />
       </body>
     </html>
   );

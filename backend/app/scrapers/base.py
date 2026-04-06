@@ -58,8 +58,11 @@ def get_scraper(platform: str) -> BaseScraper:
     scrapers: dict[str, type[BaseScraper]] = {}
 
     # Lazy imports to avoid loading heavy dependencies at module level
+    from app.scrapers.bluesky import BlueskyScraper
     from app.scrapers.facebook import FacebookScraper
     from app.scrapers.instagram import InstagramScraper
+    from app.scrapers.telegram import TelegramScraper
+    from app.scrapers.threads import ThreadsScraper
     from app.scrapers.tiktok import TikTokScraper
     from app.scrapers.twitter import TwitterScraper
     from app.scrapers.youtube import YouTubeScraper
@@ -70,6 +73,9 @@ def get_scraper(platform: str) -> BaseScraper:
         "facebook": FacebookScraper,
         "tiktok": TikTokScraper,
         "youtube": YouTubeScraper,
+        "bluesky": BlueskyScraper,
+        "threads": ThreadsScraper,
+        "telegram": TelegramScraper,
     }
 
     scraper_class = scrapers.get(platform)

@@ -41,10 +41,11 @@ const segmentLabels: Record<string, string> = {
 };
 
 /** Map role keys to display labels */
-const rolLabels: Record<string, string> = {
+const roleLabels: Record<string, string> = {
   admin: "Administrador",
-  analista: "Analista",
-  consultor: "Consultor",
+  analyst: "Analista",
+  field_operator: "Operador de Campo",
+  viewer: "Visor",
 };
 
 function useBreadcrumbs() {
@@ -92,7 +93,7 @@ export function Topbar() {
   }, []);
 
   const initials = user
-    ? user.nombre
+    ? user.full_name
         .split(" ")
         .map((w) => w[0])
         .join("")
@@ -100,8 +101,8 @@ export function Topbar() {
         .toUpperCase()
     : "U";
 
-  const displayRole = user?.rol
-    ? (rolLabels[user.rol] ?? user.rol)
+  const displayRole = user?.role
+    ? (roleLabels[user.role] ?? user.role)
     : "Usuario";
 
   return (
@@ -206,7 +207,7 @@ export function Topbar() {
               <Avatar className="h-8 w-8">
                 <AvatarImage
                   src={user?.avatar_url}
-                  alt={user?.nombre ?? "Usuario"}
+                  alt={user?.full_name ?? "Usuario"}
                 />
                 <AvatarFallback className="text-xs font-semibold">
                   {initials}
@@ -218,7 +219,7 @@ export function Topbar() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col gap-1.5">
                 <p className="text-sm font-medium leading-none">
-                  {user?.nombre ?? "Usuario"}
+                  {user?.full_name ?? "Usuario"}
                 </p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {user?.email ?? ""}

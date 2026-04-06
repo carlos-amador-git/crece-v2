@@ -34,7 +34,7 @@ POLITICAL_TOPICS: list[str] = [
 # ---------------------------------------------------------------------------
 # Model identifiers — centralised so they can be overridden via env vars later
 # ---------------------------------------------------------------------------
-CONTROVERSY_MODEL_ID = "PlanTL-GOB-ES/roberta-base-bne"
+CONTROVERSY_MODEL_ID = "cardiffnlp/twitter-roberta-base-offensive"
 TOXICITY_MODEL_ID = "citizenlab/distilbert-base-multilingual-cased-toxicity"
 TOPIC_MODEL_ID = "joeddav/xlm-roberta-large-xnli"
 

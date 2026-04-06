@@ -45,7 +45,10 @@ export interface CreateCampanaPayload {
 export function useCampanas() {
   return useQuery({
     queryKey: ["campanas"],
-    queryFn: () => api.get<Campana[]>("/campanas/"),
+    queryFn: async () => {
+      const res = await api.get<{ items: Campana[] } | Campana[]>("/campanas/");
+      return Array.isArray(res) ? res : res.items;
+    },
   });
 }
 

@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,7 +45,10 @@ async def login(
             detail="Account is deactivated",
         )
 
-    token = create_access_token(data={"sub": str(user.id), "role": user.role.value})
+    token_data = {"sub": str(user.id), "role": user.role.value}
+    if user.dirigente_id is not None:
+        token_data["dirigente_id"] = str(user.dirigente_id)
+    token = create_access_token(data=token_data)
     return Token(access_token=token)
 
 
@@ -77,6 +81,32 @@ async def register(
     await db.flush()
     await db.refresh(user)
     return user
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ForgotPasswordResponse:
+    """Request password reset email.
+
+    Always returns success to prevent email enumeration.
+    In production, this would dispatch an email via Celery.
+    """
+    # Verify user exists (for future email dispatch) but always return success
+    _result = await db.execute(select(User).where(User.email == payload.email))
+    # TODO: dispatch password reset email via Celery task
+    return ForgotPasswordResponse(
+        message="Si existe una cuenta con ese correo, recibirás instrucciones para restablecer tu contraseña."
+    )
 
 
 @router.get("/me", response_model=UserResponse)

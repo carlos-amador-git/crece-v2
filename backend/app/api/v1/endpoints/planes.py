@@ -79,20 +79,28 @@ async def generar_plan_stream(
 @router.get("/", response_model=PaginatedResponse[PlanIAResponse])
 async def list_planes(
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int | None = None,
     tipo: TipoPlan | None = None,
     aprobado: bool | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> PaginatedResponse[PlanIAResponse]:
-    """List AI-generated plans with filtering."""
+    """List AI-generated plans with filtering.
+
+    If the user has a dirigente_id, auto-filter to their dirigente only.
+    """
     query = select(PlanIA)
     count_query = select(func.count(PlanIA.id))
 
-    if dirigente_id is not None:
-        query = query.where(PlanIA.dirigente_id == dirigente_id)
-        count_query = count_query.where(PlanIA.dirigente_id == dirigente_id)
+    # Auto-filter for dirigente users
+    effective_dirigente_id = dirigente_id
+    if current_user.dirigente_id is not None:
+        effective_dirigente_id = current_user.dirigente_id
+
+    if effective_dirigente_id is not None:
+        query = query.where(PlanIA.dirigente_id == effective_dirigente_id)
+        count_query = count_query.where(PlanIA.dirigente_id == effective_dirigente_id)
     if tipo is not None:
         query = query.where(PlanIA.tipo == tipo)
         count_query = count_query.where(PlanIA.tipo == tipo)

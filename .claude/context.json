@@ -1,9 +1,11 @@
 {
   "project": "crece-v2",
   "version": "2.0.0",
-  "lastSession": "2026-04-03/04",
-  "state": "FASE_1_2_COMPLETE_DEPLOY_READY",
+  "lastSession": "2026-04-06",
+  "state": "PLAN_ORIGINAL_98_PERCENT_COMPLETE",
   "repo": "https://github.com/MarxCha/crece-v2",
+  "pr": "https://github.com/MarxCha/crece-v2/pull/2",
+  "branch": "feat/ollama-gemma4-provider",
   "deploy": {
     "target": "Coolify on 163.245.208.96",
     "compose": "docker-compose.coolify.yml",
@@ -19,10 +21,11 @@
     "python": "3.12",
     "models": 36,
     "routes": 145,
-    "services": 12,
+    "services": 14,
     "tables": 37,
-    "tests": 123,
-    "testStatus": "all_green"
+    "tests": 148,
+    "testStatus": "all_green",
+    "aiProviders": ["claude", "ollama"]
   },
   "frontend": {
     "framework": "Next.js 14",
@@ -36,14 +39,48 @@
     "status": "scaffold"
   },
   "integrations": {
-    "n8nNodes": 5,
+    "n8nNodes": 30,
+    "n8nWorkflows": 6,
+    "n8nDomain": "n8n.mdconsultoria-ti.org",
     "chatwootWebhook": true,
-    "apiKeyAuth": true
+    "apiKeyAuth": true,
+    "ollamaLocal": true,
+    "ollamaCoolify": "163.245.208.96:11434"
+  },
+  "aiEcosystem": {
+    "claude": "architecture, planning, complex decisions (subscription)",
+    "gemini": "codebase analysis 1M tokens, cross-audit (API free tier)",
+    "ollama": "Gemma 3 12B on Coolify VPS — copywriting, content factory, $0 cost, CPU-only ~480s/request"
+  },
+  "scrapers": {
+    "instagram": "ensta (Guest mode, no auth)",
+    "twitter": "Scweet v5.2 (auth_token cookie)",
+    "youtube": "scrapetube + yt-dlp (no API key)",
+    "tiktok": "yt-dlp (no auth)",
+    "facebook": "curl-cffi (Chrome TLS impersonation)",
+    "bluesky": "AT Protocol httpx (no auth)",
+    "telegram": "Telethon",
+    "threads": "stub (low MX adoption)"
+  },
+  "nlpModels": 8,
+  "voterScoring": {
+    "model": "RandomForestClassifier",
+    "syntheticCitizens": 200,
+    "dataSource": "synthetic_census_2020",
+    "accuracy": 1.0,
+    "totalScored": 606
+  },
+  "planCompletion": {
+    "done": 16,
+    "pending": 3,
+    "pendingItems": ["Geometries INE (shapefiles)", "Proxies (purchase decision)", "Decidim (separate project ~/Projects/decidim-mc/)"]
   },
   "knownIssues": [
     "CrmInteraccion endpoint uses registrado_por_id but model has promotor_id — tests work around this with mock",
     "ContentPieceResponse UUID→str coercion needs field_validator in production",
-    "Docker PostGIS image is linux/amd64 on ARM Mac — works but shows warning"
+    "Docker PostGIS image is linux/amd64 on ARM Mac — works but shows warning",
+    "Ollama content generation takes ~480s CPU-only — streaming recommended for UX",
+    "Voter scoring RF accuracy=1.0 is expected with synthetic data, will be lower with real data"
   ],
   "credentials": {
     "adminEmail": "admin@consultoriamd.com",

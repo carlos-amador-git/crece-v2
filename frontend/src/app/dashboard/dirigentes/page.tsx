@@ -61,7 +61,7 @@ export default function DirigentesPage() {
   const filtered = search
     ? dirigentes.filter(
         (d) =>
-          `${d.nombre} ${d.apellido_paterno}`
+          d.full_name
             .toLowerCase()
             .includes(search.toLowerCase()) ||
           d.cargo.toLowerCase().includes(search.toLowerCase())
@@ -169,57 +169,87 @@ export default function DirigentesPage() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Cargo</TableHead>
-                  <TableHead>Partido</TableHead>
-                  <TableHead className="text-center">IPD</TableHead>
-                  <TableHead>Plataformas</TableHead>
-                  <TableHead>Ultima Actividad</TableHead>
-                  <TableHead className="w-[50px]" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: card list */}
+              <div className="space-y-3 p-4 md:hidden">
                 {filtered.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell className="font-medium">
-                      {d.nombre} {d.apellido_paterno}
-                      {d.apellido_materno ? ` ${d.apellido_materno}` : ""}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {d.cargo}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{d.partido}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center tabular-nums">
-                      <IpdScoreBadge score={d.ipd_score} size="sm" />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1.5">
-                        {d.platforms.map((p) => (
-                          <PlatformIcon key={p} platform={p} size={14} />
-                        ))}
+                  <Link key={d.id} href={`/dashboard/dirigentes/${d.id}`}>
+                    <div className="rounded-lg border p-4 transition-colors hover:bg-muted/50">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium">{d.full_name}</p>
+                          <p className="text-sm text-muted-foreground">{d.cargo}</p>
+                        </div>
+                        <IpdScoreBadge score={d.ipd_score ?? 0} size="sm" />
                       </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {d.last_activity
-                        ? formatRelativeTime(d.last_activity)
-                        : "Sin actividad"}
-                    </TableCell>
-                    <TableCell>
-                      <Link href={`/dashboard/dirigentes/${d.id}`}>
-                        <Button variant="ghost" size="icon" aria-label="Ver detalle">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
+                      <div className="mt-3 flex items-center gap-3">
+                        <Badge variant="secondary">{d.partido}</Badge>
+                        <div className="flex gap-1.5">
+                          {d.social_profiles?.map((sp) => (
+                            <PlatformIcon key={sp.platform} platform={sp.platform} size={14} />
+                          ))}
+                        </div>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {d.updated_at ? formatRelativeTime(d.updated_at) : "Sin actividad"}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop: table */}
+              <Table className="hidden md:table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Cargo</TableHead>
+                    <TableHead>Partido</TableHead>
+                    <TableHead className="text-center">IPD</TableHead>
+                    <TableHead>Plataformas</TableHead>
+                    <TableHead>Ultima Actividad</TableHead>
+                    <TableHead className="w-[50px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((d) => (
+                    <TableRow key={d.id}>
+                      <TableCell className="font-medium">
+                        {d.full_name}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {d.cargo}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{d.partido}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center tabular-nums">
+                        <IpdScoreBadge score={d.ipd_score ?? 0} size="sm" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1.5">
+                          {d.social_profiles?.map((sp) => (
+                            <PlatformIcon key={sp.platform} platform={sp.platform} size={14} />
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {d.updated_at
+                          ? formatRelativeTime(d.updated_at)
+                          : "Sin actividad"}
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/dashboard/dirigentes/${d.id}`}>
+                          <Button variant="ghost" size="icon" aria-label="Ver detalle">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
           )}
         </CardContent>
       </Card>

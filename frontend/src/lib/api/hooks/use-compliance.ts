@@ -44,12 +44,11 @@ export function useAlertas() {
 }
 
 export function useComplianceReport(orgId?: number) {
+  const id = orgId ?? 1;
   return useQuery({
-    queryKey: ["compliance-report", orgId],
+    queryKey: ["compliance-report", id],
     queryFn: () =>
-      api.get<ComplianceReport>(
-        `/blindaje/reporte/${orgId ?? "default"}`
-      ),
+      api.get<ComplianceReport>(`/blindaje/reporte/${id}`),
   });
 }
 

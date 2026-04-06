@@ -51,7 +51,7 @@ export default function BenchmarkPage() {
     benchmarkData?.comparison
       .filter((c) => c.metric === "follower_growth")
       .flatMap((c) => [
-        { name: benchmarkData.dirigente.nombre, value: c.dirigente_value },
+        { name: benchmarkData.dirigente.full_name, value: c.dirigente_value },
         ...c.competidor_values.map((cv) => ({
           name: cv.nombre,
           value: cv.value,
@@ -62,7 +62,7 @@ export default function BenchmarkPage() {
     benchmarkData?.comparison
       .filter((c) => c.metric === "engagement_rate")
       .flatMap((c) => [
-        { name: benchmarkData.dirigente.nombre, value: c.dirigente_value },
+        { name: benchmarkData.dirigente.full_name, value: c.dirigente_value },
         ...c.competidor_values.map((cv) => ({
           name: cv.nombre,
           value: cv.value,
@@ -99,7 +99,7 @@ export default function BenchmarkPage() {
                 <SelectContent>
                   {dirigentesList.map((d) => (
                     <SelectItem key={d.id} value={String(d.id)}>
-                      {d.nombre} {d.apellido_paterno} ({d.partido})
+                      {d.full_name} ({d.partido})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -125,7 +125,7 @@ export default function BenchmarkPage() {
                 <SelectContent>
                   {dirigentesList.map((d) => (
                     <SelectItem key={d.id} value={String(d.id)}>
-                      {d.nombre} {d.apellido_paterno} ({d.partido})
+                      {d.full_name} ({d.partido})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -155,11 +155,11 @@ export default function BenchmarkPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-heading text-lg font-semibold">
-                        {detailA.nombre} {detailA.apellido_paterno}
+                        {detailA.full_name}
                       </p>
                       <Badge variant="secondary">{detailA.partido}</Badge>
                     </div>
-                    <IpdScoreBadge score={detailA.ipd_score} size="lg" />
+                    <IpdScoreBadge score={detailA.ipd_score ?? 0} size="lg" />
                   </div>
                 ) : (
                   <Skeleton className="h-16 w-full" />
@@ -172,11 +172,11 @@ export default function BenchmarkPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-heading text-lg font-semibold">
-                        {detailB.nombre} {detailB.apellido_paterno}
+                        {detailB.full_name}
                       </p>
                       <Badge variant="secondary">{detailB.partido}</Badge>
                     </div>
-                    <IpdScoreBadge score={detailB.ipd_score} size="lg" />
+                    <IpdScoreBadge score={detailB.ipd_score ?? 0} size="lg" />
                   </div>
                 ) : (
                   <Skeleton className="h-16 w-full" />
@@ -195,11 +195,11 @@ export default function BenchmarkPage() {
               <div className="mt-4 flex justify-center gap-6 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="h-3 w-3 rounded-full bg-sky-500" />
-                  {detailA?.nombre ?? "Dirigente A"}
+                  {detailA?.full_name ?? "Dirigente A"}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-3 w-3 rounded-full border-2 border-red-500 bg-transparent" />
-                  {detailB?.nombre ?? "Dirigente B"}
+                  {detailB?.full_name ?? "Dirigente B"}
                 </div>
               </div>
             </CardContent>

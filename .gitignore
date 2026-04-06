@@ -83,3 +83,8 @@ celerybeat.pid
 *.pt
 *.onnx
 /models/
+
+# ── Scraper state (runtime) ──────────────────────────────────
+*.db
+!*.db.example
+backend/vendor/

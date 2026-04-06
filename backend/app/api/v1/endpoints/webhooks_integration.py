@@ -39,24 +39,23 @@ async def chatwoot_webhook(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     x_n8n_signature: Annotated[str | None, Header(alias="X-N8N-Signature")] = None,
+    x_chatwoot_signature: Annotated[str | None, Header(alias="X-Chatwoot-Signature")] = None,
 ) -> dict:
-    """Receive events pre-processed by n8n from Chatwoot.
+    """Receive events from Chatwoot (directly or via n8n).
 
-    Verifies HMAC-SHA256 signature, then dispatches by event type:
-    - message_reply: update CRM interactions
-    - contact_created: create ciudadano if not exists
-    - propuesta: log proposal interaction
+    Accepts signatures from both X-N8N-Signature and X-Chatwoot-Signature headers.
+    Dispatches by event type — supports both n8n-preprocessed and raw Chatwoot payloads.
     """
     payload_bytes = await request.body()
 
-    # Verify signature
-    if not _verify_signature(payload_bytes, x_n8n_signature):
+    # Accept signature from either header
+    signature = x_n8n_signature or x_chatwoot_signature
+    if not _verify_signature(payload_bytes, signature):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing webhook signature",
         )
 
-    # Parse payload
     import json
 
     try:
@@ -67,9 +66,12 @@ async def chatwoot_webhook(
             detail="Invalid JSON payload",
         )
 
+    # Handle raw Chatwoot payload (has "event" key) vs n8n-preprocessed (has "tipo" key)
+    if "event" in raw and "tipo" not in raw:
+        return await _handle_chatwoot_direct(db, raw)
+
     payload = ChatwootWebhookPayload(**raw)
 
-    # Dispatch by event type
     if payload.tipo == "message_reply":
         return await _handle_message_reply(db, payload.data)
     elif payload.tipo == "contact_created":
@@ -79,6 +81,39 @@ async def chatwoot_webhook(
     else:
         logger.warning("Unknown webhook event type: %s", payload.tipo)
         return {"status": "ignored", "tipo": payload.tipo}
+
+
+async def _handle_chatwoot_direct(db: AsyncSession, raw: dict) -> dict:
+    """Handle raw Chatwoot webhook payloads (not preprocessed by n8n)."""
+    event = raw.get("event", "")
+    logger.info("Chatwoot direct event: %s", event)
+
+    if event == "contact_created":
+        contact = raw.get("contact", {}) or raw.get("data", {})
+        data = {
+            "nombre": contact.get("name", "Contacto"),
+            "telefono": contact.get("phone_number"),
+        }
+        if data["telefono"]:
+            return await _handle_contact_created(db, data)
+        return {"status": "skipped", "reason": "no phone_number"}
+
+    elif event == "message_created":
+        message = raw.get("message", {}) or raw.get("data", {})
+        conversation = raw.get("conversation", {})
+        return {
+            "status": "received",
+            "event": event,
+            "conversation_id": conversation.get("id"),
+            "message_type": message.get("message_type"),
+        }
+
+    elif event in ("conversation_created", "message_updated"):
+        return {"status": "received", "event": event}
+
+    else:
+        logger.info("Unhandled Chatwoot event: %s", event)
+        return {"status": "ignored", "event": event}
 
 
 async def _handle_message_reply(db: AsyncSession, data: dict) -> dict:

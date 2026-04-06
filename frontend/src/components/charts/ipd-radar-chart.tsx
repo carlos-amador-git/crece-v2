@@ -17,13 +17,17 @@ interface IpdRadarChartProps {
 }
 
 export function IpdRadarChart({ data, compareTo }: IpdRadarChartProps) {
+  if (!data) {
+    return <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">Sin datos de IPD disponibles</div>;
+  }
+
   const chartData = [
-    { axis: "Twitter", value: data.twitter, compare: compareTo?.twitter },
-    { axis: "Instagram", value: data.instagram, compare: compareTo?.instagram },
-    { axis: "Facebook", value: data.facebook, compare: compareTo?.facebook },
-    { axis: "TikTok", value: data.tiktok, compare: compareTo?.tiktok },
-    { axis: "YouTube", value: data.youtube, compare: compareTo?.youtube },
-    { axis: "Engagement", value: data.engagement, compare: compareTo?.engagement },
+    { axis: "Twitter", value: data.twitter ?? 0, compare: compareTo?.twitter },
+    { axis: "Instagram", value: data.instagram ?? 0, compare: compareTo?.instagram },
+    { axis: "Facebook", value: data.facebook ?? 0, compare: compareTo?.facebook },
+    { axis: "TikTok", value: data.tiktok ?? 0, compare: compareTo?.tiktok },
+    { axis: "YouTube", value: data.youtube ?? 0, compare: compareTo?.youtube },
+    { axis: "Engagement", value: data.engagement ?? 0, compare: compareTo?.engagement },
   ];
 
   return (

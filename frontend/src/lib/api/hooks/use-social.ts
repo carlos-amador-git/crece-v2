@@ -28,25 +28,24 @@ export function useSocialPosts(filters: SocialFilters = {}) {
 }
 
 export function useSentimentTrend(days: number = 30, dirigenteId?: number) {
-  const params = new URLSearchParams({ days: String(days) });
+  const params = new URLSearchParams();
   if (dirigenteId) params.set("dirigente_id", String(dirigenteId));
 
   return useQuery({
     queryKey: ["sentiment-trend", days, dirigenteId],
     queryFn: () =>
-      api.get<SentimentTrend[]>(`/social/sentiment/trend?${params}`),
+      api.get<SentimentTrend[]>(`/social/sentiment-timeline?${params}`),
+    enabled: !!dirigenteId,
   });
 }
 
 export function useSentimentDistribution(dirigenteId?: number) {
-  const params = dirigenteId
-    ? `?dirigente_id=${dirigenteId}`
-    : "";
-
+  // Distribution endpoint not yet implemented — return empty data
   return useQuery({
     queryKey: ["sentiment-distribution", dirigenteId],
     queryFn: () =>
-      api.get<SentimentDistribution>(`/social/sentiment/distribution${params}`),
+      Promise.resolve({ positive: 0, negative: 0, neutral: 0, total: 0 } as SentimentDistribution),
+    enabled: !!dirigenteId,
   });
 }
 

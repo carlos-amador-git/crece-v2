@@ -29,6 +29,7 @@ import {
   Shield,
   Send,
   MapPin,
+  Vote,
 } from "lucide-react";
 
 const sections = [
@@ -38,7 +39,6 @@ const sections = [
       { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
       { href: "/dashboard/dirigentes", label: "Dirigentes", icon: Users },
       { href: "/dashboard/social", label: "Social", icon: MessageSquare },
-      { href: "/dashboard/electoral", label: "Electoral", icon: Map },
     ],
   },
   {
@@ -56,7 +56,7 @@ const sections = [
       { href: "/dashboard/compliance", label: "Compliance", icon: Shield },
       { href: "/dashboard/campanas", label: "Campanas", icon: Send },
       { href: "/dashboard/canvassing", label: "Canvassing", icon: MapPin },
-      { href: "/dashboard/participacion", label: "Participacion", icon: Users },
+      { href: "/dashboard/participacion", label: "Participacion", icon: Vote },
     ],
   },
   {
@@ -68,17 +68,18 @@ const sections = [
 ];
 
 /** Map role keys to display labels */
-const rolLabels: Record<string, string> = {
+const roleLabels: Record<string, string> = {
   admin: "Administrador",
-  analista: "Analista",
-  consultor: "Consultor",
+  analyst: "Analista",
+  field_operator: "Operador de Campo",
+  viewer: "Visor",
 };
 
 export function Sidebar() {
   const pathname = usePathname();
   const { collapsed, toggle, mobileOpen, setMobileOpen } = useSidebarStore();
 
-  let user: { nombre?: string; rol?: string } | null = null;
+  let user: { full_name?: string; role?: string } | null = null;
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const auth = useAuth();
@@ -87,8 +88,11 @@ export function Sidebar() {
     // AuthProvider not mounted — fall back to defaults
   }
 
-  const displayName = user?.nombre ?? "Admin";
-  const displayRole = user?.rol ? (rolLabels[user.rol] ?? user.rol) : "Admin";
+  const displayName = user?.full_name ?? "Admin";
+  const userWithDirigente = user as { full_name?: string; role?: string; dirigente_id?: number } | null;
+  const displayRole = userWithDirigente?.dirigente_id
+    ? "Dirigente"
+    : user?.role ? (roleLabels[user.role] ?? user.role) : "Admin";
   const initials = displayName
     .split(" ")
     .map((w) => w[0])

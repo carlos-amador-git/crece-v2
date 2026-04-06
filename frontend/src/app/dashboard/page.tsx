@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
+// import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
 import { EngagementBarChart } from "@/components/charts/engagement-bar-chart";
@@ -11,6 +11,7 @@ import { PostCard } from "@/components/social/post-card";
 import { useKpiOverview, useTopDirigentes, useSystemStatus } from "@/lib/api/hooks/use-overview";
 import { useSentimentTrend, useSocialPosts } from "@/lib/api/hooks/use-social";
 import { formatNumber, formatRelativeTime } from "@/lib/utils";
+import { CrisisAlertList } from "@/components/alerts/crisis-alert-list";
 import {
   Users,
   TrendingUp,
@@ -18,17 +19,17 @@ import {
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
-  ArrowRight,
   Clock,
   Activity,
   Cpu,
 } from "lucide-react";
 
-const ElectoralMap = dynamic(
-  () =>
-    import("@/components/maps/electoral-map").then((m) => m.ElectoralMap),
-  { ssr: false, loading: () => <Skeleton className="h-[300px] w-full rounded-lg" /> }
-);
+// Electoral map hidden until INE shapefiles are loaded
+// const ElectoralMap = dynamic(
+//   () =>
+//     import("@/components/maps/electoral-map").then((m) => m.ElectoralMap),
+//   { ssr: false, loading: () => <Skeleton className="h-[300px] w-full rounded-lg" /> }
+// );
 
 /* Default values shown while API loads */
 const DEFAULT_KPI = {
@@ -117,7 +118,7 @@ export default function OverviewPage() {
   const kpiData = kpi ?? DEFAULT_KPI;
   const trendData = sentimentData ?? [];
   const topData =
-    topDirigentes?.map((d) => ({ name: d.nombre, value: d.ipd_score })) ?? [];
+    topDirigentes?.map((d) => ({ name: d.full_name, value: d.ipd_score ?? 0 })) ?? [];
   const posts = postsData?.items ?? [];
 
   const hasActiveAlerts = kpiData.active_alerts > 0;
@@ -151,6 +152,9 @@ export default function OverviewPage() {
           ))}
         </nav>
       </header>
+
+      {/* ── Crisis Alerts ──────────────────────────────────── */}
+      {hasActiveAlerts && <CrisisAlertList limit={3} />}
 
       {/* ── KPI Cards ───────────────────────────────────────── */}
       <section
@@ -342,7 +346,7 @@ export default function OverviewPage() {
                       className="tabular-nums text-sm font-semibold"
                       data-numeric="true"
                     >
-                      {item.value.toFixed(1)}
+                      {(item.value ?? 0).toFixed(1)}
                     </span>
                   </div>
                 ))}
@@ -377,26 +381,7 @@ export default function OverviewPage() {
           )}
         </section>
 
-        {/* Map preview */}
-        <Card className="flex flex-col lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Mapa Electoral</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 p-0">
-            <div className="h-[300px] overflow-hidden">
-              <ElectoralMap className="h-full" />
-            </div>
-          </CardContent>
-          <CardFooter className="justify-end border-t px-6 py-3">
-            <Link
-              href="/dashboard/mapa"
-              className="flex items-center gap-1 text-sm font-medium text-primary transition-colors duration-150 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              Ver mapa completo
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </CardFooter>
-        </Card>
+        {/* Map preview — hidden until INE shapefiles loaded */}
       </div>
 
       {/* ── Pulse dot animation (CSS-only, respects reduced-motion) ── */}

@@ -60,16 +60,40 @@ def anyio_backend() -> str:
 
 @pytest.fixture(autouse=True)
 async def setup_database() -> AsyncGenerator[None, None]:
-    """Create all tables before each test and drop them after."""
+    """Create all tables before each test via truncation for speed."""
     global _test_engine, _test_session_factory
     _test_engine = None
     _test_session_factory = None
     engine = _get_test_engine()
+
+    # On first run, create schema. Subsequent runs just truncate data.
+    from sqlalchemy import text, inspect as sa_inspect
+
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        has_tables = await conn.run_sync(
+            lambda sync_conn: sa_inspect(sync_conn).has_table("users")
+        )
+
+    if not has_tables:
+        # First test: create all tables + enums
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    else:
+        # Subsequent tests: truncate all tables (keeps enums, much faster)
+        async with engine.begin() as conn:
+            table_names = await conn.run_sync(
+                lambda sync_conn: sa_inspect(sync_conn).get_table_names()
+            )
+            if table_names:
+                await conn.execute(
+                    text(
+                        f"TRUNCATE {', '.join(table_names)} RESTART IDENTITY CASCADE"
+                    )
+                )
+
     yield
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+
+    # After last test in session, tables remain for next test to truncate
     await engine.dispose()
     _test_engine = None
     _test_session_factory = None

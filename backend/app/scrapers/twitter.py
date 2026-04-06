@@ -1,13 +1,16 @@
-"""Twitter/X scraper using twscrape for authenticated scraping
-and httpx as a degraded-mode fallback for public profile metadata.
+"""Twitter/X scraper with three-tier fallback strategy.
+
+Tier 1 (Primary): Scweet — uses X GraphQL API with auth_token cookie.
+    Reliable as of 2026, requires browser cookie rotation every ~30 days.
+Tier 2 (Fallback): twscrape — async scraper with account pool.
+    Requires configured accounts in local SQLite DB.
+Tier 3 (Last resort): httpx syndication endpoint — public, no auth, fragile.
 
 Design decisions:
-- twscrape is async; we wrap calls with asyncio.run() because Celery
-  workers execute tasks synchronously.
-- Account pool lives in a local SQLite DB managed by twscrape.  If no
-  accounts are configured the scraper falls back to httpx syndication
-  endpoint (limited, no auth needed, may break without notice).
-- All network operations use exponential backoff with jitter.
+- Scweet is synchronous, perfect for Celery worker context.
+- twscrape is async; we wrap calls with asyncio.run().
+- All tiers share the same parse() logic that normalizes to SocialPost fields.
+- auth_token comes from settings.TWITTER_AUTH_TOKEN (browser cookie from x.com).
 """
 
 from __future__ import annotations
@@ -39,9 +42,10 @@ _BACKOFF_MAX = 300  # 5 minutes ceiling
 _MAX_RETRIES = 4
 _HTTPX_TIMEOUT = 30.0
 
-# Twitter syndication API (public, no auth, limited)
-_SYNDICATION_TIMELINE_URL = "https://syndication.twitter.com/srv/timeline-profile/screen-name/{handle}"
-_SYNDICATION_PROFILE_URL = "https://api.twitter.com/1.1/users/show.json"
+# Twitter syndication API (public, no auth, limited — Tier 3)
+_SYNDICATION_TIMELINE_URL = (
+    "https://syndication.twitter.com/srv/timeline-profile/screen-name/{handle}"
+)
 
 
 def _get_sync_session() -> Session:
@@ -57,28 +61,151 @@ def _get_sync_session() -> Session:
 
 def _sleep_with_jitter(attempt: int) -> None:
     """Exponential backoff with full jitter (AWS-style)."""
-    ceiling = min(_BACKOFF_BASE ** attempt, _BACKOFF_MAX)
+    ceiling = min(_BACKOFF_BASE**attempt, _BACKOFF_MAX)
     sleep_time = random.uniform(0, ceiling)  # noqa: S311
     logger.debug("Backoff attempt %d — sleeping %.1fs", attempt, sleep_time)
     time.sleep(sleep_time)
 
 
 class TwitterScraper(BaseScraper):
-    """Twitter/X scraper.
+    """Twitter/X scraper with three-tier fallback.
 
-    Primary backend: twscrape (async, requires account pool).
-    Fallback: httpx against syndication endpoints (degraded, public only).
+    Tier 1: Scweet (GraphQL + auth_token cookie)
+    Tier 2: twscrape (async, account pool)
+    Tier 3: httpx syndication (degraded, public only)
     """
 
     platform = "twitter"
 
     def __init__(self) -> None:
+        self._scweet_client: Any | None = None
+        self._scweet_available: bool | None = None
         self._twscrape_api: Any | None = None
         self._twscrape_available: bool | None = None
 
-    # ------------------------------------------------------------------
-    # twscrape helpers
-    # ------------------------------------------------------------------
+    # ==================================================================
+    # Tier 1: Scweet (primary)
+    # ==================================================================
+    def _get_scweet_client(self) -> Any | None:
+        """Lazy-initialize Scweet client with auth_token from settings."""
+        if self._scweet_available is False:
+            return None
+        if self._scweet_client is not None:
+            return self._scweet_client
+
+        auth_token = settings.TWITTER_AUTH_TOKEN
+        if not auth_token:
+            logger.info(
+                "TWITTER_AUTH_TOKEN not configured — Scweet unavailable, "
+                "will fall back to twscrape/httpx"
+            )
+            self._scweet_available = False
+            return None
+
+        try:
+            from Scweet import Scweet  # type: ignore[import-untyped]
+
+            self._scweet_client = Scweet(auth_token=auth_token)
+            self._scweet_available = True
+            logger.info("Scweet client initialized (Tier 1 active)")
+            return self._scweet_client
+        except ImportError:
+            logger.warning(
+                "Scweet library not installed — pip install Scweet. "
+                "Falling back to twscrape/httpx."
+            )
+            self._scweet_available = False
+            return None
+        except Exception as exc:
+            logger.warning("Scweet initialization failed: %s", exc)
+            self._scweet_available = False
+            return None
+
+    def _fetch_tweets_scweet(
+        self, handle: str, limit: int = _MAX_TWEETS_PER_SCRAPE
+    ) -> list[dict[str, Any]]:
+        """Fetch tweets via Scweet (synchronous, GraphQL API)."""
+        client = self._get_scweet_client()
+        if client is None:
+            return []
+
+        for attempt in range(_MAX_RETRIES):
+            try:
+                raw_tweets = client.get_profile_tweets([handle], limit=limit)
+                if raw_tweets is None:
+                    raw_tweets = []
+
+                logger.info(
+                    "Scweet fetched %d tweets for @%s",
+                    len(raw_tweets),
+                    handle,
+                )
+                # Tag source for parse() disambiguation
+                for tweet in raw_tweets:
+                    tweet["_source"] = "scweet"
+                return raw_tweets
+
+            except Exception as exc:
+                logger.warning(
+                    "Scweet attempt %d failed for @%s: %s",
+                    attempt,
+                    handle,
+                    exc,
+                )
+                # On auth errors, mark Scweet as unavailable for this session
+                exc_str = str(exc).lower()
+                if "unauthorized" in exc_str or "401" in exc_str or "forbidden" in exc_str:
+                    logger.error(
+                        "Scweet auth_token appears expired for @%s — "
+                        "rotate TWITTER_AUTH_TOKEN from browser cookies",
+                        handle,
+                    )
+                    self._scweet_available = False
+                    return []
+                _sleep_with_jitter(attempt)
+
+        logger.warning("Scweet exhausted retries for @%s", handle)
+        return []
+
+    def _fetch_profile_scweet(self, handle: str) -> dict[str, Any] | None:
+        """Fetch profile info via Scweet.get_user_info()."""
+        client = self._get_scweet_client()
+        if client is None:
+            return None
+
+        for attempt in range(_MAX_RETRIES):
+            try:
+                # get_user_info returns a list with one dict
+                info_list = client.get_user_info(handle)
+                if not info_list:
+                    return None
+
+                info = info_list[0] if isinstance(info_list, list) else info_list
+                return {
+                    "followers_count": int(info.get("followers_count", 0) or 0),
+                    "following_count": int(info.get("following_count", 0) or 0),
+                    "posts_count": int(info.get("statuses_count", 0) or 0),
+                    "raw": info,
+                }
+
+            except Exception as exc:
+                logger.warning(
+                    "Scweet profile info attempt %d for @%s: %s",
+                    attempt,
+                    handle,
+                    exc,
+                )
+                exc_str = str(exc).lower()
+                if "unauthorized" in exc_str or "401" in exc_str:
+                    self._scweet_available = False
+                    return None
+                _sleep_with_jitter(attempt)
+
+        return None
+
+    # ==================================================================
+    # Tier 2: twscrape (fallback)
+    # ==================================================================
     def _get_twscrape_api(self) -> Any:
         """Lazy-import and cache the twscrape API instance."""
         if self._twscrape_api is not None:
@@ -92,7 +219,7 @@ class TwitterScraper(BaseScraper):
             return self._twscrape_api
         except ImportError:
             logger.warning(
-                "twscrape is not installed — Twitter scraper will use degraded httpx mode"
+                "twscrape is not installed — Twitter scraper Tier 2 unavailable"
             )
             self._twscrape_available = False
             return None
@@ -107,7 +234,6 @@ class TwitterScraper(BaseScraper):
         if api is None:
             return []
 
-        # Resolve user ID from handle
         user = await api.user_by_login(handle)
         if user is None:
             logger.warning("twscrape could not resolve user @%s", handle)
@@ -143,15 +269,14 @@ class TwitterScraper(BaseScraper):
             "raw": user_dict,
         }
 
-    # ------------------------------------------------------------------
-    # httpx fallback helpers
-    # ------------------------------------------------------------------
+    # ==================================================================
+    # Tier 3: httpx syndication (last resort)
+    # ==================================================================
     def _fetch_tweets_httpx(self, handle: str) -> list[dict[str, Any]]:
         """Degraded-mode: fetch public timeline via syndication endpoint.
 
         This endpoint returns an HTML page with embedded tweet data.
-        It is fragile and may stop working; it exists only as a fallback
-        when twscrape accounts are not configured.
+        It is fragile and may stop working; it exists only as a last resort.
         """
         url = _SYNDICATION_TIMELINE_URL.format(handle=handle)
         headers = {
@@ -165,11 +290,16 @@ class TwitterScraper(BaseScraper):
 
         for attempt in range(_MAX_RETRIES):
             try:
-                with httpx.Client(timeout=_HTTPX_TIMEOUT, follow_redirects=True) as client:
+                with httpx.Client(
+                    timeout=_HTTPX_TIMEOUT, follow_redirects=True
+                ) as client:
                     resp = client.get(url, headers=headers)
 
                 if resp.status_code == 429:
-                    logger.warning("Rate limited on syndication endpoint (attempt %d)", attempt)
+                    logger.warning(
+                        "Rate limited on syndication endpoint (attempt %d)",
+                        attempt,
+                    )
                     _sleep_with_jitter(attempt + 2)
                     continue
 
@@ -181,12 +311,14 @@ class TwitterScraper(BaseScraper):
                     )
                     return []
 
-                # The syndication page embeds JSON inside a <script> tag.
-                # Attempt to extract it; this is inherently brittle.
                 return self._parse_syndication_html(resp.text, handle)
 
             except httpx.TimeoutException:
-                logger.warning("Timeout fetching syndication for @%s (attempt %d)", handle, attempt)
+                logger.warning(
+                    "Timeout fetching syndication for @%s (attempt %d)",
+                    handle,
+                    attempt,
+                )
                 _sleep_with_jitter(attempt)
             except httpx.HTTPError as exc:
                 logger.warning(
@@ -202,17 +334,12 @@ class TwitterScraper(BaseScraper):
 
     @staticmethod
     def _parse_syndication_html(html: str, handle: str) -> list[dict[str, Any]]:
-        """Best-effort extraction of tweet data from syndication HTML.
-
-        Returns a list of partial tweet dicts.  Fields may be incomplete
-        compared to the twscrape path.
-        """
+        """Best-effort extraction of tweet data from syndication HTML."""
         import json
         import re
 
         tweets: list[dict[str, Any]] = []
 
-        # Look for JSON-LD or embedded __NEXT_DATA__ style payloads
         patterns = [
             r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>',
             r'"tweet_results":\s*(\{.*?\})\s*[,}]',
@@ -223,15 +350,12 @@ class TwitterScraper(BaseScraper):
             for match in matches:
                 try:
                     data = json.loads(match)
-                    # Navigate common Twitter JSON structures
                     if isinstance(data, dict):
-                        # Try to find tweet objects in nested structure
                         _extract_tweets_from_json(data, tweets)
                 except (json.JSONDecodeError, TypeError):
                     continue
 
         if not tweets:
-            # Simpler fallback: extract any data-tweet-id attributes
             tweet_ids = re.findall(r'data-tweet-id=["\'](\d+)["\']', html)
             texts = re.findall(
                 r'<p[^>]*class="[^"]*tweet-text[^"]*"[^>]*>(.*?)</p>',
@@ -261,11 +385,95 @@ class TwitterScraper(BaseScraper):
         )
         return tweets
 
-    # ------------------------------------------------------------------
+    def _fetch_profile_stats_httpx(self, handle: str) -> dict[str, int]:
+        """Fallback profile stats via public web scraping (Tier 3)."""
+        default = {"followers_count": 0, "following_count": 0, "posts_count": 0}
+        url = f"https://x.com/{handle}"
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+        }
+
+        for attempt in range(_MAX_RETRIES):
+            try:
+                with httpx.Client(
+                    timeout=_HTTPX_TIMEOUT, follow_redirects=True
+                ) as client:
+                    resp = client.get(url, headers=headers)
+
+                if resp.status_code == 429:
+                    _sleep_with_jitter(attempt + 2)
+                    continue
+
+                if resp.status_code != 200:
+                    logger.warning(
+                        "Profile page returned %d for @%s",
+                        resp.status_code,
+                        handle,
+                    )
+                    return default
+
+                return self._parse_profile_page_stats(resp.text) or default
+
+            except (httpx.TimeoutException, httpx.HTTPError) as exc:
+                logger.warning(
+                    "httpx profile stats attempt %d for @%s: %s",
+                    attempt,
+                    handle,
+                    exc,
+                )
+                _sleep_with_jitter(attempt)
+
+        return default
+
+    @staticmethod
+    def _parse_profile_page_stats(html: str) -> dict[str, int] | None:
+        """Best-effort extraction of follower/following counts from profile HTML."""
+        import json
+        import re
+
+        match = re.search(
+            r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>',
+            html,
+            re.DOTALL,
+        )
+        if match:
+            try:
+                data = json.loads(match.group(1))
+                user = _deep_find_key(data, "user_results") or _deep_find_key(
+                    data, "user"
+                )
+                if user and isinstance(user, dict):
+                    legacy = user.get("legacy") or user
+                    return {
+                        "followers_count": legacy.get("followers_count", 0),
+                        "following_count": legacy.get("friends_count", 0),
+                        "posts_count": legacy.get("statuses_count", 0),
+                    }
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        meta_match = re.search(
+            r"(\d[\d,.]*[KMkm]?)\s*Followers.*?(\d[\d,.]*[KMkm]?)\s*Following",
+            html,
+        )
+        if meta_match:
+            return {
+                "followers_count": _parse_count_str(meta_match.group(1)),
+                "following_count": _parse_count_str(meta_match.group(2)),
+                "posts_count": 0,
+            }
+
+        return None
+
+    # ==================================================================
     # BaseScraper interface
-    # ------------------------------------------------------------------
+    # ==================================================================
     def fetch_raw(self, handle: str, **kwargs: Any) -> list[dict[str, Any]]:
-        """Fetch tweets — tries twscrape first, falls back to httpx."""
+        """Fetch tweets — cascades through Scweet -> twscrape -> httpx."""
         limit = kwargs.get("limit", _MAX_TWEETS_PER_SCRAPE)
         handle = handle.lstrip("@").strip()
 
@@ -273,15 +481,28 @@ class TwitterScraper(BaseScraper):
             logger.error("Empty handle provided to fetch_raw")
             return []
 
-        # Attempt twscrape (async)
+        # ── Tier 1: Scweet ──────────────────────────────────
+        if self._scweet_available is not False:
+            tweets = self._fetch_tweets_scweet(handle, limit=limit)
+            if tweets:
+                return tweets
+            # Empty result from Scweet with available client = account exists but
+            # has no tweets. Only fall through if Scweet itself failed.
+            if self._scweet_available:
+                logger.info("Scweet returned 0 tweets for @%s (account may be empty)", handle)
+                return []
+
+        # ── Tier 2: twscrape ───────────────────────────────
         self._get_twscrape_api()
         if self._twscrape_available:
+            logger.info("Falling back to twscrape (Tier 2) for @%s", handle)
             for attempt in range(_MAX_RETRIES):
                 try:
-                    tweets = asyncio.run(self._fetch_tweets_twscrape(handle, limit=limit))
+                    tweets = asyncio.run(
+                        self._fetch_tweets_twscrape(handle, limit=limit)
+                    )
                     if tweets:
                         return tweets
-                    # Empty result is not necessarily an error (new account, protected, etc.)
                     logger.info("twscrape returned 0 tweets for @%s", handle)
                     return []
                 except Exception as exc:
@@ -293,83 +514,114 @@ class TwitterScraper(BaseScraper):
                     )
                     _sleep_with_jitter(attempt)
 
-            logger.warning("twscrape exhausted retries for @%s — falling back to httpx", handle)
+            logger.warning(
+                "twscrape exhausted retries for @%s — falling back to httpx",
+                handle,
+            )
 
-        # Fallback: httpx syndication
-        logger.info("Using httpx fallback for @%s", handle)
+        # ── Tier 3: httpx syndication ──────────────────────
+        logger.info("Using httpx syndication fallback (Tier 3) for @%s", handle)
         return self._fetch_tweets_httpx(handle)
 
     def parse(self, raw_data: dict[str, Any]) -> dict[str, Any]:
         """Parse a single raw tweet into normalized SocialPost fields.
 
-        Handles both twscrape dict format and syndication fallback format.
+        Handles three formats:
+        - Scweet dict (tweet_id, text, likes, retweets, comments, timestamp, media)
+        - twscrape dict (id, rawContent, likeCount, retweetCount, etc.)
+        - syndication fallback (id_str, full_text, favorite_count, etc.)
         """
-        # twscrape uses snake_case fields matching Twitter API v2
-        # Syndication fallback uses the legacy field names
+        source = raw_data.get("_source", "")
 
-        # Resolve post ID
-        platform_post_id = str(
-            raw_data.get("id_str")
-            or raw_data.get("id")
-            or raw_data.get("rest_id")
-            or ""
-        )
+        # ── Resolve post ID ─────────────────────────────────
+        if source == "scweet":
+            platform_post_id = str(raw_data.get("tweet_id") or "")
+        else:
+            platform_post_id = str(
+                raw_data.get("id_str")
+                or raw_data.get("id")
+                or raw_data.get("rest_id")
+                or ""
+            )
 
-        # Resolve content
-        content = (
-            raw_data.get("rawContent")
-            or raw_data.get("full_text")
-            or raw_data.get("text")
-            or ""
-        )
+        # ── Resolve content ─────────────────────────────────
+        if source == "scweet":
+            # Scweet: 'text' is primary, 'embedded_text' may have quoted tweet
+            content = raw_data.get("text") or ""
+            embedded = raw_data.get("embedded_text")
+            if embedded and embedded != content:
+                content = f"{content}\n\n[QT] {embedded}"
+        else:
+            content = (
+                raw_data.get("rawContent")
+                or raw_data.get("full_text")
+                or raw_data.get("text")
+                or ""
+            )
 
-        # Resolve published_at
+        # ── Resolve published_at ────────────────────────────
         published_at = self._parse_tweet_date(raw_data)
 
-        # Determine post type from media attachments
+        # ── Determine post type ─────────────────────────────
         post_type = self._determine_post_type(raw_data)
 
-        # Metrics — twscrape nests under different keys depending on version
-        likes = (
-            raw_data.get("likeCount")
-            or raw_data.get("favorite_count")
-            or 0
-        )
-        comments = (
-            raw_data.get("replyCount")
-            or raw_data.get("reply_count")
-            or 0
-        )
-        shares = (
-            raw_data.get("retweetCount")
-            or raw_data.get("retweet_count")
-            or 0
-        )
-        views = (
-            raw_data.get("viewCount")
-            or raw_data.get("view_count")
-            or 0
-        )
+        # ── Metrics ─────────────────────────────────────────
+        if source == "scweet":
+            likes = raw_data.get("likes", 0)
+            comments = raw_data.get("comments", 0)
+            shares = raw_data.get("retweets", 0)
+            views = 0  # Scweet does not expose view counts
+        else:
+            likes = (
+                raw_data.get("likeCount")
+                or raw_data.get("favorite_count")
+                or 0
+            )
+            comments = (
+                raw_data.get("replyCount")
+                or raw_data.get("reply_count")
+                or 0
+            )
+            shares = (
+                raw_data.get("retweetCount")
+                or raw_data.get("retweet_count")
+                or 0
+            )
+            views = (
+                raw_data.get("viewCount")
+                or raw_data.get("view_count")
+                or 0
+            )
 
         return {
             "platform_post_id": platform_post_id,
             "content": content,
             "post_type": post_type,
             "published_at": published_at,
-            "likes": int(likes) if likes else 0,
-            "comments": int(comments) if comments else 0,
-            "shares": int(shares) if shares else 0,
-            "views": int(views) if views else 0,
+            "likes": _safe_int(likes),
+            "comments": _safe_int(comments),
+            "shares": _safe_int(shares),
+            "views": _safe_int(views),
             "raw_data": raw_data,
         }
 
     def update_profile_stats(self, handle: str) -> dict[str, int]:
-        """Fetch current profile statistics for a Twitter handle."""
+        """Fetch current profile statistics — cascades through all tiers."""
         handle = handle.lstrip("@").strip()
         if not handle:
             return {"followers_count": 0, "following_count": 0, "posts_count": 0}
 
-        # Try twscrape
+        # ── Tier 1: Scweet ──────────────────────────────────
+        if self._scweet_available is not False:
+            result = self._fetch_profile_scweet(handle)
+            if result is not None:
+                return {
+                    "followers_count": result["followers_count"],
+                    "following_count": result["following_count"],
+                    "posts_count": result["posts_count"],
+                }
+
+        # ── Tier 2: twscrape ───────────────────────────────
         self._get_twscrape_api()
         if self._twscrape_available:
             for attempt in range(_MAX_RETRIES):
@@ -390,17 +642,17 @@ class TwitterScraper(BaseScraper):
                     )
                     _sleep_with_jitter(attempt)
 
-        # Fallback: try public JSON endpoint (may require bearer token)
+        # ── Tier 3: httpx ──────────────────────────────────
         return self._fetch_profile_stats_httpx(handle)
 
     def scrape(self, profile_id: int) -> dict[str, Any]:
         """Full scrape pipeline for a Twitter profile.
 
         1. Load profile from DB
-        2. Fetch raw tweets
+        2. Fetch raw tweets (Scweet -> twscrape -> httpx)
         3. Parse each tweet
         4. Deduplicate by platform_post_id
-        5. Store new posts
+        5. Store new posts via upsert
         6. Update profile stats
         """
         errors: list[str] = []
@@ -434,10 +686,8 @@ class TwitterScraper(BaseScraper):
 
             # 3 & 4. Parse and deduplicate
             if raw_tweets:
-                # Get existing platform_post_ids to avoid duplicate DB lookups
-                existing_ids_query = (
-                    select(SocialPost.platform_post_id)
-                    .where(SocialPost.profile_id == profile_id)
+                existing_ids_query = select(SocialPost.platform_post_id).where(
+                    SocialPost.profile_id == profile_id
                 )
                 existing_ids: set[str] = {
                     row[0] for row in session.execute(existing_ids_query).all()
@@ -453,7 +703,7 @@ class TwitterScraper(BaseScraper):
                         if parsed["platform_post_id"] in existing_ids:
                             continue
 
-                        # 5. Store new post via upsert (safety net for race conditions)
+                        # 5. Store via upsert
                         stmt = (
                             pg_insert(SocialPost)
                             .values(
@@ -461,7 +711,8 @@ class TwitterScraper(BaseScraper):
                                 platform_post_id=parsed["platform_post_id"],
                                 content=parsed["content"],
                                 post_type=parsed["post_type"],
-                                published_at=parsed["published_at"] or datetime.now(UTC),
+                                published_at=parsed["published_at"]
+                                or datetime.now(UTC),
                                 likes=parsed["likes"],
                                 comments=parsed["comments"],
                                 shares=parsed["shares"],
@@ -523,32 +774,45 @@ class TwitterScraper(BaseScraper):
             "errors": errors,
         }
 
-    # ------------------------------------------------------------------
+    # ==================================================================
     # Private helpers
-    # ------------------------------------------------------------------
+    # ==================================================================
     @staticmethod
     def _parse_tweet_date(raw_data: dict[str, Any]) -> datetime | None:
         """Extract and parse the tweet creation timestamp."""
-        # twscrape format: ISO string or datetime object
-        date_val = raw_data.get("date") or raw_data.get("created_at")
+        # Scweet uses 'timestamp', twscrape uses 'date', legacy uses 'created_at'
+        date_val = (
+            raw_data.get("timestamp")
+            or raw_data.get("date")
+            or raw_data.get("created_at")
+        )
         if date_val is None:
             return None
 
         if isinstance(date_val, datetime):
             return date_val.replace(tzinfo=UTC) if date_val.tzinfo is None else date_val
 
+        if isinstance(date_val, (int, float)):
+            # Unix timestamp (Scweet may return epoch seconds)
+            try:
+                return datetime.fromtimestamp(date_val, tz=UTC)
+            except (ValueError, OSError):
+                return None
+
         if isinstance(date_val, str):
-            # Twitter legacy format: "Thu Oct 26 14:30:00 +0000 2023"
             for fmt in (
-                "%a %b %d %H:%M:%S %z %Y",
-                "%Y-%m-%dT%H:%M:%S%z",
-                "%Y-%m-%dT%H:%M:%S.%f%z",
-                "%Y-%m-%d %H:%M:%S%z",
-                "%Y-%m-%d %H:%M:%S",
+                "%a %b %d %H:%M:%S %z %Y",  # Twitter legacy
+                "%Y-%m-%dT%H:%M:%S%z",  # ISO 8601
+                "%Y-%m-%dT%H:%M:%S.%f%z",  # ISO 8601 with microseconds
+                "%Y-%m-%d %H:%M:%S%z",  # Common datetime
+                "%Y-%m-%d %H:%M:%S",  # Naive datetime
+                "%Y-%m-%dT%H:%M:%SZ",  # UTC with Z suffix
             ):
                 try:
                     dt = datetime.strptime(date_val, fmt)
-                    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
+                    return (
+                        dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
+                    )
                 except ValueError:
                     continue
 
@@ -559,10 +823,39 @@ class TwitterScraper(BaseScraper):
     @staticmethod
     def _determine_post_type(raw_data: dict[str, Any]) -> str:
         """Determine PostType from tweet media attachments."""
-        # twscrape exposes media list
+        source = raw_data.get("_source", "")
+
+        if source == "scweet":
+            # Scweet media: dict with image_links (list of URLs)
+            media = raw_data.get("media")
+            if not media or not isinstance(media, dict):
+                return PostType.TEXT
+
+            image_links = media.get("image_links") or []
+            if not image_links:
+                return PostType.TEXT
+
+            # Scweet does not distinguish video vs image in media dict
+            # Video URLs typically contain /ext_tw_video/ or /amplify_video/
+            has_video = any(
+                "video" in str(url).lower() for url in image_links
+            )
+            if has_video:
+                return PostType.VIDEO
+
+            if len(image_links) > 1:
+                return PostType.CAROUSEL
+
+            return PostType.IMAGE
+
+        # twscrape / syndication format
         media = raw_data.get("media") or {}
         if isinstance(media, dict):
-            media_list = media.get("all", []) or media.get("photos", []) or media.get("videos", [])
+            media_list = (
+                media.get("all", [])
+                or media.get("photos", [])
+                or media.get("videos", [])
+            )
         elif isinstance(media, list):
             media_list = media
         else:
@@ -584,89 +877,20 @@ class TwitterScraper(BaseScraper):
 
         return PostType.IMAGE
 
-    def _fetch_profile_stats_httpx(self, handle: str) -> dict[str, int]:
-        """Fallback profile stats fetch via public web scraping.
-
-        Very limited — parses the public twitter.com page HTML for follower counts.
-        """
-        default = {"followers_count": 0, "following_count": 0, "posts_count": 0}
-        url = f"https://x.com/{handle}"
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        }
-
-        for attempt in range(_MAX_RETRIES):
-            try:
-                with httpx.Client(timeout=_HTTPX_TIMEOUT, follow_redirects=True) as client:
-                    resp = client.get(url, headers=headers)
-
-                if resp.status_code == 429:
-                    _sleep_with_jitter(attempt + 2)
-                    continue
-
-                if resp.status_code != 200:
-                    logger.warning("Profile page returned %d for @%s", resp.status_code, handle)
-                    return default
-
-                # Attempt to extract counts from meta tags or JSON-LD
-                return self._parse_profile_page_stats(resp.text) or default
-
-            except (httpx.TimeoutException, httpx.HTTPError) as exc:
-                logger.warning(
-                    "httpx profile stats attempt %d for @%s: %s",
-                    attempt,
-                    handle,
-                    exc,
-                )
-                _sleep_with_jitter(attempt)
-
-        return default
-
-    @staticmethod
-    def _parse_profile_page_stats(html: str) -> dict[str, int] | None:
-        """Best-effort extraction of follower/following counts from profile HTML."""
-        import json
-        import re
-
-        # Look for __NEXT_DATA__ or similar JSON blob
-        match = re.search(r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.DOTALL)
-        if match:
-            try:
-                data = json.loads(match.group(1))
-                # Navigate to user stats (structure varies)
-                user = _deep_find_key(data, "user_results") or _deep_find_key(data, "user")
-                if user and isinstance(user, dict):
-                    legacy = user.get("legacy") or user
-                    return {
-                        "followers_count": legacy.get("followers_count", 0),
-                        "following_count": legacy.get("friends_count", 0),
-                        "posts_count": legacy.get("statuses_count", 0),
-                    }
-            except (json.JSONDecodeError, TypeError):
-                pass
-
-        # Try meta description: "X (@handle). Y Followers, Z Following"
-        meta_match = re.search(
-            r'(\d[\d,.]*[KMkm]?)\s*Followers.*?(\d[\d,.]*[KMkm]?)\s*Following',
-            html,
-        )
-        if meta_match:
-            return {
-                "followers_count": _parse_count_str(meta_match.group(1)),
-                "following_count": _parse_count_str(meta_match.group(2)),
-                "posts_count": 0,
-            }
-
-        return None
-
 
 # ---------------------------------------------------------------------------
 # Module-level utility functions
 # ---------------------------------------------------------------------------
+def _safe_int(value: Any) -> int:
+    """Safely convert a value to int, returning 0 on failure."""
+    if value is None:
+        return 0
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return 0
+
+
 def _strip_html_tags(text: str) -> str:
     """Remove HTML tags from a string."""
     import re
@@ -674,18 +898,18 @@ def _strip_html_tags(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text).strip()
 
 
-def _extract_tweets_from_json(data: Any, results: list[dict[str, Any]], depth: int = 0) -> None:
+def _extract_tweets_from_json(
+    data: Any, results: list[dict[str, Any]], depth: int = 0
+) -> None:
     """Recursively search a nested dict/list for tweet-like objects."""
     if depth > 15:
         return
 
     if isinstance(data, dict):
-        # Check if this looks like a tweet object
         if "id_str" in data and ("full_text" in data or "text" in data):
             results.append(data)
             return
 
-        # twscrape-style: check for "rawContent"
         if "id" in data and "rawContent" in data:
             results.append(data)
             return
