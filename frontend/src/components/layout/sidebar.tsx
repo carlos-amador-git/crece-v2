@@ -47,7 +47,7 @@ const sections = [
     items: [
       { href: "/dashboard/benchmark", label: "Benchmarks", icon: BarChart3 },
       { href: "/dashboard/planes", label: "Planes IA", icon: Brain },
-      { href: "/dashboard/bot-detection", label: "Deteccion Bots", icon: Bot },
+      { href: "/dashboard/bot-detection", label: "Salud Digital", icon: Bot },
     ],
   },
   {
