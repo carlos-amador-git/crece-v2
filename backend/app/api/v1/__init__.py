@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     auth,
     benchmark,
     blindaje,
+    bot_detection,
     campanas,
     campaigns_integration,
     canvassing,
@@ -63,3 +64,4 @@ api_router.include_router(webhooks_integration.router, prefix="/webhooks", tags=
 api_router.include_router(api_keys.router, prefix="/api-keys", tags=["api-keys"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(osint.router, prefix="/osint", tags=["osint"])
+api_router.include_router(bot_detection.router, prefix="/bot-detection", tags=["bot-detection"])

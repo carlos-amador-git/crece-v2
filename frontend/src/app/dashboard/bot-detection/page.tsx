@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import {
   Bot,
@@ -78,7 +78,7 @@ export default function BotDetectionPage() {
   const { data: dirigentesData } = useDirigentes();
   const dirigentes = dirigentesData?.items ?? [];
 
-  const { data: analysis, isLoading } = useQuery({
+  const { data: analysis, isLoading, refetch } = useQuery({
     queryKey: ["bot-analysis", selectedDirigente],
     queryFn: () =>
       api.get<BotAnalysisSummary>(
@@ -87,77 +87,17 @@ export default function BotDetectionPage() {
     enabled: !!selectedDirigente,
   });
 
-  const runAnalysis = useMutation({
-    mutationFn: (dirigenteId: string) =>
-      api.post<BotAnalysisSummary>(`/bot-detection/analyze/${dirigenteId}`),
-  });
-
-  // Demo data when no backend endpoint exists yet
-  const demoData: BotAnalysisSummary = {
-    total_analyzed: 150,
-    likely_bots: 12,
-    suspicious: 23,
-    humans: 115,
-    bot_percentage: 8.0,
-    suspicious_percentage: 23.3,
-    results: [
-      {
-        handle: "user38291028374",
-        platform: "twitter",
-        bot_probability: 0.95,
-        classification: "likely_bot",
-        signals: [
-          { name: "username_trailing_digits", score: 0.3, detail: "8+ trailing digits" },
-          { name: "low_follower_ratio", score: 0.35, detail: "Ratio 0.001 (3/5000)" },
-          { name: "zero_posts_many_following", score: 0.25, detail: "0 posts, 5000 following" },
-        ],
-        analyzed_at: new Date().toISOString(),
-      },
-      {
-        handle: "bot_promocion_mx",
-        platform: "twitter",
-        bot_probability: 0.88,
-        classification: "likely_bot",
-        signals: [
-          { name: "username_suspicious_prefix", score: 0.4, detail: "Prefix 'bot_'" },
-          { name: "content_duplication", score: 0.4, detail: "80% posts duplicados" },
-        ],
-        analyzed_at: new Date().toISOString(),
-      },
-      {
-        handle: "maria_gzz_2024",
-        platform: "twitter",
-        bot_probability: 0.45,
-        classification: "suspicious",
-        signals: [
-          { name: "new_account_high_activity", score: 0.3, detail: "Cuenta de 15 dias con 200 posts" },
-        ],
-        analyzed_at: new Date().toISOString(),
-      },
-      {
-        handle: "carlos.mendez.real",
-        platform: "instagram",
-        bot_probability: 0.08,
-        classification: "human",
-        signals: [],
-        analyzed_at: new Date().toISOString(),
-      },
-      {
-        handle: "fake_news_cdmx_",
-        platform: "twitter",
-        bot_probability: 0.92,
-        classification: "likely_bot",
-        signals: [
-          { name: "regular_posting_interval", score: 0.35, detail: "Posts cada 120s exactos" },
-          { name: "burst_posting", score: 0.25, detail: "50 posts en 1 hora" },
-          { name: "no_avatar", score: 0.15, detail: "Sin foto de perfil" },
-        ],
-        analyzed_at: new Date().toISOString(),
-      },
-    ],
+  const emptyData: BotAnalysisSummary = {
+    total_analyzed: 0,
+    likely_bots: 0,
+    suspicious: 0,
+    humans: 0,
+    bot_percentage: 0,
+    suspicious_percentage: 0,
+    results: [],
   };
 
-  const displayData = analysis ?? demoData;
+  const displayData = analysis ?? emptyData;
 
   return (
     <div className="space-y-6">
@@ -183,10 +123,10 @@ export default function BotDetectionPage() {
           </Select>
           <Button
             className="gap-2"
-            disabled={!selectedDirigente || runAnalysis.isPending}
-            onClick={() => runAnalysis.mutate(selectedDirigente)}
+            disabled={!selectedDirigente || isLoading}
+            onClick={() => refetch()}
           >
-            {runAnalysis.isPending ? (
+            {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Play className="h-4 w-4" />
@@ -202,7 +142,7 @@ export default function BotDetectionPage() {
         <p className="mt-0.5 text-xs text-blue-700 dark:text-blue-300">
           Se analizan: patrones de username, ratio seguidores/seguidos, frecuencia de publicacion,
           duplicacion de contenido, edad de cuenta vs actividad, y engagement rate.
-          Datos de ejemplo mostrados — selecciona un dirigente y ejecuta el analisis para datos reales.
+          Selecciona un dirigente para ver el analisis de sus perfiles sociales.
         </p>
       </div>
 
