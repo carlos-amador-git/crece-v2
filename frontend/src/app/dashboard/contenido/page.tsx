@@ -18,6 +18,7 @@ import {
   useContenidos, useGenerateContent, useUpdateContenidoEstado,
   type ContenidoFormato, type ContenidoEstado, type ContenidoFilters,
 } from "@/lib/api/hooks/use-contenido";
+import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
 import { FileText, Plus, Loader2, Sparkles } from "lucide-react";
 
 const FORMATOS: ContenidoFormato[] = ["post", "reel", "story", "carrusel", "video", "infografia"];
@@ -32,9 +33,11 @@ export default function ContenidoPage() {
   const [genForm, setGenForm] = useState({ dirigente_id: "", formato: "", tema: "", tono: "" });
 
   const { data, isLoading } = useContenidos(filters);
+  const { data: dirigentesData } = useDirigentes({ per_page: 50 });
   const generateContent = useGenerateContent();
   const updateEstado = useUpdateContenidoEstado();
   const items = data?.items ?? [];
+  const dirigentesForSelect = dirigentesData?.items ?? [];
 
   const handleGenerate = async () => {
     if (!genForm.dirigente_id || !genForm.formato || !genForm.tema || !genForm.tono) return;
@@ -66,8 +69,11 @@ export default function ContenidoPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <label htmlFor="gen-dirigente" className="text-sm font-medium">Dirigente ID</label>
-                <Input id="gen-dirigente" placeholder="ID del dirigente" value={genForm.dirigente_id} onChange={(e) => setGenForm((f) => ({ ...f, dirigente_id: e.target.value }))} />
+                <label className="text-sm font-medium">Dirigente</label>
+                <Select value={genForm.dirigente_id} onValueChange={(v) => setGenForm((f) => ({ ...f, dirigente_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar dirigente" /></SelectTrigger>
+                  <SelectContent>{dirigentesForSelect.map((d) => <SelectItem key={d.id} value={String(d.id)}>{d.full_name}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Formato</label>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { usePlan } from "@/lib/api/hooks/use-planes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,47 +34,11 @@ const TIPO_LABELS: Record<string, { label: string; color: string; description: s
   },
 };
 
-function MarkdownRenderer({ content }: { content: string }) {
-  // Simple markdown to HTML (tables, headers, bold, lists)
-  const html = content
-    // Headers
-    .replace(/^### (.+)$/gm, '<h3 class="mt-6 mb-3 font-heading text-lg font-semibold text-foreground">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="mt-8 mb-4 font-heading text-xl font-bold text-foreground border-b border-border pb-2">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="mt-8 mb-4 font-heading text-2xl font-extrabold text-foreground">$1</h1>')
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Tables - handle pipes
-    .replace(/^\|(.+)\|$/gm, (match) => {
-      const cells = match.split('|').filter(c => c.trim());
-      const isHeader = cells.every(c => c.trim().match(/^-+$/));
-      if (isHeader) return '<tr class="border-b border-border"></tr>';
-      const tag = 'td';
-      const cellHtml = cells.map(c =>
-        `<${tag} class="px-3 py-2 text-sm border-r border-border last:border-r-0">${c.trim()}</${tag}>`
-      ).join('');
-      return `<tr class="border-b border-border/50 hover:bg-muted/30">${cellHtml}</tr>`;
-    })
-    // Wrap consecutive table rows
-    .replace(/((?:<tr[^>]*>.*<\/tr>\n?){2,})/g,
-      '<div class="my-4 overflow-x-auto rounded-lg border border-border"><table class="w-full text-left">$1</table></div>'
-    )
-    // Bullet lists
-    .replace(/^\* (.+)$/gm, '<li class="ml-4 text-sm text-muted-foreground list-disc">$1</li>')
-    .replace(/^- (.+)$/gm, '<li class="ml-4 text-sm text-muted-foreground list-disc">$1</li>')
-    // Numbered lists
-    .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 text-sm text-muted-foreground list-decimal">$1</li>')
-    // Paragraphs (lines that aren't already wrapped)
-    .replace(/^(?!<[hltud]|<strong|<em)(.+)$/gm, '<p class="text-sm text-muted-foreground leading-relaxed mb-2">$1</p>')
-    // Clean up empty paragraphs
-    .replace(/<p[^>]*>\s*<\/p>/g, '');
-
+function PlanMarkdown({ content }: { content: string }) {
   return (
-    <div
-      className="prose-crece"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-heading prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-table:text-sm prose-th:bg-muted/50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-border prose-table:border-border">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
   );
 }
 
@@ -169,7 +135,7 @@ export default function PlanDetailPage() {
           <CardTitle>Contenido del Plan</CardTitle>
         </CardHeader>
         <CardContent>
-          <MarkdownRenderer content={plan.contenido} />
+          <PlanMarkdown content={plan.contenido} />
         </CardContent>
       </Card>
 

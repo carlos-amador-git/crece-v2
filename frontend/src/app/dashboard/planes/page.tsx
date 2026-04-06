@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { usePlanes, useGeneratePlan, useApprovePlan, useRejectPlan } from "@/lib/api/hooks/use-planes";
 import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
 import { Card, CardContent } from "@/components/ui/card";
@@ -136,11 +137,13 @@ export default function PlanesPage() {
       </div>
 
       {/* Status filter */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {[
           { value: "all", label: "Todos" },
           { value: "draft", label: "Borrador" },
           { value: "approved", label: "Aprobado" },
+          { value: "executed", label: "Ejecutado" },
+          { value: "rejected", label: "Rechazado" },
         ].map((status) => (
           <Button
             key={status.value}
@@ -272,8 +275,8 @@ export default function PlanesPage() {
                     )}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown>{selectedPlan.contenido}</ReactMarkdown>
+                <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-heading prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-table:text-sm prose-th:bg-muted/50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-border prose-table:border-border">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedPlan.contenido}</ReactMarkdown>
                 </div>
                 {!selectedPlan.aprobado && (
                   <DialogFooter className="gap-2">
