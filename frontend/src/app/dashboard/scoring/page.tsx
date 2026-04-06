@@ -80,8 +80,9 @@ export default function ScoringPage() {
 
   const segments = kpi?.segments ?? [];
   const pieData = segments.map((s: ScoringSegment) => ({
-    name: SEGMENT_LABELS[s.segment] ?? s.segment,
+    name: `${SEGMENT_LABELS[s.segment] ?? s.segment} (${s.percentage.toFixed(1)}%)`,
     value: s.count,
+    percentage: s.percentage,
     color: SEGMENT_COLORS[s.segment] ?? "hsl(212, 18%, 70%)",
   }));
 
@@ -218,7 +219,10 @@ export default function ScoringPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => formatNumber(value)}
+                    formatter={(value: number, name: string) => [
+                      `${formatNumber(value)} ciudadanos`,
+                      name,
+                    ]}
                   />
                   <Legend />
                 </PieChart>
