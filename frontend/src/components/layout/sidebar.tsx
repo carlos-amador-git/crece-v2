@@ -51,6 +51,7 @@ const sections = [
   {
     label: "Fase 2",
     items: [
+      { href: "/dashboard/ciudadanos", label: "Ciudadanos", icon: Users },
       { href: "/dashboard/scoring", label: "Scoring", icon: BarChart3 },
       { href: "/dashboard/contenido", label: "Contenido", icon: FileText },
       { href: "/dashboard/compliance", label: "Compliance", icon: Shield },
