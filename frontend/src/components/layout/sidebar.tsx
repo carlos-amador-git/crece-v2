@@ -39,7 +39,6 @@ const sections = [
       { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
       { href: "/dashboard/dirigentes", label: "Dirigentes", icon: Users },
       { href: "/dashboard/social", label: "Social", icon: MessageSquare },
-      { href: "/dashboard/electoral", label: "Electoral", icon: Map },
     ],
   },
   {
@@ -90,7 +89,10 @@ export function Sidebar() {
   }
 
   const displayName = user?.full_name ?? "Admin";
-  const displayRole = user?.role ? (roleLabels[user.role] ?? user.role) : "Admin";
+  const userWithDirigente = user as { full_name?: string; role?: string; dirigente_id?: number } | null;
+  const displayRole = userWithDirigente?.dirigente_id
+    ? "Dirigente"
+    : user?.role ? (roleLabels[user.role] ?? user.role) : "Admin";
   const initials = displayName
     .split(" ")
     .map((w) => w[0])

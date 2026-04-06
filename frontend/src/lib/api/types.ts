@@ -10,6 +10,7 @@ export interface User {
   role: "admin" | "analyst" | "field_operator" | "viewer";
   avatar_url?: string;
   is_active: boolean;
+  dirigente_id?: number | null;
 }
 
 export interface AuthTokens {
@@ -146,18 +147,17 @@ export interface ElectoralFeature {
 export interface PlanIA {
   id: number;
   dirigente_id: number;
-  dirigente_nombre?: string;
-  tipo: PlanType;
-  titulo: string;
+  tipo: string;
   contenido: string;
-  status: PlanStatus;
+  modelo_ia: string;
+  prompt_usado: string;
+  datos_entrada: Record<string, unknown> | null;
+  generado_por_id: number;
+  aprobado: boolean;
   created_at: string;
-  updated_at: string;
-  approved_by?: string;
-  approved_at?: string;
 }
 
-export type PlanType = "crecimiento" | "crisis" | "engagement" | "posicionamiento" | "contenido";
+export type PlanType = "DIAGNOSTICO" | "CONSOLIDACION" | "CRISIS" | "CONTENIDO";
 export type PlanStatus = "draft" | "approved" | "rejected" | "executed";
 
 export interface Benchmark {

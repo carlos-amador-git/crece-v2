@@ -26,7 +26,21 @@ export interface SeccionScore {
 export function useSegments() {
   return useQuery({
     queryKey: ["scoring-segments"],
-    queryFn: () => api.get<ScoringKpi>("/voter-scoring/segments"),
+    queryFn: async () => {
+      const res = await api.get<ScoringSegment[] | ScoringKpi>("/voter-scoring/segments");
+      // Backend returns array of {segmento, count, percentage}
+      if (Array.isArray(res)) {
+        const segments = res.map((s: any) => ({
+          segment: s.segmento ?? s.segment,
+          count: s.count,
+          percentage: s.percentage,
+        }));
+        const total = segments.reduce((acc: number, s: ScoringSegment) => acc + s.count, 0);
+        const avg = total > 0 ? segments.reduce((acc: number, s: ScoringSegment) => acc + s.count * (s.segment === "promotable" ? 80 : s.segment === "persuadible" ? 50 : s.segment === "indeciso" ? 30 : 10), 0) / total : 0;
+        return { total_scored: total, avg_score: Math.round(avg * 10) / 10, segments };
+      }
+      return res;
+    },
   });
 }
 
