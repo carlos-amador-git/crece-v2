@@ -31,6 +31,7 @@ class SentimentService:
         self._emotion_analyzer = None
         self._hate_analyzer = None
         self._nlp = None
+        self._sentiment_spanish = None
         self._initialized = False
 
     def _ensure_initialized(self) -> None:
@@ -46,6 +47,18 @@ class SentimentService:
             logger.warning(
                 "pysentimiento not installed. Install with: pip install 'crece-v2[nlp]'"
             )
+        try:
+            from sentiment_analysis_spanish import sentiment_analysis
+
+            self._sentiment_spanish = sentiment_analysis.SentimentAnalysisSpanish()
+        except ImportError:
+            logger.warning(
+                "sentiment-analysis-spanish not installed. "
+                "Install with: pip install 'crece-v2[nlp]'"
+            )
+        except Exception as e:
+            logger.warning("Failed to load sentiment-analysis-spanish: %s", e)
+
         try:
             import spacy
 
@@ -126,6 +139,42 @@ class SentimentService:
             is_toxic=is_toxic,
             toxicity_score=round(toxicity_score, 4),
         )
+
+    def analyze_secondary(self, text: str) -> SentimentResult | None:
+        """Run sentiment-analysis-spanish CNN as a secondary validation model.
+
+        Returns ``None`` if the model is unavailable.  The result contains only
+        sentiment score/label (no emotions, topics, or toxicity — those come
+        from the primary pipeline).
+        """
+        self._ensure_initialized()
+
+        if self._sentiment_spanish is None:
+            return None
+
+        if not text or not text.strip():
+            return None
+
+        try:
+            # sentiment() returns float in [0, 1]: 0 = negative, 1 = positive
+            raw = self._sentiment_spanish.sentiment(text[:10_000])
+            # Remap [0, 1] -> [-1, 1] for consistency with pysentimiento
+            bipolar_score = round((raw * 2.0) - 1.0, 4)
+
+            if bipolar_score > 0.15:
+                label = "positive"
+            elif bipolar_score < -0.15:
+                label = "negative"
+            else:
+                label = "neutral"
+
+            return SentimentResult(
+                sentiment_score=bipolar_score,
+                sentiment_label=label,
+            )
+        except Exception:
+            logger.warning("sentiment-spanish prediction failed", exc_info=True)
+            return None
 
 
 # Module-level singleton

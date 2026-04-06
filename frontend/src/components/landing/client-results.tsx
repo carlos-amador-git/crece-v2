@@ -18,10 +18,10 @@ import {
 
 const CLIENTS = [
   {
-    name: "Alejandro Piña Medina",
-    role: "Coordinador Comisión Operativa Estatal",
-    partido: "MC",
-    avatar: "AP",
+    name: "Dirigente A",
+    role: "Coordinador Estatal",
+    partido: "Demo",
+    avatar: "DA",
     avatarBg: "bg-primary text-primary-foreground",
     ipd: { score: 3.7, target: 7.0, label: "En crecimiento" },
     metrics: [
@@ -30,33 +30,34 @@ const CLIENTS = [
       { label: "Posts/semana", value: "4.2", icon: BarChart3, trend: "+2.1" },
     ],
     platforms: [
-      { name: "Twitter", icon: Twitter, followers: "3.1K", handle: "@Alejandro_Pinha" },
-      { name: "Instagram", icon: Instagram, followers: "2.2K", handle: "@alejandro.pinha" },
-      { name: "Facebook", icon: Facebook, followers: "1.8K", handle: "alejandropinamedina" },
+      { name: "Twitter", icon: Twitter, followers: "3.1K", handle: "@dirigente_a" },
+      { name: "Instagram", icon: Instagram, followers: "2.2K", handle: "@dirigente.a" },
+      { name: "Facebook", icon: Facebook, followers: "1.8K", handle: "dirigentea" },
     ],
     sentiment: { positive: 68, neutral: 20, negative: 12 },
     recommendation:
       "Plan de consolidación de 90 días generado con IA: expandir a TikTok y YouTube, incrementar frecuencia de posting a 12/semana.",
   },
   {
-    name: "Rafael Solano Pérez",
-    role: "Miembro Comisión Estatal · Analista La Razón",
-    partido: "MC",
-    avatar: "RS",
+    name: "Dirigente B",
+    role: "Miembro Comisión Estatal",
+    partido: "Demo",
+    avatar: "DB",
     avatarBg: "bg-accent text-accent-foreground",
-    ipd: { score: 1.68, target: 5.0, label: "Oportunidad" },
+    ipd: { score: 3.29, target: 5.0, label: "Oportunidad" },
     metrics: [
-      { label: "Seguidores", value: "620", icon: Users, trend: "Nuevo" },
+      { label: "Seguidores", value: "12,876", icon: Users, trend: "+24%" },
       { label: "Engagement", value: "4.7%", icon: TrendingUp, trend: "Alto" },
-      { label: "Cobertura", value: "33%", icon: BarChart3, trend: "2/6 plat." },
+      { label: "Cobertura", value: "67%", icon: BarChart3, trend: "4/6 plat." },
     ],
     platforms: [
-      { name: "Instagram", icon: Instagram, followers: "450", handle: "@rafasolanoperez" },
-      { name: "Twitter", icon: Twitter, followers: "170", handle: "@rafasolanoperez" },
+      { name: "Twitter", icon: Twitter, followers: "7.9K", handle: "@dirigente_b" },
+      { name: "Instagram", icon: Instagram, followers: "636", handle: "@dirigente.b" },
+      { name: "Facebook", icon: Facebook, followers: "4.3K", handle: "dirigenteb" },
     ],
     sentiment: { positive: 80, neutral: 15, negative: 5 },
     recommendation:
-      "Perfil ideal para estrategia de arranque: alto engagement orgánico, construir presencia en 4 plataformas faltantes.",
+      "Perfil con alto engagement orgánico. Estrategia de arranque: consolidar presencia en plataformas activas y expandir a TikTok.",
   },
 ] as const;
 
@@ -238,7 +239,7 @@ export function ClientResults() {
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="text-sm font-semibold uppercase tracking-wide text-accent"
           >
-            Resultados reales
+            Casos de ejemplo
           </motion.p>
           <motion.h2
             variants={fadeUp}
@@ -252,9 +253,9 @@ export function ClientResults() {
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="mt-4 text-muted-foreground text-pretty"
           >
-            Perfiles reales analizados por CRECE. Cada dirigente recibe un
-            diagnóstico digital personalizado con métricas accionables y planes
-            generados con inteligencia artificial.
+            Cada dirigente recibe un diagnóstico digital personalizado
+            con métricas accionables y planes estratégicos generados
+            con inteligencia artificial.
           </motion.p>
         </motion.div>
 

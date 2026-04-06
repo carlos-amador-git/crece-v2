@@ -10,7 +10,7 @@ import Constants from "expo-constants";
 const BASE_URL =
   Constants.expoConfig?.extra?.apiUrl ??
   process.env.EXPO_PUBLIC_API_URL ??
-  "http://localhost:8000";
+  "http://localhost:8002";
 
 const TOKEN_KEY = "crece_access_token";
 

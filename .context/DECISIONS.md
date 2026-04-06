@@ -64,3 +64,21 @@
 - Default cambiado de gemma4:27b a gemma3:12b
 - Razón: VPS Coolify tiene 16GB RAM, ~8GB disponibles. 27b no cabe. 12b sí.
 - Se puede override vía .env: OLLAMA_MODEL=gemma3:27b
+
+### D13: Ollama timeout 600s para Content Factory (2026-04-05)
+- httpx timeout en content_factory.py aumentado de 300s a 600s
+- Razón: con prompt completo (dirigente context + constraints), gemma3:12b CPU-only tarda ~480s
+- Streaming disponible como alternativa para UX
+
+### D14: Voter Scoring — datos sintéticos INEGI Census 2020 (2026-04-05)
+- 200 ciudadanos con data_source='synthetic_census_2020'
+- Distribuciones basadas en INEGI Censo 2020 CDMX (edad, género, escolaridad, alcaldía)
+- NUNCA confundir con datos reales — campo data_source es obligatorio
+- RF accuracy=1.0 es esperado en datos sintéticos; con datos reales será menor
+- Script idempotente: backend/scripts/seed_synthetic_citizens.py
+
+### D15: Bot detection pattern-based, no ML (2026-04-05)
+- Servicio basado en heurísticas, no ML (no hay dataset de bots mexicanos)
+- 3 analizadores: username, profile metadata, post patterns
+- Threshold: ≥0.70 = likely_bot, ≥0.40 = suspicious, <0.40 = human
+- Razón: para MVP, heurísticas son suficientes y explicables. ML requiere labeled data.

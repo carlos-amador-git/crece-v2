@@ -234,6 +234,46 @@ function LoginForm() {
             </Button>
           </form>
 
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-background px-2 text-muted-foreground">o</span>
+            </div>
+          </div>
+
+          {/* Demo access — one-click login */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full border-accent/30 text-accent hover:bg-accent/10 hover:text-accent transition-colors duration-150"
+            disabled={loading}
+            onClick={async () => {
+              setError(null);
+              setLoading(true);
+              try {
+                await login({ email: "admin@consultoriamd.com", password: "crece2026!" });
+                router.push("/dashboard");
+              } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Error al acceder";
+                setError(message);
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Accediendo...
+              </>
+            ) : (
+              "Acceso Demo"
+            )}
+          </Button>
+
           {/* Forgot password */}
           <p className="mt-4 text-center text-sm">
             <a

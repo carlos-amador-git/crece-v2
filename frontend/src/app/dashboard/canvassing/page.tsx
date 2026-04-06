@@ -13,22 +13,38 @@ import {
 import { ProgressBar } from "@/components/dashboard/progress-bar";
 import {
   useRoutes, useRouteDetail, useOptimizeRoute,
-  type CanvassingRoute, type PuntoEstado,
+  type RutaCanvassingResponse, type PuntoRutaResponse, type ResultadoVisita,
 } from "@/lib/api/hooks/use-canvassing";
 import { formatDate } from "@/lib/utils";
 import { MapPin, Plus, Loader2, Route, CheckCircle2, XCircle, Clock, HelpCircle } from "lucide-react";
 
-function puntoIcon(estado: PuntoEstado) {
-  const map: Record<PuntoEstado, React.ReactNode> = {
-    visitado: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
-    no_encontrado: <HelpCircle className="h-4 w-4 text-amber-500" />,
-    rechazado: <XCircle className="h-4 w-4 text-red-500" />,
-    pendiente: <Clock className="h-4 w-4 text-muted-foreground" />,
+function puntoIcon(punto: PuntoRutaResponse) {
+  if (!punto.visitado) {
+    return <Clock className="h-4 w-4 text-muted-foreground" />;
+  }
+  const resultMap: Record<string, React.ReactNode> = {
+    encuesta_completada: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
+    no_en_casa: <HelpCircle className="h-4 w-4 text-amber-500" />,
+    rechazo: <XCircle className="h-4 w-4 text-red-500" />,
+    reagendado: <Clock className="h-4 w-4 text-blue-500" />,
+    direccion_incorrecta: <HelpCircle className="h-4 w-4 text-amber-500" />,
   };
-  return map[estado] ?? map.pendiente;
+  return punto.resultado ? (resultMap[punto.resultado] ?? <CheckCircle2 className="h-4 w-4 text-emerald-500" />) : <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
 }
 
-function RouteCard({ route, onSelect, isSelected }: { route: CanvassingRoute; onSelect: (id: number) => void; isSelected: boolean }) {
+function resultadoLabel(resultado: ResultadoVisita | null): string {
+  if (!resultado) return "pendiente";
+  const labels: Record<ResultadoVisita, string> = {
+    encuesta_completada: "completado",
+    no_en_casa: "no en casa",
+    rechazo: "rechazado",
+    reagendado: "reagendado",
+    direccion_incorrecta: "dir. incorrecta",
+  };
+  return labels[resultado] ?? resultado;
+}
+
+function RouteCard({ route, onSelect, isSelected }: { route: RutaCanvassingResponse; onSelect: (id: number) => void; isSelected: boolean }) {
   return (
     <Card
       className={`card-elevated cursor-pointer transition-all ${isSelected ? "ring-2 ring-accent" : ""}`}
@@ -40,7 +56,9 @@ function RouteCard({ route, onSelect, isSelected }: { route: CanvassingRoute; on
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h3 className="font-heading text-base font-semibold">{route.nombre}</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Seccion {route.seccion_id} -- {route.encuestador} -- {formatDate(route.fecha)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {route.seccion_id ? `Seccion ${route.seccion_id}` : "Sin seccion"} -- Encuestador #{route.encuestador_id} -- {formatDate(route.fecha_asignada)}
+            </p>
           </div>
           <Route className="h-5 w-5 shrink-0 text-muted-foreground" />
         </div>
@@ -53,17 +71,22 @@ function RouteCard({ route, onSelect, isSelected }: { route: CanvassingRoute; on
 export default function CanvassingPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [form, setForm] = useState({ seccion_id: "", encuestador: "", fecha: "", max_puntos: "20" });
+  const [form, setForm] = useState({ seccion_id: "", encuestador_id: "", fecha: "", max_puntos: "20" });
 
   const { data: routes, isLoading } = useRoutes();
   const { data: routeDetail } = useRouteDetail(selectedId ?? undefined);
   const optimizeRoute = useOptimizeRoute();
 
   const handleOptimize = async () => {
-    if (!form.seccion_id || !form.encuestador || !form.fecha) return;
-    await optimizeRoute.mutateAsync({ seccion_id: form.seccion_id, encuestador: form.encuestador, fecha: form.fecha, max_puntos: Number(form.max_puntos) });
+    if (!form.seccion_id || !form.encuestador_id || !form.fecha) return;
+    await optimizeRoute.mutateAsync({
+      seccion_id: Number(form.seccion_id),
+      encuestador_id: Number(form.encuestador_id),
+      fecha: form.fecha,
+      max_puntos: Number(form.max_puntos),
+    });
     setDialogOpen(false);
-    setForm({ seccion_id: "", encuestador: "", fecha: "", max_puntos: "20" });
+    setForm({ seccion_id: "", encuestador_id: "", fecha: "", max_puntos: "20" });
   };
 
   return (
@@ -82,7 +105,7 @@ export default function CanvassingPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2"><label htmlFor="cv-seccion" className="text-sm font-medium">Seccion Electoral</label><Input id="cv-seccion" placeholder="ID de seccion" value={form.seccion_id} onChange={(e) => setForm((f) => ({ ...f, seccion_id: e.target.value }))} /></div>
-              <div className="grid gap-2"><label htmlFor="cv-enc" className="text-sm font-medium">Encuestador</label><Input id="cv-enc" placeholder="Nombre del encuestador" value={form.encuestador} onChange={(e) => setForm((f) => ({ ...f, encuestador: e.target.value }))} /></div>
+              <div className="grid gap-2"><label htmlFor="cv-enc" className="text-sm font-medium">Encuestador ID</label><Input id="cv-enc" type="number" placeholder="ID del encuestador" value={form.encuestador_id} onChange={(e) => setForm((f) => ({ ...f, encuestador_id: e.target.value }))} /></div>
               <div className="grid gap-2"><label htmlFor="cv-fecha" className="text-sm font-medium">Fecha</label><Input id="cv-fecha" type="date" value={form.fecha} onChange={(e) => setForm((f) => ({ ...f, fecha: e.target.value }))} /></div>
               <div className="grid gap-2"><label htmlFor="cv-max" className="text-sm font-medium">Max Puntos</label><Input id="cv-max" type="number" min="1" max="100" value={form.max_puntos} onChange={(e) => setForm((f) => ({ ...f, max_puntos: e.target.value }))} /></div>
             </div>
@@ -129,9 +152,9 @@ export default function CanvassingPage() {
                   {routeDetail.puntos.map((p) => (
                     <li key={p.id} className="flex items-center gap-3 rounded-md border p-2.5">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground">{p.orden}</span>
-                      {puntoIcon(p.estado)}
-                      <span className="min-w-0 flex-1 truncate text-sm">{p.direccion}</span>
-                      <Badge variant="outline" className="shrink-0 text-xs">{p.estado}</Badge>
+                      {puntoIcon(p)}
+                      <span className="min-w-0 flex-1 truncate text-sm">{p.ciudadano_nombre ?? `Ciudadano #${p.ciudadano_id}`}</span>
+                      <Badge variant="outline" className="shrink-0 text-xs">{p.visitado ? resultadoLabel(p.resultado) : "pendiente"}</Badge>
                     </li>
                   ))}
                 </ul>

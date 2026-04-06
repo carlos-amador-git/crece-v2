@@ -33,11 +33,13 @@ dependencies = [
     "twscrape>=0.13.0",
     "TikTokApi>=7.3.0",
     "google-api-python-client>=2.140.0",
+    "sherlock-project>=0.15.0",
 ]
 
 [project.optional-dependencies]
 nlp = [
     "pysentimiento>=0.7.0",
+    "sentiment-analysis-spanish>=0.0.25",
     "spacy>=3.8.0",
     "transformers>=4.40.0",
     "torch>=2.2.0",

@@ -17,6 +17,8 @@ class Platform(str, enum.Enum):
     TIKTOK = "TIKTOK"
     YOUTUBE = "YOUTUBE"
     BLUESKY = "BLUESKY"
+    THREADS = "THREADS"
+    TELEGRAM = "TELEGRAM"
 
 
 class SentimentLabel(str, enum.Enum):

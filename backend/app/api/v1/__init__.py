@@ -24,6 +24,7 @@ from app.api.v1.endpoints import (
     health,
     metricas_sociales,
     organizaciones,
+    osint,
     participacion,
     planes,
     programas,
@@ -61,3 +62,4 @@ api_router.include_router(crm_integration.router, prefix="/crm", tags=["crm"])
 api_router.include_router(webhooks_integration.router, prefix="/webhooks", tags=["webhooks"])
 api_router.include_router(api_keys.router, prefix="/api-keys", tags=["api-keys"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(osint.router, prefix="/osint", tags=["osint"])

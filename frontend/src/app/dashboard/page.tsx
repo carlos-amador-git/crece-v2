@@ -11,6 +11,7 @@ import { PostCard } from "@/components/social/post-card";
 import { useKpiOverview, useTopDirigentes, useSystemStatus } from "@/lib/api/hooks/use-overview";
 import { useSentimentTrend, useSocialPosts } from "@/lib/api/hooks/use-social";
 import { formatNumber, formatRelativeTime } from "@/lib/utils";
+import { CrisisAlertList } from "@/components/alerts/crisis-alert-list";
 import {
   Users,
   TrendingUp,
@@ -151,6 +152,9 @@ export default function OverviewPage() {
           ))}
         </nav>
       </header>
+
+      {/* ── Crisis Alerts ──────────────────────────────────── */}
+      {hasActiveAlerts && <CrisisAlertList limit={3} />}
 
       {/* ── KPI Cards ───────────────────────────────────────── */}
       <section

@@ -252,7 +252,7 @@ class ContentFactory:
     async def _generate_with_ollama(system_prompt: str, user_prompt: str) -> str:
         """Generate content using local Ollama instance."""
         combined = f"{system_prompt}\n\n{user_prompt}"
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        async with httpx.AsyncClient(timeout=600.0) as client:
             resp = await client.post(
                 f"{settings.OLLAMA_BASE_URL}/api/generate",
                 json={
@@ -270,7 +270,7 @@ class ContentFactory:
     ) -> AsyncGenerator[str, None]:
         """Stream content generation using local Ollama instance."""
         combined = f"{system_prompt}\n\n{user_prompt}"
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        async with httpx.AsyncClient(timeout=600.0) as client:
             async with client.stream(
                 "POST",
                 f"{settings.OLLAMA_BASE_URL}/api/generate",

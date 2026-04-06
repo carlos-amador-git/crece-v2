@@ -41,6 +41,26 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: "Panel",
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="grid-outline" color={color} size={size} />
+          ),
+          tabBarAccessibilityLabel: "Panel general",
+        }}
+      />
+      <Tabs.Screen
+        name="diagnostico"
+        options={{
+          title: "IPD",
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="analytics-outline" color={color} size={size} />
+          ),
+          tabBarAccessibilityLabel: "Diagnostico digital",
+        }}
+      />
+      <Tabs.Screen
         name="encuestas"
         options={{
           title: "Encuestas",

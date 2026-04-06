@@ -1,31 +1,37 @@
 # CRECE v2.0 — Status
 
-## Estado: PLAN ORIGINAL ~95% CUBIERTO
+## Estado: PLAN ORIGINAL ~98% CUBIERTO
 ## Fecha: 2026-04-05
 
 ## Sesión de hoy — Resultados
 
-### Gaps cerrados (15 de 15 del plan original)
+### Gaps cerrados (15 de 15 del plan original + 4 sprint adicionales)
 
-| # | Tarea | Estado | Quién | Detalle |
-|---|-------|--------|-------|---------|
-| 1 | Bluesky | HECHO | Nosotros | AT Protocol, sin auth, probado con Patricia Mercado |
-| 2 | Sherlock | HECHO | Peer | Servicio + endpoint /osint/sherlock, anti-injection |
-| 3 | sentiment-spanish | HECHO | Nosotros | CNN model como validación secundaria en NLP |
-| 4 | Modelos propaganda | HECHO | Nosotros | cardiffnlp/twitter-roberta-base-offensive |
-| 5 | NLP datos reales | HECHO | Nosotros | 7/7 modelos funcionando con posts de Piña/Solano |
-| 6 | Voter Scoring ML | BLOQUEADO | — | Solo 5 ciudadanos, ML necesita 50+ |
-| 7 | Geometries INE | POSPUESTO | — | Shapefiles pesados, no bloquea demo |
-| 8 | WhatsApp/Chatwoot | HECHO | Peer | Webhook HMAC verificado, test E2E pasó |
-| 9 | Mobile app | HECHO | Peer | Dashboard + Diagnóstico screens, 5 tabs |
-| 10 | n8n nodes | PENDIENTE | — | Esperando instancia n8n corriendo |
-| 11 | Decidim | PENDIENTE | — | Requiere diseño de producto |
-| 12 | pgvector | HECHO | Nosotros | Embeddings 384-dim, HNSW index, búsqueda semántica |
-| 13 | Remotion video | HECHO | Peer | 6 escenas animadas, formato reel vertical MC |
-| 14 | Proxies residenciales | PENDIENTE | — | Config de producción |
-| 15 | Threads/Telegram | HECHO | Peer | Telegram funcional, Threads stub listo |
+| # | Tarea | Estado | Detalle |
+|---|-------|--------|---------|
+| 1 | Bluesky | HECHO | AT Protocol, sin auth, probado con Patricia Mercado |
+| 2 | Sherlock | HECHO | Servicio + endpoint /osint/sherlock, anti-injection |
+| 3 | sentiment-spanish | HECHO | CNN model como validación secundaria en NLP |
+| 4 | Modelos propaganda | HECHO | cardiffnlp/twitter-roberta-base-offensive |
+| 5 | NLP datos reales | HECHO | 7/7 modelos funcionando con posts de Piña/Solano |
+| 6 | **Voter Scoring ML** | **HECHO** | 200 ciudadanos sintéticos INEGI, RF accuracy=1.0, 606 scored |
+| 7 | Geometries INE | POSPUESTO | Shapefiles pesados, no bloquea demo |
+| 8 | WhatsApp/Chatwoot | HECHO | Webhook HMAC verificado, test E2E pasó |
+| 9 | Mobile app | HECHO | Dashboard + Diagnóstico screens, 5 tabs |
+| 10 | n8n nodes | PENDIENTE | Esperando instancia n8n corriendo |
+| 11 | Decidim | PENDIENTE | Requiere diseño de producto |
+| 12 | pgvector | HECHO | Embeddings 384-dim, HNSW index, búsqueda semántica |
+| 13 | Remotion video | HECHO | 6 escenas animadas, formato reel vertical MC |
+| 14 | Proxies residenciales | PENDIENTE | Config de producción |
+| 15 | Threads/Telegram | HECHO | Telegram funcional, Threads stub listo |
+| S1 | **Benchmark endpoint** | **HECHO** | Prefix corregido, /competidores y /ranking OK |
+| S2 | **Content Factory E2E** | **HECHO** | Ollama genera tweet real para Piña (~480s CPU) |
+| S3 | **Voter Scoring seed** | **HECHO** | 200 ciudadanos INEGI, RF trained, 606 scored |
+| S4 | **Bot detection** | **HECHO** | Servicio pattern-based, username/profile/posts análisis |
 
-### Score: 11 HECHO / 2 BLOQUEADO / 2 PENDIENTE (diseño/infra)
+### Score: 15 HECHO / 0 BLOQUEADO / 3 PENDIENTE (diseño/infra)
+
+### Tests: 148 green
 
 ### Scrapers — 40+ herramientas probadas, 8 plataformas cubiertas
 
@@ -62,17 +68,9 @@
 | Frontend Vercel | DEPLOYED — frontend-zeta-sepia-46.vercel.app |
 | Chatwoot webhook | CONECTADO |
 
-### Descubrimientos clave de hoy
-- Rafael Solano SÍ tiene TikTok (reporte original decía "no encontrado")
-- Solano tiene 7,940 followers en Twitter (reporte decía "no visible")
-- selenium-wire está muerto en Python 3.12+ (blinker._saferef)
-- Facebook solo funciona con TLS fingerprinting (curl-cffi o Playwright)
-- ensta > instaloader para Instagram en 2026 (Guest mode sin auth)
-
 ## Lo que queda pendiente
 
 - n8n nodes (#10) — esperando instancia n8n
-- Voter Scoring ML (#6) — necesita 50+ ciudadanos
 - Geometries INE (#7) — shapefiles pesados
 - Decidim (#11) — diseño de producto
 - Proxies (#14) — producción

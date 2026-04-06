@@ -83,6 +83,22 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
                 toxicity_score=analysis_result.toxicity_score,
             )
             session.add(analysis)
+
+            # Secondary model: sentiment-analysis-spanish (validation)
+            secondary_result = sentiment_service.analyze_secondary(post.content or "")
+            if secondary_result is not None:
+                secondary_analysis = SentimentAnalysis(
+                    post_id=post_id,
+                    model_used="sentiment-spanish",
+                    sentiment_score=secondary_result.sentiment_score,
+                    sentiment_label=secondary_result.sentiment_label,
+                    emotions=None,
+                    topics=None,
+                    is_toxic=False,
+                    toxicity_score=0.0,
+                )
+                session.add(secondary_analysis)
+
             session.commit()
 
             # ── Crisis alert generation ──────────────────────────

@@ -1,0 +1,24 @@
+{
+  "name": "@crece-v2/remotion-videos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Video generation for CRECE v2 political diagnostics",
+  "scripts": {
+    "preview": "remotion preview src/index.ts",
+    "render": "remotion render src/index.ts DiagnosticoVideo out/diagnostico.mp4",
+    "render:gif": "remotion render src/index.ts DiagnosticoVideo out/diagnostico.gif --image-format png",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/renderer": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.7.2"
+  }
+}

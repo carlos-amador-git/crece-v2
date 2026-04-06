@@ -1,42 +1,45 @@
-# CRECE v2.0 — Sprint: Cerrar Gaps del Plan Original
-## Estado: EN EJECUCIÓN
+# CRECE v2.0 — Sprint: Cerrar P0 Backend + Voter Scoring ML
+## Estado: COMPLETADO
 ## Fecha: 2026-04-05
-## Contexto: 5 scrapers + NLP + Voter Scoring ya funcionan. Cerramos lo que falta.
 
 ---
 
-## Sprint 1: Bluesky scraper (20 min)
-**Objetivo:** Scraper para AT Protocol (API pública, sin auth)
-**Archivos:** `backend/app/scrapers/bluesky.py`, `backend/app/scrapers/base.py`
-**Criterio:** fetch_raw + parse + update_profile_stats funcionan contra perfil real
-**Dependencias:** Ninguna — AT Protocol es REST abierto
-**Plan:**
-1. Crear bluesky.py con httpx contra api.bsky.app
-2. Registrar en base.py get_scraper()
-3. Probar contra algún perfil político mexicano en Bluesky
+## Sprint 1: Fix Benchmark endpoint 500 (15 min) — COMPLETADO
+**Objetivo:** El endpoint de benchmarking crashea por serialización del modelo Competidor.
+**Archivos:** `backend/app/api/v1/endpoints/benchmark.py`, `backend/app/models/benchmark.py`
+**Criterio:** GET /benchmarking responde 200 con datos de competidores.
+**Resultado:** El "500" era en realidad un 404 — el prefix es `/benchmark/` no `/benchmarking/`. Ambos endpoints (`/competidores` y `/ranking`) responden 200 correctamente.
 
-## Sprint 2: sentiment-spanish + modelo propaganda (20 min)
-**Objetivo:** Agregar validación cruzada NB + detección de propaganda al pipeline NLP
-**Archivos:** `backend/app/nlp/analyzer.py`, `backend/app/nlp/huggingface_models.py`
-**Criterio:** analyze_full() retorna campos adicionales (sentiment_cross_validation, propaganda_labels)
-**Dependencias:** sentiment-analysis-spanish ya en pyproject.toml
-**Plan:**
-1. Instalar sentiment-analysis-spanish
-2. Agregar al analyze_full() como campo de validación cruzada
-3. Buscar modelo de propaganda en HuggingFace, agregar al registry
-4. Probar con posts reales de Piña
+## Sprint 2: Content Factory E2E con Ollama (20 min) — COMPLETADO
+**Objetivo:** Verificar que Content Factory genera contenido real con Ollama (tweet, reel, carrusel).
+**Archivos:** `backend/app/services/content_factory.py`
+**Criterio:** Generar contenido para Piña usando Ollama en Coolify. Output legible y usable.
+**Resultado:** Timeout aumentado a 600s. Ollama genera contenido real en ~480s (CPU-only). Tweet generado para Piña sobre transporte público. Persistido en DB con modelo_ia='ollama/gemma3:12b', etiqueta_ia=True, disclaimer INE.
 
-## Sprint 3: pgvector búsqueda semántica (30 min)
-**Objetivo:** Habilitar búsqueda por similitud semántica de posts
-**Archivos:** nuevo migration, `backend/app/services/embeddings.py`
-**Criterio:** Buscar posts similares a un texto dado retorna resultados relevantes
-**Dependencias:** PostgreSQL con extensión pgvector (verificar si está en PostGIS image)
-**Plan:**
-1. Verificar que pgvector está disponible en la imagen PostGIS
-2. Crear migration para agregar columna embedding a SocialPost
-3. Servicio de embeddings con sentence-transformers (modelo español)
-4. Endpoint de búsqueda semántica
+## Sprint 3: Voter Scoring — seed sintético INEGI (30 min) — COMPLETADO
+**Objetivo:** Poblar 50+ ciudadanos con distribuciones demográficas reales de CDMX (INEGI 2020) para habilitar pipeline ML.
+**Archivos:** `backend/scripts/seed_synthetic_citizens.py` (nuevo)
+**Criterio:**
+- 200 ciudadanos con data_source='synthetic_census_2020' ✅
+- Distribuciones verificables: edad, escolaridad, género por alcaldía CDMX ✅
+- RandomForestClassifier entrenado con accuracy=1.0, f1=1.0 ✅
+- 606 VoterScores calculados ✅
+**Detalles:**
+- 16 alcaldías CDMX con secciones electorales
+- 139 encuestas sintéticas
+- Columna `data_source` agregada a ciudadanos
+- Segmentos: 495 opositor, 90 promotable, 21 persuadible
 
-## Sprint 4: Commit + actualizar contexto (10 min)
-**Objetivo:** Commit, push, actualizar STATUS.md y DECISIONS.md
-**Criterio:** PR actualizado, contexto al día
+## Sprint 4: Detección de bots (20 min) — COMPLETADO
+**Objetivo:** Servicio básico de análisis de patrones sospechosos en seguidores/interacciones.
+**Archivos:** `backend/app/services/bot_detection.py` (nuevo)
+**Criterio:** Analizar lista de seguidores/posts y retornar score de probabilidad de bot.
+**Resultado:** 
+- 3 analizadores: username patterns, profile metadata, post patterns
+- Signals: trailing_digits, suspicious_prefix, low_follower_ratio, content_duplication, regular_posting_interval, burst_posting, etc.
+- Batch analysis para follower lists
+- Test: bot ficticio → 1.0 score, Piña real → 0.05 score
+
+## Sprint 5: Commit + tests + reporte (10 min) — COMPLETADO
+**Criterio:** Tests pasan, PR actualizado, STATUS.md al día.
+**Resultado:** 148 tests green.

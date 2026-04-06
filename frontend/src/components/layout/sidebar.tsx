@@ -29,6 +29,7 @@ import {
   Shield,
   Send,
   MapPin,
+  Vote,
 } from "lucide-react";
 
 const sections = [
@@ -56,7 +57,7 @@ const sections = [
       { href: "/dashboard/compliance", label: "Compliance", icon: Shield },
       { href: "/dashboard/campanas", label: "Campanas", icon: Send },
       { href: "/dashboard/canvassing", label: "Canvassing", icon: MapPin },
-      { href: "/dashboard/participacion", label: "Participacion", icon: Users },
+      { href: "/dashboard/participacion", label: "Participacion", icon: Vote },
     ],
   },
   {

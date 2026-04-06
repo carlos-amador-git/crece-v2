@@ -49,12 +49,14 @@ export function CtaSection() {
               <Button
                 size="lg"
                 className="cursor-pointer bg-cta text-cta-foreground transition-colors duration-150 hover:bg-cta/90 focus-visible:ring-cta"
-                asChild
+                onClick={() => {
+                  if (typeof window !== "undefined" && (window as any).$chatwoot) {
+                    (window as any).$chatwoot.toggle("open");
+                  }
+                }}
               >
-                <a href="mailto:contacto@mdconsultoria-ti.org?subject=Demo%20CRECE%20v2">
-                  Agendar demostración
-                  <ArrowRight className="ml-2 size-4" />
-                </a>
+                Agendar demostración
+                <ArrowRight className="ml-2 size-4" />
               </Button>
               <Button
                 variant="outline"
@@ -62,7 +64,7 @@ export function CtaSection() {
                 className="cursor-pointer border-white/20 text-white hover:bg-white/10 hover:text-white"
                 asChild
               >
-                <a href="mailto:contacto@mdconsultoria-ti.org?subject=Información%20CRECE">
+                <a href="mailto:soporte@consultoriamd.com.mx?subject=Solicitud%20de%20información%20—%20CRECE%20v2">
                   Solicitar información
                 </a>
               </Button>
