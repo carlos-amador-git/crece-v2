@@ -39,51 +39,58 @@ class SystemStatusResponse(BaseModel):
 @router.get("/overview", response_model=KpiOverviewResponse)
 async def get_overview(
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> KpiOverviewResponse:
-    """Aggregated KPIs for the dashboard overview."""
+    """Aggregated KPIs for the dashboard overview.
+
+    If the user has a dirigente_id, scopes data to their dirigente only.
+    """
+    # Auto-scope for dirigente users
+    user_dirigente_id = getattr(current_user, "dirigente_id", None)
     now = datetime.now(UTC)
     last_24h = now - timedelta(hours=24)
     prev_24h = last_24h - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
     prev_7d = last_7d - timedelta(days=7)
 
-    # Total dirigentes
-    total_result = await db.execute(select(func.count(Dirigente.id)))
-    total_dirigentes = total_result.scalar() or 0
+    from app.models.social import SocialProfile
 
-    # Avg IPD: compute from diagnostico service would be expensive,
-    # use a simpler proxy — avg platform coverage as rough indicator
-    # For now return 0 if no dirigentes, computed lazily
+    # Total dirigentes (scoped if user is a dirigente)
+    if user_dirigente_id:
+        total_dirigentes = 1
+    else:
+        total_result = await db.execute(select(func.count(Dirigente.id)))
+        total_dirigentes = total_result.scalar() or 0
+
+    # Avg IPD proxy
     avg_ipd = 0.0
     if total_dirigentes > 0:
-        from app.models.social import SocialProfile
-
-        profiles_count = await db.execute(
-            select(func.count(func.distinct(SocialProfile.dirigente_id)))
-        )
-        dirigentes_with_profiles = profiles_count.scalar() or 0
-
-        total_profiles = await db.execute(select(func.count(SocialProfile.id)))
+        profile_query = select(func.count(SocialProfile.id))
+        if user_dirigente_id:
+            profile_query = profile_query.where(SocialProfile.dirigente_id == user_dirigente_id)
+        total_profiles = await db.execute(profile_query)
         n_profiles = total_profiles.scalar() or 0
+        avg_ipd = round(min(n_profiles / 6.0 * 10.0, 10.0), 1)
 
-        if dirigentes_with_profiles > 0:
-            avg_platforms = n_profiles / dirigentes_with_profiles
-            avg_ipd = round(min(avg_platforms / 6.0 * 10.0, 10.0), 1)
-
-    # Posts last 24h
-    posts_24h_result = await db.execute(
-        select(func.count(SocialPost.id)).where(SocialPost.scraped_at >= last_24h)
-    )
+    # Posts last 24h (scoped)
+    posts_query = select(func.count(SocialPost.id)).where(SocialPost.scraped_at >= last_24h)
+    if user_dirigente_id:
+        posts_query = posts_query.join(SocialProfile, SocialPost.profile_id == SocialProfile.id).where(
+            SocialProfile.dirigente_id == user_dirigente_id
+        )
+    posts_24h_result = await db.execute(posts_query)
     posts_24h = posts_24h_result.scalar() or 0
 
-    # Posts previous 24h (for change %)
-    posts_prev_result = await db.execute(
-        select(func.count(SocialPost.id)).where(
-            SocialPost.scraped_at >= prev_24h,
-            SocialPost.scraped_at < last_24h,
-        )
+    # Posts previous 24h
+    posts_prev_query = select(func.count(SocialPost.id)).where(
+        SocialPost.scraped_at >= prev_24h,
+        SocialPost.scraped_at < last_24h,
     )
+    if user_dirigente_id:
+        posts_prev_query = posts_prev_query.join(SocialProfile, SocialPost.profile_id == SocialProfile.id).where(
+            SocialProfile.dirigente_id == user_dirigente_id
+        )
+    posts_prev_result = await db.execute(posts_prev_query)
     posts_prev = posts_prev_result.scalar() or 0
 
     # Active alerts
