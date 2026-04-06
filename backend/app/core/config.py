@@ -59,7 +59,11 @@ class Settings(BaseSettings):
     FACEBOOK_XS: str = ""  # xs cookie from authenticated FB session
 
     # ── CORS ──────────────────────────────────────────────
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://frontend-zeta-sepia-46.vercel.app",
+    ]
 
     # ── Veda Electoral ───────────────────────────────────
     VEDA_ELECTORAL_ACTIVE: bool = False
