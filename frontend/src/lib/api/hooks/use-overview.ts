@@ -29,8 +29,11 @@ export function useAlerts(unreadOnly = false) {
 export function useTopDirigentes(limit = 10) {
   return useQuery({
     queryKey: ["top-dirigentes", limit],
-    queryFn: () =>
-      api.get<Dirigente[]>(`/dirigentes/top?limit=${limit}&sort=ipd_score`),
+    queryFn: async () => {
+      const res = await api.get<{ items: Dirigente[] }>(`/dirigentes/?per_page=${limit}`);
+      const items = res.items ?? [];
+      return items.sort((a, b) => (b.ipd_score ?? 0) - (a.ipd_score ?? 0));
+    },
   });
 }
 

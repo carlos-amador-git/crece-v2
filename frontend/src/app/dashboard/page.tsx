@@ -107,18 +107,21 @@ function CurrentDateTime() {
 }
 
 export default function OverviewPage() {
-  const [activeFilter, setActiveFilter] = useState<string>("today");
+  const [activeFilter, setActiveFilter] = useState<string>("30d");
 
   const { data: kpi, isLoading: kpiLoading } = useKpiOverview();
-  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(30);
   const { data: topDirigentes, isLoading: topLoading } = useTopDirigentes(10);
   const { data: postsData, isLoading: postsLoading } = useSocialPosts({ per_page: 5 });
   const { data: systemStatus } = useSystemStatus();
 
+  // Use first dirigente's ID for sentiment trend (backend requires dirigente_id)
+  const firstDirigenteId = topDirigentes?.[0]?.id;
+  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(30, firstDirigenteId);
+
   const kpiData = kpi ?? DEFAULT_KPI;
   const trendData = sentimentData ?? [];
   const topData =
-    topDirigentes?.map((d) => ({ name: d.full_name, value: d.ipd_score ?? 0 })) ?? [];
+    topDirigentes?.map((d: any) => ({ name: d.full_name, value: d.ipd_score ?? 0 })) ?? [];
   const posts = postsData?.items ?? [];
 
   const hasActiveAlerts = kpiData.active_alerts > 0;
@@ -291,29 +294,17 @@ export default function OverviewPage() {
       {/* ── Charts Row ──────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Sentiment trend -- larger */}
-        <Card className={`lg:col-span-3 ${activeFilter === "today" ? "opacity-60" : ""}`}>
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Tendencia de Sentimiento</CardTitle>
-            <CardDescription>
-              {activeFilter === "today"
-                ? "Selecciona 7, 30 o 90 dias para ver tendencia historica"
-                : `Ultimos ${activeFilter === "7d" ? "7" : activeFilter === "30d" ? "30" : "90"} dias`}
-            </CardDescription>
+            <CardDescription>Ultimos 30 dias</CardDescription>
           </CardHeader>
           <CardContent>
-            {activeFilter === "today" ? (
-              <div className="flex h-[300px] flex-col items-center justify-center text-center text-sm text-muted-foreground">
-                <Clock className="mb-2 h-8 w-8 text-muted-foreground/30" />
-                <p className="font-medium">Vista diaria</p>
-                <p className="mt-1 text-xs">La tendencia de sentimiento requiere datos historicos.<br />Selecciona un rango de dias para visualizar.</p>
-              </div>
-            ) : sentimentLoading ? (
+            {sentimentLoading ? (
               <Skeleton className="h-[300px] w-full" />
             ) : trendData.length === 0 ? (
-              <div className="flex h-[300px] flex-col items-center justify-center text-center text-sm text-muted-foreground">
-                <Clock className="mb-2 h-8 w-8 text-muted-foreground/30" />
-                <p>Sin datos de sentimiento disponibles</p>
-                <p className="mt-1 text-xs">Se requiere ejecutar el pipeline NLP sobre los posts scrapeados</p>
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                Sin datos de sentimiento disponibles
               </div>
             ) : (
               <SentimentLineChart data={trendData} />

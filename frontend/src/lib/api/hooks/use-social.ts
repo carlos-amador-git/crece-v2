@@ -35,7 +35,7 @@ export function useSentimentTrend(days: number = 30, dirigenteId?: number) {
     queryKey: ["sentiment-trend", days, dirigenteId],
     queryFn: () =>
       api.get<SentimentTrend[]>(`/social/sentiment-timeline?${params}`),
-    enabled: !!dirigenteId,
+    enabled: dirigenteId != null,
   });
 }
 
