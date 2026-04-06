@@ -30,6 +30,7 @@ import {
   Send,
   MapPin,
   Vote,
+  Bot,
 } from "lucide-react";
 
 const sections = [
@@ -46,6 +47,7 @@ const sections = [
     items: [
       { href: "/dashboard/benchmark", label: "Benchmarks", icon: BarChart3 },
       { href: "/dashboard/planes", label: "Planes IA", icon: Brain },
+      { href: "/dashboard/bot-detection", label: "Deteccion Bots", icon: Bot },
     ],
   },
   {
