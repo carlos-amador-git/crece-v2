@@ -133,9 +133,10 @@ export default function OverviewPage() {
   const platformData = (() => {
     const map: Record<string, number> = {};
     for (const d of topDirigentes ?? []) {
-      for (const p of d.social_profiles ?? []) {
-        const label = p.platform.charAt(0).toUpperCase() + p.platform.slice(1);
-        map[label] = (map[label] ?? 0) + (p.followers ?? 0);
+      for (const p of (d as any).social_profiles ?? []) {
+        const raw = (p.platform ?? "").toLowerCase();
+        const label = raw.charAt(0).toUpperCase() + raw.slice(1);
+        map[label] = (map[label] ?? 0) + (p.followers_count ?? p.followers ?? 0);
       }
     }
     return Object.entries(map)
