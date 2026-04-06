@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -99,6 +100,73 @@ async def create_gasto(
     await db.flush()
     await db.refresh(gasto)
     return gasto
+
+
+class GastoImportItem(BaseModel):
+    concepto: str
+    categoria: str
+    monto: float
+    fecha: str
+    aprobado: bool = False
+
+
+class GastoImportRequest(BaseModel):
+    gastos: list[GastoImportItem]
+
+
+@router.post(
+    "/gastos/import",
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
+)
+async def import_gastos(
+    payload: GastoImportRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Bulk import gastos from Excel/CSV upload."""
+    imported = 0
+    errors: list[str] = []
+
+    for i, item in enumerate(payload.gastos):
+        try:
+            # Validate categoria
+            try:
+                cat = CategoriaGastoINE(item.categoria)
+            except ValueError:
+                errors.append(f"Fila {i + 1}: categoria invalida '{item.categoria}'")
+                continue
+
+            if item.monto <= 0:
+                errors.append(f"Fila {i + 1}: monto debe ser mayor a 0")
+                continue
+
+            if not item.concepto.strip():
+                errors.append(f"Fila {i + 1}: concepto vacio")
+                continue
+
+            # Parse date
+            try:
+                fecha = date.fromisoformat(item.fecha)
+            except (ValueError, TypeError):
+                errors.append(f"Fila {i + 1}: fecha invalida '{item.fecha}'")
+                continue
+
+            gasto = GastoElectoral(
+                concepto=item.concepto.strip(),
+                categoria=cat,
+                monto=item.monto,
+                fecha_gasto=fecha,
+                aprobado=item.aprobado,
+                org_id=1,
+            )
+            db.add(gasto)
+            imported += 1
+        except Exception as exc:
+            errors.append(f"Fila {i + 1}: {exc}")
+
+    if imported > 0:
+        await db.flush()
+
+    return {"imported": imported, "errors": errors}
 
 
 @router.patch(
