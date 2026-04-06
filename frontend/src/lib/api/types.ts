@@ -94,9 +94,14 @@ export type SentimentType = "positive" | "negative" | "neutral";
 
 export interface SentimentTrend {
   date: string;
+  avg_sentiment: number;
+  post_count: number;
   positive: number;
+  positive_pct: number;
   negative: number;
+  negative_pct: number;
   neutral: number;
+  neutral_pct: number;
 }
 
 export interface SentimentDistribution {

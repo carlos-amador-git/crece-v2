@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import dynamic from "next/dynamic";
+// import dynamic from "next/dynamic";
 import { useDirigente } from "@/lib/api/hooks/use-dirigentes";
 import { useSentimentTrend } from "@/lib/api/hooks/use-social";
 import { usePlanes } from "@/lib/api/hooks/use-planes";
@@ -20,10 +20,11 @@ import { ArrowLeft, MessageSquare, Users, Brain } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-const ElectoralMap = dynamic(
-  () => import("@/components/maps/electoral-map").then((m) => m.ElectoralMap),
-  { ssr: false, loading: () => <Skeleton className="h-[400px] w-full rounded-lg" /> }
-);
+// Electoral map hidden until INE shapefiles are loaded
+// const ElectoralMap = dynamic(
+//   () => import("@/components/maps/electoral-map").then((m) => m.ElectoralMap),
+//   { ssr: false, loading: () => <Skeleton className="h-[400px] w-full rounded-lg" /> }
+// );
 
 /* No mock data — all data fetched from API */
 
@@ -149,7 +150,7 @@ export default function DirigenteDetailPage() {
                 <CardTitle>Indice de Penetracion Digital</CardTitle>
               </CardHeader>
               <CardContent>
-                <IpdRadarChart data={dirigente.ipd_breakdown} />
+                <IpdRadarChart data={dirigente.ipd_breakdown ?? { twitter: 0, instagram: 0, facebook: 0, tiktok: 0, youtube: 0, engagement: 0 }} />
               </CardContent>
             </Card>
             <Card>
@@ -190,9 +191,9 @@ export default function DirigenteDetailPage() {
               </CardHeader>
               <CardContent>
                 <EngagementBarChart
-                  data={(dirigente.social_accounts ?? []).map((a) => ({
-                    name: a.platform.charAt(0).toUpperCase() + a.platform.slice(1),
-                    value: a.followers,
+                  data={((dirigente.social_accounts ?? (dirigente as any).social_profiles) ?? []).map((a: any) => ({
+                    name: a.platform ? a.platform.charAt(0).toUpperCase() + a.platform.slice(1) : "Plataforma",
+                    value: a.followers ?? a.followers_count ?? 0,
                   }))}
                 />
               </CardContent>
@@ -222,16 +223,6 @@ export default function DirigenteDetailPage() {
 
         {/* Electoral Tab */}
         <TabsContent value="electoral" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Mapa de Secciones Electorales</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="h-[500px] overflow-hidden rounded-b-lg">
-                <ElectoralMap className="h-full" />
-              </div>
-            </CardContent>
-          </Card>
           <div>
             <h3 className="mb-3 font-heading text-lg font-semibold">
               Detalle de Secciones

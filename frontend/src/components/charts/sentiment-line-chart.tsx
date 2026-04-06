@@ -64,7 +64,7 @@ export function SentimentLineChart({ data }: SentimentLineChartProps) {
         />
         <Line
           type="monotone"
-          dataKey="positive"
+          dataKey="positive_pct"
           name="Positivo"
           stroke="hsl(var(--chart-positive))"
           strokeWidth={2}
@@ -73,7 +73,7 @@ export function SentimentLineChart({ data }: SentimentLineChartProps) {
         />
         <Line
           type="monotone"
-          dataKey="negative"
+          dataKey="negative_pct"
           name="Negativo"
           stroke="hsl(var(--chart-negative))"
           strokeWidth={2}
@@ -82,7 +82,7 @@ export function SentimentLineChart({ data }: SentimentLineChartProps) {
         />
         <Line
           type="monotone"
-          dataKey="neutral"
+          dataKey="neutral_pct"
           name="Neutral"
           stroke="hsl(var(--chart-neutral))"
           strokeWidth={2}
