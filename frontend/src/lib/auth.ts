@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const BASE_URL =
       process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8002/api/v1";
-    const res = await fetch(`${BASE_URL}/auth/login`, {
+    const res = await fetch(`${BASE_URL}/auth/login/`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: formData.toString(),
