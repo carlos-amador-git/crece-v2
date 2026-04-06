@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -27,6 +27,12 @@ class User(Base):
         nullable=True,
         index=True,
     )
+    dirigente_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("dirigentes.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
@@ -35,3 +41,4 @@ class User(Base):
 
     # relationships
     organizacion = relationship("Organizacion", lazy="selectin")
+    dirigente = relationship("Dirigente", lazy="selectin")

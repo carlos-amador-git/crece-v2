@@ -26,6 +26,7 @@ class UserResponse(BaseModel):
     full_name: str
     role: Role
     is_active: bool
+    dirigente_id: int | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
