@@ -22,11 +22,17 @@ dependencies = [
     "python-multipart>=0.0.12",
     "sse-starlette>=2.1.0",
     "shapely>=2.0.0",
-    "facebook-scraper>=0.2.59",
-    "TikTokApi>=6.3.0",
-    "google-api-python-client>=2.140.0",
+    "ensta>=5.2.0",
+    "moviepy<2",
+    "Scweet>=5.2",
+    "scrapetube>=2.6.0",
+    "yt-dlp>=2026.3.0",
+    "playwright>=1.40.0",
+    "facebook-page-info-scraper>=1.1.0",
+    "instaloader>=4.15.0",
     "twscrape>=0.13.0",
-    "instaloader>=4.11.0",
+    "TikTokApi>=7.3.0",
+    "google-api-python-client>=2.140.0",
 ]
 
 [project.optional-dependencies]

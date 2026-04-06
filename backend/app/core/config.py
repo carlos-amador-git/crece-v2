@@ -41,17 +41,22 @@ class Settings(BaseSettings):
 
     # ── Ollama (local AI) ────────────────────────────────
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "gemma4:27b"
+    OLLAMA_MODEL: str = "gemma3:12b"
     AI_PROVIDER: str = "claude"  # "claude" | "ollama"
 
     # ── YouTube Data API v3 ──────────────────────────────
     YOUTUBE_API_KEY: str = ""
 
+    # ── Twitter/X ────────────────────────────────────────
+    TWITTER_AUTH_TOKEN: str = ""  # auth_token cookie from x.com browser session (for Scweet)
+
     # ── TikTok ───────────────────────────────────────────
     TIKTOK_MS_TOKEN: str = ""
 
     # ── Facebook ─────────────────────────────────────────
-    FACEBOOK_COOKIES_FILE: str = ""
+    FACEBOOK_COOKIES_FILE: str = ""  # deprecated — kept for backward compat
+    FACEBOOK_C_USER: str = ""  # c_user cookie from authenticated FB session
+    FACEBOOK_XS: str = ""  # xs cookie from authenticated FB session
 
     # ── CORS ──────────────────────────────────────────────
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]

@@ -17,7 +17,7 @@ class Competidor(Base):
 
     # Relationships
     social_profiles: Mapped[list[CompetidorSocialProfile]] = relationship(
-        back_populates="competidor", cascade="all, delete-orphan"
+        back_populates="competidor", cascade="all, delete-orphan", lazy="selectin"
     )
 
 

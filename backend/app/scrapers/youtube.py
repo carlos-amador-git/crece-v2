@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
+import os
+import subprocess
+import sys
 from datetime import UTC, datetime
 from typing import Any
 
@@ -13,28 +17,87 @@ from app.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
 
-# YouTube Data API v3 quota costs:
-#   channels.list   = 1 unit
-#   playlistItems   = 1 unit
-#   videos.list     = 1 unit per 50 IDs
-#   search.list     = 100 units  (AVOID)
-#
-# Free tier daily quota: 10,000 units.
-# Strategy: channels -> uploads playlist -> playlistItems -> videos.list
-# Typical cost per scrape: 1 + 1 + ceil(N/50) units ~ 3 units for 50 videos.
+_MAX_RESULTS = 30  # Videos per scrape run.
+_YT_DLP_TIMEOUT = 120  # Seconds before yt-dlp subprocess is killed.
 
-_MAX_RESULTS = 50  # Videos per scrape run (max allowed by API per page).
+
+def _yt_dlp_path() -> str:
+    """Resolve the yt-dlp binary co-located with the current Python interpreter."""
+    return os.path.join(os.path.dirname(sys.executable), "yt-dlp")
+
+
+def _safe_int(value: Any) -> int:
+    """Coerce a value to int, returning 0 on failure."""
+    if value is None:
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _run_yt_dlp(args: list[str], timeout: int = _YT_DLP_TIMEOUT) -> str | None:
+    """Run yt-dlp as a subprocess and return stdout, or None on failure."""
+    cmd = [_yt_dlp_path(), *args]
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        if result.returncode != 0:
+            stderr = result.stderr.strip()
+            if stderr:
+                logger.warning("yt-dlp stderr: %s", stderr[:500])
+            return None
+        return result.stdout
+    except FileNotFoundError:
+        logger.error("yt-dlp binary not found at %s", _yt_dlp_path())
+        return None
+    except subprocess.TimeoutExpired:
+        logger.error("yt-dlp timed out after %ds", timeout)
+        return None
+    except Exception as exc:
+        logger.error("yt-dlp subprocess failed: %s", exc)
+        return None
+
+
+def _parse_yt_dlp_jsonl(output: str) -> list[dict[str, Any]]:
+    """Parse newline-delimited JSON output from yt-dlp --dump-json."""
+    results: list[dict[str, Any]] = []
+    for line in output.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            results.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            logger.debug("Skipping malformed yt-dlp JSON line: %s", exc)
+    return results
+
+
+def _sanitise_raw(raw: dict[str, Any]) -> dict[str, Any]:
+    """Strip non-serialisable or excessively large fields before storing as JSONB."""
+    # Keep only the fields we care about to avoid bloating the DB.
+    keep_keys = {
+        "id", "title", "description", "channel", "channel_id", "channel_url",
+        "upload_date", "duration", "view_count", "like_count", "comment_count",
+        "thumbnail", "webpage_url", "categories", "tags",
+    }
+    return {k: v for k, v in raw.items() if k in keep_keys}
 
 
 class YouTubeScraper(BaseScraper):
-    """YouTube scraper using the official YouTube Data API v3.
+    """YouTube scraper using scrapetube + yt-dlp (primary) with YouTube Data API v3 fallback.
 
-    Requires ``settings.YOUTUBE_API_KEY`` to be set.  When the key is
-    absent the scraper degrades gracefully and returns empty results.
+    Primary pipeline (no API key required):
+    1. scrapetube discovers video IDs from a channel URL.
+    2. yt-dlp fetches metadata (title, stats, dates) for each video.
 
-    Quota optimisation: uses ``playlistItems.list`` on the channel's
-    uploads playlist instead of the expensive ``search.list`` endpoint,
-    then batch-fetches statistics with ``videos.list`` (1 unit per 50 IDs).
+    Fallback pipeline (requires ``settings.YOUTUBE_API_KEY``):
+    Uses the official YouTube Data API v3 with quota-efficient
+    playlistItems + videos.list strategy.
     """
 
     platform = "youtube"
@@ -46,151 +109,175 @@ class YouTubeScraper(BaseScraper):
             pool_size=5,
             max_overflow=2,
         )
-        self._youtube_client: Any = None
 
     # ------------------------------------------------------------------
-    # Client management
+    # Primary: scrapetube + yt-dlp
     # ------------------------------------------------------------------
 
-    def _get_client(self) -> Any:
-        """Build and cache the YouTube API client.
+    def _fetch_via_scrapetube(
+        self, handle: str, max_results: int = _MAX_RESULTS
+    ) -> list[dict[str, Any]]:
+        """Fetch video metadata using scrapetube for discovery and yt-dlp for details."""
+        try:
+            import scrapetube
+        except ImportError:
+            logger.warning("scrapetube is not installed — skipping primary pipeline")
+            return []
 
-        Returns ``None`` when the API key is not configured or the
-        google-api-python-client library is missing.
-        """
-        if self._youtube_client is not None:
-            return self._youtube_client
+        clean_handle = handle.lstrip("@")
 
+        # Step 1: Discover video IDs via scrapetube.
+        video_ids: list[str] = []
+        try:
+            # Try channel URL first (handles @-style handles).
+            channel_url = f"https://www.youtube.com/@{clean_handle}"
+            videos = scrapetube.get_channel(channel_url=channel_url, limit=max_results)
+            for video in videos:
+                vid = video.get("videoId")
+                if vid:
+                    video_ids.append(vid)
+        except Exception as exc:
+            logger.warning(
+                "scrapetube channel fetch failed for @%s: %s", clean_handle, exc
+            )
+
+        if not video_ids:
+            # Fallback: try search with the handle as query.
+            try:
+                search_results = scrapetube.get_search(
+                    f"{clean_handle}", limit=max_results
+                )
+                for video in search_results:
+                    vid = video.get("videoId")
+                    if vid:
+                        video_ids.append(vid)
+            except Exception as exc:
+                logger.warning(
+                    "scrapetube search failed for %s: %s", clean_handle, exc
+                )
+
+        if not video_ids:
+            logger.info("scrapetube found no videos for @%s", clean_handle)
+            return []
+
+        logger.info(
+            "scrapetube discovered %d video IDs for @%s", len(video_ids), clean_handle
+        )
+
+        # Step 2: Fetch full metadata via yt-dlp for each video.
+        all_metadata: list[dict[str, Any]] = []
+        # Process in batches to avoid extremely long command lines.
+        batch_size = 10
+        for i in range(0, len(video_ids), batch_size):
+            batch = video_ids[i : i + batch_size]
+            urls = [f"https://www.youtube.com/watch?v={vid}" for vid in batch]
+            output = _run_yt_dlp([
+                "--dump-json",
+                "--no-download",
+                "--no-warnings",
+                "--no-playlist",
+                *urls,
+            ])
+            if output:
+                all_metadata.extend(_parse_yt_dlp_jsonl(output))
+
+        logger.info(
+            "yt-dlp fetched metadata for %d/%d videos for @%s",
+            len(all_metadata),
+            len(video_ids),
+            clean_handle,
+        )
+        return all_metadata
+
+    def _fetch_channel_stats_via_yt_dlp(self, handle: str) -> dict[str, Any]:
+        """Fetch channel-level stats using yt-dlp --dump-json on the channel page."""
+        clean_handle = handle.lstrip("@")
+        channel_url = f"https://www.youtube.com/@{clean_handle}"
+
+        output = _run_yt_dlp([
+            "--dump-json",
+            "--no-download",
+            "--no-warnings",
+            "--playlist-items", "0",
+            channel_url,
+        ], timeout=30)
+
+        if not output:
+            return {}
+
+        entries = _parse_yt_dlp_jsonl(output)
+        if not entries:
+            return {}
+
+        # yt-dlp channel metadata includes channel_follower_count.
+        return entries[0]
+
+    # ------------------------------------------------------------------
+    # Fallback: YouTube Data API v3
+    # ------------------------------------------------------------------
+
+    def _get_api_client(self) -> Any:
+        """Build the YouTube Data API v3 client. Returns None if unavailable."""
         api_key = settings.YOUTUBE_API_KEY
         if not api_key:
-            logger.warning(
-                "YOUTUBE_API_KEY is not set — YouTube scraper running in degraded mode"
-            )
             return None
 
         try:
             from googleapiclient.discovery import build
 
-            self._youtube_client = build(
-                "youtube",
-                "v3",
+            return build(
+                "youtube", "v3",
                 developerKey=api_key,
                 cache_discovery=False,
             )
-            return self._youtube_client
         except ImportError:
-            logger.error(
-                "google-api-python-client is not installed. "
-                "Install with: pip install google-api-python-client"
-            )
+            logger.debug("google-api-python-client not installed — API fallback unavailable")
             return None
         except Exception as exc:
             logger.error("Failed to build YouTube API client: %s", exc)
             return None
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    def _resolve_channel_id(self, handle: str) -> str | None:
-        """Resolve a YouTube handle or custom URL to a channel ID.
-
-        Tries ``forHandle`` first (for @-handles), then ``forUsername``
-        as a fallback for legacy usernames, and finally treats the handle
-        as a raw channel ID (UC...) if it already looks like one.
-        """
-        youtube = self._get_client()
-        if youtube is None:
-            return None
-
-        # If already a channel ID, return directly.
-        if handle.startswith("UC") and len(handle) == 24:
-            return handle
-
-        clean_handle = handle.lstrip("@")
-
-        # Try forHandle (YouTube @handle).
-        try:
-            resp = (
-                youtube.channels()
-                .list(forHandle=clean_handle, part="id,contentDetails")
-                .execute()
-            )
-            items = resp.get("items", [])
-            if items:
-                return items[0]["id"]
-        except Exception as exc:
-            logger.debug("forHandle lookup failed for %s: %s", clean_handle, exc)
-
-        # Fallback: forUsername (legacy).
-        try:
-            resp = (
-                youtube.channels()
-                .list(forUsername=clean_handle, part="id,contentDetails")
-                .execute()
-            )
-            items = resp.get("items", [])
-            if items:
-                return items[0]["id"]
-        except Exception as exc:
-            logger.debug("forUsername lookup failed for %s: %s", clean_handle, exc)
-
-        logger.warning("Could not resolve channel ID for handle=%s", handle)
-        return None
-
-    def _get_uploads_playlist_id(self, channel_id: str) -> str | None:
-        """Get the uploads playlist ID for a channel.
-
-        The uploads playlist ID is the channel ID with the second character
-        replaced: ``UC...`` -> ``UU...``.
-        """
-        # YouTube convention: uploads playlist = channel ID with UC -> UU.
-        if channel_id.startswith("UC"):
-            return "UU" + channel_id[2:]
-
-        # Fallback: query the API.
-        youtube = self._get_client()
-        if youtube is None:
-            return None
-
-        try:
-            resp = (
-                youtube.channels()
-                .list(id=channel_id, part="contentDetails")
-                .execute()
-            )
-            items = resp.get("items", [])
-            if items:
-                return (
-                    items[0]
-                    .get("contentDetails", {})
-                    .get("relatedPlaylists", {})
-                    .get("uploads")
-                )
-        except Exception as exc:
-            logger.error("Failed to get uploads playlist for %s: %s", channel_id, exc)
-
-        return None
-
-    def _fetch_playlist_video_ids(
-        self,
-        playlist_id: str,
-        max_results: int = _MAX_RESULTS,
-    ) -> list[str]:
-        """Fetch video IDs from a playlist using playlistItems.list (1 unit)."""
-        youtube = self._get_client()
+    def _fetch_via_api(self, handle: str, max_results: int = _MAX_RESULTS) -> list[dict[str, Any]]:
+        """Fallback: fetch videos via YouTube Data API v3."""
+        youtube = self._get_api_client()
         if youtube is None:
             return []
 
+        clean_handle = handle.lstrip("@")
+
+        # Resolve channel ID.
+        channel_id = None
+        if clean_handle.startswith("UC") and len(clean_handle) == 24:
+            channel_id = clean_handle
+        else:
+            for method_kwargs in [
+                {"forHandle": clean_handle},
+                {"forUsername": clean_handle},
+            ]:
+                try:
+                    resp = youtube.channels().list(part="id", **method_kwargs).execute()
+                    items = resp.get("items", [])
+                    if items:
+                        channel_id = items[0]["id"]
+                        break
+                except Exception as exc:
+                    logger.debug("API channel lookup failed with %s: %s", method_kwargs, exc)
+
+        if not channel_id:
+            logger.warning("API fallback: could not resolve channel for %s", handle)
+            return []
+
+        # Derive uploads playlist: UC... -> UU...
+        uploads_playlist = "UU" + channel_id[2:] if channel_id.startswith("UC") else None
+        if not uploads_playlist:
+            return []
+
+        # Fetch video IDs from uploads playlist.
         video_ids: list[str] = []
         try:
             resp = (
                 youtube.playlistItems()
-                .list(
-                    playlistId=playlist_id,
-                    part="contentDetails",
-                    maxResults=min(max_results, 50),
-                )
+                .list(playlistId=uploads_playlist, part="contentDetails", maxResults=min(max_results, 50))
                 .execute()
             )
             for item in resp.get("items", []):
@@ -198,97 +285,125 @@ class YouTubeScraper(BaseScraper):
                 if vid:
                     video_ids.append(vid)
         except Exception as exc:
-            logger.error(
-                "playlistItems.list failed for playlist %s: %s",
-                playlist_id,
-                exc,
-            )
-
-        return video_ids
-
-    def _batch_fetch_video_details(
-        self, video_ids: list[str]
-    ) -> list[dict[str, Any]]:
-        """Fetch full video details in batches of 50 (1 unit per batch)."""
-        youtube = self._get_client()
-        if youtube is None or not video_ids:
+            logger.error("API playlistItems.list failed: %s", exc)
             return []
 
-        all_videos: list[dict[str, Any]] = []
+        if not video_ids:
+            return []
 
-        # Process in chunks of 50 (API maximum).
+        # Batch-fetch video details.
+        all_videos: list[dict[str, Any]] = []
         for i in range(0, len(video_ids), 50):
             chunk = video_ids[i : i + 50]
             try:
                 resp = (
                     youtube.videos()
-                    .list(
-                        id=",".join(chunk),
-                        part="snippet,statistics,contentDetails",
-                    )
+                    .list(id=",".join(chunk), part="snippet,statistics,contentDetails")
                     .execute()
                 )
                 all_videos.extend(resp.get("items", []))
             except Exception as exc:
-                logger.error(
-                    "videos.list failed for chunk starting at index %d: %s",
-                    i,
-                    exc,
-                )
+                logger.error("API videos.list failed: %s", exc)
 
         return all_videos
+
+    def _fetch_api_channel_stats(self, handle: str) -> dict[str, int]:
+        """Fetch channel statistics via the API (1 quota unit)."""
+        youtube = self._get_api_client()
+        if youtube is None:
+            return {}
+
+        clean_handle = handle.lstrip("@")
+        channel_id = None
+
+        if clean_handle.startswith("UC") and len(clean_handle) == 24:
+            channel_id = clean_handle
+        else:
+            for method_kwargs in [
+                {"forHandle": clean_handle},
+                {"forUsername": clean_handle},
+            ]:
+                try:
+                    resp = youtube.channels().list(part="id,statistics", **method_kwargs).execute()
+                    items = resp.get("items", [])
+                    if items:
+                        stats = items[0].get("statistics", {})
+                        return {
+                            "followers_count": _safe_int(stats.get("subscriberCount", 0)),
+                            "following_count": 0,
+                            "posts_count": _safe_int(stats.get("videoCount", 0)),
+                        }
+                except Exception:
+                    continue
+
+        return {}
 
     # ------------------------------------------------------------------
     # BaseScraper interface
     # ------------------------------------------------------------------
 
     def fetch_raw(self, handle: str, **kwargs: Any) -> list[dict[str, Any]]:
-        """Fetch recent videos using the quota-efficient pipeline.
-
-        Pipeline (total ~3 units for 50 videos):
-        1. ``channels.list(forHandle=...)`` -> channel_id  (1 unit)
-        2. Derive uploads playlist ID (0 units)
-        3. ``playlistItems.list(...)`` -> video IDs       (1 unit)
-        4. ``videos.list(id=...)`` -> full details         (1 unit per 50)
-        """
-        channel_id = self._resolve_channel_id(handle)
-        if channel_id is None:
-            logger.warning("Cannot fetch videos — channel ID not resolved for %s", handle)
-            return []
-
-        uploads_playlist = self._get_uploads_playlist_id(channel_id)
-        if uploads_playlist is None:
-            logger.warning("Cannot find uploads playlist for channel %s", channel_id)
-            return []
-
+        """Fetch recent videos. Primary: scrapetube + yt-dlp. Fallback: API v3."""
         max_results = kwargs.get("max_results", _MAX_RESULTS)
-        video_ids = self._fetch_playlist_video_ids(uploads_playlist, max_results)
-        if not video_ids:
-            logger.info("No video IDs found for channel %s", channel_id)
-            return []
 
-        videos = self._batch_fetch_video_details(video_ids)
-        logger.info(
-            "Fetched %d videos for handle=%s (channel=%s)",
-            len(videos),
-            handle,
-            channel_id,
-        )
-        return videos
+        # Primary pipeline: scrapetube + yt-dlp (no API key needed).
+        raw = self._fetch_via_scrapetube(handle, max_results)
+        if raw:
+            logger.info("Primary pipeline (scrapetube + yt-dlp) returned %d videos", len(raw))
+            return raw
+
+        # Fallback: YouTube Data API v3.
+        logger.info("Primary pipeline returned nothing — falling back to YouTube Data API v3")
+        api_raw = self._fetch_via_api(handle, max_results)
+        if api_raw:
+            logger.info("API fallback returned %d videos", len(api_raw))
+        return api_raw
 
     def parse(self, raw_data: dict[str, Any]) -> dict[str, Any]:
-        """Parse a YouTube Data API video resource into SocialPost fields.
+        """Parse a video dict into SocialPost fields.
 
-        Field mapping
-        ~~~~~~~~~~~~~
-        * ``id`` -> ``platform_post_id``
-        * ``snippet.title`` + ``snippet.description`` -> ``content``
-        * ``statistics.likeCount`` -> ``likes``
-        * ``statistics.commentCount`` -> ``comments``
-        * ``statistics.viewCount`` -> ``views``
-        * ``snippet.publishedAt`` -> ``published_at`` (ISO 8601)
-        * ``post_type`` = ``video``
+        Handles both yt-dlp format and YouTube Data API v3 format.
         """
+        # Detect format: yt-dlp uses flat keys, API nests under snippet/statistics.
+        if "snippet" in raw_data:
+            return self._parse_api_format(raw_data)
+        return self._parse_ytdlp_format(raw_data)
+
+    def _parse_ytdlp_format(self, raw_data: dict[str, Any]) -> dict[str, Any]:
+        """Parse yt-dlp --dump-json output."""
+        title = raw_data.get("title", "")
+        description = raw_data.get("description", "")
+        content = f"{title}\n{description}".strip()
+
+        # upload_date is YYYYMMDD string.
+        upload_date_str = raw_data.get("upload_date", "")
+        if upload_date_str and len(upload_date_str) == 8:
+            try:
+                published_at = datetime(
+                    int(upload_date_str[:4]),
+                    int(upload_date_str[4:6]),
+                    int(upload_date_str[6:8]),
+                    tzinfo=UTC,
+                )
+            except (ValueError, TypeError):
+                published_at = datetime.now(UTC)
+        else:
+            published_at = datetime.now(UTC)
+
+        return {
+            "platform_post_id": str(raw_data.get("id", "")),
+            "content": content[:10_000],
+            "post_type": PostType.VIDEO.value,
+            "published_at": published_at,
+            "likes": _safe_int(raw_data.get("like_count", 0)),
+            "comments": _safe_int(raw_data.get("comment_count", 0)),
+            "shares": 0,  # YouTube does not expose share count.
+            "views": _safe_int(raw_data.get("view_count", 0)),
+            "raw_data": _sanitise_raw(raw_data),
+        }
+
+    def _parse_api_format(self, raw_data: dict[str, Any]) -> dict[str, Any]:
+        """Parse YouTube Data API v3 video resource."""
         snippet = raw_data.get("snippet", {})
         stats = raw_data.get("statistics", {})
 
@@ -296,7 +411,6 @@ class YouTubeScraper(BaseScraper):
         description = snippet.get("description", "")
         content = f"{title}\n{description}".strip()
 
-        # Parse ISO 8601 published date.
         published_str = snippet.get("publishedAt")
         if published_str:
             try:
@@ -315,7 +429,7 @@ class YouTubeScraper(BaseScraper):
             "published_at": published_at,
             "likes": _safe_int(stats.get("likeCount", 0)),
             "comments": _safe_int(stats.get("commentCount", 0)),
-            "shares": 0,  # YouTube API does not expose share count.
+            "shares": 0,
             "views": _safe_int(stats.get("viewCount", 0)),
             "raw_data": raw_data,
         }
@@ -416,49 +530,23 @@ class YouTubeScraper(BaseScraper):
         }
 
     def update_profile_stats(self, handle: str) -> dict[str, int]:
-        """Fetch channel statistics (subscribers, videos, total views).
+        """Fetch channel statistics. Primary: yt-dlp. Fallback: API v3."""
+        empty = {"followers_count": 0, "following_count": 0, "posts_count": 0}
 
-        Costs 1 quota unit via ``channels.list(part=statistics)``.
-        """
-        youtube = self._get_client()
-        if youtube is None:
-            return {"followers_count": 0, "following_count": 0, "posts_count": 0}
+        # Primary: yt-dlp channel metadata.
+        channel_meta = self._fetch_channel_stats_via_yt_dlp(handle)
+        if channel_meta:
+            followers = _safe_int(channel_meta.get("channel_follower_count", 0))
+            if followers > 0:
+                return {
+                    "followers_count": followers,
+                    "following_count": 0,
+                    "posts_count": 0,  # yt-dlp does not expose total video count.
+                }
 
-        channel_id = self._resolve_channel_id(handle)
-        if channel_id is None:
-            return {"followers_count": 0, "following_count": 0, "posts_count": 0}
+        # Fallback: API v3.
+        api_stats = self._fetch_api_channel_stats(handle)
+        if api_stats:
+            return api_stats
 
-        try:
-            resp = (
-                youtube.channels()
-                .list(id=channel_id, part="statistics")
-                .execute()
-            )
-            items = resp.get("items", [])
-            if not items:
-                return {"followers_count": 0, "following_count": 0, "posts_count": 0}
-
-            stats = items[0].get("statistics", {})
-            return {
-                "followers_count": _safe_int(stats.get("subscriberCount", 0)),
-                "following_count": 0,  # YouTube channels don't "follow" others.
-                "posts_count": _safe_int(stats.get("videoCount", 0)),
-            }
-        except Exception as exc:
-            logger.error("Failed to fetch channel stats for %s: %s", channel_id, exc)
-            return {"followers_count": 0, "following_count": 0, "posts_count": 0}
-
-
-# ------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------
-
-
-def _safe_int(value: Any) -> int:
-    """Coerce a value to int, returning 0 on failure."""
-    if value is None:
-        return 0
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
+        return empty

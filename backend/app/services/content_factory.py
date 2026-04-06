@@ -5,6 +5,7 @@ import logging
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 
+import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -245,7 +246,46 @@ Maximo de caracteres: {constraints['max_chars']}
 
 
 class ContentFactory:
-    """AI-powered political content generator using Claude API."""
+    """AI-powered political content generator — supports Claude and Ollama."""
+
+    @staticmethod
+    async def _generate_with_ollama(system_prompt: str, user_prompt: str) -> str:
+        """Generate content using local Ollama instance."""
+        combined = f"{system_prompt}\n\n{user_prompt}"
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            resp = await client.post(
+                f"{settings.OLLAMA_BASE_URL}/api/generate",
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "prompt": combined,
+                    "stream": False,
+                },
+            )
+            resp.raise_for_status()
+            return resp.json()["response"]
+
+    @staticmethod
+    async def _stream_with_ollama(
+        system_prompt: str, user_prompt: str
+    ) -> AsyncGenerator[str, None]:
+        """Stream content generation using local Ollama instance."""
+        combined = f"{system_prompt}\n\n{user_prompt}"
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            async with client.stream(
+                "POST",
+                f"{settings.OLLAMA_BASE_URL}/api/generate",
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "prompt": combined,
+                    "stream": True,
+                },
+            ) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if line:
+                        chunk = json.loads(line)
+                        if chunk.get("response"):
+                            yield chunk["response"]
 
     @staticmethod
     async def generate(
@@ -257,17 +297,8 @@ class ContentFactory:
         plataforma_destino: str,
         user_id: int,
     ) -> ContenidoGenerado:
-        """Generate content for a dirigente and persist it.
-
-        Raises:
-            ValueError: If CLAUDE_API_KEY is not configured.
-            LookupError: If the dirigente does not exist.
-        """
-        if not settings.CLAUDE_API_KEY:
-            raise ValueError(
-                "CLAUDE_API_KEY no esta configurada. "
-                "Configura la variable de entorno para usar la generacion de contenido con IA."
-            )
+        """Generate content for a dirigente and persist it."""
+        provider = settings.AI_PROVIDER
 
         # Load dirigente
         dirigente = await _load_dirigente(db, dirigente_id)
@@ -279,19 +310,25 @@ class ContentFactory:
         system_prompt, user_prompt = _build_prompt(context, formato, tema, tono, plataforma_destino)
         full_prompt_for_audit = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
 
-        # Call Claude API (sync client in thread — acceptable for non-streaming)
-        import anthropic
-
-        client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
-
-        message = client.messages.create(
-            model=settings.CLAUDE_MODEL,
-            max_tokens=4096,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
-
-        generated_text = message.content[0].text
+        if provider == "ollama":
+            generated_text = await ContentFactory._generate_with_ollama(system_prompt, user_prompt)
+            model_name = f"ollama/{settings.OLLAMA_MODEL}"
+            tokens_in, tokens_out = 0, 0
+        else:
+            if not settings.CLAUDE_API_KEY:
+                raise ValueError("CLAUDE_API_KEY no configurada y AI_PROVIDER=claude.")
+            import anthropic
+            client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
+            message = client.messages.create(
+                model=settings.CLAUDE_MODEL,
+                max_tokens=4096,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            generated_text = message.content[0].text
+            model_name = settings.CLAUDE_MODEL
+            tokens_in = message.usage.input_tokens
+            tokens_out = message.usage.output_tokens
 
         # Append INE disclaimer
         final_content = generated_text + _INE_DISCLAIMER
@@ -308,9 +345,9 @@ class ContentFactory:
             prompt_usado=full_prompt_for_audit,
             plataforma_destino=plataforma_destino,
             estado=EstadoContenido.BORRADOR,
-            modelo_ia=settings.CLAUDE_MODEL,
-            tokens_input=message.usage.input_tokens,
-            tokens_output=message.usage.output_tokens,
+            modelo_ia=model_name,
+            tokens_input=tokens_in,
+            tokens_output=tokens_out,
             etiqueta_ia=True,
         )
         db.add(contenido)
@@ -318,14 +355,9 @@ class ContentFactory:
         await db.refresh(contenido)
 
         logger.info(
-            "Content generated: id=%d dirigente=%s formato=%s tokens_in=%d tokens_out=%d",
-            contenido.id,
-            dirigente.full_name,
-            formato.value,
-            message.usage.input_tokens,
-            message.usage.output_tokens,
+            "Content generated: id=%d dirigente=%s formato=%s provider=%s",
+            contenido.id, dirigente.full_name, formato.value, provider,
         )
-
         return contenido
 
     @staticmethod
@@ -338,25 +370,8 @@ class ContentFactory:
         plataforma_destino: str,
         user_id: int,
     ) -> AsyncGenerator[str, None]:
-        """Stream content generation via SSE-compatible chunks.
-
-        Yields JSON strings formatted for EventSourceResponse:
-        - {"type": "chunk", "content": "..."}  during generation
-        - {"type": "complete", "contenido_id": 123}  when finished
-
-        Raises:
-            ValueError: If CLAUDE_API_KEY is not configured.
-            LookupError: If the dirigente does not exist.
-        """
-        if not settings.CLAUDE_API_KEY:
-            yield json.dumps({
-                "type": "error",
-                "message": (
-                    "CLAUDE_API_KEY no esta configurada. "
-                    "Configura la variable de entorno para usar la generacion de contenido con IA."
-                ),
-            })
-            return
+        """Stream content generation via SSE-compatible chunks."""
+        provider = settings.AI_PROVIDER
 
         # Load dirigente
         dirigente = await _load_dirigente(db, dirigente_id)
@@ -368,28 +383,33 @@ class ContentFactory:
         system_prompt, user_prompt = _build_prompt(context, formato, tema, tono, plataforma_destino)
         full_prompt_for_audit = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
 
-        import anthropic
-
-        client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
-
         collected_text = ""
-        total_input_tokens = 0
-        total_output_tokens = 0
+        tokens_in, tokens_out = 0, 0
 
-        with client.messages.stream(
-            model=settings.CLAUDE_MODEL,
-            max_tokens=4096,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        ) as stream:
-            for text in stream.text_stream:
-                collected_text += text
-                yield json.dumps({"type": "chunk", "content": text})
-
-            # Capture usage from the final message
-            final_message = stream.get_final_message()
-            total_input_tokens = final_message.usage.input_tokens
-            total_output_tokens = final_message.usage.output_tokens
+        if provider == "ollama":
+            model_name = f"ollama/{settings.OLLAMA_MODEL}"
+            async for chunk in ContentFactory._stream_with_ollama(system_prompt, user_prompt):
+                collected_text += chunk
+                yield json.dumps({"type": "chunk", "content": chunk})
+        else:
+            if not settings.CLAUDE_API_KEY:
+                yield json.dumps({"type": "error", "message": "CLAUDE_API_KEY no configurada."})
+                return
+            import anthropic
+            client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
+            model_name = settings.CLAUDE_MODEL
+            with client.messages.stream(
+                model=settings.CLAUDE_MODEL,
+                max_tokens=4096,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+            ) as stream:
+                for text in stream.text_stream:
+                    collected_text += text
+                    yield json.dumps({"type": "chunk", "content": text})
+                final_message = stream.get_final_message()
+                tokens_in = final_message.usage.input_tokens
+                tokens_out = final_message.usage.output_tokens
 
         # Append INE disclaimer
         final_content = collected_text + _INE_DISCLAIMER
@@ -406,9 +426,9 @@ class ContentFactory:
             prompt_usado=full_prompt_for_audit,
             plataforma_destino=plataforma_destino,
             estado=EstadoContenido.BORRADOR,
-            modelo_ia=settings.CLAUDE_MODEL,
-            tokens_input=total_input_tokens,
-            tokens_output=total_output_tokens,
+            modelo_ia=model_name,
+            tokens_input=tokens_in,
+            tokens_output=tokens_out,
             etiqueta_ia=True,
         )
         db.add(contenido)
@@ -416,14 +436,9 @@ class ContentFactory:
         await db.refresh(contenido)
 
         logger.info(
-            "Content streamed: id=%d dirigente=%s formato=%s tokens_in=%d tokens_out=%d",
-            contenido.id,
-            dirigente.full_name,
-            formato.value,
-            total_input_tokens,
-            total_output_tokens,
+            "Content streamed: id=%d dirigente=%s formato=%s provider=%s",
+            contenido.id, dirigente.full_name, formato.value, provider,
         )
-
         yield json.dumps({"type": "complete", "contenido_id": contenido.id})
 
     @staticmethod
