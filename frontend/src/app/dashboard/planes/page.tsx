@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { usePlanes, useGeneratePlan, useApprovePlan, useRejectPlan } from "@/lib/api/hooks/use-planes";
+import { usePlanes, useGeneratePlan } from "@/lib/api/hooks/use-planes";
 import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,12 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDate } from "@/lib/utils";
 import type { PlanIA, PlanType } from "@/lib/api/types";
 import {
   Brain,
-  Check,
-  X,
   Loader2,
   Sparkles,
 } from "lucide-react";
@@ -58,7 +53,6 @@ const TIPO_COLORS: Record<string, string> = {
 
 export default function PlanesPage() {
   const [generateOpen, setGenerateOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<PlanIA | null>(null);
   const [newPlanDirigente, setNewPlanDirigente] = useState("");
   const [newPlanType, setNewPlanType] = useState<PlanType>("DIAGNOSTICO");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -66,8 +60,6 @@ export default function PlanesPage() {
   const { data, isLoading } = usePlanes(undefined, 1);
   const { data: dirigentesData } = useDirigentes({ per_page: 50 });
   const generateMutation = useGeneratePlan();
-  const approveMutation = useApprovePlan();
-  const rejectMutation = useRejectPlan();
 
   const plans = data?.items ?? [];
   const dirigentesForSelect = dirigentesData?.items ?? [];
@@ -195,10 +187,9 @@ export default function PlanesPage() {
             const charCount = ((plan.contenido ?? "").length / 1000).toFixed(1);
 
             return (
+              <Link key={plan.id} href={`/dashboard/planes/${plan.id}`}>
               <Card
-                key={plan.id}
                 className="cursor-pointer transition-shadow hover:shadow-md"
-                onClick={() => setSelectedPlan(plan)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-4">
@@ -236,79 +227,11 @@ export default function PlanesPage() {
                   </div>
                 </CardContent>
               </Card>
+              </Link>
             );
           })}
         </div>
       )}
-
-      {/* Plan detail dialog */}
-      <Dialog
-        open={!!selectedPlan}
-        onOpenChange={(open) => !open && setSelectedPlan(null)}
-      >
-        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
-          {selectedPlan && (() => {
-            const tipoLabel = PLAN_TYPES.find((t) => t.value === selectedPlan.tipo)?.label ?? selectedPlan.tipo;
-            const subtitle = TIPO_SUBTITLES[selectedPlan.tipo] ?? "";
-            const tipoColor = TIPO_COLORS[selectedPlan.tipo] ?? "bg-muted text-muted-foreground";
-            const dirigenteName = dirigenteNames[selectedPlan.dirigente_id] ?? `Dirigente #${selectedPlan.dirigente_id}`;
-
-            return (
-              <>
-                <DialogHeader>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge className={tipoColor}>{selectedPlan.tipo}</Badge>
-                    <Badge variant={selectedPlan.aprobado ? "default" : "secondary"}>
-                      {selectedPlan.aprobado ? "Aprobado" : "Borrador"}
-                    </Badge>
-                  </div>
-                  <DialogTitle className="text-xl">
-                    {tipoLabel} — {subtitle}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {dirigenteName} &mdash; {formatDate(selectedPlan.created_at)}
-                    {selectedPlan.modelo_ia && (
-                      <span className="ml-2 inline-flex items-center gap-1">
-                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        {selectedPlan.modelo_ia}
-                      </span>
-                    )}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-heading prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-table:text-sm prose-th:bg-muted/50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-td:border-border prose-table:border-border">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedPlan.contenido}</ReactMarkdown>
-                </div>
-                {!selectedPlan.aprobado && (
-                  <DialogFooter className="gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        rejectMutation.mutate(selectedPlan.id);
-                        setSelectedPlan(null);
-                      }}
-                      disabled={rejectMutation.isPending}
-                    >
-                      <X className="h-4 w-4" />
-                      Rechazar
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        approveMutation.mutate(selectedPlan.id);
-                        setSelectedPlan(null);
-                      }}
-                      disabled={approveMutation.isPending}
-                    >
-                      <Check className="h-4 w-4" />
-                      Aprobar
-                    </Button>
-                  </DialogFooter>
-                )}
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
-
       {/* Generate plan dialog */}
       <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
         <DialogContent>
