@@ -1,45 +1,43 @@
-# CRECE v2.0 — Sprint: Cerrar P0 Backend + Voter Scoring ML
-## Estado: COMPLETADO
+# CRECE v2.0 — Sprint: Decidim MC + Integración Participación Ciudadana
+## Estado: EN PROGRESO
 ## Fecha: 2026-04-05
 
 ---
 
-## Sprint 1: Fix Benchmark endpoint 500 (15 min) — COMPLETADO
-**Objetivo:** El endpoint de benchmarking crashea por serialización del modelo Competidor.
-**Archivos:** `backend/app/api/v1/endpoints/benchmark.py`, `backend/app/models/benchmark.py`
-**Criterio:** GET /benchmarking responde 200 con datos de competidores.
-**Resultado:** El "500" era en realidad un 404 — el prefix es `/benchmark/` no `/benchmarking/`. Ambos endpoints (`/competidores` y `/ranking`) responden 200 correctamente.
+## Contexto
+Decidim MC (#11) era el último módulo PENDIENTE con diseño de producto.
+Se creó proyecto base en ~/Projects/decidim-mc/ con Dockerfile, docker-compose, config.
+Ahora: hacer el build funcional + integrar con CRECE vía GraphQL.
 
-## Sprint 2: Content Factory E2E con Ollama (20 min) — COMPLETADO
-**Objetivo:** Verificar que Content Factory genera contenido real con Ollama (tweet, reel, carrusel).
-**Archivos:** `backend/app/services/content_factory.py`
-**Criterio:** Generar contenido para Piña usando Ollama en Coolify. Output legible y usable.
-**Resultado:** Timeout aumentado a 600s. Ollama genera contenido real en ~480s (CPU-only). Tweet generado para Piña sobre transporte público. Persistido en DB con modelo_ia='ollama/gemma3:12b', etiqueta_ia=True, disclaimer INE.
+## Sprint 1: Fix Dockerfile y build funcional (30 min)
+**Objetivo:** Decidim MC buildea y levanta con docker compose.
+**Archivos:**
+- `decidim-mc/Dockerfile` — fix multi-stage build issues
+- `decidim-mc/db/seeds.rb` — seed MC organization
+- `decidim-mc/config/sidekiq.yml` — job queues config
+- `decidim-mc/Makefile` — comandos de conveniencia
+**Criterio:** `docker compose build` exitoso, `docker compose up` levanta health check.
 
-## Sprint 3: Voter Scoring — seed sintético INEGI (30 min) — COMPLETADO
-**Objetivo:** Poblar 50+ ciudadanos con distribuciones demográficas reales de CDMX (INEGI 2020) para habilitar pipeline ML.
-**Archivos:** `backend/scripts/seed_synthetic_citizens.py` (nuevo)
-**Criterio:**
-- 200 ciudadanos con data_source='synthetic_census_2020' ✅
-- Distribuciones verificables: edad, escolaridad, género por alcaldía CDMX ✅
-- RandomForestClassifier entrenado con accuracy=1.0, f1=1.0 ✅
-- 606 VoterScores calculados ✅
-**Detalles:**
-- 16 alcaldías CDMX con secciones electorales
-- 139 encuestas sintéticas
-- Columna `data_source` agregada a ciudadanos
-- Segmentos: 495 opositor, 90 promotable, 21 persuadible
+## Sprint 2: Cliente GraphQL en CRECE backend (30 min)
+**Objetivo:** CRECE puede consultar Decidim vía GraphQL.
+**Archivos:**
+- `crece-v2/backend/app/services/decidim_service.py` (nuevo)
+- `crece-v2/backend/app/core/config.py` (agregar DECIDIM_URL)
+**Criterio:** DecidimService.get_proposals(), .get_budgets(), .get_stats() funcionales.
 
-## Sprint 4: Detección de bots (20 min) — COMPLETADO
-**Objetivo:** Servicio básico de análisis de patrones sospechosos en seguidores/interacciones.
-**Archivos:** `backend/app/services/bot_detection.py` (nuevo)
-**Criterio:** Analizar lista de seguidores/posts y retornar score de probabilidad de bot.
-**Resultado:** 
-- 3 analizadores: username patterns, profile metadata, post patterns
-- Signals: trailing_digits, suspicious_prefix, low_follower_ratio, content_duplication, regular_posting_interval, burst_posting, etc.
-- Batch analysis para follower lists
-- Test: bot ficticio → 1.0 score, Piña real → 0.05 score
+## Sprint 3: Endpoint CRECE API para participación (20 min)
+**Objetivo:** Frontend CRECE puede ver datos de Decidim.
+**Archivos:**
+- `crece-v2/backend/app/api/v1/endpoints/participacion.py` (nuevo)
+- `crece-v2/backend/app/schemas/participacion.py` (nuevo)
+- `crece-v2/backend/app/api/v1/__init__.py` (registrar router)
+**Criterio:** GET /participacion/proposals, /participacion/budgets, /participacion/stats responden.
 
-## Sprint 5: Commit + tests + reporte (10 min) — COMPLETADO
-**Criterio:** Tests pasan, PR actualizado, STATUS.md al día.
-**Resultado:** 148 tests green.
+## Sprint 4: Contexto y documentación (10 min)
+**Objetivo:** STATUS.md, DECISIONS.md actualizados.
+**Criterio:** Decidim marcado como HECHO en STATUS.md.
+
+## Dependencias
+Sprint 2 depende de Sprint 1 (necesita saber el schema GraphQL real).
+Sprint 3 depende de Sprint 2 (consume DecidimService).
+Sprint 4 es independiente pero se hace al final.

@@ -18,7 +18,7 @@
 | 7 | Geometries INE | POSPUESTO | Shapefiles pesados, no bloquea demo |
 | 8 | WhatsApp/Chatwoot | HECHO | Webhook HMAC verificado, test E2E pasó |
 | 9 | Mobile app | HECHO | Dashboard + Diagnóstico screens, 5 tabs |
-| 10 | n8n nodes | PENDIENTE | Esperando instancia n8n corriendo |
+| 10 | n8n nodes | **HECHO** | 6 workflows importados, 30 nodos custom, mdconsultoria-ti.org |
 | 11 | Decidim | PENDIENTE | Requiere diseño de producto |
 | 12 | pgvector | HECHO | Embeddings 384-dim, HNSW index, búsqueda semántica |
 | 13 | Remotion video | HECHO | 6 escenas animadas, formato reel vertical MC |
@@ -29,7 +29,7 @@
 | S3 | **Voter Scoring seed** | **HECHO** | 200 ciudadanos INEGI, RF trained, 606 scored |
 | S4 | **Bot detection** | **HECHO** | Servicio pattern-based, username/profile/posts análisis |
 
-### Score: 15 HECHO / 0 BLOQUEADO / 3 PENDIENTE (diseño/infra)
+### Score: 16 HECHO / 0 BLOQUEADO / 2 PENDIENTE (diseño/infra)
 
 ### Tests: 148 green
 
@@ -70,7 +70,6 @@
 
 ## Lo que queda pendiente
 
-- n8n nodes (#10) — esperando instancia n8n
-- Geometries INE (#7) — shapefiles pesados
-- Decidim (#11) — diseño de producto
-- Proxies (#14) — producción
+- Geometries INE (#7) — shapefiles pesados, no bloquea demo
+- Proxies (#14) — decisión de compra de servicio
+- Decidim (#11) — proyecto independiente en ~/Projects/decidim-mc/

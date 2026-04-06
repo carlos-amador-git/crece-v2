@@ -95,7 +95,7 @@ export default function DirigenteDetailPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Posts (7d)</p>
             <p className="mt-1 font-heading text-xl font-bold">
-              {dirigente.stats.total_posts_7d}
+              {dirigente.stats?.total_posts_7d ?? 0}
             </p>
           </CardContent>
         </Card>
@@ -103,7 +103,7 @@ export default function DirigenteDetailPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Engagement (7d)</p>
             <p className="mt-1 font-heading text-xl font-bold">
-              {formatNumber(dirigente.stats.total_engagement_7d)}
+              {formatNumber(dirigente.stats?.total_engagement_7d ?? 0)}
             </p>
           </CardContent>
         </Card>
@@ -112,13 +112,13 @@ export default function DirigenteDetailPage() {
             <p className="text-sm text-muted-foreground">Sentimiento Prom.</p>
             <SentimentBadge
               sentiment={
-                dirigente.stats.sentiment_avg_7d > 0.6
+                (dirigente.stats?.sentiment_avg_7d ?? 0.5) > 0.6
                   ? "positive"
-                  : dirigente.stats.sentiment_avg_7d > 0.4
+                  : (dirigente.stats?.sentiment_avg_7d ?? 0.5) > 0.4
                   ? "neutral"
                   : "negative"
               }
-              score={dirigente.stats.sentiment_avg_7d}
+              score={dirigente.stats?.sentiment_avg_7d ?? 0.5}
             />
           </CardContent>
         </Card>
@@ -126,7 +126,7 @@ export default function DirigenteDetailPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Crecimiento (30d)</p>
             <p className="mt-1 font-heading text-xl font-bold text-emerald-600 dark:text-emerald-400">
-              +{dirigente.stats.follower_growth_30d}%
+              +{dirigente.stats?.follower_growth_30d ?? 0}%
             </p>
           </CardContent>
         </Card>
@@ -166,7 +166,7 @@ export default function DirigenteDetailPage() {
               Publicaciones Recientes
             </h3>
             <div className="space-y-3">
-              {dirigente.recent_posts.map((post) => (
+              {(dirigente.recent_posts ?? []).map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
             </div>
@@ -190,7 +190,7 @@ export default function DirigenteDetailPage() {
               </CardHeader>
               <CardContent>
                 <EngagementBarChart
-                  data={dirigente.social_accounts.map((a) => ({
+                  data={(dirigente.social_accounts ?? []).map((a) => ({
                     name: a.platform.charAt(0).toUpperCase() + a.platform.slice(1),
                     value: a.followers,
                   }))}
@@ -203,11 +203,11 @@ export default function DirigenteDetailPage() {
               Timeline de Publicaciones
             </h3>
             <div className="space-y-3">
-              {dirigente.recent_posts.map((post) => (
+              {(dirigente.recent_posts ?? []).map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
             </div>
-            {dirigente.recent_posts.length === 0 && (
+            {(dirigente.recent_posts ?? []).length === 0 && (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                   <MessageSquare className="mb-3 h-10 w-10 text-muted-foreground/50" />
@@ -237,7 +237,7 @@ export default function DirigenteDetailPage() {
               Detalle de Secciones
             </h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {dirigente.secciones.map((seccion) => (
+              {(dirigente.secciones ?? []).map((seccion) => (
                 <Card key={seccion.id}>
                   <CardContent className="p-4">
                     <div className="mb-2 flex items-center justify-between">
