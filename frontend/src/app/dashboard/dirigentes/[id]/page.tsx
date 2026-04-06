@@ -176,8 +176,8 @@ export default function DirigenteDetailPage() {
 
         {/* Social Tab */}
         <TabsContent value="social" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle>Sentimiento en el Tiempo</CardTitle>
               </CardHeader>
@@ -279,40 +279,49 @@ export default function DirigenteDetailPage() {
               </CardContent>
             </Card>
           ) : (
-            dirigentePlans.map((plan) => (
-              <Card key={plan.id}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div>
-                    <p className="font-medium">{plan.titulo}</p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <Badge variant="secondary">{plan.tipo}</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(plan.created_at)}
-                      </span>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={
-                      plan.status === "approved"
-                        ? "success"
-                        : plan.status === "executed"
-                        ? "default"
-                        : plan.status === "rejected"
-                        ? "danger"
-                        : "secondary"
-                    }
-                  >
-                    {plan.status === "approved"
-                      ? "Aprobado"
-                      : plan.status === "executed"
-                      ? "Ejecutado"
-                      : plan.status === "rejected"
-                      ? "Rechazado"
-                      : "Borrador"}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))
+            dirigentePlans.map((plan: any, idx: number) => {
+              const preview = (plan.contenido ?? "").slice(0, 250).replace(/[#*|_]/g, "").trim();
+              const tipoLabel = plan.tipo === "DIAGNOSTICO" ? "Diagnostico" : plan.tipo === "CONSOLIDACION" ? "Consolidacion" : plan.tipo === "CRISIS" ? "Crisis" : "Contenido";
+              const version = dirigentePlans.length - idx;
+              const createdTime = new Date(plan.created_at).toLocaleString("es-MX", {
+                day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+              });
+
+              return (
+                <Link key={plan.id} href={`/dashboard/planes/${plan.id}`}>
+                  <Card className="cursor-pointer transition-shadow hover:shadow-md">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="secondary">{plan.tipo}</Badge>
+                            <Badge variant="outline" className="text-[10px]">v{version}</Badge>
+                            <span className="text-xs text-muted-foreground">{createdTime}</span>
+                          </div>
+                          <p className="font-heading font-semibold text-foreground">
+                            {tipoLabel} — {tipoLabel === "Diagnostico" ? "Presencia Digital" : tipoLabel === "Consolidacion" ? "Plan 90 dias" : tipoLabel === "Crisis" ? "Manejo de Crisis" : "Calendario Editorial"}
+                          </p>
+                          <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                            {preview || "Sin contenido"}
+                          </p>
+                          <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+                              {plan.modelo_ia ?? "IA"}
+                            </span>
+                            <span>{((plan.contenido ?? "").length / 1000).toFixed(1)}K caracteres</span>
+                            <span>Plan #{plan.id}</span>
+                          </div>
+                        </div>
+                        <Badge variant={plan.aprobado ? "default" : "secondary"}>
+                          {plan.aprobado ? "Aprobado" : "Borrador"}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })
           )}
         </TabsContent>
       </Tabs>

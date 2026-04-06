@@ -49,12 +49,12 @@ export function ProfileHeader({ dirigente }: ProfileHeaderProps) {
             </span>
             <span className="flex items-center gap-1.5">
               <Users className="h-4 w-4" />
-              {dirigente.secciones.length} secciones
+              {(dirigente.secciones ?? []).length} secciones
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {dirigente.social_accounts.map((account) => (
+            {((dirigente.social_accounts ?? (dirigente as any).social_profiles) ?? []).map((account: any) => (
               <a
                 key={account.platform}
                 href={account.url}

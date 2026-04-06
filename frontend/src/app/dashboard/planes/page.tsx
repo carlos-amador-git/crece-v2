@@ -40,11 +40,10 @@ import {
 } from "lucide-react";
 
 const PLAN_TYPES: { value: PlanType; label: string }[] = [
-  { value: "crecimiento", label: "Crecimiento" },
-  { value: "crisis", label: "Crisis" },
-  { value: "engagement", label: "Engagement" },
-  { value: "posicionamiento", label: "Posicionamiento" },
-  { value: "contenido", label: "Contenido" },
+  { value: "DIAGNOSTICO", label: "Diagnostico" },
+  { value: "CONSOLIDACION", label: "Consolidacion" },
+  { value: "CRISIS", label: "Crisis" },
+  { value: "CONTENIDO", label: "Contenido" },
 ];
 
 const STATUS_CONFIG: Record<
@@ -61,7 +60,7 @@ export default function PlanesPage() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanIA | null>(null);
   const [newPlanDirigente, setNewPlanDirigente] = useState("");
-  const [newPlanType, setNewPlanType] = useState<PlanType>("crecimiento");
+  const [newPlanType, setNewPlanType] = useState<PlanType>("DIAGNOSTICO");
   const [filterStatus, setFilterStatus] = useState<PlanStatus | "all">("all");
 
   const { data, isLoading } = usePlanes(
@@ -77,7 +76,7 @@ export default function PlanesPage() {
   const filteredPlans =
     filterStatus === "all"
       ? plans
-      : plans.filter((p) => p.status === filterStatus);
+      : plans.filter((p) => (p as any).status === filterStatus);
 
   const handleGenerate = async () => {
     if (!newPlanDirigente) return;
@@ -143,7 +142,7 @@ export default function PlanesPage() {
       ) : (
         <div className="space-y-3">
           {filteredPlans.map((plan) => {
-            const statusCfg = STATUS_CONFIG[plan.status];
+            const statusCfg = STATUS_CONFIG[(plan.aprobado ? "approved" : "draft")];
             const StatusIcon = statusCfg.icon;
             return (
               <Card
@@ -156,10 +155,10 @@ export default function PlanesPage() {
                     <FileText className="h-5 w-5 text-accent" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">{plan.titulo}</p>
+                    <p className="font-medium">{`Plan de ${plan.tipo}`}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <span className="text-xs text-muted-foreground">
-                        {plan.dirigente_nombre}
+                        {`Dirigente #${plan.dirigente_id}`}
                       </span>
                       <Badge variant="secondary" className="text-[10px]">
                         {plan.tipo}
@@ -189,16 +188,16 @@ export default function PlanesPage() {
           {selectedPlan && (
             <>
               <DialogHeader>
-                <DialogTitle>{selectedPlan.titulo}</DialogTitle>
+                <DialogTitle>{`Plan de ${selectedPlan.tipo}`}</DialogTitle>
                 <DialogDescription>
-                  {selectedPlan.dirigente_nombre} &mdash;{" "}
+                  {`Dirigente #${selectedPlan.dirigente_id}`} &mdash;{" "}
                   {formatDate(selectedPlan.created_at)}
                 </DialogDescription>
               </DialogHeader>
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <ReactMarkdown>{selectedPlan.contenido}</ReactMarkdown>
               </div>
-              {selectedPlan.status === "draft" && (
+              {(selectedPlan.aprobado ? "approved" : "draft") === "draft" && (
                 <DialogFooter className="gap-2">
                   <Button
                     variant="outline"
