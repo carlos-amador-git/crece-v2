@@ -77,6 +77,40 @@
 - RF accuracy=1.0 es esperado en datos sintéticos; con datos reales será menor
 - Script idempotente: backend/scripts/seed_synthetic_citizens.py
 
+## 2026-04-11 — Sprint 1 Saneamiento
+
+### D16: RLS enforcement vía user.dirigente_id en endpoints (2026-04-11)
+- Aunque existe migración `77bbd5e5f495` con políticas RLS a nivel DB, el enforcement principal es en los endpoints FastAPI vía `current_user.dirigente_id` check
+- `org_id` en users y dirigentes está en None para los 3 demo users (single-org CRECE)
+- El DB-level RLS es defense-in-depth; cuando se agregue multi-tenancy real (Sprint 5 wizard), habrá que poblar org_id correctamente
+- Verificado: Piña ve 191 posts, Solano 190, admin 381 (split perfecto)
+
+### D17: KpiOverviewResponse extendido con campos políticos (2026-04-11)
+- Campos legacy (total_dirigentes, avg_ipd_score, posts_monitored_24h, active_alerts, *_change) se mantienen para backward compat
+- Nuevos campos: total_audiencia (sum followers), contactos_periodo (CRM en window), tema_urgente (texto de alerta más reciente o None)
+- contactos_periodo y tema_urgente tienen try/except para degradar grácilmente si las tablas no existen
+- Razón: evita romper consumers legacy mientras se habilitan métricas del político
+
+### D18: Period parameter en /dashboard/overview (2026-04-11)
+- Literal["today", "7d", "30d", "90d"] con default "30d"
+- Calcula window_start y prev_window_start dinámicamente
+- Legacy name `last_24h` se mantiene internamente pero ahora tracks el period
+- Razón: activeFilter del frontend estaba roto porque nunca llegaba al backend
+
+### D19: NLP reprocess reemplaza scores del seed (2026-04-11)
+- `backend/scripts/reprocess_nlp.py --force` sobrescribe sentiment_score/sentiment_label/emotions
+- Seed inicial tenía valores canned (0.7/0.5/0.1) — ahora son scores reales de pysentimiento
+- Razón: filosofía "cero mockups" requiere que incluso el demo tenga análisis real
+- Side effect: los tests que asumían los valores canned pueden fallar — a revisar en Sprint 2
+
+### D20: Frontend sentiment_label es string | null (2026-04-11)
+- Tipado `SocialPost.sentiment_label: string | null` (antes `sentiment: SentimentType`)
+- `SentimentBadge` acepta `string | null | undefined` y normaliza con `.toLowerCase()`
+- Bug previo: frontend leía `post.sentiment` que no existía en response → `else neutral++` siempre
+- Razón: el backend siempre devolvió `sentiment_label` en mayúsculas; el frontend tenía un tipo inventado
+
+---
+
 ### D15: Bot detection pattern-based, no ML (2026-04-05)
 - Servicio basado en heurísticas, no ML (no hay dataset de bots mexicanos)
 - 3 analizadores: username, profile metadata, post patterns

@@ -1,6 +1,37 @@
 # CRECE v2.0 — Status
 
-## Estado: PLAN ORIGINAL ~98% CUBIERTO
+## Estado: SPRINT 1 COMPLETO ✅
+## Fecha: 2026-04-11
+
+## Sprint 1 — Saneamiento (ejecutado 2026-04-11)
+
+9 tareas ejecutadas, verificadas con Playwright contra deploy de Vercel.
+
+| ID | Tarea | Resultado |
+|----|-------|-----------|
+| S1.1 | Correr NLP sobre social_posts | 378 posts reprocesados. Distribución real: 99 POSITIVE / 161 NEUTRAL / 121 NEGATIVE |
+| S1.2 | Verificar RLS con 3 demo logins | Admin=2 dirigentes/381 posts, Piña=1 dirigente/191 posts, Solano=1 dirigente/190 posts. Split 191+190=381 ✓ |
+| S1.3 | Fix bug filtros tiempo | Endpoint acepta period=today/7d/30d/90d, hook propaga `activeFilter` |
+| S1.4 | Fix 422 scoring/by-seccion | Nuevo endpoint lista 16 secciones con agregados |
+| S1.5 | Investigar IPD idéntico | Sin bug: Piña 3.90 vs Solano 3.87, redondean a 3.9 |
+| S1.6 | Auditar /participacion | Confirmado mockup. Banner DEMO amarillo visible |
+| S1.7 | Fix 404 favicon | icon.svg creado en src/app/ |
+| S1.8 | KPIs del político | "Tu Audiencia / Presencia Digital / Conversación / Tema Urgente" con data real |
+| S1.9 | Sidebar enriquecido | Dirigente users ven badges IPD X/10 y followers total |
+
+**Bug adicional encontrado y corregido (fuera de plan):** Frontend leía `post.sentiment` pero backend devuelve `sentiment_label`. Por eso el pie chart salía 100% neutral. Fix: `SocialPost` type, `PostCard`, `SentimentBadge`, `social/page.tsx`.
+
+**Deuda conocida pendiente:** prefetch RSC a `/dashboard/settings` (ruta muerta en sidebar, no bloqueante).
+
+**Cross-audit Gemini:** aprobado con recomendaciones — correr pytest antes de commit (pytest no está en container prod, verificación alternativa pasó: import check + API smoke test de 6 endpoints, todos 200).
+
+**Deploy:** frontend-zeta-sepia-46.vercel.app (production) actualizado.
+
+---
+
+## Estado histórico previo
+
+## Plan original ~98% cubierto
 ## Fecha: 2026-04-05
 
 ## Sesión de hoy — Resultados
