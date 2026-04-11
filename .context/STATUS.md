@@ -1,9 +1,9 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-11 13:10 local
-**Sesión activa:** /sprint-implement S4, 4/11 tareas done
+**Último update:** 2026-04-11 14:30 local
+**Sesión activa:** /sprint-implement luz verde all — S4 funcionalmente completo (9/11)
 **Main HEAD:** `4d61ec0` (PR #6 merged)
-**Branch activo:** `fix/sprint-4-trends` @ `dac0039`
+**Branch activo:** `fix/sprint-4-trends` @ `521fd6a`
 
 ---
 
@@ -23,20 +23,47 @@
 
 | Sprint | Esfuerzo | Prioridad | Avance |
 |---|---|---|---|
-| **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) | **4/11** (S4.1, S4.2a/c/b, S4.4a/a.5) |
+| **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) | **9/11** funcionalmente cerrado (+2 scaffolds) |
 | **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) | 0/6 |
 
-### Sesión 2026-04-11 tarde-2 — /sprint-implement S4 (ejecución)
+### Sesión 2026-04-11 tarde-3 — /sprint-implement luz verde all
 Commits en `fix/sprint-4-trends`:
 - `9efc76d` — S4.1 catálogo INEGI 16 alcaldías CDMX (ST_Contains verified)
 - `24b032d` — docs(s4) /sprint-review enriquecimiento + cross-audit Gemini
 - `59413bd` — S4.2 topic_trends + RLS + HNSW orden a→c→b (RLS verificada con rol no-priv)
-- `dac0039` — S4.4a location_inference con DB lookup + normalize_social_text + 10 tests verdes
+- `dac0039` — S4.4a location_inference con DB lookup + normalize_social_text + 10 tests
+- `bb01c46` — docs D-S4-05/06 y STATUS mid-session
+- `598c537` — Batch 1: S4.8 audit RLS + S4.3 seeds 136 cuentas + S4.6a queues + S4.7 RSS parser
+- `682b598` — Batch 2: S4.5 detect_trends + S4.6b label_trend_cluster + S4.7 ingest_rss_feeds task
+- `521fd6a` — Batch 3: S4.9 endpoint /trends/geo + /alcaldias + S4.10 TrendingAlcaldiaCard + E2E real
 
-Dep nueva: `pgvector>=0.3.0` en pyproject.toml (pip install live en container).
-Migraciones aplicadas: `a1b2c3d4e5f6` + `b2c3d4e5f6a7`.
+**Tareas S4 — estado final**:
+| ID | Estado | Verificación |
+|---|---|---|
+| S4.1 | ✅ | 16 alcaldías INEGI PostGIS, ST_Contains 3/3 points |
+| S4.2a/b/c | ✅ | topic_trends + vector(384) + HNSW cosine + 2 RLS policies verificadas |
+| S4.3 | ✅ | 136 cuentas semilla YAML (target era 150) |
+| S4.4a + a.5 | ✅ | location_inference DB-backed + normalize_social_text + 10 tests |
+| S4.4b | ⏸ scaffold | spaCy es_core_news_md NO instalado (deuda D-S4-04) |
+| S4.5 | ✅ | detect_trends pipeline end-to-end, 1 trend real generado sobre posts de Piña |
+| S4.6a/b | ✅ | cola trends_labeling + Ollama batch labeling probado contra gemma3:12b live |
+| S4.7 | ✅ parser | fetch_all_feeds + parser RSS con 8 fuentes + 4 tests; persistencia diferida (D-S4-07) |
+| S4.8 | ✅ | search_similar_posts requiere org_id kw-only, cross-org leak imposible, 3 tests |
+| S4.9 | ✅ | GET /trends/geo + /alcaldias live, auth JWT, scopeado por org |
+| S4.10 | ✅ | TrendingAlcaldiaCard montado en /dashboard/social, tsc clean |
+| S4.11 | ✅ | E2E real: detect_trends sobre 381 posts dev DB → 1 trend BJ → label Ollama "Diálogo universitario..." |
 
-**Próximo paso**: S4.3 seed YAML + S4.4b spaCy NER, o ir por S4.8 audit RLS + S4.5 worker.
+Dep nueva: `pgvector>=0.3.0` en pyproject.toml.
+Migraciones: `a1b2c3d4e5f6` (alcaldías) + `b2c3d4e5f6a7` (topic_trends + RLS + HNSW).
+Endpoints live: `/api/v1/trends/geo`, `/api/v1/trends/alcaldias`.
+Tests totales nuevos en S4: **17 verdes** (10 location_inference + 3 RLS audit + 4 RSS parser).
+
+**Deudas documentadas en DECISIONS**:
+- **D-S4-04**: spaCy es_core_news_md no instalado (skip por budget, S4.4b)
+- **D-S4-07**: RSS persistence requires `platform_enum += 'NEWS'` migration + synthetic profiles o profile_id nullable
+- **D-S4-08**: clustering semántico HNSW real requiere backfill_embeddings() sobre 381 posts existentes (primer pase agrupa solo por alcaldía)
+
+**Próximo paso recomendado**: arrancar S5 Wizard Onboarding (1.5 días nominal). Todos los blockers resueltos: RLS audited, topic_trends table ready, endpoints live, UI card mounted.
 
 ### Sesión 2026-04-11 tarde — /sprint-review
 - Plan S4+S5 revisado, enriquecido con subdivisiones y criterios medibles (ver `PLAN-current.md` sección "Plan revisado 2026-04-11")

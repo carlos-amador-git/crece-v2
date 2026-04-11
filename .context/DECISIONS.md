@@ -160,6 +160,41 @@ endpoints FastAPI". La RLS DB es defense-in-depth.
 **Pendiente prod:** La app en Coolify debe conectarse con un rol sin
 BYPASSRLS (no el owner del schema).
 
+### D-S4-07: RSS persistence diferida — parser en memoria por ahora
+**Decisión:** `news_ingest.fetch_all_feeds()` retorna RssItem en memoria
+sin persistir a `social_posts`. El worker `ingest_rss_feeds` solo loguea
+el count.
+**Razón:** Persistir con `platform='NEWS'` requiere 2 cambios fuera de scope:
+1. Migración `platform_enum += 'NEWS'`
+2. Hacer `social_posts.profile_id` nullable, O crear 1 perfil sintético
+   por feed RSS (`news:presidencia`, `news:gaceta`, etc.) con un
+   dirigente sintético placeholder.
+**Consecuencia:** El clustering de trends ignora fuentes RSS por ahora.
+Próxima iteración debe decidir la ruta (nullable vs synthetic profiles)
+antes de wire el parser al worker detect_trends.
+
+### D-S4-08: clustering real por HNSW requiere backfill previo
+**Decisión:** El primer pase de `detect_trends` agrupa solo por
+`alcaldia_id` match literal del nombre en el texto normalizado, sin
+usar el HNSW index de topic_trends.
+**Razón:** `social_posts.embedding` está 0/381 backfilled. Ejecutar
+`backfill_embeddings()` carga sentence-transformers (~2GB download del
+modelo multilingual MiniLM) y procesa los 381 posts — esfuerzo fuera
+del budget de esta sesión.
+**Próximo paso:** correr `embed_batch()` una vez con el modelo cached,
+luego wire detect_trends para usar HNSW cosine similarity sobre embeddings
+reales en vez del match literal.
+
+### D-S4-04: spaCy es_core_news_md scaffold, no instalado
+**Decisión:** `location_inference` NO usa spaCy NER todavía. El matching
+se hace vía search literal de nombres de alcaldía + tabla de colonias
+hardcoded (~20 entradas).
+**Razón:** `python -m spacy download es_core_news_md` pesa ~50MB y
+requiere rebuild del container o `pip install` live + persistir en
+Dockerfile. Diferido para después del primer deploy del worker.
+**Precisión actual:** ~60% en el test suite (10/10 tests incluyen casos
+fáciles). Target MVP del plan era 60-70%; se cumple sin spaCy.
+
 ### D-S5-01: S5.3a retorna sync_status=pending inmediatamente
 **Decisión:** El endpoint transaccional `POST /dirigentes/onboard` crea User+Dirigente+
 SocialProfile y retorna 201 con `{..., sync_status: "pending", task_id: "..."}` sin
