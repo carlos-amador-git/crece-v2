@@ -36,8 +36,8 @@ const DEFAULT_KPI = {
   avg_ipd_score: 0,
   posts_monitored_24h: 0,
   active_alerts: 0,
-  dirigentes_change: 0,
-  ipd_change: 0,
+  dirigentes_change: null as number | null,
+  ipd_change: null as number | null,
   posts_change: 0,
   alerts_change: 0,
   total_audiencia: 0,
@@ -203,7 +203,8 @@ export default function OverviewPage() {
           : kpiCards.map((card) => {
               const rawValue = kpiData[card.key];
               const change = kpiData[card.changeKey];
-              const isPositive = change >= 0;
+              const hasChange = change !== null && change !== undefined;
+              const isPositive = hasChange && (change as number) >= 0;
               const showPulse = card.isAlerts && hasActiveAlerts;
 
               // Special rendering for "Tema Urgente" — show the alert text
@@ -259,22 +260,31 @@ export default function OverviewPage() {
                         </p>
                       )}
                       {!isTemaCard && (
-                        <span
-                          className={`flex items-center text-xs font-medium ${
-                            isPositive
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-red-600 dark:text-red-400"
-                          }`}
-                        >
-                          {isPositive ? (
-                            <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" />
-                          ) : (
-                            <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" />
-                          )}
-                          <span data-numeric="true" className="tabular-nums">
-                            {Math.abs(change)}%
+                        hasChange ? (
+                          <span
+                            className={`flex items-center text-xs font-medium ${
+                              isPositive
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-red-600 dark:text-red-400"
+                            }`}
+                          >
+                            {isPositive ? (
+                              <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" />
+                            ) : (
+                              <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" />
+                            )}
+                            <span data-numeric="true" className="tabular-nums">
+                              {Math.abs(change as number)}%
+                            </span>
                           </span>
-                        </span>
+                        ) : (
+                          <span
+                            className="text-xs font-medium text-muted-foreground/60 tabular-nums"
+                            title="Sin histórico suficiente para calcular delta"
+                          >
+                            —
+                          </span>
+                        )
                       )}
                     </div>
                   </CardContent>

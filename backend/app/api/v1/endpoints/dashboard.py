@@ -34,8 +34,10 @@ class KpiOverviewResponse(BaseModel):
     avg_ipd_score: float
     posts_monitored_24h: int
     active_alerts: int
-    dirigentes_change: float
-    ipd_change: float
+    # dirigentes_change: real delta computed from Dirigente.created_at within window.
+    # ipd_change: None until follower-count snapshots exist — we refuse to fake 0.0.
+    dirigentes_change: float | None
+    ipd_change: float | None
     posts_change: float
     alerts_change: float
     # ── political KPIs ──
@@ -85,9 +87,16 @@ async def get_overview(
     # Total dirigentes (scoped if user is a dirigente)
     if user_dirigente_id:
         total_dirigentes = 1
+        dirigentes_prev_count = 1
     else:
         total_result = await db.execute(select(func.count(Dirigente.id)))
         total_dirigentes = total_result.scalar() or 0
+        # Count dirigentes that existed before the window started.
+        # We assume Dirigente.created_at is populated and deletions are soft/rare.
+        prev_result = await db.execute(
+            select(func.count(Dirigente.id)).where(Dirigente.created_at < window_start)
+        )
+        dirigentes_prev_count = prev_result.scalar() or 0
 
     # Avg IPD — real calculation via diagnostico service
     avg_ipd = 0.0
@@ -146,6 +155,12 @@ async def get_overview(
             return 100.0 if current > 0 else 0.0
         return round(((current - previous) / previous) * 100, 1)
 
+    # Real delta for dirigentes (from created_at history).
+    # IPD delta stays None: calculating it requires a follower_count history table
+    # that does not exist yet — faking 0.0 violates the "NO inventar datos" rule.
+    dirigentes_change = pct_change(float(total_dirigentes), float(dirigentes_prev_count))
+    ipd_change: float | None = None
+
     # ── Political KPIs ─────────────────────────────────────────────
     # total_audiencia: sum of followers across scoped social profiles
     audiencia_query = select(func.coalesce(func.sum(SocialProfile.followers_count), 0))
@@ -187,8 +202,8 @@ async def get_overview(
         avg_ipd_score=avg_ipd,
         posts_monitored_24h=posts_24h,
         active_alerts=active_alerts,
-        dirigentes_change=0.0,
-        ipd_change=0.0,
+        dirigentes_change=dirigentes_change,
+        ipd_change=ipd_change,
         posts_change=pct_change(posts_24h, posts_prev),
         alerts_change=pct_change(active_alerts, alerts_prev),
         total_audiencia=int(total_audiencia),

@@ -67,7 +67,9 @@ const sections = [
   {
     label: "Sistema",
     items: [
-      { href: "/dashboard/settings", label: "Configuracion", icon: Settings },
+      // prefetch disabled: evita 404 de RSC prefetch si el bundle de /settings
+      // no está aún en el deploy más reciente; la página carga en navegación real.
+      { href: "/dashboard/settings", label: "Configuracion", icon: Settings, prefetch: false },
     ],
   },
 ];
@@ -173,6 +175,7 @@ export function Sidebar() {
                     const linkContent = (
                       <Link
                         href={item.href}
+                        prefetch={(item as { prefetch?: boolean }).prefetch ?? undefined}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
                           "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out",
