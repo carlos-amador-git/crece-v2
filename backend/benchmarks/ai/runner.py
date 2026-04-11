@@ -155,6 +155,7 @@ async def run(
 
     date_str = datetime.now().strftime("%Y-%m-%d")
     out_dir = out_dir or (OUT_ROOT / date_str)
+    out_dir = out_dir.resolve()  # ensure absolute so relative_to(BASE) works
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Persist the exact prompt used
@@ -174,7 +175,11 @@ async def run(
             path = out_dir / f"iter_{iteration:02d}_{provider}.md"
             path.write_text(text, encoding="utf-8")
             results[provider] = path
-            print(f"[ok] {provider} → {path.relative_to(BASE)}")
+            try:
+                rel = path.relative_to(BASE)
+            except ValueError:
+                rel = path
+            print(f"[ok] {provider} → {rel}")
         except Exception as e:
             err_path = out_dir / f"iter_{iteration:02d}_{provider}.error.txt"
             err_path.write_text(f"{type(e).__name__}: {e}", encoding="utf-8")

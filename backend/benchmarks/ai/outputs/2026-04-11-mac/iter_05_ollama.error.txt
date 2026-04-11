@@ -1,0 +1,1 @@
+ValueError: 'backend/benchmarks/ai/outputs/2026-04-11-mac/iter_05_ollama.md' is not in the subpath of '/Users/marxchavez/Projects/crece-v2/backend/benchmarks/ai'
