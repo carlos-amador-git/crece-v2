@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
+import { useKpiOverview } from "@/lib/api/hooks/use-overview";
+import { formatNumber } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -93,9 +95,20 @@ export function Sidebar() {
 
   const displayName = user?.full_name ?? "Admin";
   const userWithDirigente = user as { full_name?: string; role?: string; dirigente_id?: number } | null;
-  const displayRole = userWithDirigente?.dirigente_id
+  const isDirigente = !!userWithDirigente?.dirigente_id;
+  const displayRole = isDirigente
     ? "Dirigente"
     : user?.role ? (roleLabels[user.role] ?? user.role) : "Admin";
+
+  // When the signed-in user is a dirigente, reuse the overview query (cached)
+  // to enrich the sidebar footer with IPD + audiencia.
+  const { data: kpiSidebar } = useKpiOverview("30d");
+  const ipdLabel = kpiSidebar?.avg_ipd_score != null
+    ? kpiSidebar.avg_ipd_score.toFixed(1)
+    : null;
+  const audienciaLabel = kpiSidebar?.total_audiencia != null
+    ? formatNumber(kpiSidebar.total_audiencia)
+    : null;
   const initials = displayName
     .split(" ")
     .map((w) => w[0])
@@ -229,13 +242,31 @@ export function Sidebar() {
               >
                 {initials}
               </span>
-              <div className="flex min-w-0 flex-col">
+              <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-medium leading-tight">
                   {displayName}
                 </span>
-                <span className="inline-flex w-fit rounded-sm bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
-                  {displayRole}
-                </span>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                  <span className="inline-flex w-fit rounded-sm bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                    {displayRole}
+                  </span>
+                  {isDirigente && ipdLabel && (
+                    <span
+                      className="inline-flex w-fit items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums"
+                      title="Indice de Penetracion Digital"
+                    >
+                      IPD {ipdLabel}/10
+                    </span>
+                  )}
+                  {isDirigente && audienciaLabel && (
+                    <span
+                      className="inline-flex w-fit items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums"
+                      title="Total de seguidores"
+                    >
+                      {audienciaLabel}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
