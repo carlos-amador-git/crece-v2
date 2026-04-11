@@ -30,7 +30,7 @@ export function PostCard({ post }: PostCardProps) {
                 </span>
               </div>
               <SentimentBadge
-                sentiment={post.sentiment}
+                sentiment={post.sentiment_label}
                 score={post.sentiment_score}
               />
             </div>

@@ -707,6 +707,22 @@ export default function ParticipacionPage() {
 
   return (
     <div className="space-y-6">
+      {/* ── Demo disclosure banner ──────────────────────── */}
+      <div
+        role="note"
+        className="flex items-start gap-3 rounded-md border border-amber-300/40 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-200"
+      >
+        <Filter className="mt-0.5 h-4 w-4 shrink-0" />
+        <div>
+          <p className="font-semibold">Módulo demo — datos no conectados al backend</p>
+          <p className="text-xs opacity-90">
+            Las propuestas, votaciones y resultados son un ejemplo estático estilo Decidim.
+            El módulo de Decidim fue excluido del scope de CRECE — el backend real
+            (<code>/api/v1/participacion</code>) gestiona solicitudes ciudadanas vía Chatwoot, no propuestas.
+          </p>
+        </div>
+      </div>
+
       {/* ── Header ──────────────────────────────────────── */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -714,7 +730,7 @@ export default function ParticipacionPage() {
             Participacion Ciudadana
           </h1>
           <p className="text-sm text-muted-foreground">
-            Deliberacion, votacion y seguimiento de propuestas ciudadanas — estilo Decidim
+            Deliberacion, votacion y seguimiento de propuestas ciudadanas — estilo Decidim (demo)
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

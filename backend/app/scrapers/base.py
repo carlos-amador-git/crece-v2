@@ -52,6 +52,19 @@ class BaseScraper(ABC):
         """
         ...
 
+    def capture_url(self, url: str) -> dict[str, Any] | None:
+        """Optional: ingest a single URL into a normalized post dict.
+
+        Default implementation returns None. Subclasses may override to support
+        the "paste-a-URL-from-Slack" workflow without running a full profile
+        scrape. Callers should check for None and fall back to OpenGraph
+        extraction or mark the URL as unsupported.
+
+        Returns a dict matching SocialPost column names, or None if the scraper
+        cannot handle single-URL capture.
+        """
+        return None
+
 
 def get_scraper(platform: str) -> BaseScraper:
     """Factory: return the scraper instance for a given platform."""

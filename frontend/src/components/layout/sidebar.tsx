@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
+import { useKpiOverview } from "@/lib/api/hooks/use-overview";
+import { formatNumber } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -65,7 +67,9 @@ const sections = [
   {
     label: "Sistema",
     items: [
-      { href: "/dashboard/settings", label: "Configuracion", icon: Settings },
+      // prefetch disabled: evita 404 de RSC prefetch si el bundle de /settings
+      // no está aún en el deploy más reciente; la página carga en navegación real.
+      { href: "/dashboard/settings", label: "Configuracion", icon: Settings, prefetch: false },
     ],
   },
 ];
@@ -93,9 +97,20 @@ export function Sidebar() {
 
   const displayName = user?.full_name ?? "Admin";
   const userWithDirigente = user as { full_name?: string; role?: string; dirigente_id?: number } | null;
-  const displayRole = userWithDirigente?.dirigente_id
+  const isDirigente = !!userWithDirigente?.dirigente_id;
+  const displayRole = isDirigente
     ? "Dirigente"
     : user?.role ? (roleLabels[user.role] ?? user.role) : "Admin";
+
+  // When the signed-in user is a dirigente, reuse the overview query (cached)
+  // to enrich the sidebar footer with IPD + audiencia.
+  const { data: kpiSidebar } = useKpiOverview("30d");
+  const ipdLabel = kpiSidebar?.avg_ipd_score != null
+    ? kpiSidebar.avg_ipd_score.toFixed(1)
+    : null;
+  const audienciaLabel = kpiSidebar?.total_audiencia != null
+    ? formatNumber(kpiSidebar.total_audiencia)
+    : null;
   const initials = displayName
     .split(" ")
     .map((w) => w[0])
@@ -160,6 +175,7 @@ export function Sidebar() {
                     const linkContent = (
                       <Link
                         href={item.href}
+                        prefetch={(item as { prefetch?: boolean }).prefetch ?? undefined}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
                           "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out",
@@ -229,13 +245,31 @@ export function Sidebar() {
               >
                 {initials}
               </span>
-              <div className="flex min-w-0 flex-col">
+              <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-medium leading-tight">
                   {displayName}
                 </span>
-                <span className="inline-flex w-fit rounded-sm bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
-                  {displayRole}
-                </span>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                  <span className="inline-flex w-fit rounded-sm bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                    {displayRole}
+                  </span>
+                  {isDirigente && ipdLabel && (
+                    <span
+                      className="inline-flex w-fit items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums"
+                      title="Indice de Penetracion Digital"
+                    >
+                      IPD {ipdLabel}/10
+                    </span>
+                  )}
+                  {isDirigente && audienciaLabel && (
+                    <span
+                      className="inline-flex w-fit items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums"
+                      title="Total de seguidores"
+                    >
+                      {audienciaLabel}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}

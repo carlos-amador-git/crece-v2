@@ -33,7 +33,7 @@ function isRetweet(post: SocialPost): boolean {
 function computeDistribution(posts: SocialPost[]): SentimentDistribution {
   let positive = 0, negative = 0, neutral = 0;
   for (const p of posts) {
-    const s = p.sentiment?.toLowerCase();
+    const s = (p.sentiment_label ?? "").toLowerCase();
     if (s === "positive") positive++;
     else if (s === "negative") negative++;
     else neutral++;
@@ -265,7 +265,7 @@ export default function SocialPage() {
                       {post.content}
                     </p>
                     <div className="mt-1.5 flex items-center gap-2">
-                      <SentimentBadge sentiment={post.sentiment} />
+                      <SentimentBadge sentiment={post.sentiment_label} />
                       <span className="text-[10px] text-muted-foreground">
                         {post.likes + post.comments + post.shares} interacciones
                       </span>

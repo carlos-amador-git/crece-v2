@@ -98,7 +98,7 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       MINIO_ENDPOINT: minio:9000
       AI_PROVIDER: ollama
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_BASE_URL: http://163.245.208.96:11434
       OLLAMA_MODEL: "gemma3:12b"
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -194,9 +194,10 @@ services:
     container_name: crece-frontend
     command: npm run dev
     ports:
-      - "3001:3000"
+      - "3005:3000"
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8002/api/v1}
+
       NEXT_PUBLIC_MAPLIBRE_STYLE: ${NEXT_PUBLIC_MAPLIBRE_STYLE:-https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json}
       WATCHPACK_POLLING: "true"
     volumes:

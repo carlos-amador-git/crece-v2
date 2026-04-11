@@ -1,75 +1,153 @@
 # CRECE v2.0 — Status
 
-## Estado: PLAN ORIGINAL ~98% CUBIERTO
-## Fecha: 2026-04-05
+## Estado: SPRINT 2 ENTREGADO + SPRINT 3 BACKEND + KANBAN UI ✅
+## Fecha: 2026-04-11
 
-## Sesión de hoy — Resultados
+## Sesión 2026-04-11 (coordinada con peer qmmine5b)
 
-### Gaps cerrados (15 de 15 del plan original + 4 sprint adicionales)
+### División de trabajo
+- **Peer qmmine5b** (worktree `../crece-v2-sprint1-deuda`, rama `sprint1-deuda`): deuda técnica Sprint 1
+- **Yo** (main): Sprints 2-5
 
-| # | Tarea | Estado | Detalle |
-|---|-------|--------|---------|
-| 1 | Bluesky | HECHO | AT Protocol, sin auth, probado con Patricia Mercado |
-| 2 | Sherlock | HECHO | Servicio + endpoint /osint/sherlock, anti-injection |
-| 3 | sentiment-spanish | HECHO | CNN model como validación secundaria en NLP |
-| 4 | Modelos propaganda | HECHO | cardiffnlp/twitter-roberta-base-offensive |
-| 5 | NLP datos reales | HECHO | 7/7 modelos funcionando con posts de Piña/Solano |
-| 6 | **Voter Scoring ML** | **HECHO** | 200 ciudadanos sintéticos INEGI, RF accuracy=1.0, 606 scored |
-| 7 | Geometries INE | POSPUESTO | Shapefiles pesados, no bloquea demo |
-| 8 | WhatsApp/Chatwoot | HECHO | Webhook HMAC verificado, test E2E pasó |
-| 9 | Mobile app | HECHO | Dashboard + Diagnóstico screens, 5 tabs |
-| 10 | n8n nodes | **HECHO** | 6 workflows importados, 30 nodos custom, mdconsultoria-ti.org |
-| 11 | Decidim | PENDIENTE | Requiere diseño de producto |
-| 12 | pgvector | HECHO | Embeddings 384-dim, HNSW index, búsqueda semántica |
-| 13 | Remotion video | HECHO | 6 escenas animadas, formato reel vertical MC |
-| 14 | Proxies residenciales | PENDIENTE | Config de producción |
-| 15 | Threads/Telegram | HECHO | Telegram funcional, Threads stub listo |
-| S1 | **Benchmark endpoint** | **HECHO** | Prefix corregido, /competidores y /ranking OK |
-| S2 | **Content Factory E2E** | **HECHO** | Ollama genera tweet real para Piña (~480s CPU) |
-| S3 | **Voter Scoring seed** | **HECHO** | 200 ciudadanos INEGI, RF trained, 606 scored |
-| S4 | **Bot detection** | **HECHO** | Servicio pattern-based, username/profile/posts análisis |
+### Sprint 1 deuda técnica — COMPLETO ✅ (commit `dbc884c`)
+Merged FF a main desde worktree `../crece-v2-sprint1-deuda`, rama ya eliminada.
 
-### Score: 16 HECHO / 0 BLOQUEADO / 2 PENDIENTE (diseño/infra)
+1. **Migración Alembic explícita** `d4e7a2c1b8f3_add_dirigente_id_to_users.py` para `users.dirigente_id` (FK → dirigentes + index). Idempotente contra DBs ya parcheadas por ALTER manual. `alembic upgrade head` verde en dev DB.
+2. **Deltas honestos en `/dashboard/overview`**: `dirigentes_change` se calcula real desde `Dirigente.created_at` comparando ventana actual vs previa. `ipd_change = None` (Optional[float]) porque NO existe tabla histórica de follower counts — la regla "NO inventar datos" prohíbe devolver 0.0 falso. Frontend renderiza "—" en lugar de "0%" engañoso.
+3. **Prefetch `/dashboard/settings`**: sidebar ahora soporta `prefetch` per-item, Settings link con `prefetch={false}` para evitar 404 de RSC prefetch en despliegues parciales.
 
-### Tests: 148 green
+Verificación: migración alembic upgrade verde, `KpiOverviewResponse` schema carga e instancia con None (pydantic verificado), `tsc --noEmit` clean en los 4 archivos frontend modificados. Pytest completo no se corrió por warmup prolongado de modelos NLP + dev DB temporalmente roto por cambios uncommitted de sesión paralela (Sprint 3 `plan_ia.estructura_json`).
 
-### Scrapers — 40+ herramientas probadas, 8 plataformas cubiertas
+Deuda técnica residual: infraestructura de snapshots de follower counts para calcular `ipd_change` real (pendiente, sprint futuro).
 
-| Plataforma | Herramienta | Auth | Costo |
-|------------|------------|------|-------|
-| Instagram | ensta (Guest) | Ninguna | $0 |
-| Twitter/X | Scweet v5.2 | Cookie auth_token | $0 |
-| YouTube | scrapetube + yt-dlp | Ninguna | $0 |
-| TikTok | yt-dlp | Ninguna | $0 |
-| Facebook | curl-cffi (Chrome TLS) | Cookies c_user+xs | $0 |
-| Bluesky | AT Protocol (httpx) | Ninguna | $0 |
-| Telegram | Telethon | — | $0 |
-| Threads | Stub (baja adopción MX) | — | $0 |
+### Sprint 2 — Benchmark Prompts IA ✅ FUNCIONAL
 
-### NLP — 8 modelos operativos
+**Directorio `backend/benchmarks/ai/` creado con runner end-to-end offline.**
 
-| Modelo | Función | Status |
-|--------|---------|--------|
-| pysentimiento/robertuito | Sentimiento primario | OK |
-| sentiment-spanish/CNN | Validación cruzada | OK |
-| pysentimiento/emotion | Emociones (Ekman) | OK |
-| pysentimiento/hate | Hate speech | OK |
-| spaCy es_core_news_md | NER + topics | OK |
-| cardiffnlp offensive | Controversia/propaganda | OK |
-| citizenlab toxicity | Toxicidad multilingüe | OK |
-| xlm-roberta-large-xnli | Zero-shot topics | OK |
+| ID | Tarea | Estado |
+|----|-------|--------|
+| S2.1 | Estructura directorio + `prompts/`, `test_cases/`, `outputs/` | HECHO |
+| S2.2 | Test case fixture + script `build_test_cases.py` (requiere DB viva) | HECHO (fixture) / PENDIENTE (DB real) |
+| S2.3 | Loop orchestrator `loop.py` | HECHO |
+| S2.4 | Rúbrica 6 dimensiones `rubric.py` (+ `--self-test` pasa) | HECHO |
+| S2.5 | Runner multi-provider `runner.py` (ollama/claude/gemini/offline) + `compare.py` | HECHO |
+| S2.6 | 3+ iteraciones sobre prompt de plan generation | PENDIENTE (requiere Ollama + DB) |
 
-### Infraestructura
+**Archivos producidos:**
+- `backend/benchmarks/ai/__init__.py`
+- `backend/benchmarks/ai/README.md`
+- `backend/benchmarks/ai/rubric.py` — 6 dims, determinista + heurísticas
+- `backend/benchmarks/ai/runner.py` — async multi-provider
+- `backend/benchmarks/ai/compare.py` — side-by-side + scores
+- `backend/benchmarks/ai/loop.py` — orquestador iterativo
+- `backend/benchmarks/ai/build_test_cases.py` — genera JSON desde DB real
+- `backend/benchmarks/ai/prompts/diagnostico_v1.md` — baseline extraído de `plan_generator`
+- `backend/benchmarks/ai/test_cases/fixture_sintético.json` — fallback sin DB
+- `backend/benchmarks/ai/outputs/2026-04-11/` — iter_00 offline + compare_00 generados
 
-| Servicio | Estado |
-|----------|--------|
-| Ollama Coolify (gemma3:12b) | FUNCIONANDO — 163.245.208.96:11434 |
-| PostgreSQL + PostGIS + pgvector | FUNCIONANDO — :5438 |
-| Frontend Vercel | DEPLOYED — frontend-zeta-sepia-46.vercel.app |
-| Chatwoot webhook | CONECTADO |
+**Verificación end-to-end ejecutada:**
+```
+python -m benchmarks.ai.rubric --self-test              # PASS total=93.8
+python -m benchmarks.ai.runner --providers offline ...  # OK
+python -m benchmarks.ai.compare ...                     # OK total=56.7 fixture
+```
 
-## Lo que queda pendiente
+### Sprint 3 — Plan estructurado + Kanban ✅ BACKEND + UI COMPLETO
 
-- Geometries INE (#7) — shapefiles pesados, no bloquea demo
-- Proxies (#14) — decisión de compra de servicio
-- Decidim (#11) — proyecto independiente en ~/Projects/decidim-mc/
+**Backend:**
+- `backend/app/models/plan_ia.py` — agregados `PlanTarea` + `EstadoTarea` enum + campo `estructura_json` en `PlanIA`
+- `backend/app/schemas/plan_ia.py` — `PlanTareaBase`, `PlanTareaCreate`, `PlanTareaUpdate`, `PlanTareaCompleteRequest`, `PlanTareaResponse`, `PlanEstructurado`, `PlanProgresoResponse` con constraints Pydantic
+- `backend/app/services/plan_structured.py` (NUEVO) — `generate_structured_plan()` con function calling, retry hasta 2 veces si el LLM viola schema, persiste en `estructura_json` + filas `plan_tareas`
+- `backend/app/api/v1/endpoints/planes.py` — endpoints nuevos:
+  - `GET  /planes/{id}/tareas`
+  - `PATCH /planes/{id}/tareas/{task_id}` (con `cambios_historial` audit trail)
+  - `POST  /planes/{id}/tareas/{task_id}/complete` (captura `metrica_valor_real`)
+  - `GET  /planes/{id}/progreso` (agregados de progreso + impacto)
+  - `POST /planes/generar` ahora acepta `estructurado: true` como opt-in
+
+**Frontend:**
+- `frontend/src/lib/api/hooks/use-planes.ts` — tipos + hooks `usePlanTareas`, `usePlanProgreso`, `useUpdateTarea`, `useCompleteTarea`
+- `frontend/src/components/planes/kanban-board.tsx` (NUEVO) — tablero 3 columnas con:
+  - Movimiento entre estados vía botones (no drag-and-drop para no agregar deps)
+  - Edición inline (titulo, descripcion, responsable, frecuencia) en Dialog
+  - Captura de métrica real al completar
+  - Historial de cambios visible en el Dialog de edición
+  - Barra de progreso + impacto acumulado por métrica
+- `frontend/src/app/dashboard/planes/[id]/kanban/page.tsx` (NUEVO) — página del tablero
+
+**Verificación:**
+- `tsc --noEmit` frontend: **exit 0 ✅**
+- Importación backend + router routes check: **9 rutas registradas ✅**
+
+**Lo que queda para cerrar Sprint 3 (próxima sesión):**
+- **S3.1 Migración Alembic** para tabla `plan_tareas` + columna `estructura_json` → bloqueada por zona de exclusión del peer; el peer no la tomó, queda pendiente para ejecutar cuando su sprint1-deuda esté mergeado
+- **S3.5 Excepción veda** en middleware para creación de planes IA internos → PENDIENTE, requiere leer `veda.py` y añadir branch
+- **S3.7b Historial de cambios UI** en timeline — parcialmente hecho (lista simple en Dialog), falta UI tipo timeline
+- **S3.9 Test E2E Playwright** — PENDIENTE
+
+### Sprint 4 — Motor de Trends MVP 🟡 DISEÑADO + STUB
+
+- `.context/S4-DESIGN.md` — diseño completo de los 11 componentes
+- `backend/app/services/location_inference.py` — scaffold con lógica heurística placeholder (3 alcaldías piloto)
+- **Todo lo demás:** 7 días de trabajo dedicado. Incluye migraciones PostGIS, worker Celery, integración pgvector HNSW con filtro org_id, RSS ingest, UI card.
+
+### Sprint 5 — Wizard Onboarding 🟡 DISEÑADO
+
+- `.context/S5-DESIGN.md` — diseño completo de endpoints + UI wizard + progress polling + auto-login
+- **Ejecución:** 1.5 días dedicados
+
+## Archivos creados/modificados en esta sesión (main, sin commit todavía)
+
+**Nuevos:**
+```
+.context/SPRINT-IMPLEMENT-2026-04-11.md
+.context/S4-DESIGN.md
+.context/S5-DESIGN.md
+backend/benchmarks/__init__.py
+backend/benchmarks/ai/__init__.py
+backend/benchmarks/ai/README.md
+backend/benchmarks/ai/rubric.py
+backend/benchmarks/ai/runner.py
+backend/benchmarks/ai/compare.py
+backend/benchmarks/ai/loop.py
+backend/benchmarks/ai/build_test_cases.py
+backend/benchmarks/ai/prompts/diagnostico_v1.md
+backend/benchmarks/ai/test_cases/fixture_sintético.json
+backend/benchmarks/ai/outputs/2026-04-11/iter_00_prompt.md
+backend/benchmarks/ai/outputs/2026-04-11/iter_00_offline.md
+backend/benchmarks/ai/outputs/2026-04-11/compare_00.md
+backend/app/services/plan_structured.py
+backend/app/services/location_inference.py
+frontend/src/components/planes/kanban-board.tsx
+frontend/src/app/dashboard/planes/[id]/kanban/page.tsx
+```
+
+**Modificados (tracked):**
+```
+backend/app/models/plan_ia.py         ← +PlanTarea +EstadoTarea +estructura_json +relationship
+backend/app/schemas/plan_ia.py        ← +7 schemas (PlanTareaBase/Create/Update/Complete/Response, PlanEstructurado, PlanProgresoResponse)
+backend/app/api/v1/endpoints/planes.py ← +4 endpoints Sprint 3
+frontend/src/lib/api/hooks/use-planes.ts ← +4 hooks Sprint 3
+```
+
+## Zona de exclusión respetada
+Cero tocamiento de:
+- `backend/app/api/v1/dashboard.py` ✓
+- `backend/app/models/user.py` ✓
+- `backend/migrations/**` ✓ (migración plan_tareas queda pendiente, no se creó)
+- `frontend/src/components/layout/sidebar.*` ✓
+
+## Próximos pasos recomendados
+1. **Peer merge sprint1-deuda → main** (peer avisa cuando esté listo)
+2. **Crear migración `plan_tareas`** (puede hacerlo cualquiera, la zona se libera tras merge del peer)
+3. **Ejecutar S2 loop real** (requiere Ollama + DB viva + credenciales Claude)
+4. **Commit de Sprint 2 + 3 backend/UI** en `main` (o rama `sprint2-3`) — coordinado con peer
+5. **Sprint 4 ejecución dedicada** (7 días)
+6. **Sprint 5 ejecución dedicada** (1.5 días)
+
+## Cross-audit (self-review, `/gemini plan` no disponible en esta sesión)
+Riesgos:
+- Kanban sin drag-and-drop: trade-off deliberado. Botones funcionan, UX es menos fluida. Si se quiere dnd real, instalar `@dnd-kit/sortable` en siguiente iteración (decisión CEO).
+- `build_test_cases.py` no probado contra DB viva en esta sesión (el tunnel puede haberse caído). Se deja fixture sintético como fallback.
+- `generate_structured_plan()` retry loop: si Ollama devuelve JSON sistemáticamente inválido, la latencia se triplica. Acotado a 3 intentos totales.
+- Historial de cambios en `PlanTarea.cambios_historial` (JSONB): no hay índice. Para >1000 tareas por plan habrá que migrar a tabla dedicada.

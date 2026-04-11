@@ -20,6 +20,55 @@ class Platform(str, enum.Enum):
     THREADS = "THREADS"
     TELEGRAM = "TELEGRAM"
 
+    @classmethod
+    def from_url(cls, url: str) -> "Platform | None":
+        """Detect the platform of a given URL.
+
+        Returns the matching Platform or None if no known pattern matches.
+        Unifies ad-hoc regex detection previously scattered across services.
+        """
+        if not url:
+            return None
+
+        u = url.lower().strip()
+        if u.startswith(("http://", "https://")):
+            u = u.split("://", 1)[1]
+        u = u.split("/", 1)[0] if "/" in u else u
+        if u.startswith("www."):
+            u = u[4:]
+
+        host_map: dict[str, "Platform"] = {
+            "twitter.com": cls.TWITTER,
+            "x.com": cls.TWITTER,
+            "mobile.twitter.com": cls.TWITTER,
+            "nitter.net": cls.TWITTER,
+            "instagram.com": cls.INSTAGRAM,
+            "instagr.am": cls.INSTAGRAM,
+            "facebook.com": cls.FACEBOOK,
+            "fb.com": cls.FACEBOOK,
+            "fb.watch": cls.FACEBOOK,
+            "m.facebook.com": cls.FACEBOOK,
+            "tiktok.com": cls.TIKTOK,
+            "vm.tiktok.com": cls.TIKTOK,
+            "youtube.com": cls.YOUTUBE,
+            "m.youtube.com": cls.YOUTUBE,
+            "youtu.be": cls.YOUTUBE,
+            "bsky.app": cls.BLUESKY,
+            "bsky.social": cls.BLUESKY,
+            "threads.net": cls.THREADS,
+            "t.me": cls.TELEGRAM,
+            "telegram.me": cls.TELEGRAM,
+            "telegram.org": cls.TELEGRAM,
+        }
+        if u in host_map:
+            return host_map[u]
+
+        for host, platform in host_map.items():
+            if u.endswith("." + host):
+                return platform
+
+        return None
+
 
 class SentimentLabel(str, enum.Enum):
     POSITIVE = "POSITIVE"

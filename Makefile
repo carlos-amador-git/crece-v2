@@ -27,7 +27,7 @@ help: ## Show this help
 dev: ## Start all services in development mode
 	$(COMPOSE) up -d
 	@echo "\n$(GREEN)Services running:$(RESET)"
-	@echo "  Backend:  http://localhost:8000"
+	@echo "  Backend:  http://localhost:8002"
 	@echo "  Frontend: http://localhost:3000"
 	@echo "  Flower:   http://localhost:5555"
 	@echo "  MinIO:    http://localhost:9001"

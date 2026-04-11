@@ -89,3 +89,22 @@ celerybeat.pid
 !*.db.example
 backend/vendor/
 .vercel
+
+# Graphify knowledge graph (local analysis)
+graphify-out/
+
+# ── Claude Code session artifacts ────────────────────────────
+.claude/
+
+# ── Local secrets (never track) ──────────────────────────────
+.env.vercel
+
+# ── Ephemeral session state ──────────────────────────────────
+.context/HANDOFF
+
+# ── Backend local cache and state (gigabytes) ────────────────
+backend/.cache/
+backend/.local/
+
+# ── Frontend env with rotating Cloudflare tunnel URLs ────────
+frontend/.env.production

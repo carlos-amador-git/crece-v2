@@ -11,7 +11,7 @@ const STYLE_URL =
   "https://demotiles.maplibre.org/style.json";
 
 const MVT_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8002/api/v1";
 
 interface ElectoralMapProps {
   className?: string;

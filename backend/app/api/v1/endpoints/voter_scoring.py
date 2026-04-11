@@ -125,6 +125,68 @@ async def get_segment_distribution(
 
 
 @router.get(
+    "/by-seccion",
+    response_model=list[SeccionScoreSummary],
+)
+async def list_scores_by_seccion(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _current_user: Annotated[User, Depends(get_current_user)],
+    limit: int = Query(50, ge=1, le=500),
+) -> list[SeccionScoreSummary]:
+    """Aggregated voter scores grouped by electoral section.
+
+    Returns one row per section that has at least one scored citizen, ordered
+    by total citizens desc. Used by the scoring dashboard table.
+    """
+    # Aggregate per seccion_id in a single query
+    agg_query = (
+        select(
+            Ciudadano.seccion_id.label("seccion_id"),
+            func.avg(VoterScore.score).label("avg_score"),
+            func.count(VoterScore.id).label("total"),
+        )
+        .join(Ciudadano, Ciudadano.id == VoterScore.ciudadano_id)
+        .where(Ciudadano.seccion_id.is_not(None))
+        .group_by(Ciudadano.seccion_id)
+        .order_by(func.count(VoterScore.id).desc())
+        .limit(limit)
+    )
+    agg_rows = (await db.execute(agg_query)).all()
+
+    if not agg_rows:
+        return []
+
+    seccion_ids = [row.seccion_id for row in agg_rows]
+
+    # Segment breakdown per seccion (single grouped query)
+    seg_query = (
+        select(
+            Ciudadano.seccion_id.label("seccion_id"),
+            VoterScore.segmento.label("segmento"),
+            func.count(VoterScore.id).label("cnt"),
+        )
+        .join(Ciudadano, Ciudadano.id == VoterScore.ciudadano_id)
+        .where(Ciudadano.seccion_id.in_(seccion_ids))
+        .group_by(Ciudadano.seccion_id, VoterScore.segmento)
+    )
+    seg_rows = (await db.execute(seg_query)).all()
+
+    seg_by_seccion: dict[int, dict[str, int]] = {}
+    for row in seg_rows:
+        seg_by_seccion.setdefault(row.seccion_id, {})[row.segmento.value] = row.cnt
+
+    return [
+        SeccionScoreSummary(
+            seccion_id=row.seccion_id,
+            avg_score=round(float(row.avg_score), 2),
+            segmento_counts=seg_by_seccion.get(row.seccion_id, {}),
+            total_ciudadanos=row.total,
+        )
+        for row in agg_rows
+    ]
+
+
+@router.get(
     "/by-seccion/{seccion_id}",
     response_model=SeccionScoreSummary,
 )

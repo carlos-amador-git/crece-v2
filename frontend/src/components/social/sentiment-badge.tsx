@@ -3,8 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface SentimentBadgeProps {
-  sentiment: SentimentType;
-  score?: number;
+  sentiment: string | null | undefined;
+  score?: number | null;
   showIcon?: boolean;
 }
 
@@ -22,7 +22,7 @@ export function SentimentBadge({
   score,
   showIcon = true,
 }: SentimentBadgeProps) {
-  const key = sentiment?.toLowerCase() as SentimentType;
+  const key = (sentiment ?? "").toLowerCase() as SentimentType;
   const config = sentimentConfig[key] ?? sentimentConfig.neutral;
   const Icon = config.icon;
 
@@ -30,7 +30,7 @@ export function SentimentBadge({
     <Badge variant={config.variant} className="gap-1">
       {showIcon && <Icon className="h-3 w-3" />}
       {config.label}
-      {score != null && (
+      {score != null && score !== undefined && (
         <span className="ml-0.5 tabular-nums opacity-70">{(score * 100).toFixed(0)}%</span>
       )}
     </Badge>
