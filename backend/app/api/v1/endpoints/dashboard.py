@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
+
+# Period parameter: maps "today" / "7d" / "30d" / "90d" to number of days.
+# Default is "30d" (matches the default pressed button in the dashboard header).
+PERIOD_TO_DAYS: dict[str, int] = {
+    "today": 1,
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+}
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +29,7 @@ router = APIRouter()
 
 
 class KpiOverviewResponse(BaseModel):
+    # ── legacy fields (kept for backward compat) ──
     total_dirigentes: int
     avg_ipd_score: float
     posts_monitored_24h: int
@@ -28,6 +38,10 @@ class KpiOverviewResponse(BaseModel):
     ipd_change: float
     posts_change: float
     alerts_change: float
+    # ── political KPIs ──
+    total_audiencia: int  # sum of followers across scoped profiles
+    contactos_periodo: int  # CRM interactions (WhatsApp/canvassing/events) in window
+    tema_urgente: str | None  # most recent active crisis alert title, or None
 
 
 class SystemStatusResponse(BaseModel):
@@ -41,18 +55,30 @@ class SystemStatusResponse(BaseModel):
 async def get_overview(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    period: Annotated[
+        Literal["today", "7d", "30d", "90d"],
+        Query(description="Time window for 'posts' and 'alerts' KPIs"),
+    ] = "30d",
 ) -> KpiOverviewResponse:
     """Aggregated KPIs for the dashboard overview.
 
     If the user has a dirigente_id, scopes data to their dirigente only.
+    The ``period`` parameter controls the time window for posts and alerts
+    (total dirigentes and IPD are always all-time).
     """
     # Auto-scope for dirigente users
     user_dirigente_id = getattr(current_user, "dirigente_id", None)
     now = datetime.now(UTC)
-    last_24h = now - timedelta(hours=24)
-    prev_24h = last_24h - timedelta(hours=24)
-    last_7d = now - timedelta(days=7)
-    prev_7d = last_7d - timedelta(days=7)
+
+    days = PERIOD_TO_DAYS[period]
+    window_start = now - timedelta(days=days)
+    prev_window_start = window_start - timedelta(days=days)
+
+    # Keep legacy names (24h/7d) for minimal diff below — they now track the period.
+    last_24h = window_start
+    prev_24h = prev_window_start
+    last_7d = window_start
+    prev_7d = prev_window_start
 
     from app.models.social import SocialProfile
 
@@ -120,6 +146,42 @@ async def get_overview(
             return 100.0 if current > 0 else 0.0
         return round(((current - previous) / previous) * 100, 1)
 
+    # ── Political KPIs ─────────────────────────────────────────────
+    # total_audiencia: sum of followers across scoped social profiles
+    audiencia_query = select(func.coalesce(func.sum(SocialProfile.followers_count), 0))
+    if user_dirigente_id:
+        audiencia_query = audiencia_query.where(SocialProfile.dirigente_id == user_dirigente_id)
+    total_audiencia = (await db.execute(audiencia_query)).scalar() or 0
+
+    # contactos_periodo: CRM interactions in window (best-effort, graceful if tables missing)
+    contactos_periodo = 0
+    try:
+        from app.models.crm_interaccion import CRMInteraccion  # type: ignore[import]
+
+        crm_query = select(func.count(CRMInteraccion.id)).where(
+            CRMInteraccion.created_at >= window_start
+        )
+        contactos_periodo = (await db.execute(crm_query)).scalar() or 0
+    except Exception:
+        contactos_periodo = 0
+
+    # tema_urgente: most recent active crisis alert title
+    tema_urgente: str | None = None
+    try:
+        tema_query = (
+            select(AlertaCrisis)
+            .where(AlertaCrisis.created_at >= last_7d)
+            .order_by(AlertaCrisis.created_at.desc())
+            .limit(1)
+        )
+        tema_row = (await db.execute(tema_query)).scalar_one_or_none()
+        if tema_row is not None:
+            tema_urgente = getattr(tema_row, "descripcion", None) or getattr(
+                tema_row, "titulo", None
+            )
+    except Exception:
+        tema_urgente = None
+
     return KpiOverviewResponse(
         total_dirigentes=total_dirigentes,
         avg_ipd_score=avg_ipd,
@@ -129,6 +191,9 @@ async def get_overview(
         ipd_change=0.0,
         posts_change=pct_change(posts_24h, posts_prev),
         alerts_change=pct_change(active_alerts, alerts_prev),
+        total_audiencia=int(total_audiencia),
+        contactos_periodo=int(contactos_periodo),
+        tema_urgente=tema_urgente,
     )
 
 
