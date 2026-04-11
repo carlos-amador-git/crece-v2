@@ -23,6 +23,7 @@ from app.models.plan_ia import PlanIA
 from app.models.programa_social import ProgramaBeneficiario, ProgramaSocial
 from app.models.social import SentimentAnalysis, SocialPost, SocialProfile
 from app.models.solicitud import SeguimientoSolicitud, SolicitudCiudadana
+from app.models.topic_trend import TopicTrend
 from app.models.user import User
 from app.models.voter_score import VoterScore
 from app.models.voter_score_integration import VoterScoreIntegration
@@ -62,6 +63,7 @@ __all__ = [
     "SocialPost",
     "SocialProfile",
     "SolicitudCiudadana",
+    "TopicTrend",
     "User",
     "VoterScore",
     "VoterScoreIntegration",
