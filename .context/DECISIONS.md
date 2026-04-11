@@ -260,6 +260,20 @@ mantiene el trabajo de compliance como deuda explícita.
   (más fino que el literal-match S4.4a actual)
 - Promotores reales para el wizard S5 en vez de usuarios sintéticos
 
+### D-S5-02: auto-login post-onboarding = redirect simple (no token handoff real)
+**Decisión:** Al completar el chain de onboarding, el wizard NO genera un
+nuevo JWT para el dirigente creado ni hace login automático como él. En
+su lugar, redirige al admin a `/dashboard/dirigentes?highlight={id}`.
+**Razón:** El JWT handoff real requiere un endpoint dedicado
+`POST /auth/impersonate` que solo admins puedan usar, con audit trail.
+Es el tipo de feature que merece un PR propio con tests de seguridad.
+El redirect simple cumple el criterio funcional del wizard ("admin
+termina el wizard y puede ver al dirigente nuevo") sin abrir superficie
+de seguridad nueva.
+**Trade-off:** El plan original S5.5 pedía "admin auto-logged-in como
+el nuevo dirigente" — eso queda como deuda D-S5-03 para cuando se
+diseñe el flujo de impersonación con compliance.
+
 ### D-S5-01: S5.3a retorna sync_status=pending inmediatamente
 **Decisión:** El endpoint transaccional `POST /dirigentes/onboard` crea User+Dirigente+
 SocialProfile y retorna 201 con `{..., sync_status: "pending", task_id: "..."}` sin

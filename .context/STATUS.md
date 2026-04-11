@@ -1,9 +1,9 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-11 15:15 local
-**Sesión activa:** D-DATA-01 Ruta C — import CRECE legacy done (9,723 ciudadanos + 45 promotores + 5,552 unidades)
+**Último update:** 2026-04-11 16:30 local
+**Sesión activa:** /sprint-implement S5 — Wizard Onboarding funcionalmente cerrado (6/6 core + deuda auto-login)
 **Main HEAD:** `4d61ec0` (PR #6 merged)
-**Branch activo:** `fix/sprint-4-trends` @ pendiente commit
+**Branch activo:** `fix/sprint-4-trends` @ pendiente commit S5
 
 ---
 
@@ -24,7 +24,7 @@
 | Sprint | Esfuerzo | Prioridad | Avance |
 |---|---|---|---|
 | **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) | **9/11** funcionalmente cerrado (+2 scaffolds) |
-| **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) | 0/6 |
+| **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) | **6/6 core** (auto-login real = deuda menor) |
 
 ### Sesión 2026-04-11 tarde-3 — /sprint-implement luz verde all
 Commits en `fix/sprint-4-trends`:

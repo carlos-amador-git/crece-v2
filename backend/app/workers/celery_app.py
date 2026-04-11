@@ -32,6 +32,8 @@ celery_app.conf.update(
         "app.workers.tasks.label_trend_cluster": {"queue": "trends_labeling"},
         # S4.7 RSS ingest → comparte cola data
         "app.workers.tasks.ingest_rss_feeds": {"queue": "data"},
+        # S5.3b onboarding chain → cola scraping (usa scrape_profile + nlp)
+        "app.workers.tasks.onboard_dirigente_chain": {"queue": "scraping"},
     },
     beat_schedule={
         "scrape-all-profiles-daily": {
