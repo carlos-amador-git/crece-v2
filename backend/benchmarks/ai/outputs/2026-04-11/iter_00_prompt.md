@@ -1,0 +1,1 @@
+PLACEHOLDER — usar --prompt para renderizar el template real
