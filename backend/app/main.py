@@ -4,8 +4,10 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.api.v1 import api_router
@@ -59,6 +61,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Exception handlers ──────────────────────────────────────
+# D-OBS-01: antes de este handler, cualquier IntegrityError levantaba un 500
+# con body "Internal Server Error" plano (no JSON) y sin tipo estructurado,
+# lo cual complicaba el debugging de clientes como n8n o Postman. Ahora se
+# devuelve un 409 Conflict con detalle + tipo del error original de la DB.
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
+    logger.warning(
+        "IntegrityError on %s %s: %s",
+        request.method,
+        request.url.path,
+        exc.orig if exc.orig else exc,
+    )
+    return JSONResponse(
+        status_code=409,
+        content={
+            "detail": "Database integrity violation",
+            "error_type": type(exc.orig).__name__ if exc.orig else "IntegrityError",
+            "message": str(exc.orig) if exc.orig else str(exc),
+        },
+    )
+
 
 # Routers
 app.include_router(api_router)

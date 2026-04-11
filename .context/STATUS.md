@@ -1,153 +1,199 @@
 # CRECE v2.0 — Status
 
-## Estado: SPRINT 2 ENTREGADO + SPRINT 3 BACKEND + KANBAN UI ✅
-## Fecha: 2026-04-11
+**Último update:** 2026-04-11 09:40 local
+**Sesión activa:** cerrando
+**Main HEAD:** ver `git log --oneline -1 main`
 
-## Sesión 2026-04-11 (coordinada con peer qmmine5b)
+---
 
-### División de trabajo
-- **Peer qmmine5b** (worktree `../crece-v2-sprint1-deuda`, rama `sprint1-deuda`): deuda técnica Sprint 1
-- **Yo** (main): Sprints 2-5
+## Estado global
 
-### Sprint 1 deuda técnica — COMPLETO ✅ (commit `dbc884c`)
-Merged FF a main desde worktree `../crece-v2-sprint1-deuda`, rama ya eliminada.
+### Sprints completados (100% del scope funcional)
 
-1. **Migración Alembic explícita** `d4e7a2c1b8f3_add_dirigente_id_to_users.py` para `users.dirigente_id` (FK → dirigentes + index). Idempotente contra DBs ya parcheadas por ALTER manual. `alembic upgrade head` verde en dev DB.
-2. **Deltas honestos en `/dashboard/overview`**: `dirigentes_change` se calcula real desde `Dirigente.created_at` comparando ventana actual vs previa. `ipd_change = None` (Optional[float]) porque NO existe tabla histórica de follower counts — la regla "NO inventar datos" prohíbe devolver 0.0 falso. Frontend renderiza "—" en lugar de "0%" engañoso.
-3. **Prefetch `/dashboard/settings`**: sidebar ahora soporta `prefetch` per-item, Settings link con `prefetch={false}` para evitar 404 de RSC prefetch en despliegues parciales.
+| Sprint | Estado | Nota |
+|---|---|---|
+| **S1 Saneamiento** | ✅ peer qmmine5b | `dbc884c` |
+| **S2 Benchmark Prompts IA** | ✅ 100% | S2.1-S2.6 completos |
+| **S3 Plan Estructurado + Kanban** | ✅ backend + UI + migration + E2E escrito | Playwright run real pendiente |
+| **Backport md-research** | ✅ 3 items | Platform.from_url, capture_url, opengraph helper |
+| **Sprint n8n-mexico cross-review** | ✅ | Paquete npm publicado + workflow validado e2e |
 
-Verificación: migración alembic upgrade verde, `KpiOverviewResponse` schema carga e instancia con None (pydantic verificado), `tsc --noEmit` clean en los 4 archivos frontend modificados. Pytest completo no se corrió por warmup prolongado de modelos NLP + dev DB temporalmente roto por cambios uncommitted de sesión paralela (Sprint 3 `plan_ia.estructura_json`).
+### Sprints pendientes para siguiente sesión
 
-Deuda técnica residual: infraestructura de snapshots de follower counts para calcular `ipd_change` real (pendiente, sprint futuro).
+| Sprint | Esfuerzo | Prioridad |
+|---|---|---|
+| **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) |
+| **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) |
 
-### Sprint 2 — Benchmark Prompts IA ✅ FUNCIONAL
+### Merges del día (en orden cronológico)
 
-**Directorio `backend/benchmarks/ai/` creado con runner end-to-end offline.**
-
-| ID | Tarea | Estado |
-|----|-------|--------|
-| S2.1 | Estructura directorio + `prompts/`, `test_cases/`, `outputs/` | HECHO |
-| S2.2 | Test case fixture + script `build_test_cases.py` (requiere DB viva) | HECHO (fixture) / PENDIENTE (DB real) |
-| S2.3 | Loop orchestrator `loop.py` | HECHO |
-| S2.4 | Rúbrica 6 dimensiones `rubric.py` (+ `--self-test` pasa) | HECHO |
-| S2.5 | Runner multi-provider `runner.py` (ollama/claude/gemini/offline) + `compare.py` | HECHO |
-| S2.6 | 3+ iteraciones sobre prompt de plan generation | PENDIENTE (requiere Ollama + DB) |
-
-**Archivos producidos:**
-- `backend/benchmarks/ai/__init__.py`
-- `backend/benchmarks/ai/README.md`
-- `backend/benchmarks/ai/rubric.py` — 6 dims, determinista + heurísticas
-- `backend/benchmarks/ai/runner.py` — async multi-provider
-- `backend/benchmarks/ai/compare.py` — side-by-side + scores
-- `backend/benchmarks/ai/loop.py` — orquestador iterativo
-- `backend/benchmarks/ai/build_test_cases.py` — genera JSON desde DB real
-- `backend/benchmarks/ai/prompts/diagnostico_v1.md` — baseline extraído de `plan_generator`
-- `backend/benchmarks/ai/test_cases/fixture_sintético.json` — fallback sin DB
-- `backend/benchmarks/ai/outputs/2026-04-11/` — iter_00 offline + compare_00 generados
-
-**Verificación end-to-end ejecutada:**
 ```
-python -m benchmarks.ai.rubric --self-test              # PASS total=93.8
-python -m benchmarks.ai.runner --providers offline ...  # OK
-python -m benchmarks.ai.compare ...                     # OK total=56.7 fixture
+<latest>  2026-04-11 — PR #6 hygiene post-n8n sprint (pending)
+909904a   2026-04-11 — PR #5 S2.6 loop 3-iter + winner + ciudadanos fix
+112e9ba   2026-04-11 — PR #4 Sprint 2/3 closures (veda, Kanban E2E, Gemma real)
+40ed808   2026-04-11 — PR #3 Sprints 2-3 + backport + ollama Coolify
+dbc884c   2026-04-11 — Sprint 1 deuda técnica (peer qmmine5b)
+2fabfb4   2026-04-11 — docs: D-SEC-03/D-DX-01/D-OBS-01/D-INFRA-01
 ```
 
-### Sprint 3 — Plan estructurado + Kanban ✅ BACKEND + UI COMPLETO
+---
 
-**Backend:**
-- `backend/app/models/plan_ia.py` — agregados `PlanTarea` + `EstadoTarea` enum + campo `estructura_json` en `PlanIA`
-- `backend/app/schemas/plan_ia.py` — `PlanTareaBase`, `PlanTareaCreate`, `PlanTareaUpdate`, `PlanTareaCompleteRequest`, `PlanTareaResponse`, `PlanEstructurado`, `PlanProgresoResponse` con constraints Pydantic
-- `backend/app/services/plan_structured.py` (NUEVO) — `generate_structured_plan()` con function calling, retry hasta 2 veces si el LLM viola schema, persiste en `estructura_json` + filas `plan_tareas`
-- `backend/app/api/v1/endpoints/planes.py` — endpoints nuevos:
-  - `GET  /planes/{id}/tareas`
-  - `PATCH /planes/{id}/tareas/{task_id}` (con `cambios_historial` audit trail)
-  - `POST  /planes/{id}/tareas/{task_id}/complete` (captura `metrica_valor_real`)
-  - `GET  /planes/{id}/progreso` (agregados de progreso + impacto)
-  - `POST /planes/generar` ahora acepta `estructurado: true` como opt-in
+## Sprint 2 — Benchmark Prompts IA ✅
 
-**Frontend:**
-- `frontend/src/lib/api/hooks/use-planes.ts` — tipos + hooks `usePlanTareas`, `usePlanProgreso`, `useUpdateTarea`, `useCompleteTarea`
-- `frontend/src/components/planes/kanban-board.tsx` (NUEVO) — tablero 3 columnas con:
-  - Movimiento entre estados vía botones (no drag-and-drop para no agregar deps)
-  - Edición inline (titulo, descripcion, responsable, frecuencia) en Dialog
-  - Captura de métrica real al completar
-  - Historial de cambios visible en el Dialog de edición
-  - Barra de progreso + impacto acumulado por métrica
-- `frontend/src/app/dashboard/planes/[id]/kanban/page.tsx` (NUEVO) — página del tablero
+### Loop S2.6 — 3 iteraciones reales medidas contra Gemma 3:12b
 
-**Verificación:**
-- `tsc --noEmit` frontend: **exit 0 ✅**
-- Importación backend + router routes check: **9 rutas registradas ✅**
+Test case: `alejandro_piña_medina_diagnostico.json` (datos reales scrapeados
++ NLP 30d desde dev DB). Ejecutado contra Mac M-series local (~4-6 min/iter).
 
-**Lo que queda para cerrar Sprint 3 (próxima sesión):**
-- **S3.1 Migración Alembic** para tabla `plan_tareas` + columna `estructura_json` → bloqueada por zona de exclusión del peer; el peer no la tomó, queda pendiente para ejecutar cuando su sprint1-deuda esté mergeado
-- **S3.5 Excepción veda** en middleware para creación de planes IA internos → PENDIENTE, requiere leer `veda.py` y añadir branch
-- **S3.7b Historial de cambios UI** en timeline — parcialmente hecho (lista simple en Dialog), falta UI tipo timeline
-- **S3.9 Test E2E Playwright** — PENDIENTE
+**Scores post rubric fix:**
 
-### Sprint 4 — Motor de Trends MVP 🟡 DISEÑADO + STUB
+| Iter | Prompt | Total | Coverage | Spec | Factual | Compliance | Length | Hallu |
+|---|---|---|---|---|---|---|---|---|
+| 04 | **v1 baseline (ganador)** | **86.5** | 100 | 63 | 87.8 | 100 | 85.6 | 85 |
+| 05 | v2 (strict length + specificity) | 85.5 | 100 | 63 | 91.5 | 100 | 83.1 | 75 |
+| 06 | v3 (literal format + anti-hallu) | 81.8 | 100 | 49 | 85.3 | 100 | 86.6 | 75 |
 
-- `.context/S4-DESIGN.md` — diseño completo de los 11 componentes
-- `backend/app/services/location_inference.py` — scaffold con lógica heurística placeholder (3 alcaldías piloto)
-- **Todo lo demás:** 7 días de trabajo dedicado. Incluye migraciones PostGIS, worker Celery, integración pgvector HNSW con filtro org_id, RSS ingest, UI card.
+**Ganador:** v1 baseline. Commiteado en `backend/app/nlp/prompts/diagnostico_winner.md`.
 
-### Sprint 5 — Wizard Onboarding 🟡 DISEÑADO
+### Learnings críticos del experimento
 
-- `.context/S5-DESIGN.md` — diseño completo de endpoints + UI wizard + progress polling + auto-login
-- **Ejecución:** 1.5 días dedicados
+1. Gemma ignora mínimos de palabras (pedir 1800 → entregó 1247)
+2. Más instrucciones = más alucinación (v2/v3 inventaron `@martibatres`)
+3. Formato literal rígido reduce patterns rubric-detectables (9→7)
+4. Simpler wins — v1 baseline convergió como óptimo
 
-## Archivos creados/modificados en esta sesión (main, sin commit todavía)
+### Infraestructura validada
 
-**Nuevos:**
-```
-.context/SPRINT-IMPLEMENT-2026-04-11.md
-.context/S4-DESIGN.md
-.context/S5-DESIGN.md
-backend/benchmarks/__init__.py
-backend/benchmarks/ai/__init__.py
-backend/benchmarks/ai/README.md
-backend/benchmarks/ai/rubric.py
-backend/benchmarks/ai/runner.py
-backend/benchmarks/ai/compare.py
-backend/benchmarks/ai/loop.py
-backend/benchmarks/ai/build_test_cases.py
-backend/benchmarks/ai/prompts/diagnostico_v1.md
-backend/benchmarks/ai/test_cases/fixture_sintético.json
-backend/benchmarks/ai/outputs/2026-04-11/iter_00_prompt.md
-backend/benchmarks/ai/outputs/2026-04-11/iter_00_offline.md
-backend/benchmarks/ai/outputs/2026-04-11/compare_00.md
-backend/app/services/plan_structured.py
-backend/app/services/location_inference.py
-frontend/src/components/planes/kanban-board.tsx
-frontend/src/app/dashboard/planes/[id]/kanban/page.tsx
-```
+- `rubric.py` 6 dimensiones, self-test 92.3/100 (post-fix de decimales)
+- `runner.py` multi-provider ollama/claude/gemini/offline
+- `compare.py` side-by-side + gap analysis
+- `loop.py` orchestrator de iteraciones
+- `build_test_cases.py` genera JSON desde DB real
+- 4 fixtures reales: Piña + Solano × Diagnóstico + Consolidación
+- Coolify Ollama CPU-only NO es viable para el loop (>17 min sin completar)
+- Mac M-series con `gemma3:12b` local es ~4-6 min/iter ← ruta de trabajo
 
-**Modificados (tracked):**
-```
-backend/app/models/plan_ia.py         ← +PlanTarea +EstadoTarea +estructura_json +relationship
-backend/app/schemas/plan_ia.py        ← +7 schemas (PlanTareaBase/Create/Update/Complete/Response, PlanEstructurado, PlanProgresoResponse)
-backend/app/api/v1/endpoints/planes.py ← +4 endpoints Sprint 3
-frontend/src/lib/api/hooks/use-planes.ts ← +4 hooks Sprint 3
-```
+---
 
-## Zona de exclusión respetada
-Cero tocamiento de:
-- `backend/app/api/v1/dashboard.py` ✓
-- `backend/app/models/user.py` ✓
-- `backend/migrations/**` ✓ (migración plan_tareas queda pendiente, no se creó)
-- `frontend/src/components/layout/sidebar.*` ✓
+## Sprint 3 — Plan Estructurado + Kanban ✅
 
-## Próximos pasos recomendados
-1. **Peer merge sprint1-deuda → main** (peer avisa cuando esté listo)
-2. **Crear migración `plan_tareas`** (puede hacerlo cualquiera, la zona se libera tras merge del peer)
-3. **Ejecutar S2 loop real** (requiere Ollama + DB viva + credenciales Claude)
-4. **Commit de Sprint 2 + 3 backend/UI** en `main` (o rama `sprint2-3`) — coordinado con peer
-5. **Sprint 4 ejecución dedicada** (7 días)
-6. **Sprint 5 ejecución dedicada** (1.5 días)
+### Backend
 
-## Cross-audit (self-review, `/gemini plan` no disponible en esta sesión)
-Riesgos:
-- Kanban sin drag-and-drop: trade-off deliberado. Botones funcionan, UX es menos fluida. Si se quiere dnd real, instalar `@dnd-kit/sortable` en siguiente iteración (decisión CEO).
-- `build_test_cases.py` no probado contra DB viva en esta sesión (el tunnel puede haberse caído). Se deja fixture sintético como fallback.
-- `generate_structured_plan()` retry loop: si Ollama devuelve JSON sistemáticamente inválido, la latencia se triplica. Acotado a 3 intentos totales.
-- Historial de cambios en `PlanTarea.cambios_historial` (JSONB): no hay índice. Para >1000 tareas por plan habrá que migrar a tabla dedicada.
+- `backend/app/models/plan_ia.py` — `PlanTarea`, `EstadoTarea`, `estructura_json` JSONB
+- `backend/app/schemas/plan_ia.py` — 7 schemas Pydantic con constraints
+- `backend/app/services/plan_structured.py` (NUEVO) — `generate_structured_plan()` con retry hasta 2× si schema falla
+- `backend/app/api/v1/endpoints/planes.py` — 4 endpoints nuevos:
+  - `GET /planes/{id}/tareas`
+  - `PATCH /planes/{id}/tareas/{task_id}` (audit trail)
+  - `POST /planes/{id}/tareas/{task_id}/complete` (captura métrica real)
+  - `GET /planes/{id}/progreso` (agregados + impacto)
+- Migración `402acb98d2d4` aplicada en dev DB — `estado_tarea_enum` + `plan_tareas` + `planes_ia.estructura_json`
+
+### Frontend
+
+- `frontend/src/components/planes/kanban-board.tsx` — 3 columnas, edit inline, completar con métrica, historial visible, progress bar
+- `frontend/src/app/dashboard/planes/[id]/kanban/page.tsx` — ruta nueva
+- `frontend/src/lib/api/hooks/use-planes.ts` — hooks react-query
+- Botones de movimiento (no drag-and-drop, ver D-SPRINT3-01)
+
+### E2E
+
+- `frontend/e2e/plan-kanban.spec.ts` — 4 tests con mocks stateful, NO ejecutado todavía
+- `frontend/e2e/README.md` — documentación del suite
+
+### Pendiente
+
+- **S3.9** ejecutar Playwright E2E con frontend dev server arriba (~30 min)
+
+---
+
+## Sprint 1 peer qmmine5b — ✅ `dbc884c`
+
+- Migración Alembic `d4e7a2c1b8f3_add_dirigente_id_to_users.py`
+- Deltas honestos en `/dashboard/overview` (`dirigentes_change` real, `ipd_change=None`)
+- Fix prefetch RSC `/dashboard/settings`
+
+---
+
+## Cross-project n8n-mexico ✅
+
+### Paquete publicado
+
+- **`@mdconsultoria-ti/n8n-nodes-crece@0.1.1`** en npm público
+- 4 nodos activos: `CreceSegmentar`, `CreceVoterScore`, `CreceContenido`, `CreceSentimiento`
+- `CreceCanvassing` omitido del array `nodes[]`, código queda en repo para v0.2.0
+- 6 workflows CRECE importados + re-typed + credencial linkeada
+- 1 workflow end-to-end validado (read path `Buscar Ciudadano` → 18 items deserializados)
+
+### Bugs descubiertos + arreglados en tiempo real
+
+| Bug | Fix |
+|---|---|
+| `fixture_sintético.json` PLACEHOLDER literal | Runner validation PR #4 |
+| `seed.py` sin org bootstrap → `/api-keys` 500 | SQL runtime fix + PR #6 seed fix |
+| `ciudadanos.py` JWT-only → n8n 401 | Swap dual-auth PR #5 |
+| `rubric._score_factual` decimal false positive | PR #6 regex fix |
+| `runner.py` path bug out_dir relativo | PR #5 bugfix |
+
+---
+
+## Backport md-research ✅
+
+3 items portados a `main`:
+
+- **`Platform.from_url()`** classmethod — 21 host patterns + subdominio fallback
+- **`BaseScraper.capture_url()`** default None — 8 scrapers heredan sin cambios
+- **`helpers/opengraph.py`** — httpx + regex universal link preview
+
+Documentado en `docs/BACKPORT-MD-RESEARCH.md` con rationale de los 4 items NO portados.
+
+---
+
+## Deudas técnicas abiertas
+
+Ver `.context/DECISIONS.md` sección "Deudas técnicas encontradas durante cross-review con peer n8n-mexico":
+
+- **D-SEC-03** — 21 endpoints siguen JWT-only, falta swap a dual-auth o middleware unificado (recomendación del peer)
+- **D-DX-01** — `seed.py` sin org bootstrap → **FIXED en PR #6**
+- **D-OBS-01** — `IntegrityError` devuelve 500 plano → **FIXED en PR #6**
+- **D-INFRA-01** — Tunnel Cloudflare efímero, bloqueado por Carlos (admin Coolify)
+- **D-SEC-02** — `ApiKey.permissions` no enforced (deuda cross-proyecto)
+- **Rubric** — `_score_factual` decimal false positive → **FIXED en PR #6**
+- **Rubric** — `_score_specificity` patterns estrechos (solo 6 regex)
+- **Rubric** — `_score_hallucinations` solo detecta @handles, miss numbers/dates/facts
+- **Drift migration** — `social_posts.embedding`, `competidor_social_profiles.last_scraped_at`, `secciones_electorales.seccion` constraint
+
+---
+
+## Infraestructura activa (para el próximo arranque)
+
+### Backend local
+- **Contenedor:** `crece-backend` bind-mounted a `/Users/marxchavez/Projects/crece-v2/backend`
+- **Puerto:** `8002` (local host)
+- **Base de datos:** PostgreSQL + PostGIS en `:5438` (crece_dev)
+- **Tests DB:** `:5438` crece_test
+- **Redis:** `:6383`
+- **MinIO:** `:9006/9007`
+
+### Tunnel Cloudflare efímero (reinicia con nombre nuevo)
+- Hoy: `musicians-oregon-judge-angela.trycloudflare.com` (PID 5762, `cloudflared tunnel --url http://localhost:8002`)
+- Log: `/private/tmp/cf-tunnel.log`
+- **Aviso:** al próximo reinicio cambia de nombre. Ver `.context/DECISIONS.md` D-INFRA-01 para alternativas robustas
+
+### Ollama
+- **Mac local (recomendado para benchmarks):** `http://localhost:11434` con `gemma3:12b` (8GB) y `gemma4:latest`
+- **Coolify VPS (exposición directa):** `http://163.245.208.96:11434` con `gemma3:12b`
+- CPU-only en ambos. Mac M-series ~4 min/iter; VPS x86 >17 min sin completar (inviable para loop)
+
+### Frontend
+- **Vercel:** `https://frontend-zeta-sepia-46.vercel.app/` (production deploy)
+- **Dev local:** `npm run dev` en `frontend/` (puerto 3000)
+
+### Credenciales demo (hardcoded en login page)
+- Admin: `admin@consultoriamd.com` / `crece2026!`
+- Piña: `pina@crece.mx` / `demo2026!`
+- Solano: `solano@crece.mx` / `demo2026!`
+
+### Organización raíz (post PR #6 seed fix)
+- `id=3, slug=mc-cdmx, nombre='Movimiento Ciudadano CDMX', tipo=PARTIDO`
+- Todos los users del seed scopados a esta org automáticamente

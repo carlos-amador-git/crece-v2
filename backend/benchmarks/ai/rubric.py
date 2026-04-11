@@ -120,8 +120,14 @@ def _score_factual(text: str, context: dict[str, Any]) -> tuple[float, list[str]
     """Heuristic: every number in the output should either match a number in the
     context or be a clearly derived ratio/percentage. Flags numbers that look
     fabricated (followers counts, dates, currency that don't exist in context).
+
+    NOTE: We extract COMPLETE numeric tokens including decimals (2.5, 0.0272)
+    and optional thousand separators. The previous implementation used
+    `\b\d{3,}\b` which split `0.0272` into `0272` and flagged it as an unknown
+    number, producing false positives against decimal metrics in the context
+    (engagement_rate, sentiment scores). See DECISIONS.md rubric limitations.
     """
-    # Extract numbers from context recursively
+    # Extract numbers from context recursively — keep both int and float forms
     context_numbers: set[str] = set()
 
     def walk(obj: Any) -> None:
@@ -135,13 +141,18 @@ def _score_factual(text: str, context: dict[str, Any]) -> tuple[float, list[str]
             context_numbers.add(str(obj))
             context_numbers.add(str(int(obj)))
         elif isinstance(obj, str):
-            for m in re.findall(r"\d+\.?\d*", obj):
-                context_numbers.add(m)
+            for m in re.findall(r"-?\d+(?:[.,]\d+)?", obj):
+                context_numbers.add(m.replace(",", "."))
 
     walk(context)
 
-    # Find large numbers in text (likely follower counts or explicit metrics)
-    text_numbers = re.findall(r"\b\d{3,}\b", text)
+    # Extract numeric tokens from the text WITHOUT splitting decimals.
+    # Matches: "3674", "0.0272", "-0.3449", "7.89%", "1,800", "285,000".
+    # Does NOT match the fragment "0272" from "0.0272" because the leading
+    # "0." is part of the same token — avoiding the false positive that
+    # tanked _score_factual to 30-66 across all 3 prompt iterations.
+    raw_numbers = re.findall(r"-?\d+(?:[.,]\d+)*", text)
+    text_numbers = [n.replace(",", "") for n in raw_numbers if len(n) >= 3]
     if not text_numbers:
         return 80.0, ["Sin números grandes que auditar"]
 
