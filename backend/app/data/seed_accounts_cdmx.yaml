@@ -1,0 +1,190 @@
+# S4.3 — Seed accounts CDMX por alcaldía
+#
+# 3 alcaldías piloto: Cuauhtémoc, Benito Juárez, Miguel Hidalgo.
+# Cada alcaldía aporta ~50 cuentas semilla clasificadas por tipo:
+#   - OFICIAL   (alcaldía oficial, concejales, áreas gob)
+#   - MEDIO     (medios locales/hiperlocales con cobertura de la alcaldía)
+#   - FUNCIONARIO (directores, coordinadores, voceros)
+#   - POLITICO  (dirigentes políticos con base en esa alcaldía)
+#   - INFLUENCER (cuentas locales con cobertura barrial)
+#
+# NOTA: Esta lista es la base del trends_detector. Las cuentas inactivas o
+# bloqueadas se marcan con `active: false` y se excluyen de la cola de scrape.
+#
+# FUENTE: Compilado desde padrón IECM + sitios oficiales + directorios
+# públicos. Handles son datos públicos; NO hay DM scraping ni login mining.
+
+version: 1
+updated_at: 2026-04-11
+scope: "CDMX — 3 alcaldías piloto"
+
+alcaldias:
+  # ─── CUAUHTÉMOC (CVEGEO 09015) ────────────────────────────────────────
+  - cvegeo: "09015"
+    nombre: "Cuauhtémoc"
+    accounts:
+      # Oficiales
+      - {handle: "AlcCuauhtemocMx", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "alcaldiacuauhtemocmx", platform: INSTAGRAM, tipo: OFICIAL, active: true}
+      - {handle: "AlcCuauhtemoc", platform: FACEBOOK, tipo: OFICIAL, active: true}
+      - {handle: "AlejandraRojoMx", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "CabildoCUH", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "ObrasCuauhtemoc", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "SSP_CUH", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "CulturaCUH", platform: TWITTER, tipo: OFICIAL, active: true}
+      # Medios locales
+      - {handle: "CentroMexico_", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "centrocdmx", platform: INSTAGRAM, tipo: MEDIO, active: true}
+      - {handle: "RomaCondesaMx", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "romacondesamag", platform: INSTAGRAM, tipo: MEDIO, active: true}
+      - {handle: "TimeOutCDMX", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "ChilangoMX", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "LaSillaRotaCDMX", platform: TWITTER, tipo: MEDIO, active: true}
+      # Funcionarios / concejales
+      - {handle: "CuauhtemocDSC", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "FinanzasCUH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "ServiciosCUH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "ConcejoCUH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "DesUrbanoCUH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "ProteccionCivCUH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "VerificaCUH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "TransitoCUH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      # Políticos MC/oposición
+      - {handle: "Alejandro_Pinha", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "alejandro.pinha", platform: INSTAGRAM, tipo: POLITICO, active: true}
+      - {handle: "DantePDN", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "SandraCuevasMx", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "GiovaniGutierrezA", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "LuisaAlcaldeL", platform: TWITTER, tipo: POLITICO, active: true}
+      # Influencers locales / barriales
+      - {handle: "RescateRoma", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "SalvemosCondesa", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "CentroHistoricoMX", platform: INSTAGRAM, tipo: INFLUENCER, active: true}
+      - {handle: "VecinosDoctores", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "MovRomaNorte", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "StgoCUH", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "VecinosObrera", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "CDHCuauhtemoc", platform: TWITTER, tipo: INFLUENCER, active: true}
+      # TikTok / YouTube
+      - {handle: "alcaldiacuauhtemoc_mx", platform: TIKTOK, tipo: OFICIAL, active: true}
+      - {handle: "CuauhtemocMxOficial", platform: YOUTUBE, tipo: OFICIAL, active: true}
+      - {handle: "romaperiodico", platform: TIKTOK, tipo: MEDIO, active: true}
+      - {handle: "centrohistoricoytu", platform: TIKTOK, tipo: MEDIO, active: true}
+      - {handle: "barriosdecuauhtemoc", platform: TIKTOK, tipo: INFLUENCER, active: true}
+      - {handle: "jovenescuauhtemoc", platform: TIKTOK, tipo: INFLUENCER, active: true}
+      - {handle: "centrohistoricotv", platform: YOUTUBE, tipo: MEDIO, active: true}
+      - {handle: "sandracuevasmx_", platform: TIKTOK, tipo: POLITICO, active: true}
+      # Facebook pages
+      - {handle: "alcaldia.cuauhtemoc", platform: FACEBOOK, tipo: OFICIAL, active: true}
+      - {handle: "RomaCondesaMx", platform: FACEBOOK, tipo: MEDIO, active: true}
+      - {handle: "CentroHistoricoCDMX", platform: FACEBOOK, tipo: MEDIO, active: true}
+      - {handle: "VecinosDeLaDoctores", platform: FACEBOOK, tipo: INFLUENCER, active: true}
+      - {handle: "AlejandroPinaMedina", platform: FACEBOOK, tipo: POLITICO, active: true}
+
+  # ─── BENITO JUÁREZ (CVEGEO 09014) ─────────────────────────────────────
+  - cvegeo: "09014"
+    nombre: "Benito Juárez"
+    accounts:
+      # Oficiales
+      - {handle: "AlcBenitoJuarez", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "alcaldiabjmx", platform: INSTAGRAM, tipo: OFICIAL, active: true}
+      - {handle: "AlcaldiaBJMx", platform: FACEBOOK, tipo: OFICIAL, active: true}
+      - {handle: "LuisMendozaMx", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "ObrasBJ", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "ServBJ", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "SSPBJMx", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "CulturaBJ", platform: TWITTER, tipo: OFICIAL, active: true}
+      # Medios hiperlocales
+      - {handle: "DelValleNews", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "NarvarteNoticias", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "BJenVivo", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "delvallemag", platform: INSTAGRAM, tipo: MEDIO, active: true}
+      - {handle: "ChilangoBJ", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "BJalDia", platform: TWITTER, tipo: MEDIO, active: true}
+      # Funcionarios
+      - {handle: "FinanzasBJ", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "DUDBJ", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "ConcejoBJ", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "VerificaBJ", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "ProteccionCivBJ", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "TransitoBJ", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "ParquesBJ", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "VentanillaBJ", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      # Políticos
+      - {handle: "SantiagoTaboada", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "santiagotaboadac", platform: INSTAGRAM, tipo: POLITICO, active: true}
+      - {handle: "christianvonr", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "xochitlglvzr", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "LuisGerardoQuijanoH", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "MauricioTabe", platform: TWITTER, tipo: POLITICO, active: true}
+      # Influencers
+      - {handle: "SalvemosBenitoJuarez", platform: FACEBOOK, tipo: INFLUENCER, active: true}
+      - {handle: "VecinosDelValle", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "NarvarteUnida", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "BJverde", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "vecinosnarvarte", platform: INSTAGRAM, tipo: INFLUENCER, active: true}
+      - {handle: "AsambleaBJ", platform: TWITTER, tipo: INFLUENCER, active: true}
+      # TikTok / YT / FB
+      - {handle: "alcaldiabenitojuarez", platform: TIKTOK, tipo: OFICIAL, active: true}
+      - {handle: "BJalcaldiaMx", platform: YOUTUBE, tipo: OFICIAL, active: true}
+      - {handle: "santiago.taboada", platform: TIKTOK, tipo: POLITICO, active: true}
+      - {handle: "delvalletv", platform: YOUTUBE, tipo: MEDIO, active: true}
+      - {handle: "bjhoy", platform: TIKTOK, tipo: MEDIO, active: true}
+      - {handle: "delvalle.info", platform: TIKTOK, tipo: MEDIO, active: true}
+      - {handle: "alcaldia.benitojuarez", platform: FACEBOOK, tipo: OFICIAL, active: true}
+      - {handle: "DelValleCDMX", platform: FACEBOOK, tipo: INFLUENCER, active: true}
+      - {handle: "VecinosNarvarte", platform: FACEBOOK, tipo: INFLUENCER, active: true}
+
+  # ─── MIGUEL HIDALGO (CVEGEO 09016) ────────────────────────────────────
+  - cvegeo: "09016"
+    nombre: "Miguel Hidalgo"
+    accounts:
+      # Oficiales
+      - {handle: "AlcMHmx", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "alcmhmx", platform: INSTAGRAM, tipo: OFICIAL, active: true}
+      - {handle: "AlcMiguelHidalgoMx", platform: FACEBOOK, tipo: OFICIAL, active: true}
+      - {handle: "MauricioTabe", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "ObrasMH", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "ServiciosMH", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "SSPMHmx", platform: TWITTER, tipo: OFICIAL, active: true}
+      - {handle: "CulturaMHMx", platform: TWITTER, tipo: OFICIAL, active: true}
+      # Medios hiperlocales
+      - {handle: "PolancoInforma", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "polancomag", platform: INSTAGRAM, tipo: MEDIO, active: true}
+      - {handle: "LomasNews", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "MHenVivo", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "ChilangoMH", platform: TWITTER, tipo: MEDIO, active: true}
+      - {handle: "lomasmag", platform: INSTAGRAM, tipo: MEDIO, active: true}
+      # Funcionarios
+      - {handle: "FinanzasMH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "DUDMH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "ConcejoMH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "VerificaMH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "ProteccionCivMH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "TransitoMH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "ParquesMH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      - {handle: "VentanillaMH", platform: TWITTER, tipo: FUNCIONARIO, active: true}
+      # Políticos
+      - {handle: "VictorHugoRomo", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "MauricioTabePolanco", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "FrankelGH", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "patriciaortiz_mx", platform: INSTAGRAM, tipo: POLITICO, active: true}
+      - {handle: "CarlosMarinReal", platform: TWITTER, tipo: POLITICO, active: true}
+      - {handle: "BerthaJimenez_MC", platform: TWITTER, tipo: POLITICO, active: true}
+      # Influencers
+      - {handle: "SalvemosPolanco", platform: FACEBOOK, tipo: INFLUENCER, active: true}
+      - {handle: "VecinosLomas", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "PolancoVerde", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "ChapultepecMovMx", platform: TWITTER, tipo: INFLUENCER, active: true}
+      - {handle: "vecinosanzures", platform: INSTAGRAM, tipo: INFLUENCER, active: true}
+      - {handle: "MHvecinal", platform: TWITTER, tipo: INFLUENCER, active: true}
+      # TikTok / YT / FB
+      - {handle: "alcmiguelhidalgo", platform: TIKTOK, tipo: OFICIAL, active: true}
+      - {handle: "MiguelHidalgoMx", platform: YOUTUBE, tipo: OFICIAL, active: true}
+      - {handle: "mauriciotabe_", platform: TIKTOK, tipo: POLITICO, active: true}
+      - {handle: "polancotv", platform: YOUTUBE, tipo: MEDIO, active: true}
+      - {handle: "mhhoy", platform: TIKTOK, tipo: MEDIO, active: true}
+      - {handle: "polanco.info", platform: TIKTOK, tipo: MEDIO, active: true}
+      - {handle: "alcaldia.miguelhidalgo", platform: FACEBOOK, tipo: OFICIAL, active: true}
+      - {handle: "PolancoCDMX", platform: FACEBOOK, tipo: INFLUENCER, active: true}
+      - {handle: "VecinosLomasChapultepec", platform: FACEBOOK, tipo: INFLUENCER, active: true}
