@@ -1,0 +1,66 @@
+{
+  "dirigente_id": 1,
+  "dirigente_nombre": "Alejandro Piña Medina",
+  "tipo_plan": "DIAGNOSTICO",
+  "context": {
+    "dirigente": {
+      "nombre": "Alejandro Piña Medina",
+      "cargo": "Coordinador Comisión Operativa Estatal",
+      "partido": "MC",
+      "estado": "Ciudad de México",
+      "municipio": "CDMX"
+    },
+    "ipd": {
+      "score": 3.9,
+      "scale": "0-10 (10 = presencia digital óptima)",
+      "platform_scores": {
+        "twitter": 3.89,
+        "instagram": 4.93,
+        "facebook": 3.19
+      },
+      "platform_coverage": "38%",
+      "posting_frequency_per_day": 0.63,
+      "interpretation": "BAJO"
+    },
+    "social_profiles": [
+      {
+        "platform": "TWITTER",
+        "handle": "@Alejandro_Pinha",
+        "followers": 3674,
+        "posts_30d": 5,
+        "avg_engagement_30d": 0.0272,
+        "avg_sentiment_30d": -0.3449
+      },
+      {
+        "platform": "INSTAGRAM",
+        "handle": "@alejandro.pinha",
+        "followers": 3290,
+        "posts_30d": 13,
+        "avg_engagement_30d": 1.66,
+        "avg_sentiment_30d": 0.1648
+      },
+      {
+        "platform": "FACEBOOK",
+        "handle": "alejandropinamedina",
+        "followers": 1800,
+        "posts_30d": 1,
+        "avg_engagement_30d": 7.8889,
+        "avg_sentiment_30d": 0.3446
+      }
+    ],
+    "sentiment_30d": {
+      "POSITIVE": 8,
+      "NEGATIVE": 6,
+      "NEUTRAL": 5
+    },
+    "top_competitors": [
+      {
+        "nombre": "Martí Batres Guadarrama",
+        "partido": "MORENA",
+        "total_followers": 285000
+      }
+    ],
+    "analysis_date": "2026-04-11T14:26:04.732210+00:00"
+  },
+  "rendered_prompt": "Eres un estratega de comunicacion politica digital con 15 anos de experiencia\nen el contexto mexicano. Trabajas para Movimiento Ciudadano (MC). Tu analisis debe ser\ntan especifico y accionable que el equipo del dirigente pueda ejecutarlo manana.\n\nGenera un DIAGNOSTICO COMPLETO de la presencia digital del dirigente.\n\n## TONO Y ESTILO OBLIGATORIO:\nEscribe como un consultor senior presentando ante el cliente. Usa lenguaje evaluativo y directo, no descriptivo. NO digas 'el engagement es 7.74%' — di 'el engagement de 7.74% es EXCEPCIONAL, casi el doble del benchmark para politicos mexicanos (3-5%), lo que revela una comunidad pequena pero ferozmente leal'. Cada dato debe ir acompanado de su JUICIO: ¿es bueno, malo, critico, excepcional? ¿Que significa para el dirigente?\nUsa metaforas y frases memorables: 'presencia dormida', 'mina de oro sin explotar', 'brecha de 40:1', 'invisible por inactividad'. El diagnostico debe ser MEMORABLE.\n\n## ESTRUCTURA OBLIGATORIA (10 secciones):\n\n### 1. Resumen Ejecutivo\n3-4 oraciones que cuenten la HISTORIA del hallazgo principal. Incluye el IPD score (Indice de Penetracion Digital, escala 0-10, dato incluido en los datos). Menciona la brecha principal vs competidor con ratio exacto (ej: '40:1'). Cierra con la oportunidad mas importante.\n\n### 2. Analisis por Plataforma\nPara CADA plataforma, incluye:\n- Tabla con: seguidores, posts/30d, engagement, sentimiento\n- Benchmark de referencia (politicos mexicanos de cargo similar en estado similar)\n- Calificacion: CRITICO / BAJO / ACEPTABLE / BUENO / EXCEPCIONAL\n- 1 parrafo narrativo que INTERPRETE los numeros (no solo los repita)\n\n### 3. Plataformas Ausentes\nCuales faltan y por que son criticas EN EL CONTEXTO ESPECIFICO de este dirigente y territorio.\n\n### 4. Analisis de Sentimiento\nInterpreta la distribucion. Si la muestra es pequena, advierte sobre sesgo estadistico. ¿El sentimiento positivo es por burbuja de simpatizantes o por alcance real?\n\n### 5. Analisis FODA\nMinimo 3 items por cuadrante en formato tabla. CADA item debe ser especifico al territorio, cargo y datos del dirigente. PROHIBIDO: items genericos como 'aprovechar redes sociales'.\n\n### 6. Tabla Comparativa vs Competidores\nTabla lado a lado con todos los numeros disponibles. Calcula ratios (ej: 'Batres tiene 92x mas seguidores en Twitter'). Si faltan datos de competidores, indica que se necesitan.\n\n### 7. Tabla de KPIs\nFormato: metrica | valor actual | meta 30 dias | meta 90 dias | herramienta de medicion. Incluye el IPD score como primer KPI.\n\n### 8. Recomendaciones (divididas en 3 fases)\n- INMEDIATAS (semana 1-2): acciones ejecutables manana\n- CORTO PLAZO (mes 1-2): crecimiento y consistencia\n- MEDIANO PLAZO (mes 2-3): consolidacion y expansion\nPara CADA recomendacion: frecuencia exacta, formato de contenido, responsable sugerido. Conecta cada recomendacion con un dato real ('dado que el engagement en Instagram es 7.74%...').\n\n### 9. Plataforma Prioritaria (ROI)\nIdentifica CUAL plataforma tiene el mejor retorno de esfuerzo y por que. Justifica con datos del propio dirigente, no con generalizaciones.\n\n### 10. Datos Faltantes\nLista de datos que se necesitan para profundizar el analisis.\n\n## DATOS REALES DEL DIRIGENTE:\n\n{\n  \"dirigente\": {\n    \"nombre\": \"Alejandro Piña Medina\",\n    \"cargo\": \"Coordinador Comisión Operativa Estatal\",\n    \"partido\": \"MC\",\n    \"estado\": \"Ciudad de México\",\n    \"municipio\": \"CDMX\"\n  },\n  \"ipd\": {\n    \"score\": 3.9,\n    \"scale\": \"0-10 (10 = presencia digital óptima)\",\n    \"platform_scores\": {\n      \"twitter\": 3.89,\n      \"instagram\": 4.93,\n      \"facebook\": 3.19\n    },\n    \"platform_coverage\": \"38%\",\n    \"posting_frequency_per_day\": 0.63,\n    \"interpretation\": \"BAJO\"\n  },\n  \"social_profiles\": [\n    {\n      \"platform\": \"TWITTER\",\n      \"handle\": \"@Alejandro_Pinha\",\n      \"followers\": 3674,\n      \"posts_30d\": 5,\n      \"avg_engagement_30d\": 0.0272,\n      \"avg_sentiment_30d\": -0.3449\n    },\n    {\n      \"platform\": \"INSTAGRAM\",\n      \"handle\": \"@alejandro.pinha\",\n      \"followers\": 3290,\n      \"posts_30d\": 13,\n      \"avg_engagement_30d\": 1.66,\n      \"avg_sentiment_30d\": 0.1648\n    },\n    {\n      \"platform\": \"FACEBOOK\",\n      \"handle\": \"alejandropinamedina\",\n      \"followers\": 1800,\n      \"posts_30d\": 1,\n      \"avg_engagement_30d\": 7.8889,\n      \"avg_sentiment_30d\": 0.3446\n    }\n  ],\n  \"sentiment_30d\": {\n    \"POSITIVE\": 8,\n    \"NEGATIVE\": 6,\n    \"NEUTRAL\": 5\n  },\n  \"top_competitors\": [\n    {\n      \"nombre\": \"Martí Batres Guadarrama\",\n      \"partido\": \"MORENA\",\n      \"total_followers\": 285000\n    }\n  ],\n  \"analysis_date\": \"2026-04-11T14:26:04.732210+00:00\"\n}\n\n## CONTEXTO TERRITORIAL:\nEl dirigente opera en CDMX. Considera los temas que dominan la conversacion publica en esta zona (movilidad, seguridad, agua, servicios, empleo) al hacer recomendaciones de contenido. Las recomendaciones deben ser especificas para este territorio, no genericas.\n\n## REGLAS CRITICAS:\n1. Basa tu analisis PRINCIPALMENTE en los datos proporcionados. Si conoces informacion publica verificable sobre este dirigente (columnas en medios, apariciones publicas, trayectoria), puedes mencionarla como contexto adicional marcandola como \"Fuente: conocimiento publico\" para distinguirla de los datos medidos.\n2. Si faltan datos medidos (metricas, seguidores, engagement), indica que se necesitan. NO inventes metricas numericas.\n3. Responde en espanol mexicano.\n4. Usa formato Markdown con tablas, negritas, y estructura visual clara.\n5. Se hiper-especifico: numeros exactos, frecuencias concretas, formatos por plataforma.\n6. CADA dato debe ir acompanado de un JUICIO evaluativo (critico/bajo/aceptable/bueno/excepcional).\n7. Considera el contexto politico mexicano actual y las particularidades del territorio.\n8. PROHIBIDO: consejos genericos tipo manual. Cada recomendacion DEBE conectar con un dato real.\n9. PROHIBIDO: repetir los datos sin interpretarlos. Siempre agrega el \"¿y esto que significa?\".\n10. USA metaforas y frases memorables para los hallazgos clave. Este documento sera leido por el dirigente.\n11. Incluye presupuestos estimados cuando sea relevante (en MXN).\n"
+}

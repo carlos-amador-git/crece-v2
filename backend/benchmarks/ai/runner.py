@@ -38,11 +38,17 @@ OUT_ROOT = BASE / "outputs"
 
 
 def _render_prompt(prompt_template: str, test_case: dict[str, Any]) -> str:
-    """If the prompt has a rendered_prompt in the test_case, use it directly.
-    Otherwise, substitute {{context_json}} and {{territory_context}} placeholders.
+    """If the test case carries a precomputed rendered_prompt (from
+    build_test_cases.py running the real _build_prompt() against the DB),
+    use it directly. Otherwise fall through to template substitution with
+    {{context_json}} / {{territory_context}} / {{extra}} placeholders.
+
+    Defensive: ignore strings that look like unfilled placeholders (e.g.
+    'PLACEHOLDER', empty, or shorter than 100 chars — real prompts are ~2KB+).
     """
-    if "rendered_prompt" in test_case:
-        return test_case["rendered_prompt"]
+    rp = test_case.get("rendered_prompt")
+    if isinstance(rp, str) and len(rp) > 200 and "PLACEHOLDER" not in rp.upper():
+        return rp
 
     ctx = test_case.get("context", {})
     context_json = json.dumps(ctx, indent=2, ensure_ascii=False, default=str)
