@@ -52,20 +52,23 @@ export function useCrisisPostAlerts(dirigenteId?: number) {
       );
 
       return data.items
-        .filter((post) => post.sentiment_score < NEGATIVE_THRESHOLD)
-        .map((post) => ({
-          id: post.id,
-          dirigente_name: post.dirigente_nombre ?? "Desconocido",
-          sentiment_score: post.sentiment_score,
-          platform: post.platform,
-          post_content_preview:
-            post.content.length > 140
-              ? `${post.content.slice(0, 140)}...`
-              : post.content,
-          published_at: post.published_at,
-          severity: classifySeverity(post.sentiment_score),
-          post_url: post.url,
-        }))
+        .filter((post) => (post.sentiment_score ?? 0) < NEGATIVE_THRESHOLD)
+        .map((post) => {
+          const score = post.sentiment_score ?? 0;
+          return {
+            id: post.id,
+            dirigente_name: post.dirigente_nombre ?? "Desconocido",
+            sentiment_score: score,
+            platform: post.platform,
+            post_content_preview:
+              post.content.length > 140
+                ? `${post.content.slice(0, 140)}...`
+                : post.content,
+            published_at: post.published_at,
+            severity: classifySeverity(score),
+            post_url: post.url,
+          };
+        })
         .sort((a, b) => a.sentiment_score - b.sentiment_score);
     },
     refetchInterval: 60_000,

@@ -81,8 +81,8 @@ export interface SocialPost {
   platform: SocialPlatform;
   content: string;
   url: string;
-  sentiment: SentimentType;
-  sentiment_score: number;
+  sentiment_label: string | null;
+  sentiment_score: number | null;
   likes: number;
   comments: number;
   shares: number;
@@ -192,6 +192,10 @@ export interface KpiOverview {
   ipd_change: number;
   posts_change: number;
   alerts_change: number;
+  // political KPIs
+  total_audiencia: number;
+  contactos_periodo: number;
+  tema_urgente: string | null;
 }
 
 export interface PaginatedResponse<T> {

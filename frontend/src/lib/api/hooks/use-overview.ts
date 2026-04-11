@@ -9,10 +9,12 @@ import type {
   HealthCheck,
 } from "../types";
 
-export function useKpiOverview() {
+export type OverviewPeriod = "today" | "7d" | "30d" | "90d";
+
+export function useKpiOverview(period: OverviewPeriod = "30d") {
   return useQuery({
-    queryKey: ["kpi-overview"],
-    queryFn: () => api.get<KpiOverview>("/dashboard/overview"),
+    queryKey: ["kpi-overview", period],
+    queryFn: () => api.get<KpiOverview>(`/dashboard/overview?period=${period}`),
     refetchInterval: 60_000,
   });
 }

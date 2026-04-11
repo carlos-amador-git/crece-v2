@@ -40,34 +40,40 @@ const DEFAULT_KPI = {
   ipd_change: 0,
   posts_change: 0,
   alerts_change: 0,
+  total_audiencia: 0,
+  contactos_periodo: 0,
+  tema_urgente: null as string | null,
 };
 
 const TIME_FILTERS = [
-  { label: "Hoy", value: "today" },
-  { label: "7 dias", value: "7d" },
-  { label: "30 dias", value: "30d" },
-  { label: "90 dias", value: "90d" },
-] as const;
+  { label: "Hoy", value: "today" as const },
+  { label: "7 dias", value: "7d" as const },
+  { label: "30 dias", value: "30d" as const },
+  { label: "90 dias", value: "90d" as const },
+];
 
 const kpiCards = [
   {
-    title: "Total Dirigentes",
-    key: "total_dirigentes" as const,
-    changeKey: "dirigentes_change" as const,
+    title: "Tu Audiencia",
+    subtitle: "Personas que te siguen",
+    key: "total_audiencia" as const,
+    changeKey: "posts_change" as const, // proxy — no history yet
     icon: Users,
     format: (v: number) => formatNumber(v),
     isAlerts: false,
   },
   {
-    title: "Avg IPD Score",
+    title: "Presencia Digital",
+    subtitle: "Tu IPD sobre 10",
     key: "avg_ipd_score" as const,
     changeKey: "ipd_change" as const,
     icon: TrendingUp,
-    format: (v: number) => v.toFixed(1),
+    format: (v: number) => `${v.toFixed(1)} / 10`,
     isAlerts: false,
   },
   {
-    title: "Posts (24h)",
+    title: "Conversacion",
+    subtitle: "Posts monitoreados en el periodo",
     key: "posts_monitored_24h" as const,
     changeKey: "posts_change" as const,
     icon: MessageSquare,
@@ -75,7 +81,8 @@ const kpiCards = [
     isAlerts: false,
   },
   {
-    title: "Alertas Activas",
+    title: "Tema Urgente",
+    subtitle: "Alerta mas reciente",
     key: "active_alerts" as const,
     changeKey: "alerts_change" as const,
     icon: AlertTriangle,
@@ -106,9 +113,9 @@ function CurrentDateTime() {
 }
 
 export default function OverviewPage() {
-  const [activeFilter, setActiveFilter] = useState<string>("30d");
+  const [activeFilter, setActiveFilter] = useState<"today" | "7d" | "30d" | "90d">("30d");
 
-  const { data: kpi, isLoading: kpiLoading } = useKpiOverview();
+  const { data: kpi, isLoading: kpiLoading } = useKpiOverview(activeFilter);
   const { data: topDirigentes, isLoading: topLoading } = useTopDirigentes(10);
   const { data: postsData, isLoading: postsLoading } = useSocialPosts({ per_page: 5 });
   const { data: systemStatus } = useSystemStatus();
@@ -194,10 +201,14 @@ export default function OverviewPage() {
               </Card>
             ))
           : kpiCards.map((card) => {
-              const value = kpiData[card.key];
+              const rawValue = kpiData[card.key];
               const change = kpiData[card.changeKey];
               const isPositive = change >= 0;
               const showPulse = card.isAlerts && hasActiveAlerts;
+
+              // Special rendering for "Tema Urgente" — show the alert text
+              const isTemaCard = card.key === "active_alerts";
+              const temaText = kpiData.tema_urgente;
 
               return (
                 <Card
@@ -209,9 +220,16 @@ export default function OverviewPage() {
                 >
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        {card.title}
-                      </p>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {card.title}
+                        </p>
+                        {card.subtitle && (
+                          <p className="text-xs text-muted-foreground/70">
+                            {card.subtitle}
+                          </p>
+                        )}
+                      </div>
                       <div className="relative">
                         <card.icon className="h-4.5 w-4.5 text-muted-foreground" />
                         {showPulse && (
@@ -223,28 +241,41 @@ export default function OverviewPage() {
                       </div>
                     </div>
                     <div className="mt-2 flex items-end justify-between">
-                      <p
-                        className="tabular-nums font-heading text-2xl font-bold"
-                        data-numeric="true"
-                      >
-                        {card.format(value)}
-                      </p>
-                      <span
-                        className={`flex items-center text-xs font-medium ${
-                          isPositive
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {isPositive ? (
-                          <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" />
-                        ) : (
-                          <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" />
-                        )}
-                        <span data-numeric="true" className="tabular-nums">
-                          {Math.abs(change)}%
+                      {isTemaCard ? (
+                        <p
+                          className={`line-clamp-2 text-sm font-semibold ${
+                            temaText ? "text-foreground" : "text-muted-foreground"
+                          }`}
+                          title={temaText ?? undefined}
+                        >
+                          {temaText ?? "Sin alertas en el periodo"}
+                        </p>
+                      ) : (
+                        <p
+                          className="tabular-nums font-heading text-2xl font-bold"
+                          data-numeric="true"
+                        >
+                          {card.format(Number(rawValue))}
+                        </p>
+                      )}
+                      {!isTemaCard && (
+                        <span
+                          className={`flex items-center text-xs font-medium ${
+                            isPositive
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {isPositive ? (
+                            <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" />
+                          ) : (
+                            <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" />
+                          )}
+                          <span data-numeric="true" className="tabular-nums">
+                            {Math.abs(change)}%
+                          </span>
                         </span>
-                      </span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
