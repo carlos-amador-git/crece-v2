@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.models.alcaldia import AlcaldiaCDMX
 from app.models.alerta_crisis import AlertaCrisis
 from app.models.api_key import ApiKey
 from app.models.benchmark import Competidor, CompetidorSocialProfile
@@ -27,6 +28,7 @@ from app.models.voter_score import VoterScore
 from app.models.voter_score_integration import VoterScoreIntegration
 
 __all__ = [
+    "AlcaldiaCDMX",
     "AlertaCompliance",
     "AlertaCrisis",
     "ApiKey",
