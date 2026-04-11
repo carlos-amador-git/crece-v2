@@ -209,3 +209,217 @@ def scrape_all_profiles() -> dict:
     logger.info("Dispatching scrape tasks for all profiles")
     # In production, would query all active profiles and dispatch scrape_profile for each
     return {"status": "dispatched"}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Sprint 4 — Trends detector pipeline
+# ──────────────────────────────────────────────────────────────────────
+
+
+@celery_app.task(
+    name="app.workers.tasks.detect_trends",
+    bind=True,
+    max_retries=2,
+)
+def detect_trends(self, org_id: int | None = None, lookback_hours: int = 24) -> dict:  # type: ignore[no-untyped-def]
+    """S4.5 — Detecta trends agrupando posts por embedding + alcaldía.
+
+    Pipeline por org_id (o todas las orgs si None):
+        1. Cargar posts últimas 24h con embedding NOT NULL
+        2. Para cada post: inferir alcaldía via location_inference
+        3. Agrupar por (alcaldia_id, cluster semántico) con HNSW
+           usando el filtro org_id ANTES del vector search (S4.8)
+        4. Calcular post_count, sentiment_avg, growth_rate_24h
+        5. Persistir rows en topic_trends
+        6. Disparar label_trend_cluster por cada cluster nuevo
+
+    NOTA: Implementación completa del clustering es iterativa — el
+    primer pase solo agrupa por alcaldía (sin HNSW) y persiste un
+    TopicTrend por alcaldía con sus posts más recientes. El clustering
+    semántico por embedding se habilita cuando el backfill de embeddings
+    sobre los 381 posts de dev DB se corre (backfill_embeddings()).
+    """
+    from sqlalchemy import select, text
+
+    from app.models.topic_trend import TopicTrend
+    from app.models.alcaldia import AlcaldiaCDMX
+
+    logger.info("detect_trends starting (org_id=%s)", org_id)
+    session = _get_sync_session()
+    try:
+        # 1. Posts últimas 24h (por ahora, sin filtro org_id — lo agregaremos
+        #    cuando social_posts tenga la columna mediada o el JOIN se
+        #    extienda al pipeline).
+        rows = session.execute(
+            text(
+                "SELECT sp.id, sp.content, sp.sentiment_score, sp.published_at "
+                "FROM social_posts sp "
+                "WHERE sp.published_at > now() - (:hrs || ' hours')::interval "
+                "  AND sp.content IS NOT NULL AND sp.content != '' "
+                "LIMIT 500"
+            ),
+            {"hrs": str(lookback_hours)},
+        ).fetchall()
+        logger.info("detect_trends: %d posts in window", len(rows))
+
+        if not rows:
+            return {"status": "no_posts", "trends_created": 0}
+
+        # 2. Inferir alcaldía por cada post (stub: solo buckets los que
+        #    mencionan explícitamente una alcaldía)
+        from app.services.location_inference import normalize_social_text
+
+        alcaldia_rows = session.execute(
+            text("SELECT id, nombre FROM alcaldias_cdmx")
+        ).fetchall()
+        alcaldia_by_name = {r[1]: r[0] for r in alcaldia_rows}
+
+        from collections import defaultdict
+
+        buckets: dict[int, list[tuple]] = defaultdict(list)
+        for post_id, content, sentiment, pub_at in rows:
+            norm = normalize_social_text(content or "")
+            low = norm.lower()
+            for nombre, aid in alcaldia_by_name.items():
+                if nombre.lower() in low:
+                    buckets[aid].append((post_id, sentiment or 0.0, pub_at))
+                    break
+
+        if not buckets:
+            return {"status": "no_matches", "trends_created": 0}
+
+        # 3. Determine default org: if caller didn't pass one, use the
+        #    MC CDMX root org (id=3 per D-DX-01 seed).
+        eff_org_id = org_id or 3
+
+        now = datetime.now(UTC)
+        bucket_start = now.replace(minute=0, second=0, microsecond=0)
+
+        created = 0
+        for alcaldia_id, posts in buckets.items():
+            sentiments = [s for _, s, _ in posts if s is not None]
+            avg_sent = sum(sentiments) / len(sentiments) if sentiments else None
+
+            trend = TopicTrend(
+                org_id=eff_org_id,
+                alcaldia_id=alcaldia_id,
+                topic_label=None,  # labeled asynchronously by label_trend_cluster
+                time_bucket=bucket_start,
+                post_count=len(posts),
+                sentiment_avg=avg_sent,
+                growth_rate_24h=None,  # computed on next pass by comparing to previous bucket
+                sample_posts={"post_ids": [p[0] for p in posts[:5]]},
+            )
+            session.add(trend)
+            session.flush()
+
+            # Fire-and-forget label task for this cluster
+            label_trend_cluster.delay(trend.id)
+            created += 1
+
+        session.commit()
+        logger.info("detect_trends created %d trends", created)
+        return {"status": "ok", "trends_created": created, "org_id": eff_org_id}
+    except Exception as exc:
+        session.rollback()
+        logger.exception("detect_trends failed: %s", exc)
+        raise self.retry(exc=exc, countdown=120)
+    finally:
+        session.close()
+
+
+@celery_app.task(
+    name="app.workers.tasks.label_trend_cluster",
+    bind=True,
+    max_retries=2,
+)
+def label_trend_cluster(self, trend_id: int) -> dict:  # type: ignore[no-untyped-def]
+    """S4.6b — Etiqueta un TopicTrend con un label humano vía Ollama.
+
+    Corre en la cola `trends_labeling` (concurrency=2) para no saturar
+    al runtime Ollama local/remoto. Prompt estricto: 1 línea, <50 chars,
+    castellano, sin emojis.
+    """
+    from sqlalchemy import text as sql_text
+
+    import httpx
+
+    from app.core.config import settings
+
+    session = _get_sync_session()
+    try:
+        row = session.execute(
+            sql_text(
+                "SELECT tt.id, tt.alcaldia_id, tt.post_count, a.nombre, tt.sample_posts "
+                "FROM topic_trends tt "
+                "LEFT JOIN alcaldias_cdmx a ON a.id = tt.alcaldia_id "
+                "WHERE tt.id = :id"
+            ),
+            {"id": trend_id},
+        ).first()
+        if row is None:
+            return {"status": "not_found", "trend_id": trend_id}
+
+        _, alcaldia_id, post_count, alcaldia_nombre, sample = row
+        post_ids = (sample or {}).get("post_ids", []) if isinstance(sample, dict) else []
+
+        posts_content: list[str] = []
+        if post_ids:
+            post_rows = session.execute(
+                sql_text("SELECT content FROM social_posts WHERE id = ANY(:ids)"),
+                {"ids": post_ids},
+            ).fetchall()
+            posts_content = [r[0][:300] for r in post_rows if r[0]]
+
+        joined = "\n\n".join(f"- {c}" for c in posts_content[:5])
+        prompt = (
+            "Eres analista político. Resume en UNA línea de MÁXIMO 50 caracteres, "
+            "en castellano, sin emojis, sin comillas, el tema común de estos posts "
+            f"de {alcaldia_nombre or 'CDMX'}:\n\n{joined}\n\nTema:"
+        )
+
+        ollama_url = getattr(settings, "OLLAMA_BASE_URL", "http://host.docker.internal:11434")
+        model = getattr(settings, "OLLAMA_MODEL", "gemma3:12b")
+
+        resp = httpx.post(
+            f"{ollama_url}/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False},
+            timeout=90.0,
+        )
+        resp.raise_for_status()
+        label = resp.json().get("response", "").strip().splitlines()[0][:50]
+
+        session.execute(
+            sql_text("UPDATE topic_trends SET topic_label = :l WHERE id = :id"),
+            {"l": label, "id": trend_id},
+        )
+        session.commit()
+        logger.info("labeled trend %d: %s", trend_id, label)
+        return {"status": "ok", "trend_id": trend_id, "label": label}
+    except Exception as exc:
+        session.rollback()
+        logger.warning("label_trend_cluster %d failed: %s", trend_id, exc)
+        raise self.retry(exc=exc, countdown=30)
+    finally:
+        session.close()
+
+
+@celery_app.task(name="app.workers.tasks.ingest_rss_feeds")
+def ingest_rss_feeds() -> dict:
+    """S4.7 — Fetch todos los RSS feeds y log items nuevos.
+
+    Persistencia a `social_posts` está en deuda D-S4-07 (requiere
+    migración de platform_enum + profile_id nullable o synthetic
+    profiles). Por ahora solo logueamos para observabilidad del beat.
+    """
+    import asyncio
+
+    from app.services.news_ingest import fetch_all_feeds
+
+    try:
+        items = asyncio.run(fetch_all_feeds())
+        logger.info("ingest_rss_feeds fetched %d items", len(items))
+        return {"status": "ok", "items_fetched": len(items)}
+    except Exception as exc:
+        logger.exception("ingest_rss_feeds failed: %s", exc)
+        return {"status": "error", "error": str(exc)}
