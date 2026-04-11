@@ -139,6 +139,27 @@ whitespace. Se corre **antes** de pasar el texto a spaCy `es_core_news_md`.
 **Razón (cross-audit Gemini):** spaCy baja precisión drásticamente con texto social crudo.
 **Impacto:** S4.4 gana una subtarea (S4.4a.5) pero mantiene el target 60-70% precisión.
 
+### D-S4-05: RLS en topic_trends NO incluye `org_id IS NULL` bypass
+**Decisión:** A diferencia de las tablas existentes (dirigentes, users, etc.),
+la policy de `topic_trends` NO tiene `org_id IS NULL OR ...`. Solo
+`org_id::text = current_setting('app.current_org_id', true)`.
+**Razón:** Los trends son siempre tenant-scoped. NO hay trends "compartidos"
+entre organizaciones. El NOT NULL en la columna previene el caso NULL.
+
+### D-S4-06: crece role es superuser/bypassrls en dev DB (tests RLS requieren rol secundario)
+**Hallazgo:** Al verificar la policy de `topic_trends`, queries bajo `crece`
+con `SET app.current_org_id='4'` seguían viendo rows de `org_id=3`.
+**Root cause:** `SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname='crece'`
+devuelve `t | t`. FORCE ROW LEVEL SECURITY no aplica a superusers ni a
+BYPASSRLS.
+**Consistencia con D16:** Ya asumido — "el enforcement principal es en los
+endpoints FastAPI". La RLS DB es defense-in-depth.
+**Verificación S4.2c:** Creado rol `rls_test NOLOGIN NOSUPERUSER NOBYPASSRLS`,
+`SET ROLE rls_test` + `SET app.current_org_id='3'` + insert, luego
+`SET app.current_org_id='4'` + select → 0 rows. Policy funciona.
+**Pendiente prod:** La app en Coolify debe conectarse con un rol sin
+BYPASSRLS (no el owner del schema).
+
 ### D-S5-01: S5.3a retorna sync_status=pending inmediatamente
 **Decisión:** El endpoint transaccional `POST /dirigentes/onboard` crea User+Dirigente+
 SocialProfile y retorna 201 con `{..., sync_status: "pending", task_id: "..."}` sin

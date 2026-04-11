@@ -1,9 +1,9 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-11 12:15 local
-**Sesión activa:** /sprint-review S4+S5, S4.1 DONE
+**Último update:** 2026-04-11 13:10 local
+**Sesión activa:** /sprint-implement S4, 4/11 tareas done
 **Main HEAD:** `4d61ec0` (PR #6 merged)
-**Branch activo:** `fix/sprint-4-trends` @ `9efc76d`
+**Branch activo:** `fix/sprint-4-trends` @ `dac0039`
 
 ---
 
@@ -23,8 +23,20 @@
 
 | Sprint | Esfuerzo | Prioridad | Avance |
 |---|---|---|---|
-| **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) | **S4.1 ✅** (1/11) |
+| **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) | **4/11** (S4.1, S4.2a/c/b, S4.4a/a.5) |
 | **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) | 0/6 |
+
+### Sesión 2026-04-11 tarde-2 — /sprint-implement S4 (ejecución)
+Commits en `fix/sprint-4-trends`:
+- `9efc76d` — S4.1 catálogo INEGI 16 alcaldías CDMX (ST_Contains verified)
+- `24b032d` — docs(s4) /sprint-review enriquecimiento + cross-audit Gemini
+- `59413bd` — S4.2 topic_trends + RLS + HNSW orden a→c→b (RLS verificada con rol no-priv)
+- `dac0039` — S4.4a location_inference con DB lookup + normalize_social_text + 10 tests verdes
+
+Dep nueva: `pgvector>=0.3.0` en pyproject.toml (pip install live en container).
+Migraciones aplicadas: `a1b2c3d4e5f6` + `b2c3d4e5f6a7`.
+
+**Próximo paso**: S4.3 seed YAML + S4.4b spaCy NER, o ir por S4.8 audit RLS + S4.5 worker.
 
 ### Sesión 2026-04-11 tarde — /sprint-review
 - Plan S4+S5 revisado, enriquecido con subdivisiones y criterios medibles (ver `PLAN-current.md` sección "Plan revisado 2026-04-11")
