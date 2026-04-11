@@ -197,6 +197,74 @@ fáciles). Target MVP del plan era 60-70%; se cumple sin spaCy.
 
 ## 2026-04-11 — D-DATA-01 Ruta C (import CRECE legacy)
 
+### D-DATA-02 (resuelta parcialmente): PII at-rest con pgcrypto + audit log
+**Decisión:** Encriptación at-rest de campos PII críticos en `ciudadanos_legacy`
+usando `pgcrypto.pgp_sym_encrypt` con key simétrica `PII_ENCRYPTION_KEY`
+desde `settings`. Audit trail mediante tabla `data_access_log` y dependency
+FastAPI `require_pii_clearance`.
+
+**Scope ejecutado (2026-04-11):**
+1. **Migración `f6a7b8c9d0e1`**:
+   - Columnas nuevas en `ciudadanos_legacy`: `clave_electoral_enc`, `email_enc`,
+     `phone_01_enc`, `phone_02_enc`, `whatsapp_enc`, `fecha_nacimiento_enc`
+     (todas `bytea`, nullable)
+   - Tabla `data_access_log` (user_id, org_id, table_name, row_id, action,
+     fields[], metadata_json, request_ip, user_agent, created_at) con RLS
+     policies y 5 índices
+2. **Servicio `app.services.pii`**:
+   - `encrypt_value` / `decrypt_value` con pgp_sym_encrypt/decrypt vía bind
+     params (la key nunca sale de Python — llega como parámetro SQL, no
+     inline en logs)
+   - `backfill_ciudadano_legacy` idempotente (solo procesa rows con
+     `*_enc IS NULL AND clear_col NOT NULL`)
+   - `read_pii_fields` descifra N campos por ciudadano en 1 query
+3. **Dependency `app.core.pii_access.require_pii_clearance`**:
+   - Gate por `Role.ADMIN` (no viewer, no analyst, no field_operator)
+   - Inyecta `PiiAuditor` con contexto del request (user_id, org_id, IP, UA)
+   - Loggea `access_attempt` al pasar, el endpoint DEBE llamar
+     `auditor.log(action="read_pii", fields=[...], row_id=...)`
+4. **Endpoint `/ciudadanos-legacy`** (D-DATA-02 demo):
+   - `GET /` — listado SAFE (sin PII), admin/analyst pueden leer
+   - `GET /{id}/pii` — descifra PII, gated por `require_pii_clearance`
+5. **`PII_ENCRYPTION_KEY` persistida en `backend/.env`** (gitignored)
+   con valor dev `dev-crece-pii-key-2026-min32chars!`
+6. **Backfill ejecutado**: 675 emails + 2,625 phone_01 + 945 phone_02 +
+   7,763 whatsapps + 1,312 fechas nacimiento + 1 clave electoral encriptados
+
+**Verificación:**
+- Tests: `tests/test_pii_encryption.py` — 6/6 verdes
+  - Round-trip encrypt/decrypt
+  - Empty plaintext returns None
+  - Wrong/corrupt ciphertext returns None (no crash)
+  - read_pii_fields sobre row real descifra email
+  - Backfill idempotente (2a corrida = 0 rows afectadas)
+  - PiiAuditor.log inserta correctamente en data_access_log
+- Smoke test live:
+  - Admin → GET /pii devuelve 200 con email descifrado
+  - Viewer (Piña) → GET /pii devuelve **403 Forbidden**
+  - Audit log muestra 2 entries (access_attempt + read_pii) post-admin
+  - NO hay entry para el viewer rechazado (HTTPException aborta antes del commit)
+- Total tests S4+S5+compliance: **23/23 verdes**
+
+**Deudas remanentes de D-DATA-02 (no bloqueantes):**
+- **D-DATA-02a**: Scripts de right-to-delete (LFPDPPP artículo 32). Sólo
+  scaffold; endpoint DELETE /ciudadanos-legacy/{id}/gdpr-erase requiere
+  CASCADE a data_access_log y flag `deleted_at` en vez de drop físico.
+- **D-DATA-02b**: Rotación de la key PII. `scripts/rotate_pii_key.py`
+  descifra con key-vieja y re-encripta con key-nueva. Crítico antes de
+  cualquier incidente de seguridad en la key actual.
+- **D-DATA-02c**: Dropeo de las columnas en claro de `ciudadanos_legacy`
+  (`email`, `phone_01`, ..., `clave_electoral`). Actualmente coexisten
+  con las `_enc`. Una vez que ningún código consumidor lee las columnas
+  en claro, otra migración las dropea.
+- **D-DATA-02d**: Extender la dependency + backfill a otros campos PII
+  de otras tablas (`ciudadanos` v2 si llega a poblarse, `users.email`
+  probablemente NO porque es credential de login).
+- **D-DATA-02e**: Loggear los accesos FALLIDOS (403). Hoy el HTTPException
+  del dependency aborta antes del commit, así que queda sin huella.
+  Refactor: usar un try/except en el dependency que loggee antes de
+  lanzar.
+
 ### D-DATA-01: Import CRECE Oracle APEX legacy — Ruta C (3 alcaldías piloto)
 **Decisión:** Importar el snapshot del CRECE Oracle APEX original al dev DB
 filtrado a las 3 alcaldías piloto del plan S4 (Cuauhtémoc, Benito Juárez,

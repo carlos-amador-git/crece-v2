@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     campaigns_integration,
     canvassing,
     ciudadanos,
+    ciudadanos_legacy,
     contenido,
     content_factory_integration,
     crm_integration,
@@ -45,6 +46,11 @@ api_router.include_router(electoral.router, prefix="/electoral", tags=["electora
 api_router.include_router(benchmark.router, prefix="/benchmark", tags=["benchmark"])
 api_router.include_router(planes.router, prefix="/planes", tags=["planes"])
 api_router.include_router(ciudadanos.router, prefix="/ciudadanos", tags=["ciudadanos"])
+api_router.include_router(
+    ciudadanos_legacy.router,
+    prefix="/ciudadanos-legacy",
+    tags=["ciudadanos-legacy"],
+)
 api_router.include_router(eventos.router, prefix="/eventos", tags=["eventos"])
 api_router.include_router(programas.router, prefix="/programas", tags=["programas"])
 api_router.include_router(organizaciones.router, prefix="/organizaciones", tags=["organizaciones"])

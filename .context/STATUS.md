@@ -1,9 +1,9 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-11 16:30 local
-**Sesión activa:** /sprint-implement S5 — Wizard Onboarding funcionalmente cerrado (6/6 core + deuda auto-login)
+**Último update:** 2026-04-11 17:00 local
+**Sesión activa:** /sprint-implement D-DATA-02 — PII encryption at-rest + audit trail
 **Main HEAD:** `4d61ec0` (PR #6 merged)
-**Branch activo:** `fix/sprint-4-trends` @ pendiente commit S5
+**Branch activo:** `fix/sprint-4-trends` @ pendiente commit D-DATA-02
 
 ---
 

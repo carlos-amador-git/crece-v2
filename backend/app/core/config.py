@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 1440  # 24 hours
 
+    # ── PII encryption (D-DATA-02 LFPDPPP) ────────────────
+    # pgp_sym_encrypt symmetric key for ciudadanos_legacy PII columns.
+    # NEVER commit the real key. Rotation: scripts/rotate_pii_key.py (future).
+    PII_ENCRYPTION_KEY: str = "CHANGE-ME-pii-dev-key-min-32-chars"
+
     # ── MinIO ─────────────────────────────────────────────
     MINIO_ENDPOINT: str = "localhost:9000"
     MINIO_ACCESS_KEY: str = "minioadmin"
