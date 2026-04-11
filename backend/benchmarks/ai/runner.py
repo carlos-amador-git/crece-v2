@@ -73,10 +73,19 @@ def _render_prompt(prompt_template: str, test_case: dict[str, Any]) -> str:
 
 
 async def _call_ollama(prompt: str) -> str:
+    """Call the Ollama /api/generate endpoint.
+
+    NOTE: Timeout is set to 1 hour. CPU-only inference with gemma3:12b
+    on a ~6000 char prompt takes ~50 min end-to-end due to slow token
+    eval rate (~873ms/token input, ~933ms/token output). A shorter
+    timeout drops the request mid-inference. For faster iterations
+    over the benchmark loop, either (a) run on a GPU-backed Ollama,
+    (b) switch to gemma3:4b, or (c) use shorter prompt variants.
+    """
     import httpx
     base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     model = os.environ.get("OLLAMA_MODEL", "gemma3:12b")
-    async with httpx.AsyncClient(timeout=600.0) as client:
+    async with httpx.AsyncClient(timeout=3600.0) as client:
         resp = await client.post(
             f"{base_url}/api/generate",
             json={"model": model, "prompt": prompt, "stream": False},
