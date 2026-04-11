@@ -1,9 +1,9 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-11 14:30 local
-**Sesión activa:** /sprint-implement luz verde all — S4 funcionalmente completo (9/11)
+**Último update:** 2026-04-11 15:15 local
+**Sesión activa:** D-DATA-01 Ruta C — import CRECE legacy done (9,723 ciudadanos + 45 promotores + 5,552 unidades)
 **Main HEAD:** `4d61ec0` (PR #6 merged)
-**Branch activo:** `fix/sprint-4-trends` @ `521fd6a`
+**Branch activo:** `fix/sprint-4-trends` @ pendiente commit
 
 ---
 
@@ -64,6 +64,38 @@ Tests totales nuevos en S4: **17 verdes** (10 location_inference + 3 RLS audit +
 - **D-S4-08**: clustering semántico HNSW real requiere backfill_embeddings() sobre 381 posts existentes (primer pase agrupa solo por alcaldía)
 
 **Próximo paso recomendado**: arrancar S5 Wizard Onboarding (1.5 días nominal). Todos los blockers resueltos: RLS audited, topic_trends table ready, endpoints live, UI card mounted.
+
+### Sesión 2026-04-11 tarde-4 — D-DATA-01 Ruta C import CRECE legacy
+**Contexto:** el CEO aportó el zip `MC Tablas.zip` con 5 CSVs del CRECE Oracle APEX original. Aprobó Ruta C: importar 3 alcaldías piloto.
+
+**Tablas nuevas y datos importados:**
+- `unidades_territoriales` (5,552 rows, sin PII) — grano sección × colonia, con volatilidad, estrato, lista nominal, categoría P1..P5
+- `ciudadanos_legacy` (9,723 rows, RLS-scoped, PII sensible) — Cuauhtémoc 6,643 + Miguel Hidalgo 2,267 + Benito Juárez 813
+- `promotores_legacy` (45 rows) — super/mega/regular promotores de las 3 alcaldías piloto
+
+**Archivos nuevos:**
+- Migraciones: `c3d4e5f6a7b8` (unidades_territoriales) + `d4e5f6a7b8c9` (ciudadanos_legacy + promotores_legacy + RLS policies)
+- Modelos: `backend/app/models/unidad_territorial.py`, `backend/app/models/legacy.py`
+- Script: `backend/scripts/import_mc_original.py` (idempotente, gated por `CRECE_MC_RAW_DIR`)
+- `.gitignore`: `backend/data/raw/mc_original/` excluido del repo (PII)
+
+**Calidad de la data importada:**
+- 100% de ciudadanos linkeados a `unidad_territorial` via sección electoral
+- 99% con coordenadas GPS reales (9,632/9,723)
+- 100% de ciudadanos asignados a un promotor legacy
+- Top promotor: MCCDMXCUAUSUPERPROMOTORC3 con 903 ciudadanos
+
+**Hallazgos documentados en DECISIONS.md:**
+- D-DATA-01 (decisión Ruta C con alcance y trade-offs)
+- D-DATA-02 (compliance LFPDPPP pendiente — pgcrypto at-rest, audit log, right-to-delete)
+- D-DATA-03 (reconciliación legacy ↔ v2 pendiente)
+- D-DATA-04 (datos faltantes: solo 5% con email, 37% con phone)
+
+**Próximos pasos habilitados:**
+1. Voter scoring real sobre 9,723 ciudadanos con lat/lon
+2. Canvassing con unidades territoriales + volatilidad + estrato socioeconómico
+3. Trends detector puede filtrar por `unidad_territorial` (más fino que alcaldía)
+4. S5 wizard puede usar promotores reales en vez de usuarios sintéticos
 
 ### Sesión 2026-04-11 tarde — /sprint-review
 - Plan S4+S5 revisado, enriquecido con subdivisiones y criterios medibles (ver `PLAN-current.md` sección "Plan revisado 2026-04-11")

@@ -195,6 +195,71 @@ Dockerfile. Diferido para después del primer deploy del worker.
 **Precisión actual:** ~60% en el test suite (10/10 tests incluyen casos
 fáciles). Target MVP del plan era 60-70%; se cumple sin spaCy.
 
+## 2026-04-11 — D-DATA-01 Ruta C (import CRECE legacy)
+
+### D-DATA-01: Import CRECE Oracle APEX legacy — Ruta C (3 alcaldías piloto)
+**Decisión:** Importar el snapshot del CRECE Oracle APEX original al dev DB
+filtrado a las 3 alcaldías piloto del plan S4 (Cuauhtémoc, Benito Juárez,
+Miguel Hidalgo). master_catalogo completo (sin PII), ciudadanos +
+promotores solo piloto.
+
+**Razón:** Balance entre velocidad de ejecución y minimización de
+superficie PII. Ruta A (import full) expondría 63K ciudadanos sin
+compliance previo. Ruta B (compliance-first) toma ~45 min antes de
+cualquier valor. Ruta C da valor inmediato con PII focalizado y
+mantiene el trabajo de compliance como deuda explícita.
+
+**Alcance ejecutado:**
+- `unidades_territoriales`: 5,552 filas (16 alcaldías CDMX, sin PII)
+- `promotores_legacy`: 45 filas (3 alcaldías piloto)
+- `ciudadanos_legacy`: 9,723 filas (Cuauhtémoc 6,643 + MH 2,267 + BJ 813)
+- 99.9% mapeados a `unidad_territorial_id` via sección electoral
+- >96% con coordenadas GPS reales
+
+**Decisiones técnicas:**
+1. **Tablas paralelas `*_legacy`** en vez de forzar import sobre `ciudadanos`/`users` v2:
+   - v2 tiene enums NOT NULL (`edad_rango`, `genero`, `nivel_interes`)
+     que no caben con los free-text del Oracle APEX
+   - v2 `ciudadanos.seccion_id` FK a `secciones_electorales` (tabla vacía)
+   - v2 `users.hashed_password` NOT NULL — passwords Oracle son inútiles
+   - Preservación 1:1 del snapshot legacy facilita auditoría y roll-forward futuro
+2. **RLS estricta desde el día 1** en ambas tablas legacy — sin bypass NULL,
+   `org_id` NOT NULL default=3 (MC CDMX root)
+3. **Columna `raw_data JSONB`** en ciudadanos_legacy para campos no mapeados (reserva futura)
+4. **Idempotente via UPSERT** por `legacy_id` / `legacy_user_id`
+5. **Import gated por `CRECE_MC_RAW_DIR`** env var — el script falla con error
+   explícito si la variable no está seteada. CSVs en `backend/data/raw/mc_original/`
+   **gitignored**.
+
+**Hallazgos durante import:**
+- **BJ tiene data muy rala**: 813 ciudadanos vs 6,643 de Cuauhtémoc (8×).
+  Si se demuestra la UX sobre BJ, considerar añadir Venustiano Carranza
+  (10,835 ciudadanos) como alcaldía piloto adicional.
+- **CSV tiene corrimiento de columnas**: phones caen en columna EDAD.
+  Mitigado con `_parse_age()` que valida rango 0-120.
+- **MUNICIPIO texto libre** en el CSV, mucha duplicación de mayúsculas.
+  El mapeo canónico se hace via `SECCION → master_catalogo.ALCALDIA_2024`.
+
+**Deudas documentadas para futuro:**
+- **D-DATA-02**: Compliance LFPDPPP real — encriptación at-rest de PII
+  vía `pgcrypto` (extensión ya instalada), audit trail `data_access_log`,
+  scripts de "right to delete". Obligatorio antes de cualquier deploy
+  prod. Bloqueante para exponer estas tablas en el frontend.
+- **D-DATA-03**: Reconciliación ciudadanos_legacy ↔ v2 `ciudadanos`.
+  Propuesta: view materializada o job nocturno que copie rows
+  mapeables (con enums válidos) a la tabla v2. Mientras, usar solo
+  la tabla legacy para queries de voter scoring / canvassing.
+- **D-DATA-04**: Datos faltantes — el CSV no tiene password v2 usable,
+  email en 5% de ciudadanos, phone en 37%. Los promotores requieren
+  forced password reset cuando se wire con v2 `users`.
+
+**Valor inmediato desbloqueado:**
+- Voter scoring real sobre 9,723 ciudadanos con lat/lon
+- Canvassing geo con unidades territoriales, volatilidad y estrato socioeconómico
+- Integración trends detector → filtro por alcaldía + unidad territorial
+  (más fino que el literal-match S4.4a actual)
+- Promotores reales para el wizard S5 en vez de usuarios sintéticos
+
 ### D-S5-01: S5.3a retorna sync_status=pending inmediatamente
 **Decisión:** El endpoint transaccional `POST /dirigentes/onboard` crea User+Dirigente+
 SocialProfile y retorna 201 con `{..., sync_status: "pending", task_id: "..."}` sin

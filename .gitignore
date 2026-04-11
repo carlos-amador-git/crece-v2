@@ -108,3 +108,8 @@ backend/.local/
 
 # ── Frontend env with rotating Cloudflare tunnel URLs ────────
 frontend/.env.production
+
+# ── PII / LFPDPPP (Ruta C — D-DATA-01) ────────────────────────
+# Datos originales del CRECE Oracle APEX con PII de ~63K ciudadanos.
+# NUNCA commitear. Gated por env var CRECE_MC_RAW_DIR.
+backend/data/raw/mc_original/
