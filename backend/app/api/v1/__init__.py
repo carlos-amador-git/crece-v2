@@ -30,6 +30,7 @@ from app.api.v1.endpoints import (
     planes,
     programas,
     social,
+    trends,
     voter_scoring,
     webhooks_integration,
 )
@@ -65,3 +66,4 @@ api_router.include_router(api_keys.router, prefix="/api-keys", tags=["api-keys"]
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(osint.router, prefix="/osint", tags=["osint"])
 api_router.include_router(bot_detection.router, prefix="/bot-detection", tags=["bot-detection"])
+api_router.include_router(trends.router, prefix="/trends", tags=["trends"])
