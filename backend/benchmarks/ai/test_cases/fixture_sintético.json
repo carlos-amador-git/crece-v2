@@ -30,6 +30,5 @@
       {"nombre": "Sandra Cuevas", "partido": "PAN", "total_followers": 124000}
     ],
     "analysis_date": "2026-04-11T07:00:00+00:00"
-  },
-  "rendered_prompt": "PLACEHOLDER — usar --prompt para renderizar el template real"
+  }
 }

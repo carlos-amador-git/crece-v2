@@ -1,0 +1,66 @@
+{
+  "dirigente_id": 1,
+  "dirigente_nombre": "Alejandro Piña Medina",
+  "tipo_plan": "CONSOLIDACION",
+  "context": {
+    "dirigente": {
+      "nombre": "Alejandro Piña Medina",
+      "cargo": "Coordinador Comisión Operativa Estatal",
+      "partido": "MC",
+      "estado": "Ciudad de México",
+      "municipio": "CDMX"
+    },
+    "ipd": {
+      "score": 3.9,
+      "scale": "0-10 (10 = presencia digital óptima)",
+      "platform_scores": {
+        "twitter": 3.89,
+        "instagram": 4.93,
+        "facebook": 3.19
+      },
+      "platform_coverage": "38%",
+      "posting_frequency_per_day": 0.63,
+      "interpretation": "BAJO"
+    },
+    "social_profiles": [
+      {
+        "platform": "TWITTER",
+        "handle": "@Alejandro_Pinha",
+        "followers": 3674,
+        "posts_30d": 5,
+        "avg_engagement_30d": 0.0272,
+        "avg_sentiment_30d": -0.3449
+      },
+      {
+        "platform": "INSTAGRAM",
+        "handle": "@alejandro.pinha",
+        "followers": 3290,
+        "posts_30d": 13,
+        "avg_engagement_30d": 1.66,
+        "avg_sentiment_30d": 0.1648
+      },
+      {
+        "platform": "FACEBOOK",
+        "handle": "alejandropinamedina",
+        "followers": 1800,
+        "posts_30d": 1,
+        "avg_engagement_30d": 7.8889,
+        "avg_sentiment_30d": 0.3446
+      }
+    ],
+    "sentiment_30d": {
+      "POSITIVE": 8,
+      "NEGATIVE": 6,
+      "NEUTRAL": 5
+    },
+    "top_competitors": [
+      {
+        "nombre": "Martí Batres Guadarrama",
+        "partido": "MORENA",
+        "total_followers": 285000
+      }
+    ],
+    "analysis_date": "2026-04-11T14:26:04.732210+00:00"
+  },
+  "rendered_prompt": "Eres un estratega de comunicacion politica digital con 15 anos de experiencia\nen el contexto mexicano. Trabajas para Movimiento Ciudadano (MC). Tu analisis debe ser\ntan especifico y accionable que el equipo del dirigente pueda ejecutarlo manana.\n\nGenera un PLAN DE CONSOLIDACION a 90 dias.\n\nESTRUCTURA OBLIGATORIA:\n1. Diagnostico rapido del estado actual (1 parrafo)\n2. FASE 1 (Dias 1-30) — Fundacion: tabla de acciones con plataforma, KPI meta, frecuencia de posting especifica, responsable\n3. FASE 2 (Dias 31-60) — Crecimiento: misma estructura\n4. FASE 3 (Dias 61-90) — Consolidacion: misma estructura\n5. Tabla de KPIs SMART: metrica | actual | meta 30d | meta 60d | meta 90d\n6. Calendario editorial semanal tipo (lunes a domingo, por plataforma)\n7. Riesgos y mitigaciones (tabla)\n8. Presupuesto estimado si aplica\n\n## DATOS REALES DEL DIRIGENTE:\n\n{\n  \"dirigente\": {\n    \"nombre\": \"Alejandro Piña Medina\",\n    \"cargo\": \"Coordinador Comisión Operativa Estatal\",\n    \"partido\": \"MC\",\n    \"estado\": \"Ciudad de México\",\n    \"municipio\": \"CDMX\"\n  },\n  \"ipd\": {\n    \"score\": 3.9,\n    \"scale\": \"0-10 (10 = presencia digital óptima)\",\n    \"platform_scores\": {\n      \"twitter\": 3.89,\n      \"instagram\": 4.93,\n      \"facebook\": 3.19\n    },\n    \"platform_coverage\": \"38%\",\n    \"posting_frequency_per_day\": 0.63,\n    \"interpretation\": \"BAJO\"\n  },\n  \"social_profiles\": [\n    {\n      \"platform\": \"TWITTER\",\n      \"handle\": \"@Alejandro_Pinha\",\n      \"followers\": 3674,\n      \"posts_30d\": 5,\n      \"avg_engagement_30d\": 0.0272,\n      \"avg_sentiment_30d\": -0.3449\n    },\n    {\n      \"platform\": \"INSTAGRAM\",\n      \"handle\": \"@alejandro.pinha\",\n      \"followers\": 3290,\n      \"posts_30d\": 13,\n      \"avg_engagement_30d\": 1.66,\n      \"avg_sentiment_30d\": 0.1648\n    },\n    {\n      \"platform\": \"FACEBOOK\",\n      \"handle\": \"alejandropinamedina\",\n      \"followers\": 1800,\n      \"posts_30d\": 1,\n      \"avg_engagement_30d\": 7.8889,\n      \"avg_sentiment_30d\": 0.3446\n    }\n  ],\n  \"sentiment_30d\": {\n    \"POSITIVE\": 8,\n    \"NEGATIVE\": 6,\n    \"NEUTRAL\": 5\n  },\n  \"top_competitors\": [\n    {\n      \"nombre\": \"Martí Batres Guadarrama\",\n      \"partido\": \"MORENA\",\n      \"total_followers\": 285000\n    }\n  ],\n  \"analysis_date\": \"2026-04-11T14:26:04.732210+00:00\"\n}\n\n## CONTEXTO TERRITORIAL:\nEl dirigente opera en CDMX. Considera los temas que dominan la conversacion publica en esta zona (movilidad, seguridad, agua, servicios, empleo) al hacer recomendaciones de contenido. Las recomendaciones deben ser especificas para este territorio, no genericas.\n\n## REGLAS CRITICAS:\n1. Basa tu analisis PRINCIPALMENTE en los datos proporcionados. Si conoces informacion publica verificable sobre este dirigente (columnas en medios, apariciones publicas, trayectoria), puedes mencionarla como contexto adicional marcandola como \"Fuente: conocimiento publico\" para distinguirla de los datos medidos.\n2. Si faltan datos medidos (metricas, seguidores, engagement), indica que se necesitan. NO inventes metricas numericas.\n3. Responde en espanol mexicano.\n4. Usa formato Markdown con tablas, negritas, y estructura visual clara.\n5. Se hiper-especifico: numeros exactos, frecuencias concretas, formatos por plataforma.\n6. CADA dato debe ir acompanado de un JUICIO evaluativo (critico/bajo/aceptable/bueno/excepcional).\n7. Considera el contexto politico mexicano actual y las particularidades del territorio.\n8. PROHIBIDO: consejos genericos tipo manual. Cada recomendacion DEBE conectar con un dato real.\n9. PROHIBIDO: repetir los datos sin interpretarlos. Siempre agrega el \"¿y esto que significa?\".\n10. USA metaforas y frases memorables para los hallazgos clave. Este documento sera leido por el dirigente.\n11. Incluye presupuestos estimados cuando sea relevante (en MXN).\n"
+}
