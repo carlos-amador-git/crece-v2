@@ -18,6 +18,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 from app.core.security import hash_password
+from app.models.organizacion import Organizacion
 from app.models.user import User, Role
 from app.models.dirigente import Dirigente
 from app.models.social import SocialProfile, SocialPost, Platform, PostType, SentimentLabel
@@ -34,13 +35,27 @@ async def seed():
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with async_session() as session:
-        # ── Users ──────────────────────────────────────────────────
+        # ── Organización raíz (D-DX-01 fix) ────────────────────────
+        # El endpoint POST /api/v1/api-keys requiere current_user.org_id
+        # no NULL (modelo ApiKey.org_id es NOT NULL con FK a organizaciones).
+        # Sin este bootstrap, `make reset-db && make seed` dejaba users con
+        # org_id=NULL y cualquier creación de API key reventaba con 500.
+        org_mc = Organizacion(
+            nombre="Movimiento Ciudadano CDMX",
+            slug="mc-cdmx",
+            tipo="PARTIDO",
+        )
+        session.add(org_mc)
+        await session.flush()
+
+        # ── Users (todos scopados a la org raíz) ──────────────────
         admin = User(
             email="admin@consultoriamd.com",
             hashed_password=hash_password("crece2026!"),
             full_name="Marx Chávez",
             role=Role.ADMIN,
             is_active=True,
+            org_id=org_mc.id,
         )
         analyst = User(
             email="analista@consultoriamd.com",
@@ -48,6 +63,7 @@ async def seed():
             full_name="Ana García",
             role=Role.ANALYST,
             is_active=True,
+            org_id=org_mc.id,
         )
         field_op = User(
             email="campo@consultoriamd.com",
@@ -55,6 +71,7 @@ async def seed():
             full_name="Carlos López",
             role=Role.FIELD_OPERATOR,
             is_active=True,
+            org_id=org_mc.id,
         )
         session.add_all([admin, analyst, field_op])
         await session.flush()
