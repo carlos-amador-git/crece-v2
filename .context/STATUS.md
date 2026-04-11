@@ -1,8 +1,9 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-11 09:40 local
-**Sesión activa:** cerrando
-**Main HEAD:** ver `git log --oneline -1 main`
+**Último update:** 2026-04-11 12:15 local
+**Sesión activa:** /sprint-review S4+S5, S4.1 DONE
+**Main HEAD:** `4d61ec0` (PR #6 merged)
+**Branch activo:** `fix/sprint-4-trends` @ `9efc76d`
 
 ---
 
@@ -20,10 +21,18 @@
 
 ### Sprints pendientes para siguiente sesión
 
-| Sprint | Esfuerzo | Prioridad |
-|---|---|---|
-| **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) |
-| **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) |
+| Sprint | Esfuerzo | Prioridad | Avance |
+|---|---|---|---|
+| **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) | **S4.1 ✅** (1/11) |
+| **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) | 0/6 |
+
+### Sesión 2026-04-11 tarde — /sprint-review
+- Plan S4+S5 revisado, enriquecido con subdivisiones y criterios medibles (ver `PLAN-current.md` sección "Plan revisado 2026-04-11")
+- Cross-audit con Gemini CLI aplicó 4 ajustes: orden correcto S4.2 `a→c→b`, S4.8 debe ir tras S4.2b (no antes), S4.4 necesita pre-processor de normalización social, S5.3a debe retornar `sync_status=pending` inmediatamente
+- Ruta crítica actualizada: `S4.1 ✅ → S4.2a → S4.2c (RLS) → S4.2b (HNSW) → S4.8 audit → S4.5`
+- Resources asignados por tarea (agentes + skills + herramientas)
+- **S4.1 ejecutado y verificado**: 16 alcaldías INEGI CDMX en PostGIS, `ST_Contains` OK contra 3 puntos conocidos. Commit `9efc76d` en `fix/sprint-4-trends`.
+- **Próximo paso**: S4.2a — crear tabla `topic_trends` con FKs a `alcaldias_cdmx` y `org_id`, SIN la columna vector todavía.
 
 ### Merges del día (en orden cronológico)
 

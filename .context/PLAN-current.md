@@ -210,3 +210,174 @@ Post-walkthrough visual + inventario de código + cross-audit con Gemini. El cod
 **Este plan está en ESPERANDO APROBACIÓN.** No se ha tocado un solo archivo del proyecto. Esperando luz verde del CEO para arrancar por Sprint 1.
 
 **Próximo paso recomendado:** Arrancar Sprint 1 tarea S1.1 (correr NLP sobre 19 posts de `/social`) como primera acción concreta — es la más aislada, la de menor riesgo, y desbloquea todo lo demás.
+
+---
+
+# Plan revisado 2026-04-11 (/sprint-review)
+
+**Contexto:** S1, S2, S3 y cross-project n8n-mexico cerrados. Quedan **S4 y S5**. Esta sección enriquece las tareas abiertas con criterios medibles, subdivisiones concretas y orden de ejecución ajustado.
+
+## S4 — Motor de Trends MVP (revisado)
+
+### Estado real post-review
+- **S4.1 ✅ DONE** (commit `9efc76d` en `fix/sprint-4-trends`): 16 alcaldías INEGI en PostGIS, `ST_Contains` verificado contra 3 puntos conocidos.
+- S4.2–S4.11 pendientes.
+
+### Subdivisiones y criterios concretos
+
+| ID | Sub | Criterio medible | Dep | Paralelizable |
+|---|---|---|---|---|
+| **S4.1** | — | ✅ 16 rows + índice GIST + `ST_Contains` verdadero sobre Zócalo/Del Valle/Polanco | — | — |
+| **S4.2a** | Modelo `TopicTrend` con `org_id`, `alcaldia_id` FK, `time_bucket`, `post_count`, `growth_rate_24h`, `sample_posts JSONB` | migración aplica sin errores | S4.1 | — |
+| **S4.2b** | Columna `topic_embedding Vector(384)` + índice HNSW (`lists` o `m/ef_construction` según pgvector versión) | `\d topic_trends` muestra vector + idx hnsw | S4.2a | — |
+| **S4.2c** | Policy RLS sobre `topic_trends` scoping por `org_id` | `SET app.current_org_id=1; SELECT` no ve org=2 | S4.2a | — |
+| **S4.3a** | Schema YAML `seed_accounts_cdmx.yaml` con 3 alcaldías piloto (CUA/BJ/MH), campos: handle, platform, tipo (oficial/medio/funcionario), alcaldia_cvegeo | YAML lint valida contra pydantic `SeedAccount` | — | SÍ (paralelo a S4.2) |
+| **S4.3b** | 50 cuentas semilla por alcaldía piloto (150 totales) | `len(yaml)==150` + no duplicados por (handle,platform) | S4.3a | — |
+| **S4.3c** | Script `seed_trend_sources.py` idempotente que persiste en `social_profiles` con `is_seed=True` | 150 rows, reejecutable sin duplicar | S4.3b + S4.1 | — |
+| **S4.4a** | Reemplazar dicts in-memory de `location_inference.py` por query a `alcaldias_cdmx` via ST_Contains | test unitario: 5 coords conocidas resuelven correctamente | S4.1 | — |
+| **S4.4b** | Integrar spaCy `es_core_news_md` NER sobre `content` → extract GPE+LOC | 1 ejemplo real de post Piña con "Cuauhtémoc" retorna alcaldia_id correcto | S4.4a | — |
+| **S4.4c** | Fallback: bio de cuenta semilla si NER no matchea | test: post sin mención pero con bio "Miguel Hidalgo" → MH con confidence 0.5 | S4.4b | — |
+| **S4.5a** | Worker Celery `trends_detector` scaffold con schedule 1h | `celery beat` agenda la task, logs muestran ejecución | S4.2 + S4.8 | — |
+| **S4.5b** | Pipeline: cargar social_posts últimas 24h → inferir alcaldía → agrupar por embedding HNSW filtrado por `org_id` ANTES del knn | EXPLAIN ANALYZE muestra filter antes de Index Scan on hnsw | S4.5a | — |
+| **S4.5c** | Cálculo `growth_rate_24h` vs ventana anterior + persistencia en `topic_trends` | rows con growth_rate != 0 existen post-run | S4.5b | — |
+| **S4.6a** | Cola Celery dedicada `trends_labeling` con concurrency=2 en `celery_app.py` | `celery inspect active_queues` muestra la cola | S4.5a | SÍ (con S4.5) |
+| **S4.6b** | Task batch que toma N clusters y pide labels a Ollama con prompt estricto (1 line, <50 chars, castellano, sin emojis) | 5 clusters etiquetados en <2 min, 0 failures | S4.6a + S4.5c | — |
+| **S4.7a** | Servicio `news_ingest.py` — parser RSS agnóstico con httpx + feedparser | test sobre feed sintético devuelve N items | — | SÍ (día 3+) |
+| **S4.7b** | Lista de fuentes RSS: Presidencia MX, Gaceta CDMX, Congreso CDMX, IECM, El Universal, Milenio, Animal Político, Aristegui | 8 URLs probadas manualmente, HEAD 200 | — | SÍ |
+| **S4.7c** | Worker `news_tasks` cada 3h, persiste en `social_posts` con `platform='NEWS'` (decisión: NO crear tabla nueva, reusar schema existente) | rows con platform=NEWS existen post-run | S4.7a+b | SÍ |
+| **S4.8** | **AUDIT DE SEGURIDAD**: `embeddings.find_similar_posts()` filtra `org_id` ANTES del vector search en HNSW. Test con 2 orgs, query desde org=1 NO devuelve post de org=2 | test explícito `test_rls_vector_search.py` verde | — (puede ir el día 1, paralelo a S4.2) | SÍ |
+| **S4.9** | Endpoint `GET /trends/geo?alcaldia_id=X&period=24h\|7d\|30d` con response schema `TopicTrendResponse` | retorna 200 + JSON válido para alcaldía conocida; 404 para desconocida | S4.5c | — |
+| **S4.10** | Card "Trending ahora en [alcaldía]" en `/dashboard/social` (NO nueva página), reusa `Card`, `Badge`, `FilterSelect` | card visible con top 5 + filtro alcaldía cambia data | S4.9 | — |
+| **S4.11** | Test E2E worker sobre 19 posts reales de Piña → al menos 1 trend detectado con label humano | `pytest -k test_trends_over_real_posts` verde | S4.5c + S4.6b | — |
+
+### Ruta crítica S4 (tras la revisión)
+```
+S4.1 ✅ → S4.8 (audit RLS) → S4.2a/b/c (modelo) → S4.4a (catalog lookup) → S4.5a/b/c (worker)
+                                                                              ↓
+                                                       S4.3a/b/c (seeds) ─────┤
+                                                                              ↓
+                                                                           S4.6a/b (labels)
+                                                                              ↓
+                                                                           S4.9 → S4.10 → S4.11
+```
+Paralelo desde día 1: **S4.7 RSS ingest** y **S4.3 seed YAML** pueden arrancar sin dependencia.
+
+### Cambios vs plan original
+1. **S4.1 ejecutado hoy** con GeoJSON INEGI 2023 redistribuido (opción 1 confirmada por CEO), en vez de shapefile directo. Contenido idéntico: CVEGEO/CVE_ENT/CVE_MUN/NOMGEO preservados. Razón: evita dep nueva de geopandas/fiona (~200MB imagen Docker).
+2. **S4.2 dividido en 3** (modelo/pgvector/RLS) porque pgvector HNSW + policy RLS no son triviales y merecen commits independientes.
+3. **S4.4 dividido en 3** para separar "reemplazar stub in-memory por query DB" (fácil, hoy) de "agregar spaCy real" (medio) de "bio fallback" (fácil).
+4. **S4.8 movido al día 1** (era criterio de orden pero estaba implícito). Es el audit de seguridad más importante del sprint: si `find_similar_posts` no filtra `org_id` antes del HNSW, toda la feature sale inusable en multi-tenant.
+5. **S4.7 marcada paralelizable** para evitar bloqueo del día 3 en adelante.
+6. **S4.11 aclarado**: "19 posts reales" significa usar los posts ya scrapeados de Piña en dev DB, NO scrapear de nuevo.
+
+### Ajustes post cross-audit Gemini (2026-04-11)
+
+**G1 — Orden correcto de S4.2: `a → c → b`, no `a → b → c`.**
+Activar policies RLS **antes** de crear el índice HNSW evita ventanas de fuga durante la ingesta inicial. Secuencia corregida:
+1. S4.2a — CREATE TABLE `topic_trends` con columnas base + FKs
+2. S4.2c — CREATE POLICY RLS sobre `topic_trends` (scope `org_id`)
+3. S4.2b — ALTER TABLE ADD COLUMN `topic_embedding vector(384)` + CREATE INDEX HNSW
+   - Antes del índice: `SET maintenance_work_mem='512MB'` (HNSW es memory-intensive, el default 64MB hace thrashing con vectores de 384 dims)
+
+**G2 — S4.8 reposicionado: DESPUÉS de S4.2b, ANTES de S4.5.**
+No se puede auditar comportamiento de HNSW+RLS sin el índice creado. El EXPLAIN ANALYZE de `find_similar_posts` no tiene sentido si el planner no tiene el hnsw disponible. Nueva ruta crítica:
+```
+S4.1 ✅ → S4.2a → S4.2c (RLS) → S4.2b (HNSW) → S4.8 (audit) → S4.5 (worker)
+```
+
+**G3 — S4.4 necesita pre-processor de normalización social antes del NER.**
+spaCy `es_core_news_md` baja precisión drásticamente con texto social crudo. Nueva subtarea:
+- **S4.4a.5** — `normalize_social_text()`: strip emojis, convertir `@handles` a placeholder, expandir `#hashtags` a tokens separados, colapsar whitespace. Probar antes y después con un post real de Piña para medir delta.
+
+**G4 — S5.3a debe retornar `sync_status='pending'` inmediatamente.**
+El endpoint transaccional crea User+Dirigente+SocialProfile y retorna 201 con `{..., sync_status: "pending", task_id: "..."}` para que el wizard UI muestre el dirigente inmediatamente y el polling de S5.4 comience. Agregar columna `dirigentes.sync_status ENUM('pending','scraping','analyzing','ready','error')` en la migración de S5.3a.
+
+Todos los ajustes integrados en las tablas de subdivisiones arriba y en la ruta crítica.
+
+### Riesgos nuevos identificados
+- **R1**: `spaCy es_core_news_md` no está instalado en el contenedor. Download es ~50MB, aceptable. Alternativa: `es_core_news_sm` (~15MB) con precisión menor.
+- **R2**: pgvector HNSW requiere versión ≥0.5.0. Verificar con `SELECT extversion FROM pg_extension WHERE extname='vector'` antes de S4.2b.
+- **R3**: feedparser no está en `requirements.txt`. Agregar en S4.7a.
+
+## S5 — Wizard Onboarding Político (revisado)
+
+### Subdivisiones y criterios
+
+| ID | Sub | Criterio medible | Dep |
+|---|---|---|---|
+| **S5.1** | Ruta `/dashboard/sistema/onboarding` visible solo a `role=admin` | guard redirige a /dashboard si user.role != admin | S1.2 (verified) |
+| **S5.2a** | Step 1: Datos básicos (nombre, cargo, org, email login, password temporal) | validación Zod frontend + Pydantic backend | S5.1 |
+| **S5.2b** | Step 2: Handles por plataforma con validación en vivo (IG/X/FB/TikTok/YT) + preview OpenGraph | preview card renderiza cuando handle es válido | S5.2a |
+| **S5.2c** | Step 3: Confirmación + botón "Crear dirigente" | click dispara POST /dirigentes/onboard | S5.2b |
+| **S5.3a** | Endpoint `POST /dirigentes/onboard` que crea User + Dirigente + SocialProfile en 1 transacción | 409 si email existe, 201 + ids si OK | — |
+| **S5.3b** | Celery chain: `scrape_initial → compute_nlp → calculate_ipd` | `task_id` retornado, redis muestra chain activa | S5.3a |
+| **S5.4** | Endpoint `GET /dirigentes/{id}/onboarding-progress` retorna `{step, status, progress_pct}` | polling 2s muestra 5 estados: scraping/nlp/ipd/done/error | S5.3b |
+| **S5.5** | Auto-login como nuevo dirigente con token temporal al finalizar chain | redirect a `/dashboard` loggeado como el nuevo dirigente | S5.4 |
+| **S5.6** | E2E Playwright: crear "Test Político" con handles de fixture → espera progress → verifica dashboard | test verde, cleanup del user test al final | S5.5 |
+
+### Cambios vs plan original
+1. **S5.2 dividido en 3 pasos explícitos** (a/b/c) para mapear 1:1 con el UI Tabs.
+2. **S5.3 dividido en "endpoint transaccional" vs "celery chain"** para que el endpoint pueda testearse sin workers corriendo.
+3. **S5.4 aclarado**: el endpoint de progress DEBE existir aunque no haya chain — retorna estado inicial "scraping pending".
+
+## Orden de ejecución propuesto (7.5 días nominales)
+
+| Día | Mañana | Tarde |
+|---|---|---|
+| 1 | S4.1 ✅ + S4.8 audit RLS | S4.2a/b/c modelo + pgvector + policy |
+| 2 | S4.3a/b/c seeds YAML | S4.4a/b/c location_inference real |
+| 3 | S4.5a scaffold worker | S4.5b/c pipeline + growth_rate |
+| 4 | S4.6a/b labeling batch Ollama | S4.7a/b/c RSS ingest (paralelo) |
+| 5 | S4.9 endpoint /trends/geo | S4.10 UI card + S4.11 E2E real |
+| 6 | S5.1 + S5.2a/b/c wizard UI | S5.3a endpoint transaccional |
+| 7 | S5.3b celery chain + S5.4 progress | S5.5 auto-login + S5.6 E2E |
+| 7.5 | Buffer: tests green + commits | Reporte final |
+
+## Fase 3 — Asignación de recursos
+
+### Agentes primarios por tarea
+
+| Tarea | Agente(s) | Skill(s) cargado(s) | Herramientas |
+|---|---|---|---|
+| S4.1 ✅ | `/backend` + `/geo` + `/mexico` | `postgis`, `docker` | psql, shapely |
+| S4.2a (modelo) | `/backend` + `/database` | `postgis`, `fastapi` | alembic |
+| S4.2c (RLS) | `/security-engineer` + `/database` | `postgresql` Tier-1 | psql EXPLAIN |
+| S4.2b (HNSW) | `/database` + `/performance-engineer` | `pgvector` | psql, `SET maintenance_work_mem` |
+| S4.3 (seeds) | `/mexico` + `/backend` | — | yaml schema |
+| S4.4 (location) | `/backend` + `/geo` + `python-expert` | — | spaCy es_core_news_md |
+| S4.4a.5 (normalize) | `/backend` | — | regex, emoji lib |
+| S4.5 (worker) | `/backend` + `/devops-architect` | `docker` | Celery, redis-cli |
+| S4.6 (Ollama batch) | `/backend` | — | Ollama HTTP, Celery |
+| S4.7 (RSS) | `/backend` + `/mexico` | — | feedparser, httpx |
+| S4.8 (audit RLS) | `/security-reviewer` + `security-engineer` | `postgresql` | psql EXPLAIN ANALYZE |
+| S4.9 (endpoint) | `/backend` | `fastapi` | pytest |
+| S4.10 (UI card) | `/frontend` + `/tailwind` | `shadcn-ui`, `tailwindcss-v4` | Playwright MCP |
+| S4.11 (E2E trend real) | `/test-v2` + `/test-planning` | `playwright-testing` | pytest |
+| S5.1 (route) | `/frontend` + `/nextjs` | `nextjs-app-router` | — |
+| S5.2 (wizard UI) | `/ui-design` + `/frontend` | `shadcn-ui`, `react-ui-patterns` | shadcn MCP |
+| S5.3a (endpoint tx) | `/backend` | `fastapi` | alembic |
+| S5.3b (celery chain) | `/backend` + `/devops-architect` | `bullmq-specialist` adaptado | Celery |
+| S5.4 (progress) | `/backend` + `/frontend` | `react-ui-patterns` (polling) | — |
+| S5.5 (auto-login) | `/security-engineer` + `/backend` | `clerk-auth` patterns | JWT debug |
+| S5.6 (E2E Playwright) | `/test-v2` | `playwright-testing` | Playwright MCP |
+
+### Herramientas de verificación continua
+- **Playwright MCP** — screenshots + E2E para S4.10, S5.2, S5.6
+- **Chrome DevTools MCP** — network/console monitoring para validar S4.9 + S4.10 en runtime
+- **psql EXPLAIN ANALYZE** — obligatorio en S4.2b, S4.5b, S4.8
+- **pgvector stats** — medir build time del HNSW index (para informar decisiones futuras)
+- **Ollama latencia local** — medir tiempo por batch en S4.6b, presupuesto <2min/5clusters
+
+### Lo que NO se usa en este sprint
+- No hay nuevas APIs pagadas (se respeta regla D11)
+- No se tocan endpoints de la deuda D-SEC-03 (21 endpoints dual-auth) — diferido a PR dedicado
+- No se tocan migraciones drift (embedding, last_scraped_at, secciones constraint) — diferido
+
+## Criterios de aceptación globales (revisados)
+
+- [x] 148+ tests siguen en verde al final de cada sprint (pendiente a verificar tras cada commit)
+- [ ] RLS + HNSW filtrado correctamente (test explícito S4.8)
+- [ ] Trends de al menos 1 alcaldía en `/dashboard/social`
+- [ ] Admin crea político en <5 min end-to-end (S5.6)
+- [ ] Cero consola errors en las 16+ páginas del dashboard
+

@@ -102,6 +102,52 @@ manualmente la URL en Settings → Credentials cuando se detecte el break.
 Ambas requieren Carlos. Escalar junto con D-SEC-02 (permissions enforcement) y
 el pending de `seed.py` como paquete de "infra para producción real".
 
+## 2026-04-11 — Sprint 4 kickoff
+
+### D-S4-01: S4.1 usa GeoJSON INEGI redistribuido, no shapefile directo
+**Decisión:** El catálogo `alcaldias_cdmx` se cargó desde
+`github.com/PhantomInsights/mexico-geojson/2023/states/Ciudad de México.json`
+(cacheado en `backend/data/raw/`), que redistribuye el Marco Geoestadístico INEGI 2023
+como GeoJSON preservando CVEGEO/CVE_ENT/CVE_MUN/NOMGEO originales.
+**Razón (opción 1 del plan aprobada por CEO):** contenido idéntico al shapefile oficial
+INEGI, pero evita agregar `geopandas`+`fiona` a la imagen Docker (~200MB). Solo usa
+`shapely` (ya instalado) + `httpx` + stdlib json. Seed idempotente, offline después del
+primer fetch.
+**Verificación:** 16/16 alcaldías insertadas. `ST_Contains` probado contra Zócalo
+(Cuauhtémoc), Del Valle (Benito Juárez), Polanco (Miguel Hidalgo) — todos correctos.
+
+### D-S4-02: Orden S4.2 = `a → c → b` (modelo → RLS → HNSW)
+**Decisión:** Al crear `topic_trends`, se activa la policy RLS sobre `org_id` **antes**
+de crear el índice HNSW, no después.
+**Razón (cross-audit Gemini 2026-04-11):** RLS-first evita ventanas de fuga entre orgs
+durante ingesta inicial. Además, HNSW requiere `maintenance_work_mem` alto (≥512MB)
+para vectores de 384 dims — configurar antes del CREATE INDEX.
+**Trade-off:** Ninguno funcional. Solo cambia el orden de operaciones.
+
+### D-S4-03: S4.8 audit RLS va DESPUÉS de S4.2b, no en el día 1
+**Decisión:** El audit "find_similar_posts filtra org_id antes del HNSW knn" se ejecuta
+después de que el índice HNSW exista.
+**Razón (cross-audit Gemini):** no se puede auditar comportamiento del planner contra un
+índice que no existe. EXPLAIN ANALYZE requiere el plan real.
+**Reemplaza:** El orden del plan original que listaba S4.8 como dependencia blando de
+S4.5 sin aclarar timing.
+
+### D-S4-04: location_inference necesita normalize_social_text() antes del NER
+**Decisión:** Agregar un pre-processor `normalize_social_text(content)` que strippea
+emojis, convierte `@handles` a placeholder, expande `#hashtags` a tokens, colapsa
+whitespace. Se corre **antes** de pasar el texto a spaCy `es_core_news_md`.
+**Razón (cross-audit Gemini):** spaCy baja precisión drásticamente con texto social crudo.
+**Impacto:** S4.4 gana una subtarea (S4.4a.5) pero mantiene el target 60-70% precisión.
+
+### D-S5-01: S5.3a retorna sync_status=pending inmediatamente
+**Decisión:** El endpoint transaccional `POST /dirigentes/onboard` crea User+Dirigente+
+SocialProfile y retorna 201 con `{..., sync_status: "pending", task_id: "..."}` sin
+esperar al celery chain.
+**Razón (cross-audit Gemini):** permite al wizard UI mostrar el dirigente creado
+inmediatamente y comenzar el polling de `/onboarding-progress` sin bloquear la UI.
+**Impacto:** Migración de S5.3a agrega columna `dirigentes.sync_status ENUM(pending,
+scraping, analyzing, ready, error)`.
+
 ## 2026-04-03
 
 ### D1: Multi-tenant via RLS (no schema-per-tenant)
