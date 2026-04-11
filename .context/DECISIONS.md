@@ -1,5 +1,28 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-04-11
+
+### D-SPRINT3-01: Kanban sin drag-and-drop (usa botones)
+**Decisión:** Implementar el tablero Kanban con botones "→" y "Completar" en lugar de drag-and-drop real (`@dnd-kit` u otro).
+**Razón:** Agregar una dep nueva de frontend atrasa el scaffold y la UI funcional con botones ya cumple el criterio S3.7 del plan (movimiento entre 3 columnas + edición inline + captura de métrica). Drag-and-drop es UX nice-to-have, no requisito.
+**Revertible:** Sí. Si CEO quiere dnd real, instalar `@dnd-kit/core @dnd-kit/sortable` y envolver los `Card` de `kanban-board.tsx`. Cero cambios de backend.
+
+### D-SPRINT3-02: estructura_json como JSONB en planes_ia
+**Decisión:** Guardar el plan estructurado tanto como JSONB (`planes_ia.estructura_json`) **como** denormalizado en `plan_tareas`.
+**Razón:** JSONB permite recuperar el plan tal como lo generó el LLM (auditoría) sin tocar `plan_tareas` cada vez. `plan_tareas` es para queries rápidas y edición humana. Las dos fuentes divergen a propósito cuando el humano edita.
+**Trade-off:** Se pierde la garantía estricta de sincronización entre `estructura_json` y `plan_tareas`. Aceptable: `estructura_json` se trata como "original inmutable", `plan_tareas` como "estado vivo".
+
+### D-SPRINT3-03: Retry schema violation en plan_structured (max 2 retries)
+**Decisión:** Si el LLM devuelve JSON que no cumple `PlanEstructurado`, reintentar hasta 2 veces concatenando el error de validación al prompt.
+**Razón:** Gemma local tiende a olvidar constraints en outputs largos. Un retry con feedback explícito suele funcionar.
+**Límite duro:** 3 intentos totales. Al 4º, se lanza `RuntimeError`. Caller decide si fallback a `generate_plan()` (no estructurado) o avisar al usuario.
+
+### D-COORD-01: Multi-sesión requiere worktrees (reforzado por CEO 2026-04-11)
+**Decisión:** Multi-sesión concurrente sobre el mismo repo NO puede operar en el mismo `cwd`. Precondición dura.
+**Razón:** claude-peers-mcp es filesystem-shared. Git ops de un peer mueven HEAD para todos.
+**Aplicado:** Peer qmmine5b se movió a `../crece-v2-sprint1-deuda` rama `sprint1-deuda` a medio sprint. Yo me quedé en `main` sin git ops hasta su confirmación.
+**Regla viva en:** `~/.claude/CLAUDE.md` líneas 329-351.
+
 ## 2026-04-03
 
 ### D1: Multi-tenant via RLS (no schema-per-tenant)
