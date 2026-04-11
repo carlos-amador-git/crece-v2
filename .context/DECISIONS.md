@@ -23,6 +23,85 @@
 **Aplicado:** Peer qmmine5b se movió a `../crece-v2-sprint1-deuda` rama `sprint1-deuda` a medio sprint. Yo me quedé en `main` sin git ops hasta su confirmación.
 **Regla viva en:** `~/.claude/CLAUDE.md` líneas 329-351.
 
+## Deudas técnicas encontradas durante cross-review con peer n8n-mexico (2026-04-11)
+
+### D-SEC-03: 21 endpoints siguen JWT-only (no aceptan X-API-Key)
+**Hallazgo:** Durante el test end-to-end del paquete `@mdconsultoria-ti/n8n-nodes-crece`
+(peer n8n-mexico uta4m297), el node `Buscar Ciudadano` recibió 401 "Not authenticated"
+al hitar `/api/v1/ciudadanos/` con header `X-API-Key` válido.
+
+**Root cause:** solo 4 endpoints (`alerts_integration.py`, `campaigns_integration.py`,
+`content_factory_integration.py`, `crm_integration.py`) usan `get_current_user_or_api_key`.
+Los otros 22 usan `get_current_user` (JWT-only), históricamente nunca actualizados tras
+el sprint "Fase 2 Integration" (commit `a67032f`) que introdujo el dual-auth Depends.
+
+**Fix parcial aplicado (PR #5):** `ciudadanos.py` migrado a dual auth. Los otros 21 quedan
+como deuda: `canvassing.py`, `planes.py`, `dashboard.py`, `social.py`, `voter_scoring.py`,
+`benchmark.py`, `campanas.py`, `contenido.py`, `dirigentes.py`, `electoral.py`,
+`encuestas.py`, `eventos.py`, `geo.py`, `metricas_sociales.py`, `organizaciones.py`,
+`osint.py`, `participacion.py`, `programas.py`, `blindaje.py`, `bot_detection.py`,
+`webhooks_integration.py`.
+
+**Fix propuesto (recomendación del peer en ADR-011 de n8n-mexico):** middleware que
+inyecte `request.state.user` antes de la resolución de Depends. Single point of change
+en lugar de 22 swaps por endpoint. Cirugía más profunda pero mucho más robusta contra
+regresiones futuras.
+
+**Linkeado a:** ADR-011 n8n-mexico (autoridad para el impacto en workflows n8n).
+
+### D-DX-01: seed.py no bootstrea organización → /api-keys 500 en dev fresh
+**Hallazgo:** El seed del dev DB crea users con `org_id=NULL` y cero rows en la tabla
+`organizaciones`. El endpoint `POST /api/v1/api-keys` revienta con `NotNullViolationError`
+al intentar persistir `ApiKey.org_id = current_user.org_id = NULL`.
+
+**Reproducción:** `make reset-db && make seed && curl -X POST /api/v1/api-keys → 500`.
+
+**Fix en runtime (NO en código, solo al dev DB local) durante sesión:**
+```sql
+INSERT INTO organizaciones (nombre, slug, tipo) VALUES ('Movimiento Ciudadano CDMX', 'mc-cdmx', 'PARTIDO');
+UPDATE users SET org_id = 3 WHERE org_id IS NULL;
+```
+
+**Fix pendiente en código:** agregar a `backend/scripts/seed.py` la creación de una
+organización MC CDMX por default y asignar todos los users del seed a ella.
+
+### D-OBS-01: IntegrityError devuelve "Internal Server Error" plano en lugar de 409 JSON
+**Hallazgo:** Cuando el endpoint `/api-keys` falló con `NotNullViolationError` (D-DX-01),
+FastAPI devolvió un string literal `"Internal Server Error"` en el body en lugar del
+típico JSON `{"detail": "..."}`. Esto complicó el debugging del peer — no tenía
+stacktrace ni tipo de error estructurado.
+
+**Fix propuesto:** exception handler global en `backend/app/main.py`:
+```python
+@app.exception_handler(sqlalchemy.exc.IntegrityError)
+async def integrity_error_handler(request, exc):
+    return JSONResponse(
+        status_code=409,
+        content={"detail": "Database integrity violation", "error": str(exc.orig)},
+    )
+```
+
+Con esto los clientes HTTP (n8n, Postman, frontend) reciben un 409 JSON accionable
+en lugar de un 500 string plano.
+
+### D-INFRA-01: Tunnel Cloudflare quick efímero rompe credenciales n8n en cada reinicio
+**Hallazgo:** El dev backend está expuesto vía `cloudflared tunnel --url http://localhost:8002`
+que asigna un nombre aleatorio (`musicians-oregon-judge-angela.trycloudflare.com` hoy,
+otro nombre mañana). La credencial `CRECE account` en n8n prod tiene la URL Base
+hardcoded → cada reinicio del tunnel rompe todos los workflows del peer.
+
+**Workaround del peer:** documentado en su `.context/BLOCKERS.md` B-005 — rotar
+manualmente la URL en Settings → Credentials cuando se detecte el break.
+
+**Fix permanente (bloqueado por Carlos Amador, admin Coolify):**
+- **Opción A:** tunnel nombrado Cloudflare con cuenta + DNS CNAME propio (ej.
+  `api-crece-dev.mdconsultoria-ti.org`). ~15 min de setup.
+- **Opción B:** deploy del backend CRECE a Coolify con dominio estable
+  (`api-crece.mdconsultoria-ti.org`). Ruta oficial del plan original.
+
+Ambas requieren Carlos. Escalar junto con D-SEC-02 (permissions enforcement) y
+el pending de `seed.py` como paquete de "infra para producción real".
+
 ## 2026-04-03
 
 ### D1: Multi-tenant via RLS (no schema-per-tenant)
