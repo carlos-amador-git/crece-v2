@@ -1,5 +1,41 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-04-12
+
+### D-B-01: GeoJSON inline, no tile server MVT
+**Decisión:** El endpoint `/canvassing/geo` retorna GeoJSON FeatureCollection
+completo en el response, construido en PostgreSQL con `jsonb_build_object` +
+`jsonb_agg`. NO usa tile server MVT.
+**Razón:** 9,723 puntos producen ~2-3MB de GeoJSON. MapLibre maneja esto
+sin problema con clustering. Un tile server añade complejidad innecesaria
+para este volumen.
+**Umbral de migración (Gemini G2):** Si el import full (63K ciudadanos)
+se ejecuta, >15K registros justifica migrar a `ST_AsMVT` de PostGIS.
+**Trade-off:** Payload grande en mobile con conexión lenta. Aceptable
+para MVP interno; mitigar con limit=2000 default.
+
+### D-B-02: Endpoints geo en router canvassing existente
+**Decisión:** `/canvassing/geo` y `/canvassing/geo-stats` se agregaron al
+router `canvassing.py` existente, no en router nuevo.
+**Razón:** Conceptualmente es canvassing (segmentación de campo). Los
+endpoints legacy de rutas conviven sin conflicto de paths.
+
+### D-B-03: Privacidad de nombres en mapa
+**Decisión:** El GeoJSON retorna `nombre` como "J. Pérez" (inicial +
+apellido) en la propiedad corta. El `nombre_completo` se incluye para
+el popup al hacer click.
+**Razón:** El mapa es visible para analyst + admin. Minimizar exposure
+de datos en la vista general. PII (email, phone, clave electoral) nunca
+sale en el GeoJSON.
+
+### D-B-04: GeoJSON construido en PostgreSQL (Gemini G6)
+**Decisión:** La query de `/canvassing/geo` construye el GeoJSON completo
+en SQL usando `jsonb_build_object` y `jsonb_agg`. FastAPI solo actúa como
+proxy (JSONResponse directo del scalar).
+**Razón:** Evita deserializar 5,000 rows a Python, construir dicts, y
+re-serializar a JSON. La DB lo hace en un solo pase. Reduce TTFB y CPU
+del backend.
+
 ## 2026-04-11
 
 ### D-SPRINT3-01: Kanban sin drag-and-drop (usa botones)
