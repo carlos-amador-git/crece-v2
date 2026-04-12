@@ -55,7 +55,7 @@ class PlanIA(Base):
     # Relationships
     dirigente = relationship("Dirigente", back_populates="planes")
     generado_por = relationship("User")
-    tareas: Mapped[list["PlanTarea"]] = relationship(
+    tareas: Mapped[list[PlanTarea]] = relationship(
         "PlanTarea",
         back_populates="plan",
         cascade="all, delete-orphan",

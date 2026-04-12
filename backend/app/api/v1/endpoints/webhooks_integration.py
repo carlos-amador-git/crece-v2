@@ -212,10 +212,9 @@ async def _handle_propuesta(db: AsyncSession, data: dict) -> dict:
         return {"status": "skipped", "reason": "no ciudadano_id in payload"}
 
     try:
-        from app.models.crm_interaccion import CrmInteraccion
-
         # D.2 fix: resolve org_id from ciudadano
         from app.models.ciudadano import Ciudadano
+        from app.models.crm_interaccion import CrmInteraccion
 
         c_result = await db.execute(
             select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id)

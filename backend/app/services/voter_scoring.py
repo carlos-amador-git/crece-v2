@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ciudadano import (
@@ -202,7 +202,7 @@ class VoterScoringEngine:
         latest = model_files[0]
         try:
             with open(latest, "rb") as f:
-                self._model = pickle.load(f)  # noqa: S301
+                self._model = pickle.load(f)
             self._model_version = latest.stem.replace("voter_score_", "")
             logger.info("Loaded voter scoring model: %s", self._model_version)
         except Exception:

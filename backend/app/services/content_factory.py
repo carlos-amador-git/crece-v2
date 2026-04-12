@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.contenido import ContenidoGenerado, EstadoContenido, FormatoContenido
 from app.models.dirigente import Dirigente
-from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -270,22 +269,21 @@ class ContentFactory:
     ) -> AsyncGenerator[str, None]:
         """Stream content generation using local Ollama instance."""
         combined = f"{system_prompt}\n\n{user_prompt}"
-        async with httpx.AsyncClient(timeout=600.0) as client:
-            async with client.stream(
-                "POST",
-                f"{settings.OLLAMA_BASE_URL}/api/generate",
-                json={
-                    "model": settings.OLLAMA_MODEL,
-                    "prompt": combined,
-                    "stream": True,
-                },
-            ) as resp:
-                resp.raise_for_status()
-                async for line in resp.aiter_lines():
-                    if line:
-                        chunk = json.loads(line)
-                        if chunk.get("response"):
-                            yield chunk["response"]
+        async with httpx.AsyncClient(timeout=600.0) as client, client.stream(
+            "POST",
+            f"{settings.OLLAMA_BASE_URL}/api/generate",
+            json={
+                "model": settings.OLLAMA_MODEL,
+                "prompt": combined,
+                "stream": True,
+            },
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if line:
+                    chunk = json.loads(line)
+                    if chunk.get("response"):
+                        yield chunk["response"]
 
     @staticmethod
     async def generate(
@@ -540,7 +538,6 @@ class ContentFactory:
                 })
 
         # 2. Topics from negative sentiment (issues to address)
-        from app.models.social import SentimentAnalysis
 
         negative_result = await db.execute(
             select(SocialPost.content, SocialPost.sentiment_score)

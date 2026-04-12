@@ -6,11 +6,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 import httpx
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.social import PostType, SocialPost, SocialProfile
+from app.models.social import PostType, SocialProfile
 from app.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)

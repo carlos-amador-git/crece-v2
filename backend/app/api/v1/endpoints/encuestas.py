@@ -15,8 +15,8 @@ from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.encuesta import (
     EncuestaCreate,
-    EncuestaResumen,
     EncuestaResponse,
+    EncuestaResumen,
     EncuestaUpdate,
 )
 

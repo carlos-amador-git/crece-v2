@@ -4,8 +4,8 @@ from app.models.alcaldia import AlcaldiaCDMX
 from app.models.alerta_crisis import AlertaCrisis
 from app.models.api_key import ApiKey
 from app.models.benchmark import Competidor, CompetidorSocialProfile
-from app.models.campana import Campana, CampanaMensaje, CampanaSegmento
 from app.models.campaign_integration import Campaign
+from app.models.campana import Campana, CampanaMensaje, CampanaSegmento
 from app.models.canvassing import PuntoRuta, RutaCanvassing
 from app.models.ciudadano import Ciudadano
 from app.models.contenido import ContenidoGenerado
@@ -35,8 +35,8 @@ __all__ = [
     "AlertaCompliance",
     "AlertaCrisis",
     "ApiKey",
-    "Campana",
     "Campaign",
+    "Campana",
     "CampanaMensaje",
     "CampanaSegmento",
     "Ciudadano",
@@ -56,10 +56,10 @@ __all__ = [
     "MetricaSocial",
     "Organizacion",
     "PlanIA",
-    "PromotorLegacy",
-    "PuntoRuta",
     "ProgramaBeneficiario",
     "ProgramaSocial",
+    "PromotorLegacy",
+    "PuntoRuta",
     "RutaCanvassing",
     "SeccionElectoral",
     "SeguimientoSolicitud",

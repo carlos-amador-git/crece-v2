@@ -61,7 +61,7 @@ class _ModelRegistry:
     # -- helpers -------------------------------------------------------------
 
     @staticmethod
-    def _safe_import_pipeline():  # noqa: ANN205
+    def _safe_import_pipeline():
         """Import ``transformers.pipeline`` with a clear error message."""
         try:
             from transformers import pipeline  # type: ignore[import-untyped]

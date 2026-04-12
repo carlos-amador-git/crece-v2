@@ -182,7 +182,7 @@ class ParticipacionService:
         org_id: int | None = None,
     ) -> ParticipacionDashboardStats:
         """Aggregate dashboard statistics for solicitudes ciudadanas."""
-        base_filter = True  # noqa: E712 — SQLAlchemy literal
+        base_filter = True
         if org_id is not None:
             base_filter = SolicitudCiudadana.org_id == org_id
 

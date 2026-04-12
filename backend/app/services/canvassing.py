@@ -113,29 +113,29 @@ class CanvassingService:
         ordered = self._nearest_neighbor_sort(candidates)
 
         # ── Step 3: Build geometry and calculate distance via PostGIS ──
-        # Collect ordered point WKTs for ST_MakeLine
-        point_wkts = []
-        for row in ordered:
-            point_wkts.append(f"'{row.ubicacion}'::geometry")
+        # E.3 — Use parameterized query instead of f-string interpolation
+        # to prevent SQL injection via geometry WKB values.
+        ordered_ids = [row.id for row in ordered]
 
-        makeline_expr = f"ST_MakeLine(ARRAY[{', '.join(point_wkts)}])"
-
-        distance_sql = text(
-            f"SELECT ST_Length({makeline_expr}::geography) / 1000.0 AS distance_km"
-        )
-        dist_result = await db.execute(distance_sql)
-        distance_km = dist_result.scalar_one()
+        geom_sql = text("""
+            WITH ordered_pts AS (
+                SELECT c.ubicacion, t.ordinality
+                FROM unnest(:ids::int[]) WITH ORDINALITY AS t(cid, ordinality)
+                JOIN ciudadanos c ON c.id = t.cid
+            )
+            SELECT
+                ST_SetSRID(ST_MakeLine(array_agg(ubicacion ORDER BY ordinality)), 4326) AS geom,
+                ST_Length(ST_MakeLine(array_agg(ubicacion ORDER BY ordinality))::geography) / 1000.0 AS distance_km
+            FROM ordered_pts
+        """)
+        geom_result = await db.execute(geom_sql, {"ids": ordered_ids})
+        geom_row = geom_result.one()
+        route_geom = geom_row.geom
+        distance_km = float(geom_row.distance_km)
 
         # ── Step 4: Estimate time ──
         walking_time_min = (distance_km / _WALKING_SPEED_KMH) * 60
         total_time_min = int(len(ordered) * _MINUTES_PER_STOP + walking_time_min)
-
-        # ── Step 5: Create route geometry ──
-        geom_sql = text(
-            f"SELECT ST_SetSRID({makeline_expr}, 4326) AS geom"
-        )
-        geom_result = await db.execute(geom_sql)
-        route_geom = geom_result.scalar_one()
 
         # ── Step 6: Persist RutaCanvassing ──
         ruta = RutaCanvassing(

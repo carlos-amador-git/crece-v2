@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from geoalchemy2.functions import ST_AsGeoJSON, ST_AsMVT, ST_AsMVTGeom, ST_TileEnvelope
-from sqlalchemy import func, select, text
+from geoalchemy2.functions import ST_AsGeoJSON
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user
 from app.models.electoral import IntencionVoto, SeccionElectoral
 from app.models.user import User
-from app.schemas.common import PaginatedResponse
 from app.schemas.electoral import (
     IntencionVotoCreate,
     IntencionVotoResponse,

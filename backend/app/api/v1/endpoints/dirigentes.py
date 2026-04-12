@@ -9,9 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user, hash_password
 from app.models.dirigente import Dirigente, DirigenteSyncStatus
-from app.models.social import Platform, SentimentLabel, SocialPost, SocialProfile
+from app.models.social import Platform, SocialPost, SocialProfile
 from app.models.user import User
-from app.schemas.common import PaginatedResponse
 from app.schemas.dirigente import (
     DiagnosticoResponse,
     DirigenteCreate,

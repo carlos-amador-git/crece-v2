@@ -11,7 +11,7 @@ from app.models.plan_ia import EstadoTarea, TipoPlan
 class PlanGenerateRequest(BaseModel):
     dirigente_id: int
     tipo: TipoPlan
-    contexto_adicional: str | None = None
+    contexto_adicional: str | None = Field(None, max_length=2000)
     estructurado: bool = False  # Sprint 3: si True, genera PlanEstructurado JSON
 
 

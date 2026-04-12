@@ -88,52 +88,27 @@ async def decrypt_value(db: AsyncSession, ciphertext: bytes) -> str | None:
 async def backfill_ciudadano_legacy(
     db: AsyncSession, batch_size: int = 500
 ) -> dict[str, int]:
-    """Backfill all ciudadanos_legacy rows that still have NULL in _enc columns.
+    """Backfill ciudadanos_legacy _enc columns from clear-text columns.
 
-    Iterates in batches, encrypts the clear values inside the same UPDATE
-    statement via a subquery. Idempotent: only touches rows where the
-    _enc column is NULL AND the clear column is not NULL.
+    NOTE: As of migration b2b3b4b5b6b7 (D-DATA-02c), the clear-text PII
+    columns (clave_electoral, email, phone_01, phone_02, whatsapp,
+    fecha_nacimiento) have been DROPPED from the table. All data now lives
+    exclusively in the _enc columns. This function is kept for backward
+    compatibility but returns zeros for all fields since there is nothing
+    left to backfill.
     """
-    stats: dict[str, int] = {}
-    for clear_col, enc_col in (
-        ("clave_electoral", "clave_electoral_enc"),
-        ("email", "email_enc"),
-        ("phone_01", "phone_01_enc"),
-        ("phone_02", "phone_02_enc"),
-        ("whatsapp", "whatsapp_enc"),
-    ):
-        result = await db.execute(
-            text(
-                f"""
-                UPDATE ciudadanos_legacy
-                SET {enc_col} = pgp_sym_encrypt({clear_col}, :key)
-                WHERE {enc_col} IS NULL
-                  AND {clear_col} IS NOT NULL
-                  AND {clear_col} != ''
-                """
-            ),
-            {"key": settings.PII_ENCRYPTION_KEY},
-        )
-        stats[clear_col] = result.rowcount or 0
-
-    # fecha_nacimiento: cast to text first
-    result = await db.execute(
-        text(
-            """
-            UPDATE ciudadanos_legacy
-            SET fecha_nacimiento_enc = pgp_sym_encrypt(
-                fecha_nacimiento::text, :key
-            )
-            WHERE fecha_nacimiento_enc IS NULL
-              AND fecha_nacimiento IS NOT NULL
-            """
-        ),
-        {"key": settings.PII_ENCRYPTION_KEY},
+    logger.info(
+        "backfill_ciudadano_legacy: clear-text columns were dropped "
+        "(migration b2b3b4b5b6b7). Nothing to backfill."
     )
-    stats["fecha_nacimiento"] = result.rowcount or 0
-
-    await db.commit()
-    return stats
+    return {
+        "clave_electoral": 0,
+        "email": 0,
+        "phone_01": 0,
+        "phone_02": 0,
+        "whatsapp": 0,
+        "fecha_nacimiento": 0,
+    }
 
 
 async def read_pii_fields(

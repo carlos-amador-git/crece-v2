@@ -19,7 +19,6 @@ from app.models.user import User
 from app.schemas.campana import (
     CampanaAnalytics,
     CampanaCreate,
-    CampanaMensajeResponse,
     CampanaPreviewResponse,
     CampanaResponse,
     CampanaSegmentoCreate,

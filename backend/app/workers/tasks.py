@@ -51,7 +51,7 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
 
         session = _get_sync_session()
         try:
-            from app.models.social import SentimentAnalysis, SocialPost, SocialProfile
+            from app.models.social import SentimentAnalysis, SocialPost
 
             post = session.get(SocialPost, post_id)
             if post is None:
@@ -239,10 +239,9 @@ def detect_trends(self, org_id: int | None = None, lookback_hours: int = 24) -> 
     semántico por embedding se habilita cuando el backfill de embeddings
     sobre los 381 posts de dev DB se corre (backfill_embeddings()).
     """
-    from sqlalchemy import select, text
+    from sqlalchemy import text
 
     from app.models.topic_trend import TopicTrend
-    from app.models.alcaldia import AlcaldiaCDMX
 
     logger.info("detect_trends starting (org_id=%s)", org_id)
     session = _get_sync_session()
@@ -340,9 +339,8 @@ def label_trend_cluster(self, trend_id: int) -> dict:  # type: ignore[no-untyped
     al runtime Ollama local/remoto. Prompt estricto: 1 línea, <50 chars,
     castellano, sin emojis.
     """
-    from sqlalchemy import text as sql_text
-
     import httpx
+    from sqlalchemy import text as sql_text
 
     from app.core.config import settings
 
@@ -426,7 +424,8 @@ def onboard_dirigente_chain(self, dirigente_id: int) -> dict:  # type: ignore[no
     el progreso se expone via `dirigentes.sync_status`. Si algún paso
     falla, se setea status='error' + sync_error.
     """
-    from datetime import UTC, datetime as _dt
+    from datetime import UTC
+    from datetime import datetime as _dt
 
     from sqlalchemy import text as sql_text
 

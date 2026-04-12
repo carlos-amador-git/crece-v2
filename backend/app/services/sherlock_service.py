@@ -125,7 +125,7 @@ async def investigate_username(
                 process.communicate(),
                 timeout=timeout,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Kill the zombie process before raising
             try:
                 process.kill()

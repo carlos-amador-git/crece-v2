@@ -193,7 +193,7 @@ class TikTokScraper(BaseScraper):
             return asyncio.run(
                 asyncio.wait_for(_fetch(), timeout=_TIKTOKAPI_TIMEOUT)
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("TikTokApi timed out for @%s", handle)
             return []
         except RuntimeError:

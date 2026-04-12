@@ -62,7 +62,7 @@ def _get_sync_session() -> Session:
 def _sleep_with_jitter(attempt: int) -> None:
     """Exponential backoff with full jitter (AWS-style)."""
     ceiling = min(_BACKOFF_BASE**attempt, _BACKOFF_MAX)
-    sleep_time = random.uniform(0, ceiling)  # noqa: S311
+    sleep_time = random.uniform(0, ceiling)
     logger.debug("Backoff attempt %d — sleeping %.1fs", attempt, sleep_time)
     time.sleep(sleep_time)
 

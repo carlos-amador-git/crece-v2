@@ -6,10 +6,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.core.security import (
     Role,
     RoleChecker,
@@ -25,7 +26,9 @@ router = APIRouter()
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Token:
@@ -93,7 +96,9 @@ class ForgotPasswordResponse(BaseModel):
 
 
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
+@limiter.limit("3/minute")
 async def forgot_password(
+    request: Request,
     payload: ForgotPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ForgotPasswordResponse:
@@ -134,6 +139,7 @@ class ImpersonateResponse(BaseModel):
     response_model=ImpersonateResponse,
     dependencies=[Depends(RoleChecker([Role.ADMIN]))],
 )
+@limiter.limit("3/minute")
 async def impersonate_user(
     user_id: int,
     request: Request,

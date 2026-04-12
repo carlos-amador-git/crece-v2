@@ -22,7 +22,7 @@ class Platform(str, enum.Enum):
     NEWS = "NEWS"
 
     @classmethod
-    def from_url(cls, url: str) -> "Platform | None":
+    def from_url(cls, url: str) -> Platform | None:
         """Detect the platform of a given URL.
 
         Returns the matching Platform or None if no known pattern matches.
@@ -38,7 +38,7 @@ class Platform(str, enum.Enum):
         if u.startswith("www."):
             u = u[4:]
 
-        host_map: dict[str, "Platform"] = {
+        host_map: dict[str, Platform] = {
             "twitter.com": cls.TWITTER,
             "x.com": cls.TWITTER,
             "mobile.twitter.com": cls.TWITTER,

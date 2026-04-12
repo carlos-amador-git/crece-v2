@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -98,6 +98,22 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+    @model_validator(mode="after")
+    def _guard_production_secrets(self) -> Settings:
+        """E.5 — Refuse to start in production with default secrets."""
+        if self.APP_ENV == "production":
+            _defaults = {
+                "JWT_SECRET": "CHANGE-ME-in-production",
+                "PII_ENCRYPTION_KEY": "CHANGE-ME-pii-dev-key-min-32-chars",
+            }
+            for field_name, default_val in _defaults.items():
+                if getattr(self, field_name) == default_val:
+                    raise ValueError(
+                        f"{field_name} still has its default value. "
+                        f"Set a real secret before running in production."
+                    )
+        return self
 
     @property
     def is_production(self) -> bool:

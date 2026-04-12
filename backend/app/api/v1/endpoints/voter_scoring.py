@@ -14,7 +14,7 @@ from app.models.ciudadano import Ciudadano
 from app.models.encuesta import Encuesta
 from app.models.evento import EventoAsistente
 from app.models.user import User
-from app.models.voter_score import SegmentoVotante, VoterScore
+from app.models.voter_score import VoterScore
 from app.schemas.voter_score import (
     SeccionScoreSummary,
     SegmentDistribution,

@@ -58,7 +58,7 @@ async def ensure_embedding_column(db: AsyncSession) -> None:
         ADD COLUMN IF NOT EXISTS embedding vector({_EMBEDDING_DIM})
     """))
     # Create HNSW index for fast similarity search
-    await db.execute(text(f"""
+    await db.execute(text("""
         CREATE INDEX IF NOT EXISTS ix_social_posts_embedding
         ON social_posts
         USING hnsw (embedding vector_cosine_ops)

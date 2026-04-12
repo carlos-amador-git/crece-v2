@@ -79,7 +79,9 @@ class NLPAnalyzer:
             logger.warning("Failed to load pysentimiento models: %s", e)
 
         try:
-            from sentiment_analysis_spanish import sentiment_analysis  # type: ignore[import-untyped]
+            from sentiment_analysis_spanish import (
+                sentiment_analysis,  # type: ignore[import-untyped]
+            )
 
             self._sentiment_spanish = sentiment_analysis.SentimentAnalysisSpanish()
             logger.info("sentiment-analysis-spanish model loaded successfully")
