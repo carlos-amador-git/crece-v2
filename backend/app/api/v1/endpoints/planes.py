@@ -43,9 +43,7 @@ async def generar_plan(
     result = await db.execute(select(Dirigente).where(Dirigente.id == payload.dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
 
     if payload.estructurado:
         plan = await generate_structured_plan(
@@ -79,9 +77,7 @@ async def generar_plan_stream(
     result = await db.execute(select(Dirigente).where(Dirigente.id == payload.dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
 
     return EventSourceResponse(
         generate_plan_stream(
@@ -292,9 +288,7 @@ async def get_progreso(
     _current_user: Annotated[User, Depends(get_current_user)],
 ) -> PlanProgresoResponse:
     await _get_plan_or_404(db, plan_id)
-    result = await db.execute(
-        select(PlanTarea).where(PlanTarea.plan_id == plan_id)
-    )
+    result = await db.execute(select(PlanTarea).where(PlanTarea.plan_id == plan_id))
     tareas = list(result.scalars().all())
 
     counts = {EstadoTarea.TODO: 0, EstadoTarea.IN_PROGRESS: 0, EstadoTarea.DONE: 0}

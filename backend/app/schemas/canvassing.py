@@ -24,7 +24,9 @@ class OptimizeRequest(BaseModel):
     fecha: date
     ciudadano_ids: list[int] | None = Field(
         default=None,
-        description="Specific ciudadano IDs to include. If omitted, uses voter score to prioritize.",
+        description=(
+            "Specific ciudadano IDs to include. If omitted, uses voter score to prioritize."
+        ),
     )
     max_puntos: int = Field(default=20, ge=1, le=100)
     priorizar_score: bool = Field(

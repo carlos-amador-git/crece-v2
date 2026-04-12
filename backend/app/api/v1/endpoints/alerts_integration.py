@@ -71,9 +71,7 @@ async def update_alert_status(
     )
     alerta = result.scalar_one_or_none()
     if alerta is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
 
     alerta.estado = payload.estado
     await db.flush()

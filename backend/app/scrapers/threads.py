@@ -52,7 +52,9 @@ def _extract_meta_content(html: str, property_name: str) -> str | None:
     if match:
         return match.group(1)
     # Try reversed attribute order: content before property.
-    pattern_alt = rf'<meta\s+[^>]*content=["\']([^"\']*)["\'][^>]*property=["\']og:{property_name}["\']'
+    pattern_alt = (
+        rf'<meta\s+[^>]*content=["\']([^"\']*)["\'][^>]*property=["\']og:{property_name}["\']'
+    )
     match_alt = re.search(pattern_alt, html, re.IGNORECASE)
     if match_alt:
         return match_alt.group(1)
@@ -146,8 +148,7 @@ class ThreadsScraper(BaseScraper):
         becomes available.
         """
         logger.info(
-            "Threads fetch_raw called for %s — no public API available, "
-            "returning empty result set",
+            "Threads fetch_raw called for %s — no public API available, returning empty result set",
             handle,
         )
         return []

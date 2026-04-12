@@ -66,26 +66,24 @@ async def sherlock_investigate(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
-        )
+        ) from exc
     except SherlockNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Sherlock tool is not installed on the server",
-        )
+        ) from None
     except SherlockTimeoutError:
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail="Sherlock investigation timed out. Try again later.",
-        )
+        ) from None
     except RuntimeError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Sherlock execution failed: {exc}",
-        )
+        ) from exc
 
-    profiles = [
-        FoundProfile(platform=platform, url=url) for platform, url in results.items()
-    ]
+    profiles = [FoundProfile(platform=platform, url=url) for platform, url in results.items()]
 
     return SherlockResponse(
         username=payload.username,

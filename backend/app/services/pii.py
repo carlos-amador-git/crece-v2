@@ -85,9 +85,7 @@ async def decrypt_value(db: AsyncSession, ciphertext: bytes) -> str | None:
         return None
 
 
-async def backfill_ciudadano_legacy(
-    db: AsyncSession, batch_size: int = 500
-) -> dict[str, int]:
+async def backfill_ciudadano_legacy(db: AsyncSession, batch_size: int = 500) -> dict[str, int]:
     """Backfill ciudadanos_legacy _enc columns from clear-text columns.
 
     NOTE: As of migration b2b3b4b5b6b7 (D-DATA-02c), the clear-text PII
@@ -129,13 +127,9 @@ async def read_pii_fields(
     if not enc_cols:
         return {}
 
-    select_parts = ", ".join(
-        f"pgp_sym_decrypt(CAST({c} AS bytea), :key) AS {c}" for c in enc_cols
-    )
+    select_parts = ", ".join(f"pgp_sym_decrypt(CAST({c} AS bytea), :key) AS {c}" for c in enc_cols)
     result = await db.execute(
-        text(
-            f"SELECT {select_parts} FROM ciudadanos_legacy WHERE id = :id"
-        ),
+        text(f"SELECT {select_parts} FROM ciudadanos_legacy WHERE id = :id"),
         {"id": ciudadano_id, "key": settings.PII_ENCRYPTION_KEY},
     )
     row = result.first()
@@ -218,10 +212,7 @@ async def backfill_hmac_indexes(db: AsyncSession) -> dict[str, int]:
                 if row.val:
                     digest = compute_hmac(row.val)
                     await db.execute(
-                        text(
-                            f"UPDATE ciudadanos_legacy "
-                            f"SET {hmac_col} = :hmac WHERE id = :id"
-                        ),
+                        text(f"UPDATE ciudadanos_legacy SET {hmac_col} = :hmac WHERE id = :id"),
                         {"hmac": digest, "id": row.id},
                     )
                     stats[field] += 1

@@ -69,9 +69,7 @@ _COLONIA_TO_ALCALDIA: dict[str, str] = {
 
 
 def _strip_accents(s: str) -> str:
-    return "".join(
-        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
-    )
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
 
 
 def normalize_social_text(content: str) -> str:
@@ -122,6 +120,7 @@ def _get_spacy_nlp():
     _spacy_load_attempted = True
     try:
         import spacy
+
         # Try models in order of preference
         for model_name in ("es_core_news_md", "es_core_news_sm", "es_core_news_lg"):
             try:
@@ -140,9 +139,7 @@ def _get_spacy_nlp():
     return None
 
 
-async def _resolve_by_spacy_ner(
-    db: AsyncSession, normalized_text: str
-) -> tuple[int, str] | None:
+async def _resolve_by_spacy_ner(db: AsyncSession, normalized_text: str) -> tuple[int, str] | None:
     """Extract GPE/LOC entities via spaCy and match against alcaldias_cdmx."""
     nlp = _get_spacy_nlp()
     if nlp is None:
@@ -174,9 +171,7 @@ async def _resolve_by_spacy_ner(
     return None
 
 
-async def _resolve_by_point(
-    db: AsyncSession, lat: float, lon: float
-) -> tuple[int, str] | None:
+async def _resolve_by_point(db: AsyncSession, lat: float, lon: float) -> tuple[int, str] | None:
     result = await db.execute(
         text(
             "SELECT id, nombre FROM alcaldias_cdmx "
@@ -189,9 +184,7 @@ async def _resolve_by_point(
     return (row[0], row[1]) if row else None
 
 
-async def _resolve_by_name(
-    db: AsyncSession, normalized_text: str
-) -> tuple[int, str] | None:
+async def _resolve_by_name(db: AsyncSession, normalized_text: str) -> tuple[int, str] | None:
     """Tries to match an alcaldía name inside `normalized_text`.
 
     Uses accent-insensitive matching: we fold accents on both sides.
@@ -207,9 +200,7 @@ async def _resolve_by_name(
     return None
 
 
-async def _resolve_by_colonia(
-    db: AsyncSession, normalized_text: str
-) -> tuple[int, str] | None:
+async def _resolve_by_colonia(db: AsyncSession, normalized_text: str) -> tuple[int, str] | None:
     folded = _strip_accents(normalized_text.lower())
     # Longest colonia name first to avoid partial shadowing
     for colonia in sorted(_COLONIA_TO_ALCALDIA.keys(), key=len, reverse=True):

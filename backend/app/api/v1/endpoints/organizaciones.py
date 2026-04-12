@@ -47,11 +47,7 @@ async def list_organizaciones(
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()
 
-    query = (
-        query.order_by(Organizacion.nombre)
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    )
+    query = query.order_by(Organizacion.nombre).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     items = list(result.scalars().all())
 
@@ -71,14 +67,10 @@ async def get_organizacion(
     _current_user: Annotated[User, Depends(get_current_user)],
 ) -> Organizacion:
     """Get a single organizacion by ID."""
-    result = await db.execute(
-        select(Organizacion).where(Organizacion.id == organizacion_id)
-    )
+    result = await db.execute(select(Organizacion).where(Organizacion.id == organizacion_id))
     org = result.scalar_one_or_none()
     if org is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Organizacion not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizacion not found")
     return org
 
 
@@ -111,14 +103,10 @@ async def update_organizacion(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Organizacion:
     """Update an organizacion. Admin only."""
-    result = await db.execute(
-        select(Organizacion).where(Organizacion.id == organizacion_id)
-    )
+    result = await db.execute(select(Organizacion).where(Organizacion.id == organizacion_id))
     org = result.scalar_one_or_none()
     if org is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Organizacion not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizacion not found")
 
     update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -139,12 +127,8 @@ async def delete_organizacion(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Delete an organizacion. Admin only."""
-    result = await db.execute(
-        select(Organizacion).where(Organizacion.id == organizacion_id)
-    )
+    result = await db.execute(select(Organizacion).where(Organizacion.id == organizacion_id))
     org = result.scalar_one_or_none()
     if org is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Organizacion not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizacion not found")
     await db.delete(org)

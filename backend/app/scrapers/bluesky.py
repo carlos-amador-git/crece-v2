@@ -9,6 +9,7 @@ is ready for when Movimiento Ciudadano or dirigentes open accounts.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from datetime import UTC, datetime
 from typing import Any
@@ -73,10 +74,8 @@ class BlueskyScraper(BaseScraper):
         created = record.get("createdAt", "")
         published_at = datetime.now(UTC)
         if created:
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 published_at = datetime.fromisoformat(created.replace("Z", "+00:00"))
-            except (ValueError, TypeError):
-                pass
 
         likes = raw_data.get("likeCount", 0)
         reposts = raw_data.get("repostCount", 0)
@@ -135,13 +134,18 @@ class BlueskyScraper(BaseScraper):
         try:
             profile = session.get(SocialProfile, profile_id)
             if profile is None:
-                return {"new_posts": 0, "updated_profile": False, "errors": [f"Profile {profile_id} not found"]}
+                return {
+                    "new_posts": 0,
+                    "updated_profile": False,
+                    "errors": [f"Profile {profile_id} not found"],
+                }
 
             handle = profile.handle
             raw_posts = self.fetch_raw(handle)
 
             existing_ids = {
-                row[0] for row in session.execute(
+                row[0]
+                for row in session.execute(
                     select(SocialPost.platform_post_id).where(SocialPost.profile_id == profile_id)
                 ).all()
             }

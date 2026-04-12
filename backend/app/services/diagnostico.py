@@ -107,9 +107,7 @@ async def calculate_ipd(
         freq_score = min(frequency / 1.0, 1.0) * 10.0
 
         # Weighted platform score
-        platform_total = (
-            follower_score * 0.30 + engagement_score * 0.30 + freq_score * 0.40
-        )
+        platform_total = follower_score * 0.30 + engagement_score * 0.30 + freq_score * 0.40
         platform_scores[platform.value.lower()] = round(platform_total, 2)
 
         total_followers += profile.followers_count
@@ -164,11 +162,7 @@ async def calculate_ipd(
     )
 
     if coverage < 0.5:
-        missing = [
-            p.value.lower()
-            for p in Platform
-            if p not in {pr.platform for pr in profiles}
-        ]
+        missing = [p.value.lower() for p in Platform if p not in {pr.platform for pr in profiles}]
         recommendations.append(
             f"Low platform coverage ({coverage:.0%}). Missing: {', '.join(missing)}."
         )

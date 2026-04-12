@@ -42,7 +42,8 @@ def _build_structured_prompt(tipo: TipoPlan, context: dict, extra: str | None = 
         TipoPlan.CONTENIDO: "Genera tareas específicas del plan editorial para 30 días",
     }[tipo]
 
-    base = f"""Eres un estratega de comunicación política digital con 15 años de experiencia en México,
+    base = f"""Eres un estratega de comunicacion politica digital \
+con 15 anos de experiencia en Mexico,
 trabajando para Movimiento Ciudadano.
 
 {tipo_hint} para el dirigente descrito abajo.
@@ -140,7 +141,9 @@ async def generate_structured_plan(
             last_error = str(e)
             logger.warning(
                 "Plan estructurado inválido (intento %d/%d): %s",
-                attempt + 1, MAX_RETRIES + 1, last_error,
+                attempt + 1,
+                MAX_RETRIES + 1,
+                last_error,
             )
             prompt += (
                 f"\n\n## CORRECCIÓN NECESARIA:\n"
@@ -184,11 +187,13 @@ async def generate_structured_plan(
             deadline=t.deadline,
             metrica_objetivo=t.metrica_objetivo,
             metrica_valor_objetivo=t.metrica_valor_objetivo,
-            cambios_historial=[{
-                "type": "generated",
-                "by": model_name,
-                "at": plan.created_at.isoformat() if plan.created_at else None,
-            }],
+            cambios_historial=[
+                {
+                    "type": "generated",
+                    "by": model_name,
+                    "at": plan.created_at.isoformat() if plan.created_at else None,
+                }
+            ],
         )
         db.add(tarea)
 

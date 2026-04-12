@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
 from datetime import UTC, datetime
@@ -92,7 +93,7 @@ def _extract_messages(html: str) -> list[dict[str, Any]]:
     messages: list[dict[str, Any]] = []
 
     # Each message block is wrapped in a div with data-post="channel/ID".
-    post_pattern = re.compile(
+    re.compile(
         r'<div[^>]*class="tgme_widget_message_wrap[^"]*"[^>]*>'
         r'.*?data-post="([^"]+)"',
         re.DOTALL,
@@ -154,12 +155,8 @@ def _extract_messages(html: str) -> list[dict[str, Any]]:
 
         published_at = datetime.now(UTC)
         if i < len(date_blocks):
-            try:
-                published_at = datetime.fromisoformat(
-                    date_blocks[i].replace("Z", "+00:00")
-                )
-            except (TypeError, ValueError):
-                pass
+            with contextlib.suppress(TypeError, ValueError):
+                published_at = datetime.fromisoformat(date_blocks[i].replace("Z", "+00:00"))
 
         # Determine post type.
         post_type = PostType.TEXT.value
@@ -168,14 +165,16 @@ def _extract_messages(html: str) -> list[dict[str, Any]]:
         elif post_id in photo_ids:
             post_type = PostType.IMAGE.value
 
-        messages.append({
-            "id": message_id,
-            "post_id": post_id,
-            "text": text,
-            "views": views,
-            "published_at": published_at,
-            "post_type": post_type,
-        })
+        messages.append(
+            {
+                "id": message_id,
+                "post_id": post_id,
+                "text": text,
+                "views": views,
+                "published_at": published_at,
+                "post_type": post_type,
+            }
+        )
 
     return messages
 
@@ -300,9 +299,7 @@ class TelegramScraper(BaseScraper):
         published_at = raw_data.get("published_at", datetime.now(UTC))
         if isinstance(published_at, str):
             try:
-                published_at = datetime.fromisoformat(
-                    published_at.replace("Z", "+00:00")
-                )
+                published_at = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
             except (TypeError, ValueError):
                 published_at = datetime.now(UTC)
 
@@ -364,9 +361,7 @@ class TelegramScraper(BaseScraper):
                     continue
 
                 existing = session.execute(
-                    select(SocialPost).where(
-                        SocialPost.platform_post_id == platform_post_id
-                    )
+                    select(SocialPost).where(SocialPost.platform_post_id == platform_post_id)
                 ).scalar_one_or_none()
 
                 if existing is not None:
@@ -445,13 +440,11 @@ class TelegramScraper(BaseScraper):
             re.DOTALL | re.IGNORECASE,
         )
         if counter_match:
-            subscribers = _parse_subscriber_count(
-                counter_match.group(1) + " subscribers"
-            )
+            subscribers = _parse_subscriber_count(counter_match.group(1) + " subscribers")
         else:
             # Fallback: look for "N subscribers" anywhere in the page header.
             fallback = re.search(
-                r'([\d\s,.]+[KkMm]?)\s*(?:subscribers?|members?)',
+                r"([\d\s,.]+[KkMm]?)\s*(?:subscribers?|members?)",
                 html[:5000],
                 re.IGNORECASE,
             )

@@ -38,9 +38,8 @@ async def list_posts(
 ) -> PaginatedResponse[SocialPostResponse]:
     """List social posts with comprehensive filtering."""
     query = select(SocialPost).join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
-    count_query = (
-        select(func.count(SocialPost.id))
-        .join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
+    count_query = select(func.count(SocialPost.id)).join(
+        SocialProfile, SocialPost.profile_id == SocialProfile.id
     )
 
     # Normalize case-insensitive enum params

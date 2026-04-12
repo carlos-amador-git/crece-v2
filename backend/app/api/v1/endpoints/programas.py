@@ -46,11 +46,7 @@ async def list_programas(
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()
 
-    query = (
-        query.order_by(ProgramaSocial.nombre)
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    )
+    query = query.order_by(ProgramaSocial.nombre).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     items = list(result.scalars().all())
 
@@ -112,9 +108,7 @@ async def get_programa(
     _current_user: Annotated[User, Depends(get_current_user)],
 ) -> ProgramaSocial:
     """Get a single programa social by ID."""
-    result = await db.execute(
-        select(ProgramaSocial).where(ProgramaSocial.id == programa_id)
-    )
+    result = await db.execute(select(ProgramaSocial).where(ProgramaSocial.id == programa_id))
     programa = result.scalar_one_or_none()
     if programa is None:
         raise HTTPException(
@@ -152,9 +146,7 @@ async def update_programa(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ProgramaSocial:
     """Update a programa social. Admin only."""
-    result = await db.execute(
-        select(ProgramaSocial).where(ProgramaSocial.id == programa_id)
-    )
+    result = await db.execute(select(ProgramaSocial).where(ProgramaSocial.id == programa_id))
     programa = result.scalar_one_or_none()
     if programa is None:
         raise HTTPException(
@@ -180,9 +172,7 @@ async def delete_programa(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Delete a programa social. Admin only."""
-    result = await db.execute(
-        select(ProgramaSocial).where(ProgramaSocial.id == programa_id)
-    )
+    result = await db.execute(select(ProgramaSocial).where(ProgramaSocial.id == programa_id))
     programa = result.scalar_one_or_none()
     if programa is None:
         raise HTTPException(
@@ -225,9 +215,7 @@ async def add_beneficiario(
 ) -> ProgramaBeneficiario:
     """Add a beneficiario record. Admin only (government data)."""
     # Verify programa exists
-    prog_result = await db.execute(
-        select(ProgramaSocial).where(ProgramaSocial.id == programa_id)
-    )
+    prog_result = await db.execute(select(ProgramaSocial).where(ProgramaSocial.id == programa_id))
     if prog_result.scalar_one_or_none() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Programa social not found"

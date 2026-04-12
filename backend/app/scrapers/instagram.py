@@ -60,7 +60,8 @@ class InstagramScraper(BaseScraper):
     # ------------------------------------------------------------------
     @staticmethod
     def _fetch_with_ensta(
-        handle: str, limit: int,
+        handle: str,
+        limit: int,
     ) -> tuple[list[dict[str, Any]], dict[str, int]]:
         """Fetch posts and profile stats via ensta Guest mode.
 
@@ -89,13 +90,15 @@ class InstagramScraper(BaseScraper):
         for i, post in enumerate(guest.posts(handle, count=limit)):
             if i >= limit:
                 break
-            raw_posts.append({
-                "shortcode": post.code or "",
-                "caption": post.caption_text or "",
-                "likes": post.like_count or 0,
-                "comments": post.comment_count or 0,
-                "taken_at": post.taken_at,  # unix timestamp
-            })
+            raw_posts.append(
+                {
+                    "shortcode": post.code or "",
+                    "caption": post.caption_text or "",
+                    "likes": post.like_count or 0,
+                    "comments": post.comment_count or 0,
+                    "taken_at": post.taken_at,  # unix timestamp
+                }
+            )
 
         return raw_posts, profile_stats
 
@@ -104,7 +107,8 @@ class InstagramScraper(BaseScraper):
     # ------------------------------------------------------------------
     @staticmethod
     def _fetch_with_instaloader(
-        handle: str, limit: int,
+        handle: str,
+        limit: int,
     ) -> tuple[list[dict[str, Any]], dict[str, int]]:
         """Fetch posts and profile stats via instaloader with auth.
 
@@ -154,15 +158,15 @@ class InstagramScraper(BaseScraper):
         for i, post in enumerate(ig_profile.get_posts()):
             if i >= limit:
                 break
-            raw_posts.append({
-                "shortcode": post.shortcode or "",
-                "caption": post.caption or "",
-                "likes": post.likes or 0,
-                "comments": post.comments or 0,
-                "taken_at": (
-                    int(post.date_utc.timestamp()) if post.date_utc else None
-                ),
-            })
+            raw_posts.append(
+                {
+                    "shortcode": post.shortcode or "",
+                    "caption": post.caption or "",
+                    "likes": post.likes or 0,
+                    "comments": post.comments or 0,
+                    "taken_at": (int(post.date_utc.timestamp()) if post.date_utc else None),
+                }
+            )
 
         return raw_posts, profile_stats
 
@@ -220,7 +224,9 @@ class InstagramScraper(BaseScraper):
             return posts
         except Exception as exc:
             logger.error(
-                "instaloader fallback also failed for @%s: %s", handle, exc,
+                "instaloader fallback also failed for @%s: %s",
+                handle,
+                exc,
             )
 
         return []
@@ -336,9 +342,8 @@ class InstagramScraper(BaseScraper):
 
             # 3 & 4. Parse, deduplicate, and store
             if raw_posts:
-                existing_ids_query = (
-                    select(SocialPost.platform_post_id)
-                    .where(SocialPost.profile_id == profile_id)
+                existing_ids_query = select(SocialPost.platform_post_id).where(
+                    SocialPost.profile_id == profile_id
                 )
                 existing_ids: set[str] = {
                     row[0] for row in session.execute(existing_ids_query).all()
@@ -370,9 +375,7 @@ class InstagramScraper(BaseScraper):
                                 raw_data=parsed["raw_data"],
                                 scraped_at=datetime.now(UTC),
                             )
-                            .on_conflict_do_nothing(
-                                index_elements=["platform_post_id"]
-                            )
+                            .on_conflict_do_nothing(index_elements=["platform_post_id"])
                         )
                         result = session.execute(stmt)
                         if result.rowcount and result.rowcount > 0:

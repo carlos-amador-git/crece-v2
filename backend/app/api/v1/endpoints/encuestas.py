@@ -162,9 +162,7 @@ async def get_encuesta(
     result = await db.execute(select(Encuesta).where(Encuesta.id == encuesta_id))
     encuesta = result.scalar_one_or_none()
     if encuesta is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Encuesta not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Encuesta not found")
     return encuesta
 
 
@@ -212,9 +210,7 @@ async def update_encuesta(
     result = await db.execute(select(Encuesta).where(Encuesta.id == encuesta_id))
     encuesta = result.scalar_one_or_none()
     if encuesta is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Encuesta not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Encuesta not found")
 
     update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():

@@ -51,7 +51,7 @@ async def generate_content_endpoint(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
 
     return ContentPieceResponse.model_validate(pieza)
 
@@ -146,7 +146,7 @@ async def get_piece(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid piece ID format",
-        )
+        ) from None
 
     result = await db.execute(
         select(ContenidoPieza).where(
@@ -156,9 +156,7 @@ async def get_piece(
     )
     pieza = result.scalar_one_or_none()
     if pieza is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Content piece not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content piece not found")
 
     return ContentPieceResponse.model_validate(pieza)
 
@@ -182,7 +180,7 @@ async def update_variant(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid piece ID format",
-        )
+        ) from None
 
     result = await db.execute(
         select(ContenidoPieza).where(
@@ -192,9 +190,7 @@ async def update_variant(
     )
     pieza = result.scalar_one_or_none()
     if pieza is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Content piece not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content piece not found")
 
     if pieza.estado == "aprobado":
         raise HTTPException(
@@ -232,7 +228,7 @@ async def approve_piece(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid piece ID format",
-        )
+        ) from None
 
     result = await db.execute(
         select(ContenidoPieza).where(
@@ -242,9 +238,7 @@ async def approve_piece(
     )
     pieza = result.scalar_one_or_none()
     if pieza is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Content piece not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content piece not found")
 
     pieza.estado = "aprobado"
     pieza.aprobado_por_id = current_user.id

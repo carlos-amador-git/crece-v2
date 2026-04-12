@@ -55,7 +55,9 @@ api_router.include_router(eventos.router, prefix="/eventos", tags=["eventos"])
 api_router.include_router(programas.router, prefix="/programas", tags=["programas"])
 api_router.include_router(organizaciones.router, prefix="/organizaciones", tags=["organizaciones"])
 api_router.include_router(encuestas.router, prefix="/encuestas", tags=["encuestas"])
-api_router.include_router(metricas_sociales.router, prefix="/metricas-sociales", tags=["metricas-sociales"])
+api_router.include_router(
+    metricas_sociales.router, prefix="/metricas-sociales", tags=["metricas-sociales"]
+)
 api_router.include_router(geo.router, prefix="/geo", tags=["geo"])
 api_router.include_router(voter_scoring.router, prefix="/voter-scoring", tags=["voter-scoring"])
 api_router.include_router(contenido.router, prefix="/contenido", tags=["contenido"])
@@ -64,7 +66,9 @@ api_router.include_router(campanas.router, prefix="/campanas", tags=["campanas"]
 api_router.include_router(canvassing.router, prefix="/canvassing", tags=["canvassing"])
 api_router.include_router(participacion.router, prefix="/participacion", tags=["participacion"])
 api_router.include_router(campaigns_integration.router, prefix="/campaigns", tags=["campaigns"])
-api_router.include_router(content_factory_integration.router, prefix="/content", tags=["content-factory"])
+api_router.include_router(
+    content_factory_integration.router, prefix="/content", tags=["content-factory"]
+)
 api_router.include_router(alerts_integration.router, prefix="/alerts", tags=["alerts"])
 api_router.include_router(crm_integration.router, prefix="/crm", tags=["crm"])
 api_router.include_router(webhooks_integration.router, prefix="/webhooks", tags=["webhooks"])

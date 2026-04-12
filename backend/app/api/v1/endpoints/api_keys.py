@@ -33,9 +33,7 @@ class ApiKeyCreateResponse(BaseModel):
     id: int
     name: str
     key_prefix: str
-    raw_key: str = Field(
-        ..., description="The full API key. Only shown ONCE at creation time."
-    )
+    raw_key: str = Field(..., description="The full API key. Only shown ONCE at creation time.")
     permissions: dict[str, Any]
     created_at: datetime
 

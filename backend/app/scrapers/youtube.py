@@ -81,9 +81,21 @@ def _sanitise_raw(raw: dict[str, Any]) -> dict[str, Any]:
     """Strip non-serialisable or excessively large fields before storing as JSONB."""
     # Keep only the fields we care about to avoid bloating the DB.
     keep_keys = {
-        "id", "title", "description", "channel", "channel_id", "channel_url",
-        "upload_date", "duration", "view_count", "like_count", "comment_count",
-        "thumbnail", "webpage_url", "categories", "tags",
+        "id",
+        "title",
+        "description",
+        "channel",
+        "channel_id",
+        "channel_url",
+        "upload_date",
+        "duration",
+        "view_count",
+        "like_count",
+        "comment_count",
+        "thumbnail",
+        "webpage_url",
+        "categories",
+        "tags",
     }
     return {k: v for k, v in raw.items() if k in keep_keys}
 
@@ -137,32 +149,24 @@ class YouTubeScraper(BaseScraper):
                 if vid:
                     video_ids.append(vid)
         except Exception as exc:
-            logger.warning(
-                "scrapetube channel fetch failed for @%s: %s", clean_handle, exc
-            )
+            logger.warning("scrapetube channel fetch failed for @%s: %s", clean_handle, exc)
 
         if not video_ids:
             # Fallback: try search with the handle as query.
             try:
-                search_results = scrapetube.get_search(
-                    f"{clean_handle}", limit=max_results
-                )
+                search_results = scrapetube.get_search(f"{clean_handle}", limit=max_results)
                 for video in search_results:
                     vid = video.get("videoId")
                     if vid:
                         video_ids.append(vid)
             except Exception as exc:
-                logger.warning(
-                    "scrapetube search failed for %s: %s", clean_handle, exc
-                )
+                logger.warning("scrapetube search failed for %s: %s", clean_handle, exc)
 
         if not video_ids:
             logger.info("scrapetube found no videos for @%s", clean_handle)
             return []
 
-        logger.info(
-            "scrapetube discovered %d video IDs for @%s", len(video_ids), clean_handle
-        )
+        logger.info("scrapetube discovered %d video IDs for @%s", len(video_ids), clean_handle)
 
         # Step 2: Fetch full metadata via yt-dlp for each video.
         all_metadata: list[dict[str, Any]] = []
@@ -171,13 +175,15 @@ class YouTubeScraper(BaseScraper):
         for i in range(0, len(video_ids), batch_size):
             batch = video_ids[i : i + batch_size]
             urls = [f"https://www.youtube.com/watch?v={vid}" for vid in batch]
-            output = _run_yt_dlp([
-                "--dump-json",
-                "--no-download",
-                "--no-warnings",
-                "--no-playlist",
-                *urls,
-            ])
+            output = _run_yt_dlp(
+                [
+                    "--dump-json",
+                    "--no-download",
+                    "--no-warnings",
+                    "--no-playlist",
+                    *urls,
+                ]
+            )
             if output:
                 all_metadata.extend(_parse_yt_dlp_jsonl(output))
 
@@ -194,13 +200,17 @@ class YouTubeScraper(BaseScraper):
         clean_handle = handle.lstrip("@")
         channel_url = f"https://www.youtube.com/@{clean_handle}"
 
-        output = _run_yt_dlp([
-            "--dump-json",
-            "--no-download",
-            "--no-warnings",
-            "--playlist-items", "0",
-            channel_url,
-        ], timeout=30)
+        output = _run_yt_dlp(
+            [
+                "--dump-json",
+                "--no-download",
+                "--no-warnings",
+                "--playlist-items",
+                "0",
+                channel_url,
+            ],
+            timeout=30,
+        )
 
         if not output:
             return {}
@@ -226,7 +236,8 @@ class YouTubeScraper(BaseScraper):
             from googleapiclient.discovery import build
 
             return build(
-                "youtube", "v3",
+                "youtube",
+                "v3",
                 developerKey=api_key,
                 cache_discovery=False,
             )
@@ -277,7 +288,11 @@ class YouTubeScraper(BaseScraper):
         try:
             resp = (
                 youtube.playlistItems()
-                .list(playlistId=uploads_playlist, part="contentDetails", maxResults=min(max_results, 50))
+                .list(
+                    playlistId=uploads_playlist,
+                    part="contentDetails",
+                    maxResults=min(max_results, 50),
+                )
                 .execute()
             )
             for item in resp.get("items", []):
@@ -314,10 +329,9 @@ class YouTubeScraper(BaseScraper):
             return {}
 
         clean_handle = handle.lstrip("@")
-        channel_id = None
 
         if clean_handle.startswith("UC") and len(clean_handle) == 24:
-            channel_id = clean_handle
+            pass
         else:
             for method_kwargs in [
                 {"forHandle": clean_handle},
@@ -414,9 +428,7 @@ class YouTubeScraper(BaseScraper):
         published_str = snippet.get("publishedAt")
         if published_str:
             try:
-                published_at = datetime.fromisoformat(
-                    published_str.replace("Z", "+00:00")
-                )
+                published_at = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
             except (TypeError, ValueError):
                 published_at = datetime.now(UTC)
         else:
@@ -474,9 +486,7 @@ class YouTubeScraper(BaseScraper):
                     continue
 
                 existing = session.execute(
-                    select(SocialPost).where(
-                        SocialPost.platform_post_id == platform_post_id
-                    )
+                    select(SocialPost).where(SocialPost.platform_post_id == platform_post_id)
                 ).scalar_one_or_none()
 
                 if existing is not None:

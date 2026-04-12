@@ -51,7 +51,8 @@ _PLATFORM_CONSTRAINTS: dict[FormatoContenido, dict[str, object]] = {
         "max_chars": 3000,
         "instruction": (
             "Escribe un guion para un Reel/TikTok de 30-60 segundos. "
-            "Estructura: HOOK (primeros 3 segundos, crucial) → CONTENIDO (20-40 seg) → CTA (5-10 seg). "
+            "Estructura: HOOK (primeros 3 segundos, crucial) "
+            "→ CONTENIDO (20-40 seg) → CTA (5-10 seg). "
             "Incluye indicaciones visuales entre corchetes [accion/escena]. "
             "El hook debe ser una pregunta provocadora o dato impactante. "
             "Lenguaje coloquial, ritmo rapido, frases cortas."
@@ -131,14 +132,16 @@ async def _gather_dirigente_context(db: AsyncSession, dirigente: Dirigente) -> d
             )
         )
         row = stats_result.one()
-        profiles_data.append({
-            "platform": p.platform.value,
-            "handle": p.handle,
-            "followers": p.followers_count,
-            "posts_30d": int(row[0]),
-            "avg_engagement_30d": round(float(row[1]), 4) if row[1] else 0.0,
-            "avg_sentiment_30d": round(float(row[2]), 4) if row[2] else None,
-        })
+        profiles_data.append(
+            {
+                "platform": p.platform.value,
+                "handle": p.handle,
+                "followers": p.followers_count,
+                "posts_30d": int(row[0]),
+                "avg_engagement_30d": round(float(row[1]), 4) if row[1] else 0.0,
+                "avg_sentiment_30d": round(float(row[2]), 4) if row[2] else None,
+            }
+        )
 
     # Recent top-performing post themes
     top_posts_result = await db.execute(
@@ -208,9 +211,9 @@ Tono: **{tono}**
 Plataforma destino: **{plataforma_destino}**
 
 ## RESTRICCIONES DEL FORMATO
-{constraints['instruction']}
-Estructura sugerida: {constraints['example_structure']}
-Maximo de caracteres: {constraints['max_chars']}
+{constraints["instruction"]}
+Estructura sugerida: {constraints["example_structure"]}
+Maximo de caracteres: {constraints["max_chars"]}
 
 ## CONTEXTO DEL DIRIGENTE (datos reales, NO inventes adicionales)
 {context_json}
@@ -269,15 +272,18 @@ class ContentFactory:
     ) -> AsyncGenerator[str, None]:
         """Stream content generation using local Ollama instance."""
         combined = f"{system_prompt}\n\n{user_prompt}"
-        async with httpx.AsyncClient(timeout=600.0) as client, client.stream(
-            "POST",
-            f"{settings.OLLAMA_BASE_URL}/api/generate",
-            json={
-                "model": settings.OLLAMA_MODEL,
-                "prompt": combined,
-                "stream": True,
-            },
-        ) as resp:
+        async with (
+            httpx.AsyncClient(timeout=600.0) as client,
+            client.stream(
+                "POST",
+                f"{settings.OLLAMA_BASE_URL}/api/generate",
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "prompt": combined,
+                    "stream": True,
+                },
+            ) as resp,
+        ):
             resp.raise_for_status()
             async for line in resp.aiter_lines():
                 if line:
@@ -311,7 +317,9 @@ class ContentFactory:
         if provider == "ollama":
             for _attempt in range(2):
                 try:
-                    generated_text = await ContentFactory._generate_with_ollama(system_prompt, user_prompt)
+                    generated_text = await ContentFactory._generate_with_ollama(
+                        system_prompt, user_prompt
+                    )
                     model_name = f"ollama/{settings.OLLAMA_MODEL}"
                     tokens_in, tokens_out = 0, 0
                     break
@@ -327,6 +335,7 @@ class ContentFactory:
             if not settings.CLAUDE_API_KEY:
                 raise ValueError("CLAUDE_API_KEY no configurada y AI_PROVIDER=claude.")
             import anthropic
+
             client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
             generated_text = None
             for _attempt in range(2):
@@ -381,7 +390,10 @@ class ContentFactory:
 
         logger.info(
             "Content generated: id=%d dirigente=%s formato=%s provider=%s",
-            contenido.id, dirigente.full_name, formato.value, provider,
+            contenido.id,
+            dirigente.full_name,
+            formato.value,
+            provider,
         )
         return contenido
 
@@ -416,7 +428,9 @@ class ContentFactory:
             stream_failed = False
             for _attempt in range(2):
                 try:
-                    async for chunk in ContentFactory._stream_with_ollama(system_prompt, user_prompt):
+                    async for chunk in ContentFactory._stream_with_ollama(
+                        system_prompt, user_prompt
+                    ):
                         collected_text += chunk
                         yield json.dumps({"type": "chunk", "content": chunk})
                     stream_failed = False
@@ -437,6 +451,7 @@ class ContentFactory:
                 yield json.dumps({"type": "error", "message": "CLAUDE_API_KEY no configurada."})
                 return
             import anthropic
+
             client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
             model_name = settings.CLAUDE_MODEL
             stream_failed = False
@@ -494,7 +509,10 @@ class ContentFactory:
 
         logger.info(
             "Content streamed: id=%d dirigente=%s formato=%s provider=%s",
-            contenido.id, dirigente.full_name, formato.value, provider,
+            contenido.id,
+            dirigente.full_name,
+            formato.value,
+            provider,
         )
         yield json.dumps({"type": "complete", "contenido_id": contenido.id})
 
@@ -531,11 +549,13 @@ class ContentFactory:
             content_preview = row[0][:80] if row[0] else ""
             engagement = float(row[1]) if row[1] else 0.0
             if content_preview:
-                temas.append({
-                    "tema": f"Seguimiento: {content_preview}...",
-                    "relevancia_score": min(1.0, engagement * 10),
-                    "fuente": "engagement_alto",
-                })
+                temas.append(
+                    {
+                        "tema": f"Seguimiento: {content_preview}...",
+                        "relevancia_score": min(1.0, engagement * 10),
+                        "fuente": "engagement_alto",
+                    }
+                )
 
         # 2. Topics from negative sentiment (issues to address)
 
@@ -554,11 +574,13 @@ class ContentFactory:
         for row in negative_result.all():
             content_preview = row[0][:80] if row[0] else ""
             if content_preview:
-                temas.append({
-                    "tema": f"Respuesta a critica: {content_preview}...",
-                    "relevancia_score": 0.8,
-                    "fuente": "sentimiento_negativo",
-                })
+                temas.append(
+                    {
+                        "tema": f"Respuesta a critica: {content_preview}...",
+                        "relevancia_score": 0.8,
+                        "fuente": "sentimiento_negativo",
+                    }
+                )
 
         # 3. Topics from ciudadano reports (constituent concerns)
         try:
@@ -578,11 +600,13 @@ class ContentFactory:
             for row in ciudadano_result.all():
                 if row[0]:
                     count = int(row[1])
-                    temas.append({
-                        "tema": f"Atencion ciudadana: {row[0]}",
-                        "relevancia_score": min(1.0, count / 10),
-                        "fuente": "ciudadanos",
-                    })
+                    temas.append(
+                        {
+                            "tema": f"Atencion ciudadana: {row[0]}",
+                            "relevancia_score": min(1.0, count / 10),
+                            "fuente": "ciudadanos",
+                        }
+                    )
         except Exception:
             # Ciudadano model may have different schema; gracefully skip
             logger.debug("Could not query ciudadano problematicas for topic suggestions")

@@ -319,15 +319,15 @@ async def seed():
             es_rival=True,
         )
         pan_cdmx = Competidor(
-            nombre="Representante PAN CDMX",
+            nombre="Santiago Taboada Cortina",
             partido="PAN",
-            cargo="Dirigente Estatal",
+            cargo="Candidato Jefe de Gobierno CDMX",
             es_rival=True,
         )
         session.add_all([morena_cdmx, pan_cdmx])
         await session.flush()
 
-        comp_profile = CompetidorSocialProfile(
+        comp_profile_morena_tw = CompetidorSocialProfile(
             competidor_id=morena_cdmx.id,
             platform=Platform.TWITTER,
             handle="@martlobo",
@@ -336,7 +336,25 @@ async def seed():
             following_count=3200,
             posts_count=45000,
         )
-        session.add(comp_profile)
+        comp_profile_pan_tw = CompetidorSocialProfile(
+            competidor_id=pan_cdmx.id,
+            platform=Platform.TWITTER,
+            handle="@Santiago_Taboada",
+            url="https://x.com/Santiago_Taboada",
+            followers_count=198000,
+            following_count=2100,
+            posts_count=32000,
+        )
+        comp_profile_pan_ig = CompetidorSocialProfile(
+            competidor_id=pan_cdmx.id,
+            platform=Platform.INSTAGRAM,
+            handle="@santiagotaboadac",
+            url="https://instagram.com/santiagotaboadac",
+            followers_count=156000,
+            following_count=1200,
+            posts_count=2800,
+        )
+        session.add_all([comp_profile_morena_tw, comp_profile_pan_tw, comp_profile_pan_ig])
 
         # ── Sample AI Plan ────────────────────────────────────────
         plan = PlanIA(
@@ -612,7 +630,7 @@ async def seed():
         print("   - 6 posts de ejemplo")
         print("   - 5 secciones electorales CDMX")
         print("   - 5 registros de intención de voto")
-        print("   - 2 competidores")
+        print("   - 2 competidores (Batres, Taboada) con 3 perfiles sociales")
         print("   - 1 plan IA de ejemplo")
         print("   - 5 ciudadanos (2 promotores)")
         print("   - 4 eventos (1 completado, 3 programados)")

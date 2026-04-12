@@ -41,7 +41,7 @@ async def health_db() -> dict[str, Any]:
                 "postgis_version": postgis_version,
             }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Database unavailable: {e}")
+        raise HTTPException(status_code=503, detail=f"Database unavailable: {e}") from e
 
 
 @router.get("/redis")
@@ -58,4 +58,4 @@ async def health_redis() -> dict[str, Any]:
             "redis_version": info.get("redis_version", "unknown"),
         }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Redis unavailable: {e}")
+        raise HTTPException(status_code=503, detail=f"Redis unavailable: {e}") from e

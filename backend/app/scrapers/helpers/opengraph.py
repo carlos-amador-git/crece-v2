@@ -26,10 +26,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 10.0
-DEFAULT_USER_AGENT = (
-    "Mozilla/5.0 (compatible; CreceBot/2.0; "
-    "+https://consultoriamd.com/crece)"
-)
+DEFAULT_USER_AGENT = "Mozilla/5.0 (compatible; CreceBot/2.0; +https://consultoriamd.com/crece)"
 MAX_HTML_BYTES = 1_500_000  # 1.5 MB — enough for head section of any real page
 
 # Matches <meta property="og:..." content="..."> and <meta name="twitter:..." content="...">
@@ -142,18 +139,14 @@ def extract_opengraph(
         "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
     }
     try:
-        with httpx.Client(
-            timeout=timeout, follow_redirects=True, headers=headers
-        ) as client:
+        with httpx.Client(timeout=timeout, follow_redirects=True, headers=headers) as client:
             response = client.get(url)
     except (httpx.HTTPError, httpx.TimeoutException) as exc:
         logger.warning("opengraph fetch failed for %s: %s", url, exc)
         return None
 
     if response.status_code >= 400:
-        logger.info(
-            "opengraph fetch got HTTP %d for %s", response.status_code, url
-        )
+        logger.info("opengraph fetch got HTTP %d for %s", response.status_code, url)
         return None
 
     html = response.text

@@ -64,9 +64,7 @@ async def list_eventos(
     total = total_result.scalar_one()
 
     query = (
-        query.order_by(Evento.fecha_inicio.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+        query.order_by(Evento.fecha_inicio.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     result = await db.execute(query)
     items = list(result.scalars().all())
@@ -89,9 +87,8 @@ async def list_upcoming_eventos(
 ) -> PaginatedResponse[EventoResponse]:
     """List upcoming (programado or en_curso) eventos sorted by fecha_inicio."""
     now = datetime.now(UTC)
-    base_filter = (
-        Evento.estado.in_([EstadoEvento.PROGRAMADO, EstadoEvento.EN_CURSO])
-        & (Evento.fecha_inicio >= now)
+    base_filter = Evento.estado.in_([EstadoEvento.PROGRAMADO, EstadoEvento.EN_CURSO]) & (
+        Evento.fecha_inicio >= now
     )
     count_query = select(func.count(Evento.id)).where(base_filter)
     total_result = await db.execute(count_query)
@@ -148,8 +145,12 @@ async def stats_roi(
         asistentes_reales_sum=asistentes_sum,
         nuevos_simpatizantes_sum=simpatizantes_sum,
         costo_promedio_por_evento=costo_total_sum / total_eventos if total_eventos > 0 else 0,
-        costo_promedio_por_asistente=costo_total_sum / asistentes_sum if asistentes_sum > 0 else None,
-        costo_promedio_por_simpatizante=costo_total_sum / simpatizantes_sum if simpatizantes_sum > 0 else None,
+        costo_promedio_por_asistente=costo_total_sum / asistentes_sum
+        if asistentes_sum > 0
+        else None,
+        costo_promedio_por_simpatizante=costo_total_sum / simpatizantes_sum
+        if simpatizantes_sum > 0
+        else None,
     )
 
 
@@ -317,9 +318,7 @@ async def list_asistentes(
     _current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[EventoAsistente]:
     """List asistentes for a given evento."""
-    result = await db.execute(
-        select(EventoAsistente).where(EventoAsistente.evento_id == evento_id)
-    )
+    result = await db.execute(select(EventoAsistente).where(EventoAsistente.evento_id == evento_id))
     return list(result.scalars().all())
 
 

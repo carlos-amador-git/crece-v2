@@ -35,9 +35,7 @@ class MetricaSocial(Base):
         nullable=False,
     )
 
-    __table_args__ = (
-        UniqueConstraint("profile_id", "periodo", name="uq_metrica_profile_periodo"),
-    )
+    __table_args__ = (UniqueConstraint("profile_id", "periodo", name="uq_metrica_profile_periodo"),)
 
     # relationships
     profile = relationship("SocialProfile", lazy="selectin")

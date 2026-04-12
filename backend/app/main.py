@@ -77,10 +77,11 @@ app.add_middleware(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True if settings.CORS_ORIGINS != ["*"] else False,
+    allow_credentials=settings.CORS_ORIGINS != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ── Exception handlers ──────────────────────────────────────
 # D-OBS-01: antes de este handler, cualquier IntegrityError levantaba un 500

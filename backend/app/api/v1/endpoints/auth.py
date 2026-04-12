@@ -111,7 +111,10 @@ async def forgot_password(
     _result = await db.execute(select(User).where(User.email == payload.email))
     # TODO: dispatch password reset email via Celery task
     return ForgotPasswordResponse(
-        message="Si existe una cuenta con ese correo, recibirás instrucciones para restablecer tu contraseña."
+        message=(
+            "Si existe una cuenta con ese correo, "
+            "recibirás instrucciones para restablecer tu contraseña."
+        )
     )
 
 
@@ -186,7 +189,8 @@ async def impersonate_user(
     raw = await db.connection()
     await raw.exec_driver_sql(
         "INSERT INTO data_access_log "
-        "(user_id, org_id, table_name, row_id, action, fields, metadata_json, request_ip, user_agent, created_at) "
+        "(user_id, org_id, table_name, row_id, action, "
+        "fields, metadata_json, request_ip, user_agent, created_at) "
         "VALUES ($1, $2, 'users', $3, 'impersonate', $4::varchar[], $5::jsonb, $6, $7, NOW())",
         (current_user.id, current_user.org_id or 3, str(user_id), ["*"], meta_str, ip, ua),
     )

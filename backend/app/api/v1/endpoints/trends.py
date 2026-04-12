@@ -71,19 +71,21 @@ async def get_geo_trends(
     try:
         window = _parse_period(period)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     window_start = datetime.now(UTC) - window
 
-    query = select(TopicTrend, AlcaldiaCDMX.nombre).join(
-        AlcaldiaCDMX,
-        AlcaldiaCDMX.id == TopicTrend.alcaldia_id,
-        isouter=True,
-    ).where(
-        TopicTrend.org_id == org_id,
-        TopicTrend.time_bucket >= window_start,
+    query = (
+        select(TopicTrend, AlcaldiaCDMX.nombre)
+        .join(
+            AlcaldiaCDMX,
+            AlcaldiaCDMX.id == TopicTrend.alcaldia_id,
+            isouter=True,
+        )
+        .where(
+            TopicTrend.org_id == org_id,
+            TopicTrend.time_bucket >= window_start,
+        )
     )
     if alcaldia_id is not None:
         query = query.where(TopicTrend.alcaldia_id == alcaldia_id)

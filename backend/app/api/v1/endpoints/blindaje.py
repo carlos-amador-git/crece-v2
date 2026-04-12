@@ -180,9 +180,7 @@ async def update_gasto(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> GastoElectoral:
     """Update an existing gasto electoral."""
-    result = await db.execute(
-        select(GastoElectoral).where(GastoElectoral.id == gasto_id)
-    )
+    result = await db.execute(select(GastoElectoral).where(GastoElectoral.id == gasto_id))
     gasto = result.scalar_one_or_none()
     if gasto is None:
         raise HTTPException(
@@ -210,9 +208,7 @@ async def aprobar_gasto(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> GastoElectoral:
     """Approve a gasto electoral. Admin only."""
-    result = await db.execute(
-        select(GastoElectoral).where(GastoElectoral.id == gasto_id)
-    )
+    result = await db.execute(select(GastoElectoral).where(GastoElectoral.id == gasto_id))
     gasto = result.scalar_one_or_none()
     if gasto is None:
         raise HTTPException(
@@ -290,9 +286,7 @@ async def resolver_alerta(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> AlertaCompliance:
     """Mark a compliance alert as resolved."""
-    result = await db.execute(
-        select(AlertaCompliance).where(AlertaCompliance.id == alerta_id)
-    )
+    result = await db.execute(select(AlertaCompliance).where(AlertaCompliance.id == alerta_id))
     alerta = result.scalar_one_or_none()
     if alerta is None:
         raise HTTPException(
@@ -348,9 +342,7 @@ async def get_compliance_report(
 
     Includes spending by SIF category, alert summary, and bot detection stats.
     """
-    return await BlindajeService.generate_compliance_report(
-        db, org_id, periodo_inicio, periodo_fin
-    )
+    return await BlindajeService.generate_compliance_report(db, org_id, periodo_inicio, periodo_fin)
 
 
 @router.post("/bot-check/{post_id}", response_model=BotAnalysisResult)
@@ -360,9 +352,7 @@ async def check_bot(
     _current_user: Annotated[User, Depends(get_current_user)],
 ) -> BotAnalysisResult:
     """Check a specific social post for bot-like behavior indicators."""
-    result = await db.execute(
-        select(SocialPost).where(SocialPost.id == post_id)
-    )
+    result = await db.execute(select(SocialPost).where(SocialPost.id == post_id))
     post = result.scalar_one_or_none()
     if post is None:
         raise HTTPException(

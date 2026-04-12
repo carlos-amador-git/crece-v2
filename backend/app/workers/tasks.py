@@ -30,11 +30,13 @@ def scrape_profile(self, profile_id: int, platform: str) -> dict:  # type: ignor
     try:
         scraper = get_scraper(platform)
         result = scraper.scrape(profile_id)
-        logger.info("Scraped %d new posts for profile %d (%s)", result["new_posts"], profile_id, platform)
+        logger.info(
+            "Scraped %d new posts for profile %d (%s)", result["new_posts"], profile_id, platform
+        )
         return result
     except Exception as exc:
         logger.error("Scrape failed for profile %d: %s", profile_id, exc)
-        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from None
 
 
 @celery_app.task(bind=True, name="app.workers.tasks.analyze_sentiment", max_retries=2)
@@ -109,7 +111,7 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
             session.close()
     except Exception as exc:
         logger.error("Sentiment analysis failed for post %d: %s", post_id, exc)
-        raise self.retry(exc=exc, countdown=30)
+        raise self.retry(exc=exc, countdown=30) from None
 
 
 def _check_toxicity_alert(session, post_id: int, post, result: dict) -> None:
@@ -170,7 +172,9 @@ def _check_toxicity_alert(session, post_id: int, post, result: dict) -> None:
         perfil_id=post.profile_id,
         tipo="toxicity_spike",
         severidad=severity,
-        descripcion=f"Detectados {toxic_count} posts toxicos en las ultimas 2 horas para este perfil",
+        descripcion=(
+            f"Detectados {toxic_count} posts toxicos en las ultimas 2 horas para este perfil"
+        ),
         post_ids=[post_id],
         estado="nueva",
     )
@@ -184,7 +188,9 @@ def _check_toxicity_alert(session, post_id: int, post, result: dict) -> None:
 
 
 @celery_app.task(bind=True, name="app.workers.tasks.generate_plan", max_retries=1)
-def generate_plan(self, dirigente_id: int, tipo: str, user_id: int, contexto: str | None = None) -> dict:  # type: ignore[no-untyped-def]
+def generate_plan(
+    self, dirigente_id: int, tipo: str, user_id: int, contexto: str | None = None
+) -> dict:  # type: ignore[no-untyped-def]
     """Generate an AI plan (runs synchronously in worker context)."""
     try:
         logger.info("Generating %s plan for dirigente %d", tipo, dirigente_id)
@@ -192,7 +198,7 @@ def generate_plan(self, dirigente_id: int, tipo: str, user_id: int, contexto: st
         return {"dirigente_id": dirigente_id, "tipo": tipo, "status": "generated"}
     except Exception as exc:
         logger.error("Plan generation failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from None
 
 
 @celery_app.task(name="app.workers.tasks.sync_electoral_data")
@@ -268,9 +274,7 @@ def detect_trends(self, org_id: int | None = None, lookback_hours: int = 24) -> 
         #    mencionan explícitamente una alcaldía)
         from app.services.location_inference import normalize_social_text
 
-        alcaldia_rows = session.execute(
-            text("SELECT id, nombre FROM alcaldias_cdmx")
-        ).fetchall()
+        alcaldia_rows = session.execute(text("SELECT id, nombre FROM alcaldias_cdmx")).fetchall()
         alcaldia_by_name = {r[1]: r[0] for r in alcaldia_rows}
 
         from collections import defaultdict
@@ -322,7 +326,7 @@ def detect_trends(self, org_id: int | None = None, lookback_hours: int = 24) -> 
     except Exception as exc:
         session.rollback()
         logger.exception("detect_trends failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from None
     finally:
         session.close()
 
@@ -358,7 +362,7 @@ def label_trend_cluster(self, trend_id: int) -> dict:  # type: ignore[no-untyped
         if row is None:
             return {"status": "not_found", "trend_id": trend_id}
 
-        _, alcaldia_id, post_count, alcaldia_nombre, sample = row
+        _, _alcaldia_id, _post_count, alcaldia_nombre, sample = row
         post_ids = (sample or {}).get("post_ids", []) if isinstance(sample, dict) else []
 
         posts_content: list[str] = []
@@ -397,7 +401,7 @@ def label_trend_cluster(self, trend_id: int) -> dict:  # type: ignore[no-untyped
     except Exception as exc:
         session.rollback()
         logger.warning("label_trend_cluster %d failed: %s", trend_id, exc)
-        raise self.retry(exc=exc, countdown=30)
+        raise self.retry(exc=exc, countdown=30) from None
     finally:
         session.close()
 
@@ -449,9 +453,7 @@ def onboard_dirigente_chain(self, dirigente_id: int) -> dict:  # type: ignore[no
         # something to work on.
         _set_status("scraping")
         profile_rows = session.execute(
-            sql_text(
-                "SELECT id, platform, handle FROM social_profiles WHERE dirigente_id = :id"
-            ),
+            sql_text("SELECT id, platform, handle FROM social_profiles WHERE dirigente_id = :id"),
             {"id": dirigente_id},
         ).fetchall()
 
@@ -470,9 +472,7 @@ def onboard_dirigente_chain(self, dirigente_id: int) -> dict:  # type: ignore[no
                     exc,
                 )
             session.execute(
-                sql_text(
-                    "UPDATE social_profiles SET last_scraped_at = :ts WHERE id = :id"
-                ),
+                sql_text("UPDATE social_profiles SET last_scraped_at = :ts WHERE id = :id"),
                 {"ts": _dt.now(UTC), "id": prof_id},
             )
         session.commit()
@@ -517,7 +517,7 @@ def onboard_dirigente_chain(self, dirigente_id: int) -> dict:  # type: ignore[no
             session.commit()
         except Exception:
             pass
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from None
     finally:
         session.close()
 
@@ -568,7 +568,15 @@ def ingest_rss_feeds() -> dict:
         # Build source_name -> handle mapping
         source_handles: dict[str, str] = {}
         for feed in RSS_SOURCES:
-            slug = feed.name.lower().replace(" ", "-").replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+            slug = (
+                feed.name.lower()
+                .replace(" ", "-")
+                .replace("á", "a")
+                .replace("é", "e")
+                .replace("í", "i")
+                .replace("ó", "o")
+                .replace("ú", "u")
+            )
             source_handles[feed.name] = f"news:{slug}"
 
         # Find-or-create synthetic profiles per source
@@ -682,7 +690,9 @@ def dispatch_scheduled_campaigns() -> dict:
                 else:
                     logger.warning(
                         "Campaign %d auto-dispatch failed: %d %s",
-                        campana.id, resp.status_code, resp.text[:200],
+                        campana.id,
+                        resp.status_code,
+                        resp.text[:200],
                     )
             except httpx.HTTPError as exc:
                 logger.error("Campaign %d dispatch error: %s", campana.id, exc)

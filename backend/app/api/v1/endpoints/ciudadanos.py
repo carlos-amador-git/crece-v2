@@ -66,10 +66,7 @@ async def list_ciudadanos(
         count_query = count_query.where(Ciudadano.org_id == org_id)
     if search:
         pattern = f"%{search}%"
-        search_filter = (
-            Ciudadano.nombre.ilike(pattern)
-            | Ciudadano.apellido_paterno.ilike(pattern)
-        )
+        search_filter = Ciudadano.nombre.ilike(pattern) | Ciudadano.apellido_paterno.ilike(pattern)
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
 

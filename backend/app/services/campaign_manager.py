@@ -105,9 +105,7 @@ class CampaignManager:
 
         # Delete any previously prepared messages (idempotent re-preparation)
         existing = await db.execute(
-            select(CampanaMensaje.ciudadano_id).where(
-                CampanaMensaje.campana_id == campana_id
-            )
+            select(CampanaMensaje.ciudadano_id).where(CampanaMensaje.campana_id == campana_id)
         )
         existing_ids = {row.ciudadano_id for row in existing.all()}
         new_ids = ciudadano_ids - existing_ids
@@ -115,9 +113,7 @@ class CampaignManager:
         # Fetch phone numbers for new ciudadanos
         if new_ids:
             phone_result = await db.execute(
-                select(Ciudadano.id, Ciudadano.telefono).where(
-                    Ciudadano.id.in_(new_ids)
-                )
+                select(Ciudadano.id, Ciudadano.telefono).where(Ciudadano.id.in_(new_ids))
             )
             for row in phone_result.all():
                 mensaje = CampanaMensaje(
@@ -256,13 +252,9 @@ class CampaignManager:
             "total_fallidos": total_fallidos,
             "tasa_envio": (enviados / total) if total > 0 else 0.0,
             "tasa_entrega": (entregados / enviados) if enviados > 0 else 0.0,
-            "tasa_lectura": (
-                (campana.total_leidos or 0) / entregados if entregados > 0 else 0.0
-            ),
+            "tasa_lectura": ((campana.total_leidos or 0) / entregados if entregados > 0 else 0.0),
             "tasa_respuesta": (
-                (campana.total_respondidos or 0) / entregados
-                if entregados > 0
-                else 0.0
+                (campana.total_respondidos or 0) / entregados if entregados > 0 else 0.0
             ),
             "tasa_fallo": (total_fallidos / total) if total > 0 else 0.0,
         }
@@ -275,23 +267,17 @@ class CampaignManager:
         if segmento.filtro_seccion_id is not None:
             query = query.where(Ciudadano.seccion_id == segmento.filtro_seccion_id)
         if segmento.filtro_intencion_voto is not None:
-            query = query.where(
-                Ciudadano.intencion_voto == segmento.filtro_intencion_voto
-            )
+            query = query.where(Ciudadano.intencion_voto == segmento.filtro_intencion_voto)
         if segmento.filtro_edad_rango is not None:
             query = query.where(Ciudadano.edad_rango == segmento.filtro_edad_rango)
         if segmento.filtro_escolaridad is not None:
             query = query.where(Ciudadano.escolaridad == segmento.filtro_escolaridad)
         if segmento.filtro_es_simpatizante is not None:
-            query = query.where(
-                Ciudadano.es_simpatizante_mc == segmento.filtro_es_simpatizante
-            )
+            query = query.where(Ciudadano.es_simpatizante_mc == segmento.filtro_es_simpatizante)
         if segmento.filtro_es_promotor is not None:
             query = query.where(Ciudadano.es_promotor == segmento.filtro_es_promotor)
         if segmento.filtro_score_min is not None or segmento.filtro_score_max is not None:
-            query = query.join(
-                VoterScore, VoterScore.ciudadano_id == Ciudadano.id
-            )
+            query = query.join(VoterScore, VoterScore.ciudadano_id == Ciudadano.id)
             if segmento.filtro_score_min is not None:
                 query = query.where(VoterScore.score >= segmento.filtro_score_min)
             if segmento.filtro_score_max is not None:
@@ -304,23 +290,17 @@ class CampaignManager:
         if segmento.filtro_seccion_id is not None:
             query = query.where(Ciudadano.seccion_id == segmento.filtro_seccion_id)
         if segmento.filtro_intencion_voto is not None:
-            query = query.where(
-                Ciudadano.intencion_voto == segmento.filtro_intencion_voto
-            )
+            query = query.where(Ciudadano.intencion_voto == segmento.filtro_intencion_voto)
         if segmento.filtro_edad_rango is not None:
             query = query.where(Ciudadano.edad_rango == segmento.filtro_edad_rango)
         if segmento.filtro_escolaridad is not None:
             query = query.where(Ciudadano.escolaridad == segmento.filtro_escolaridad)
         if segmento.filtro_es_simpatizante is not None:
-            query = query.where(
-                Ciudadano.es_simpatizante_mc == segmento.filtro_es_simpatizante
-            )
+            query = query.where(Ciudadano.es_simpatizante_mc == segmento.filtro_es_simpatizante)
         if segmento.filtro_es_promotor is not None:
             query = query.where(Ciudadano.es_promotor == segmento.filtro_es_promotor)
         if segmento.filtro_score_min is not None or segmento.filtro_score_max is not None:
-            query = query.join(
-                VoterScore, VoterScore.ciudadano_id == Ciudadano.id
-            )
+            query = query.join(VoterScore, VoterScore.ciudadano_id == Ciudadano.id)
             if segmento.filtro_score_min is not None:
                 query = query.where(VoterScore.score >= segmento.filtro_score_min)
             if segmento.filtro_score_max is not None:

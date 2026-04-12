@@ -100,14 +100,16 @@ async def analyze_dirigente_profiles(
 
             # Anomaly: high shares but very low likes (artificial amplification)
             if shares > 500 and likes < 5:
-                all_anomalies.append({
-                    "platform": profile.platform.value.lower(),
-                    "handle": profile.handle,
-                    "type": "amplification",
-                    "description": f"Post con {shares:,} shares pero solo {likes} likes",
-                    "content_preview": (p.content or "")[:120],
-                    "published_at": p.published_at.isoformat() if p.published_at else None,
-                })
+                all_anomalies.append(
+                    {
+                        "platform": profile.platform.value.lower(),
+                        "handle": profile.handle,
+                        "type": "amplification",
+                        "description": f"Post con {shares:,} shares pero solo {likes} likes",
+                        "content_preview": (p.content or "")[:120],
+                        "published_at": p.published_at.isoformat() if p.published_at else None,
+                    }
+                )
 
         # Engagement rate
         avg_engagement = sum(engagements) / total_posts if total_posts > 0 else 0
@@ -122,7 +124,7 @@ async def analyze_dirigente_profiles(
         # Engagement variance (coefficient of variation)
         if total_posts >= 3 and avg_engagement > 0:
             variance = sum((e - avg_engagement) ** 2 for e in engagements) / total_posts
-            std_dev = variance ** 0.5
+            std_dev = variance**0.5
             cv = std_dev / avg_engagement
         else:
             cv = 0
@@ -138,11 +140,16 @@ async def analyze_dirigente_profiles(
         if followers > 5000 and engagement_rate < 1.0:
             penalty = 30
             score -= penalty
-            signals.append(f"Engagement {engagement_rate:.2f}% con {followers:,} seguidores — posibles seguidores comprados")
+            signals.append(
+                f"Engagement {engagement_rate:.2f}% con {followers:,} "
+                f"seguidores — posibles seguidores comprados"
+            )
         elif followers > 1000 and engagement_rate < 0.5:
             penalty = 20
             score -= penalty
-            signals.append(f"Engagement muy bajo ({engagement_rate:.2f}%) para {followers:,} seguidores")
+            signals.append(
+                f"Engagement muy bajo ({engagement_rate:.2f}%) para {followers:,} seguidores"
+            )
 
         # Healthy engagement (2-5% for active campaigns)
         if engagement_rate >= 2.0:
@@ -159,7 +166,9 @@ async def analyze_dirigente_profiles(
         # High engagement variance = possible spikes from paid amplification
         if cv > 3.0 and total_posts >= 5:
             score -= 20
-            signals.append(f"Variacion de engagement muy alta (CV={cv:.1f}) — posible amplificacion puntual")
+            signals.append(
+                f"Variacion de engagement muy alta (CV={cv:.1f}) — posible amplificacion puntual"
+            )
         elif cv > 2.0 and total_posts >= 5:
             score -= 10
             signals.append(f"Engagement irregular (CV={cv:.1f})")
@@ -167,31 +176,38 @@ async def analyze_dirigente_profiles(
         # Very few posts
         if total_posts < 3:
             score -= 15
-            signals.append(f"Solo {total_posts} posts — datos insuficientes para evaluacion completa")
+            signals.append(
+                f"Solo {total_posts} posts — datos insuficientes para evaluacion completa"
+            )
 
         # Abnormal comment/like ratio
         if total_likes > 10 and comment_like_ratio > 0.5:
             score -= 10
-            signals.append(f"Ratio comentarios/likes alto ({comment_like_ratio:.2f}) — posible granja de comentarios")
+            signals.append(
+                f"Ratio comentarios/likes alto "
+                f"({comment_like_ratio:.2f}) — posible granja de comentarios"
+            )
 
         score = max(0, min(100, score))
 
-        profile_analyses.append({
-            "platform": profile.platform.value.lower(),
-            "handle": profile.handle,
-            "followers": followers,
-            "following": following,
-            "posts_analyzed": total_posts,
-            "engagement_rate": round(engagement_rate, 2),
-            "avg_engagement": round(avg_engagement, 1),
-            "comment_like_ratio": round(comment_like_ratio, 3),
-            "zero_engagement_pct": round(zero_pct, 1),
-            "engagement_cv": round(cv, 2),
-            "ff_ratio": round(ff_ratio, 2),
-            "health_score": round(score),
-            "health_level": _health_level(score),
-            "signals": signals,
-        })
+        profile_analyses.append(
+            {
+                "platform": profile.platform.value.lower(),
+                "handle": profile.handle,
+                "followers": followers,
+                "following": following,
+                "posts_analyzed": total_posts,
+                "engagement_rate": round(engagement_rate, 2),
+                "avg_engagement": round(avg_engagement, 1),
+                "comment_like_ratio": round(comment_like_ratio, 3),
+                "zero_engagement_pct": round(zero_pct, 1),
+                "engagement_cv": round(cv, 2),
+                "ff_ratio": round(ff_ratio, 2),
+                "health_score": round(score),
+                "health_level": _health_level(score),
+                "signals": signals,
+            }
+        )
 
     # Overall health = weighted average by follower count
     total_followers = sum(p["followers"] for p in profile_analyses) or 1

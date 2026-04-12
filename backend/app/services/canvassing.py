@@ -57,18 +57,15 @@ class CanvassingService:
         """
         # ── Step 1: Fetch candidate ciudadanos with location ──
         if target_ciudadanos:
-            query = (
-                select(
-                    Ciudadano.id,
-                    Ciudadano.nombre,
-                    Ciudadano.apellido_paterno,
-                    Ciudadano.ubicacion,
-                )
-                .where(
-                    Ciudadano.seccion_id == seccion_id,
-                    Ciudadano.ubicacion.isnot(None),
-                    Ciudadano.id.in_(target_ciudadanos),
-                )
+            query = select(
+                Ciudadano.id,
+                Ciudadano.nombre,
+                Ciudadano.apellido_paterno,
+                Ciudadano.ubicacion,
+            ).where(
+                Ciudadano.seccion_id == seccion_id,
+                Ciudadano.ubicacion.isnot(None),
+                Ciudadano.id.in_(target_ciudadanos),
             )
         elif priorizar_score:
             # Join with voter_scores and order by score descending
@@ -125,7 +122,9 @@ class CanvassingService:
             )
             SELECT
                 ST_SetSRID(ST_MakeLine(array_agg(ubicacion ORDER BY ordinality)), 4326) AS geom,
-                ST_Length(ST_MakeLine(array_agg(ubicacion ORDER BY ordinality))::geography) / 1000.0 AS distance_km
+                ST_Length(
+                    ST_MakeLine(array_agg(ubicacion ORDER BY ordinality))::geography
+                ) / 1000.0 AS distance_km
             FROM ordered_pts
         """)
         geom_result = await db.execute(geom_sql, {"ids": ordered_ids})
@@ -231,13 +230,10 @@ class CanvassingService:
         """
         # ── Fetch candidate IDs ──
         if target_ciudadanos:
-            id_query = (
-                select(Ciudadano.id)
-                .where(
-                    Ciudadano.seccion_id == seccion_id,
-                    Ciudadano.ubicacion.isnot(None),
-                    Ciudadano.id.in_(target_ciudadanos),
-                )
+            id_query = select(Ciudadano.id).where(
+                Ciudadano.seccion_id == seccion_id,
+                Ciudadano.ubicacion.isnot(None),
+                Ciudadano.id.in_(target_ciudadanos),
             )
         elif priorizar_score:
             id_query = (
@@ -332,7 +328,9 @@ class CanvassingService:
             )
             SELECT
                 ST_SetSRID(ST_MakeLine(array_agg(ubicacion ORDER BY ordinality)), 4326) AS geom,
-                ST_Length(ST_MakeLine(array_agg(ubicacion ORDER BY ordinality))::geography) / 1000.0 AS distance_km
+                ST_Length(
+                    ST_MakeLine(array_agg(ubicacion ORDER BY ordinality))::geography
+                ) / 1000.0 AS distance_km
             FROM ordered_pts
         """)
         line_result = await db.execute(line_sql, {"ids": ordered_ids})
@@ -471,9 +469,7 @@ class CanvassingService:
             ValueError: If punto_id not found.
         """
         # Update the punto
-        result = await db.execute(
-            select(PuntoRuta).where(PuntoRuta.id == punto_id)
-        )
+        result = await db.execute(select(PuntoRuta).where(PuntoRuta.id == punto_id))
         punto = result.scalar_one_or_none()
         if punto is None:
             msg = f"PuntoRuta {punto_id} not found"
@@ -527,9 +523,7 @@ class CanvassingService:
         Raises:
             ValueError: If ruta_id not found.
         """
-        result = await db.execute(
-            select(RutaCanvassing).where(RutaCanvassing.id == ruta_id)
-        )
+        result = await db.execute(select(RutaCanvassing).where(RutaCanvassing.id == ruta_id))
         ruta = result.scalar_one_or_none()
         if ruta is None:
             msg = f"Ruta {ruta_id} not found"
@@ -543,9 +537,7 @@ class CanvassingService:
         distancia_restante_km = None
         if ruta.distancia_total_km is not None and total > 0:
             remaining_ratio = (total - completados) / total
-            distancia_restante_km = round(
-                ruta.distancia_total_km * remaining_ratio, 3
-            )
+            distancia_restante_km = round(ruta.distancia_total_km * remaining_ratio, 3)
 
         return {
             "total": total,

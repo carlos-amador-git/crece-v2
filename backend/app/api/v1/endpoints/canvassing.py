@@ -31,18 +31,14 @@ router = APIRouter()
 # ── Helpers ──────────────────────────────────────────────────
 
 
-async def _ruta_to_response(
-    db: AsyncSession, ruta: RutaCanvassing
-) -> RutaCanvassingResponse:
+async def _ruta_to_response(db: AsyncSession, ruta: RutaCanvassing) -> RutaCanvassingResponse:
     """Convert a RutaCanvassing ORM instance to a response schema."""
     puntos_resp = []
     for p in ruta.puntos:
         # Extract lat/lon from PostGIS geometry
         p_lat, p_lon = None, None
         if p.ubicacion is not None:
-            coord_sql = text(
-                "SELECT ST_Y(:geom::geometry) AS lat, ST_X(:geom::geometry) AS lon"
-            )
+            coord_sql = text("SELECT ST_Y(:geom::geometry) AS lat, ST_X(:geom::geometry) AS lon")
             coord_result = await db.execute(coord_sql, {"geom": p.ubicacion})
             coords = coord_result.one()
             p_lat, p_lon = coords.lat, coords.lon
@@ -54,9 +50,7 @@ async def _ruta_to_response(
             )
         )
         c_row = c_result.one_or_none()
-        c_nombre = (
-            f"{c_row.nombre} {c_row.apellido_paterno}" if c_row else None
-        )
+        c_nombre = f"{c_row.nombre} {c_row.apellido_paterno}" if c_row else None
 
         puntos_resp.append(
             PuntoRutaResponse(
@@ -76,12 +70,8 @@ async def _ruta_to_response(
     # Build GeoJSON from route geometry
     geometry_geojson = None
     if ruta.geometry_ruta is not None:
-        geojson_sql = text(
-            "SELECT ST_AsGeoJSON(:geom::geometry)::json AS geojson"
-        )
-        geojson_result = await db.execute(
-            geojson_sql, {"geom": ruta.geometry_ruta}
-        )
+        geojson_sql = text("SELECT ST_AsGeoJSON(:geom::geometry)::json AS geojson")
+        geojson_result = await db.execute(geojson_sql, {"geom": ruta.geometry_ruta})
         geometry_geojson = geojson_result.scalar_one()
 
     # Progress
@@ -91,9 +81,7 @@ async def _ruta_to_response(
     distancia_restante_km = None
     if ruta.distancia_total_km is not None and total > 0:
         remaining_ratio = (total - completados) / total
-        distancia_restante_km = round(
-            ruta.distancia_total_km * remaining_ratio, 3
-        )
+        distancia_restante_km = round(ruta.distancia_total_km * remaining_ratio, 3)
 
     return RutaCanvassingResponse(
         id=ruta.id,
@@ -128,9 +116,7 @@ async def _ruta_to_response(
     "/optimize",
     response_model=RutaCanvassingResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[
-        Depends(RoleChecker([Role.ADMIN, Role.ANALYST, Role.FIELD_OPERATOR]))
-    ],
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST, Role.FIELD_OPERATOR]))],
 )
 async def optimize_route(
     payload: OptimizeRequest,
@@ -168,8 +154,8 @@ async def list_routes(
     db: Annotated[AsyncSession, Depends(get_db)],
     _current_user: Annotated[User, Depends(get_current_user)],
     encuestador_id: int | None = Query(default=None),
-    fecha: date | None = Query(default=None),
-    estado: EstadoRuta | None = Query(default=None),
+    fecha: date | None = Query(default=None),  # noqa: B008
+    estado: EstadoRuta | None = Query(default=None),  # noqa: B008
     seccion_id: int | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -210,9 +196,7 @@ async def get_route(
     _current_user: Annotated[User, Depends(get_current_user)],
 ) -> RutaCanvassingResponse:
     """Get a single canvassing route with points and GeoJSON."""
-    result = await db.execute(
-        select(RutaCanvassing).where(RutaCanvassing.id == route_id)
-    )
+    result = await db.execute(select(RutaCanvassing).where(RutaCanvassing.id == route_id))
     ruta = result.scalar_one_or_none()
     if ruta is None:
         raise HTTPException(
@@ -225,9 +209,7 @@ async def get_route(
 @router.patch(
     "/routes/{route_id}/punto/{punto_id}",
     response_model=PuntoRutaResponse,
-    dependencies=[
-        Depends(RoleChecker([Role.ADMIN, Role.ANALYST, Role.FIELD_OPERATOR]))
-    ],
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST, Role.FIELD_OPERATOR]))],
 )
 async def mark_punto_visited(
     route_id: int,
@@ -266,12 +248,8 @@ async def mark_punto_visited(
     # Extract lat/lon
     p_lat, p_lon = None, None
     if updated_punto.ubicacion is not None:
-        coord_sql = text(
-            "SELECT ST_Y(:geom::geometry) AS lat, ST_X(:geom::geometry) AS lon"
-        )
-        coord_result = await db.execute(
-            coord_sql, {"geom": updated_punto.ubicacion}
-        )
+        coord_sql = text("SELECT ST_Y(:geom::geometry) AS lat, ST_X(:geom::geometry) AS lon")
+        coord_result = await db.execute(coord_sql, {"geom": updated_punto.ubicacion})
         coords = coord_result.one()
         p_lat, p_lon = coords.lat, coords.lon
 
@@ -322,9 +300,7 @@ async def get_route_progress(
 @router.get(
     "/nearby",
     response_model=list[NearbyCiudadanoResponse],
-    dependencies=[
-        Depends(RoleChecker([Role.ADMIN, Role.ANALYST, Role.FIELD_OPERATOR]))
-    ],
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST, Role.FIELD_OPERATOR]))],
 )
 async def get_nearby_ciudadanos(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -369,9 +345,7 @@ async def cancel_route(
     Sets the route state to CANCELADA rather than deleting it,
     preserving audit trail.
     """
-    result = await db.execute(
-        select(RutaCanvassing).where(RutaCanvassing.id == route_id)
-    )
+    result = await db.execute(select(RutaCanvassing).where(RutaCanvassing.id == route_id))
     ruta = result.scalar_one_or_none()
     if ruta is None:
         raise HTTPException(
@@ -395,9 +369,7 @@ async def cancel_route(
 @router.get(
     "/geo",
     response_class=JSONResponse,
-    dependencies=[
-        Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))
-    ],
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
 )
 async def get_canvassing_geo(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -476,7 +448,9 @@ async def get_canvassing_geo(
                 'properties', jsonb_build_object(
                     'id', cl.id,
                     'nombre', LEFT(cl.nombre, 1) || '. ' || COALESCE(cl.apellido_paterno, ''),
-                    'nombre_completo', cl.nombre || ' ' || COALESCE(cl.apellido_paterno, '') || ' ' || COALESCE(cl.apellido_materno, ''),
+                    'nombre_completo', cl.nombre || ' '
+                        || COALESCE(cl.apellido_paterno, '') || ' '
+                        || COALESCE(cl.apellido_materno, ''),
                     'edad', cl.edad,
                     'sexo', cl.sexo,
                     'nivel_educativo', cl.nivel_educativo,
@@ -505,9 +479,7 @@ async def get_canvassing_geo(
 
 @router.get(
     "/geo-stats",
-    dependencies=[
-        Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))
-    ],
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
 )
 async def get_canvassing_geo_stats(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -520,7 +492,9 @@ async def get_canvassing_geo_stats(
         SELECT jsonb_build_object(
             'total', (SELECT COUNT(*) FROM ciudadanos_legacy WHERE org_id = :org_id),
             'con_geo', (SELECT COUNT(*) FROM ciudadanos_legacy
-                        WHERE org_id = :org_id AND latitud_cd IS NOT NULL AND longitud_cd IS NOT NULL),
+                        WHERE org_id = :org_id
+                          AND latitud_cd IS NOT NULL
+                          AND longitud_cd IS NOT NULL),
             'por_alcaldia', (
                 SELECT COALESCE(jsonb_agg(jsonb_build_object(
                     'alcaldia_id', cl.alcaldia_id,

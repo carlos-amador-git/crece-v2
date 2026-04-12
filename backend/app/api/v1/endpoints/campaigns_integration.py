@@ -54,9 +54,7 @@ async def segment_ciudadanos(
 
     if payload.programa_social:
         # JSONB contains check — programas_sociales is a JSONB column
-        query = query.where(
-            Ciudadano.programas_sociales.op("?")(payload.programa_social)
-        )
+        query = query.where(Ciudadano.programas_sociales.op("?")(payload.programa_social))
 
     if payload.excluir_contactados_dias:
         # Exclude ciudadanos with recent CRM interactions
@@ -156,9 +154,7 @@ async def list_campaigns(
     from app.models.campaign_integration import Campaign
 
     query = select(Campaign).where(Campaign.org_id == current_user.org_id)
-    count_query = select(func.count(Campaign.id)).where(
-        Campaign.org_id == current_user.org_id
-    )
+    count_query = select(func.count(Campaign.id)).where(Campaign.org_id == current_user.org_id)
 
     if estado:
         query = query.where(Campaign.estado == estado)
@@ -168,9 +164,7 @@ async def list_campaigns(
     total = total_result.scalar_one()
 
     query = (
-        query.order_by(Campaign.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+        query.order_by(Campaign.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     result = await db.execute(query)
     items = list(result.scalars().all())
@@ -201,7 +195,7 @@ async def get_campaign(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid campaign ID format",
-        )
+        ) from None
 
     result = await db.execute(
         select(Campaign).where(
@@ -211,8 +205,6 @@ async def get_campaign(
     )
     campaign = result.scalar_one_or_none()
     if campaign is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
     return CampaignResponse.model_validate(campaign)

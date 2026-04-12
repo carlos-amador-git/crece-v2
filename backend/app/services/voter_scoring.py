@@ -123,7 +123,9 @@ class VoterScoringEngine:
 
         ultima_intencion_mc = 0
         if latest_encuesta is not None:
-            ultima_intencion_mc = 1 if latest_encuesta.intencion_voto == IntencionVotoCiudadano.MC else 0
+            ultima_intencion_mc = (
+                1 if latest_encuesta.intencion_voto == IntencionVotoCiudadano.MC else 0
+            )
 
         return {
             "edad_numeric": RANGO_EDAD_MIDPOINT.get(ciudadano.edad_rango, 35.0),
@@ -134,9 +136,7 @@ class VoterScoringEngine:
             ),
             "es_simpatizante_mc": float(ciudadano.es_simpatizante_mc),
             "es_promotor": float(ciudadano.es_promotor),
-            "nivel_interes_ordinal": float(
-                NIVEL_INTERES_ORDINAL.get(ciudadano.nivel_interes, 0)
-            ),
+            "nivel_interes_ordinal": float(NIVEL_INTERES_ORDINAL.get(ciudadano.nivel_interes, 0)),
             "num_encuestas": float(len(encuestas)),
             "num_eventos_asistidos": float(num_eventos_asistidos),
             "num_programas_sociales": float(num_programas),
@@ -233,14 +233,7 @@ class VoterScoringEngine:
         from sklearn.model_selection import train_test_split
 
         # Fetch ciudadanos that have at least 1 encuesta
-        stmt = (
-            select(Ciudadano)
-            .where(
-                Ciudadano.id.in_(
-                    select(Encuesta.ciudadano_id).distinct()
-                )
-            )
-        )
+        stmt = select(Ciudadano).where(Ciudadano.id.in_(select(Encuesta.ciudadano_id).distinct()))
         result = await db.execute(stmt)
         ciudadanos = list(result.scalars().all())
 
@@ -251,7 +244,7 @@ class VoterScoringEngine:
             )
 
         # Collect features and labels
-        X_rows: list[list[float]] = []
+        feature_rows: list[list[float]] = []
         y_labels: list[int] = []
 
         for c in ciudadanos:
@@ -265,8 +258,7 @@ class VoterScoringEngine:
 
             # Count events attended
             evt_result = await db.execute(
-                select(func.count(EventoAsistente.id))
-                .where(
+                select(func.count(EventoAsistente.id)).where(
                     EventoAsistente.ciudadano_id == c.id,
                     EventoAsistente.asistio.is_(True),
                 )
@@ -275,15 +267,17 @@ class VoterScoringEngine:
 
             features = self.extract_features(c, encuestas, num_eventos)
             feature_vector = [features[col] for col in FEATURE_COLUMNS]
-            X_rows.append(feature_vector)
+            feature_rows.append(feature_vector)
 
             # Target: did the latest encuesta indicate MC?
             latest = encuestas[0] if encuestas else None
-            y_labels.append(1 if latest and latest.intencion_voto == IntencionVotoCiudadano.MC else 0)
+            y_labels.append(
+                1 if latest and latest.intencion_voto == IntencionVotoCiudadano.MC else 0
+            )
 
         # Train/test split
-        X_train, X_test, y_train, y_test = train_test_split(
-            X_rows, y_labels, test_size=0.2, random_state=42, stratify=y_labels
+        x_train, x_test, y_train, y_test = train_test_split(
+            feature_rows, y_labels, test_size=0.2, random_state=42, stratify=y_labels
         )
 
         clf = RandomForestClassifier(
@@ -293,10 +287,10 @@ class VoterScoringEngine:
             random_state=42,
             n_jobs=-1,
         )
-        clf.fit(X_train, y_train)
+        clf.fit(x_train, y_train)
 
         # Evaluate
-        y_pred = clf.predict(X_test)
+        y_pred = clf.predict(x_test)
         acc = accuracy_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred, zero_division=0)
         cm = confusion_matrix(y_test, y_pred).tolist()
@@ -309,7 +303,10 @@ class VoterScoringEngine:
 
         logger.info(
             "Trained voter scoring model %s — accuracy=%.3f, f1=%.3f, samples=%d",
-            version, acc, f1, len(X_rows),
+            version,
+            acc,
+            f1,
+            len(feature_rows),
         )
 
         return {
@@ -317,7 +314,7 @@ class VoterScoringEngine:
             "accuracy": round(acc, 4),
             "f1_score": round(f1, 4),
             "confusion_matrix": cm,
-            "total_samples": len(X_rows),
+            "total_samples": len(feature_rows),
         }
 
     # ── Single scoring ───────────────────────────────────
@@ -418,16 +415,18 @@ class VoterScoringEngine:
 
             result_score = self.score_ciudadano(c, encuestas, num_eventos)
 
-            upsert_values.append({
-                "ciudadano_id": c.id,
-                "score": result_score.score,
-                "probabilidad_mc": result_score.probabilidad_mc,
-                "segmento": result_score.segmento.value,
-                "features": result_score.features,
-                "modelo_version": result_score.modelo_version,
-                "scored_at": now,
-                "org_id": c.org_id,
-            })
+            upsert_values.append(
+                {
+                    "ciudadano_id": c.id,
+                    "score": result_score.score,
+                    "probabilidad_mc": result_score.probabilidad_mc,
+                    "segmento": result_score.segmento.value,
+                    "features": result_score.features,
+                    "modelo_version": result_score.modelo_version,
+                    "scored_at": now,
+                    "org_id": c.org_id,
+                }
+            )
 
             seg_key = result_score.segmento.value
             segmento_counts[seg_key] = segmento_counts.get(seg_key, 0) + 1

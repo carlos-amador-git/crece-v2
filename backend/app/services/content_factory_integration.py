@@ -62,13 +62,15 @@ async def _gather_context(db: AsyncSession, dirigente: Dirigente) -> dict:
             )
         )
         row = stats_result.one()
-        profiles_data.append({
-            "platform": p.platform.value,
-            "handle": p.handle,
-            "followers": p.followers_count,
-            "posts_30d": int(row[0]),
-            "avg_engagement_30d": round(float(row[1]), 4) if row[1] else 0.0,
-        })
+        profiles_data.append(
+            {
+                "platform": p.platform.value,
+                "handle": p.handle,
+                "followers": p.followers_count,
+                "posts_30d": int(row[0]),
+                "avg_engagement_30d": round(float(row[1]), 4) if row[1] else 0.0,
+            }
+        )
 
     return {
         "dirigente": {
@@ -181,7 +183,8 @@ async def generate_content(
 
     if not settings.CLAUDE_API_KEY:
         raise ValueError(
-            "CLAUDE_API_KEY is not configured. Set the environment variable to enable AI content generation."
+            "CLAUDE_API_KEY is not configured. "
+            "Set the environment variable to enable AI content generation."
         )
 
     # Load dirigente
@@ -220,7 +223,7 @@ async def generate_content(
     try:
         from app.models.contenido_pieza import ContenidoPieza
     except ImportError:
-        raise ImportError("ContenidoPieza model is not available yet")
+        raise ImportError("ContenidoPieza model is not available yet") from None
 
     pieza = ContenidoPieza(
         dirigente_id=dirigente_id,

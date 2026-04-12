@@ -131,14 +131,10 @@ async def get_ciudadano_pii(
     """
     # Verify existence + org scope
     row = (
-        await db.execute(
-            select(CiudadanoLegacy).where(CiudadanoLegacy.id == ciudadano_id)
-        )
+        await db.execute(select(CiudadanoLegacy).where(CiudadanoLegacy.id == ciudadano_id))
     ).scalar_one_or_none()
     if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Ciudadano not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ciudadano not found")
 
     fields_to_read = [
         "email",
@@ -193,14 +189,10 @@ async def erase_ciudadano(
     Logs the action to `data_access_log` with action='gdpr_erase'.
     """
     row = (
-        await db.execute(
-            select(CiudadanoLegacy).where(CiudadanoLegacy.id == ciudadano_id)
-        )
+        await db.execute(select(CiudadanoLegacy).where(CiudadanoLegacy.id == ciudadano_id))
     ).scalar_one_or_none()
     if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Ciudadano not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ciudadano not found")
     if row.deleted_at is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -233,8 +225,12 @@ async def erase_ciudadano(
         row_id=str(ciudadano_id),
         action="gdpr_erase",
         fields=[
-            "email_enc", "phone_01_enc", "phone_02_enc",
-            "whatsapp_enc", "fecha_nacimiento_enc", "clave_electoral_enc",
+            "email_enc",
+            "phone_01_enc",
+            "phone_02_enc",
+            "whatsapp_enc",
+            "fecha_nacimiento_enc",
+            "clave_electoral_enc",
         ],
         metadata={"erased_at": now.isoformat()},
     )

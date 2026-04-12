@@ -31,16 +31,12 @@ class ApiKey(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    key_hash: Mapped[str] = mapped_column(
-        String(128), nullable=False, unique=True
-    )
+    key_hash: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
     key_prefix: Mapped[str] = mapped_column(String(12), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     permissions: Mapped[dict | None] = mapped_column(JSONB, default=dict)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    last_used_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

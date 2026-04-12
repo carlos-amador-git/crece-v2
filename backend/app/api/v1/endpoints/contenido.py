@@ -82,14 +82,17 @@ async def generate_contenido(
             user_id=current_user.id,
         )
     except LookupError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating content: {exc}",
-        )
+        ) from exc
 
     return _to_response(contenido)
 
@@ -111,9 +114,7 @@ async def generate_contenido_stream(
     result = await db.execute(select(Dirigente).where(Dirigente.id == payload.dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
 
     return EventSourceResponse(
         ContentFactory.generate_stream(
@@ -157,9 +158,7 @@ async def list_contenidos(
         count_query = count_query.where(ContenidoGenerado.estado == estado)
     if plataforma_destino is not None:
         query = query.where(ContenidoGenerado.plataforma_destino == plataforma_destino)
-        count_query = count_query.where(
-            ContenidoGenerado.plataforma_destino == plataforma_destino
-        )
+        count_query = count_query.where(ContenidoGenerado.plataforma_destino == plataforma_destino)
 
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()
@@ -191,14 +190,10 @@ async def get_contenido(
     _current_user: Annotated[User, Depends(get_current_user)],
 ) -> ContenidoResponse:
     """Get a single generated content piece by ID."""
-    result = await db.execute(
-        select(ContenidoGenerado).where(ContenidoGenerado.id == contenido_id)
-    )
+    result = await db.execute(select(ContenidoGenerado).where(ContenidoGenerado.id == contenido_id))
     contenido = result.scalar_one_or_none()
     if contenido is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Contenido not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contenido not found")
     return _to_response(contenido)
 
 
@@ -220,20 +215,17 @@ async def update_estado(
     Valid flow: borrador -> revisado -> aprobado -> publicado
     Rejection: borrador -> rechazado, revisado -> rechazado
     """
-    result = await db.execute(
-        select(ContenidoGenerado).where(ContenidoGenerado.id == contenido_id)
-    )
+    result = await db.execute(select(ContenidoGenerado).where(ContenidoGenerado.id == contenido_id))
     contenido = result.scalar_one_or_none()
     if contenido is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Contenido not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contenido not found")
 
     if not is_valid_transition(contenido.estado, payload.estado):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
-                f"Transicion de estado invalida: {contenido.estado.value} -> {payload.estado.value}. "
+                f"Transicion de estado invalida: "
+                f"{contenido.estado.value} -> {payload.estado.value}. "
                 f"Transiciones validas desde '{contenido.estado.value}': "
                 f"{', '.join(s.value for s in _get_valid_targets(contenido.estado))}"
             ),
@@ -269,7 +261,7 @@ async def temas_sugeridos(
     try:
         raw_temas = await ContentFactory.list_temas_sugeridos(db=db, dirigente_id=dirigente_id)
     except LookupError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     return [
         TemaSugerido(
@@ -294,14 +286,10 @@ async def delete_contenido(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Delete a generated content piece. Admin only."""
-    result = await db.execute(
-        select(ContenidoGenerado).where(ContenidoGenerado.id == contenido_id)
-    )
+    result = await db.execute(select(ContenidoGenerado).where(ContenidoGenerado.id == contenido_id))
     contenido = result.scalar_one_or_none()
     if contenido is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Contenido not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contenido not found")
 
     await db.delete(contenido)
     await db.flush()

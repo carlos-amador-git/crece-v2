@@ -5,15 +5,6 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-
-# Period parameter: maps "today" / "7d" / "30d" / "90d" to number of days.
-# Default is "30d" (matches the default pressed button in the dashboard header).
-PERIOD_TO_DAYS: dict[str, int] = {
-    "today": 1,
-    "7d": 7,
-    "30d": 30,
-    "90d": 90,
-}
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +15,15 @@ from app.models.dirigente import Dirigente
 from app.models.social import SocialPost
 from app.models.user import User
 from app.services.diagnostico import calculate_ipd
+
+# Period parameter: maps "today" / "7d" / "30d" / "90d" to number of days.
+# Default is "30d" (matches the default pressed button in the dashboard header).
+PERIOD_TO_DAYS: dict[str, int] = {
+    "today": 1,
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+}
 
 router = APIRouter()
 
@@ -116,9 +116,9 @@ async def get_overview(
     # Posts last 24h (scoped)
     posts_query = select(func.count(SocialPost.id)).where(SocialPost.scraped_at >= last_24h)
     if user_dirigente_id:
-        posts_query = posts_query.join(SocialProfile, SocialPost.profile_id == SocialProfile.id).where(
-            SocialProfile.dirigente_id == user_dirigente_id
-        )
+        posts_query = posts_query.join(
+            SocialProfile, SocialPost.profile_id == SocialProfile.id
+        ).where(SocialProfile.dirigente_id == user_dirigente_id)
     posts_24h_result = await db.execute(posts_query)
     posts_24h = posts_24h_result.scalar() or 0
 
@@ -128,17 +128,15 @@ async def get_overview(
         SocialPost.scraped_at < last_24h,
     )
     if user_dirigente_id:
-        posts_prev_query = posts_prev_query.join(SocialProfile, SocialPost.profile_id == SocialProfile.id).where(
-            SocialProfile.dirigente_id == user_dirigente_id
-        )
+        posts_prev_query = posts_prev_query.join(
+            SocialProfile, SocialPost.profile_id == SocialProfile.id
+        ).where(SocialProfile.dirigente_id == user_dirigente_id)
     posts_prev_result = await db.execute(posts_prev_query)
     posts_prev = posts_prev_result.scalar() or 0
 
     # Active alerts
     alerts_result = await db.execute(
-        select(func.count(AlertaCrisis.id)).where(
-            AlertaCrisis.created_at >= last_7d
-        )
+        select(func.count(AlertaCrisis.id)).where(AlertaCrisis.created_at >= last_7d)
     )
     active_alerts = alerts_result.scalar() or 0
 

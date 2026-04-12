@@ -19,9 +19,7 @@ class Campaign(Base):
 
     __tablename__ = "campaigns"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     org_id: Mapped[int] = mapped_column(
         ForeignKey("organizaciones.id", ondelete="CASCADE"),
         nullable=False,
@@ -37,12 +35,8 @@ class Campaign(Base):
     leidos: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     respondidos: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     estado: Mapped[str] = mapped_column(String(50), default="borrador", nullable=False)
-    chatwoot_campaign_id: Mapped[str | None] = mapped_column(
-        String(100), nullable=True
-    )
-    programado_para: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    chatwoot_campaign_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    programado_para: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     creado_por_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,

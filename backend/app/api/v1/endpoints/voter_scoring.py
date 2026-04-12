@@ -97,13 +97,10 @@ async def get_segment_distribution(
     org_id: int | None = None,
 ) -> list[SegmentDistribution]:
     """Return the distribution of voter segments for dashboard charts."""
-    query = (
-        select(
-            VoterScore.segmento,
-            func.count(VoterScore.id).label("cnt"),
-        )
-        .group_by(VoterScore.segmento)
-    )
+    query = select(
+        VoterScore.segmento,
+        func.count(VoterScore.id).label("cnt"),
+    ).group_by(VoterScore.segmento)
     if org_id is not None:
         query = query.where(VoterScore.org_id == org_id)
 
@@ -252,9 +249,7 @@ async def get_voter_score(
     """
     if recompute:
         # Fetch ciudadano
-        c_result = await db.execute(
-            select(Ciudadano).where(Ciudadano.id == ciudadano_id)
-        )
+        c_result = await db.execute(select(Ciudadano).where(Ciudadano.id == ciudadano_id))
         ciudadano = c_result.scalar_one_or_none()
         if ciudadano is None:
             raise HTTPException(
@@ -272,17 +267,14 @@ async def get_voter_score(
 
         # Count events attended
         evt_result = await db.execute(
-            select(func.count(EventoAsistente.id))
-            .where(
+            select(func.count(EventoAsistente.id)).where(
                 EventoAsistente.ciudadano_id == ciudadano_id,
                 EventoAsistente.asistio.is_(True),
             )
         )
         num_eventos = evt_result.scalar_one()
 
-        score_result = voter_scoring_engine.score_ciudadano(
-            ciudadano, encuestas, num_eventos
-        )
+        score_result = voter_scoring_engine.score_ciudadano(ciudadano, encuestas, num_eventos)
 
         return VoterScoreResponse(
             id=0,  # not persisted
@@ -296,9 +288,7 @@ async def get_voter_score(
         )
 
     # Return stored score
-    result = await db.execute(
-        select(VoterScore).where(VoterScore.ciudadano_id == ciudadano_id)
-    )
+    result = await db.execute(select(VoterScore).where(VoterScore.ciudadano_id == ciudadano_id))
     voter_score = result.scalar_one_or_none()
     if voter_score is None:
         raise HTTPException(

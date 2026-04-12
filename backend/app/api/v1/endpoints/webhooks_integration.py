@@ -64,7 +64,7 @@ async def chatwoot_webhook(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid JSON payload",
-        )
+        ) from None
 
     # Handle raw Chatwoot payload (has "event" key) vs n8n-preprocessed (has "tipo" key)
     if "event" in raw and "tipo" not in raw:
@@ -129,9 +129,7 @@ async def _handle_message_reply(db: AsyncSession, data: dict) -> dict:
     if mensaje and mensaje.strip().upper() in ("STOP", "BAJA", "CANCELAR", "NO MAS"):
         from app.models.ciudadano import Ciudadano
 
-        result = await db.execute(
-            select(Ciudadano).where(Ciudadano.id == ciudadano_id)
-        )
+        result = await db.execute(select(Ciudadano).where(Ciudadano.id == ciudadano_id))
         ciudadano = result.scalar_one_or_none()
         if ciudadano:
             ciudadano.no_contactar = True
@@ -144,9 +142,7 @@ async def _handle_message_reply(db: AsyncSession, data: dict) -> dict:
     if not org_id:
         from app.models.ciudadano import Ciudadano
 
-        c_result = await db.execute(
-            select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id)
-        )
+        c_result = await db.execute(select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id))
         org_id = c_result.scalar_one_or_none() or 3  # fallback MC CDMX
 
     try:
@@ -179,9 +175,7 @@ async def _handle_contact_created(db: AsyncSession, data: dict) -> dict:
         return {"status": "skipped", "reason": "no telefono in payload"}
 
     # Check if already exists
-    result = await db.execute(
-        select(Ciudadano).where(Ciudadano.telefono == telefono).limit(1)
-    )
+    result = await db.execute(select(Ciudadano).where(Ciudadano.telefono == telefono).limit(1))
     existing = result.scalar_one_or_none()
     if existing is not None:
         return {"status": "exists", "ciudadano_id": existing.id}
@@ -216,9 +210,7 @@ async def _handle_propuesta(db: AsyncSession, data: dict) -> dict:
         from app.models.ciudadano import Ciudadano
         from app.models.crm_interaccion import CrmInteraccion
 
-        c_result = await db.execute(
-            select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id)
-        )
+        c_result = await db.execute(select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id))
         prop_org_id = c_result.scalar_one_or_none() or 3
 
         interaccion = CrmInteraccion(

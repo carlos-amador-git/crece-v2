@@ -19,9 +19,7 @@ class SeccionElectoral(Base):
     distrito_local: Mapped[str] = mapped_column(String(10), nullable=False)
     municipio: Mapped[str] = mapped_column(String(200), nullable=False)
     geometry = mapped_column(
-        geoalchemy2.Geometry(
-            geometry_type="MULTIPOLYGON", srid=4326, dimension=2
-        ),
+        geoalchemy2.Geometry(geometry_type="MULTIPOLYGON", srid=4326, dimension=2),
         nullable=True,
     )
 

@@ -19,9 +19,7 @@ class VoterScoreIntegration(Base):
 
     __tablename__ = "voter_scores_integration"
     __table_args__ = (
-        UniqueConstraint(
-            "ciudadano_id", name="uq_voter_scores_integration_ciudadano_id"
-        ),
+        UniqueConstraint("ciudadano_id", name="uq_voter_scores_integration_ciudadano_id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

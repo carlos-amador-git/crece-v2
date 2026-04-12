@@ -58,9 +58,7 @@ class Campana(Base):
     fecha_programada: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    fecha_envio: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    fecha_envio: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     fecha_completada: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -158,20 +156,12 @@ class CampanaMensaje(Base):
         default=EstadoMensaje.PENDIENTE,
         nullable=False,
     )
-    chatwoot_message_id: Mapped[str | None] = mapped_column(
-        String(100), nullable=True, index=True
-    )
+    chatwoot_message_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
 
     # ── Delivery timestamps ──────────────────────────────
-    enviado_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    entregado_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    leido_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    enviado_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    entregado_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    leido_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_mensaje: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(

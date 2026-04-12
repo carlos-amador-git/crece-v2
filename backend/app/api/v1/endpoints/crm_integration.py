@@ -117,9 +117,7 @@ async def get_voter_score(
     from app.models.voter_score_integration import VoterScoreIntegration
 
     result = await db.execute(
-        select(VoterScoreIntegration).where(
-            VoterScoreIntegration.ciudadano_id == ciudadano_id
-        )
+        select(VoterScoreIntegration).where(VoterScoreIntegration.ciudadano_id == ciudadano_id)
     )
     score = result.scalar_one_or_none()
     if score is None:
@@ -148,16 +146,12 @@ async def list_voter_scores(
     count_query = select(func.count(VoterScoreIntegration.id))
 
     if score_favorable_min is not None:
-        query = query.where(
-            VoterScoreIntegration.score_favorable >= score_favorable_min
-        )
+        query = query.where(VoterScoreIntegration.score_favorable >= score_favorable_min)
         count_query = count_query.where(
             VoterScoreIntegration.score_favorable >= score_favorable_min
         )
     if score_persuadible_min is not None:
-        query = query.where(
-            VoterScoreIntegration.score_persuadible >= score_persuadible_min
-        )
+        query = query.where(VoterScoreIntegration.score_persuadible >= score_persuadible_min)
         count_query = count_query.where(
             VoterScoreIntegration.score_persuadible >= score_persuadible_min
         )

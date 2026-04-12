@@ -66,9 +66,7 @@ class BlindajeService:
         if profile.following_count > 0:
             ratio = profile.followers_count / profile.following_count
             if ratio > 10.0:
-                indicators.append(
-                    f"Follower/following ratio is {ratio:.1f} (threshold: 10)"
-                )
+                indicators.append(f"Follower/following ratio is {ratio:.1f} (threshold: 10)")
 
         # Indicator 2: very low engagement with high follower count
         if profile.followers_count > 10_000 and post.engagement_rate < 0.0001:
@@ -87,16 +85,12 @@ class BlindajeService:
         )
         daily_posts = count_result.scalar_one()
         if daily_posts > 50:
-            indicators.append(
-                f"Published {daily_posts} posts in the last 24h (threshold: 50)"
-            )
+            indicators.append(f"Published {daily_posts} posts in the last 24h (threshold: 50)")
 
         # Indicator 4: new account with high follower count
         # Approximate account age using the earliest post we have on record
         earliest_result = await db.execute(
-            select(func.min(SocialPost.published_at)).where(
-                SocialPost.profile_id == profile.id
-            )
+            select(func.min(SocialPost.published_at)).where(SocialPost.profile_id == profile.id)
         )
         earliest_post_date = earliest_result.scalar_one()
         if earliest_post_date is not None:
@@ -271,7 +265,11 @@ class BlindajeService:
             )
 
         # 2. Content published during veda electoral
-        if settings.VEDA_ELECTORAL_ACTIVE and settings.VEDA_ELECTORAL_INICIO and settings.VEDA_ELECTORAL_FIN:
+        if (
+            settings.VEDA_ELECTORAL_ACTIVE
+            and settings.VEDA_ELECTORAL_INICIO
+            and settings.VEDA_ELECTORAL_FIN
+        ):
             try:
                 veda_inicio = datetime.fromisoformat(settings.VEDA_ELECTORAL_INICIO)
                 veda_fin = datetime.fromisoformat(settings.VEDA_ELECTORAL_FIN)

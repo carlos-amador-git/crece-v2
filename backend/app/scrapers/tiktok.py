@@ -81,10 +81,25 @@ def _parse_yt_dlp_jsonl(output: str) -> list[dict[str, Any]]:
 def _sanitise_raw(raw: dict[str, Any]) -> dict[str, Any]:
     """Strip non-serialisable or excessively large fields before storing as JSONB."""
     keep_keys = {
-        "id", "title", "description", "uploader", "uploader_id", "uploader_url",
-        "channel", "channel_id", "upload_date", "timestamp", "duration",
-        "view_count", "like_count", "comment_count", "repost_count",
-        "thumbnail", "webpage_url", "categories", "tags",
+        "id",
+        "title",
+        "description",
+        "uploader",
+        "uploader_id",
+        "uploader_url",
+        "channel",
+        "channel_id",
+        "upload_date",
+        "timestamp",
+        "duration",
+        "view_count",
+        "like_count",
+        "comment_count",
+        "repost_count",
+        "thumbnail",
+        "webpage_url",
+        "categories",
+        "tags",
     }
     clean: dict[str, Any] = {}
     for k, v in raw.items():
@@ -130,28 +145,27 @@ class TikTokScraper(BaseScraper):
     # Primary: yt-dlp
     # ------------------------------------------------------------------
 
-    def _fetch_via_yt_dlp(
-        self, handle: str, max_videos: int = _MAX_VIDEOS
-    ) -> list[dict[str, Any]]:
+    def _fetch_via_yt_dlp(self, handle: str, max_videos: int = _MAX_VIDEOS) -> list[dict[str, Any]]:
         """Fetch TikTok video metadata using yt-dlp."""
         clean_handle = handle.lstrip("@")
         url = f"https://www.tiktok.com/@{clean_handle}"
 
-        output = _run_yt_dlp([
-            "--dump-json",
-            "--no-download",
-            "--no-warnings",
-            "--playlist-items", f"1-{max_videos}",
-            url,
-        ])
+        output = _run_yt_dlp(
+            [
+                "--dump-json",
+                "--no-download",
+                "--no-warnings",
+                "--playlist-items",
+                f"1-{max_videos}",
+                url,
+            ]
+        )
 
         if not output:
             return []
 
         entries = _parse_yt_dlp_jsonl(output)
-        logger.info(
-            "yt-dlp fetched %d TikTok videos for @%s", len(entries), clean_handle
-        )
+        logger.info("yt-dlp fetched %d TikTok videos for @%s", len(entries), clean_handle)
         return entries
 
     # ------------------------------------------------------------------
@@ -190,9 +204,7 @@ class TikTokScraper(BaseScraper):
             return videos
 
         try:
-            return asyncio.run(
-                asyncio.wait_for(_fetch(), timeout=_TIKTOKAPI_TIMEOUT)
-            )
+            return asyncio.run(asyncio.wait_for(_fetch(), timeout=_TIKTOKAPI_TIMEOUT))
         except TimeoutError:
             logger.error("TikTokApi timed out for @%s", handle)
             return []
@@ -236,9 +248,7 @@ class TikTokScraper(BaseScraper):
                 return {}
 
         try:
-            return asyncio.run(
-                asyncio.wait_for(_fetch(), timeout=_TIKTOKAPI_TIMEOUT)
-            )
+            return asyncio.run(asyncio.wait_for(_fetch(), timeout=_TIKTOKAPI_TIMEOUT))
         except Exception:
             return {}
 
@@ -324,9 +334,7 @@ class TikTokScraper(BaseScraper):
 
         duration = _safe_int(video_meta.get("duration", 0))
         music = raw_data.get("music")
-        post_type = (
-            PostType.REEL if (duration > 0 and duration < 60 and music) else PostType.VIDEO
-        )
+        post_type = PostType.REEL if (duration > 0 and duration < 60 and music) else PostType.VIDEO
 
         create_time = raw_data.get("createTime")
         if create_time is not None:
@@ -389,9 +397,7 @@ class TikTokScraper(BaseScraper):
                     continue
 
                 existing = session.execute(
-                    select(SocialPost).where(
-                        SocialPost.platform_post_id == platform_post_id
-                    )
+                    select(SocialPost).where(SocialPost.platform_post_id == platform_post_id)
                 ).scalar_one_or_none()
 
                 if existing is not None:
@@ -457,13 +463,17 @@ class TikTokScraper(BaseScraper):
         empty = {"followers_count": 0, "following_count": 0, "posts_count": 0}
 
         # Primary: yt-dlp -- fetch just 1 video to get channel metadata.
-        output = _run_yt_dlp([
-            "--dump-json",
-            "--no-download",
-            "--no-warnings",
-            "--playlist-items", "1",
-            f"https://www.tiktok.com/@{handle}",
-        ], timeout=30)
+        output = _run_yt_dlp(
+            [
+                "--dump-json",
+                "--no-download",
+                "--no-warnings",
+                "--playlist-items",
+                "1",
+                f"https://www.tiktok.com/@{handle}",
+            ],
+            timeout=30,
+        )
 
         if output:
             entries = _parse_yt_dlp_jsonl(output)
@@ -483,10 +493,7 @@ class TikTokScraper(BaseScraper):
         if not user_data:
             return empty
 
-        stats = (
-            user_data.get("userInfo", {}).get("stats", {})
-            or user_data.get("stats", {})
-        )
+        stats = user_data.get("userInfo", {}).get("stats", {}) or user_data.get("stats", {})
 
         return {
             "followers_count": _safe_int(stats.get("followerCount", 0)),

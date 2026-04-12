@@ -37,12 +37,8 @@ class Evento(Base):
         Enum(TipoEvento, name="tipo_evento", native_enum=True),
         nullable=False,
     )
-    fecha_inicio: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    fecha_fin: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    fecha_inicio: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    fecha_fin: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     lugar: Mapped[str] = mapped_column(String(500), nullable=False)
     geometry: Mapped[str | None] = mapped_column(
         Geometry(geometry_type="POINT", srid=4326),
