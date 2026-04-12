@@ -11,9 +11,9 @@ Convivencia intencional con las tablas v2 (`ciudadanos`, `users`):
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -85,15 +85,9 @@ class CiudadanoLegacy(Base):
     nombre: Mapped[str | None] = mapped_column(String(255), nullable=True)
     apellido_paterno: Mapped[str | None] = mapped_column(String(255), nullable=True)
     apellido_materno: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    fecha_nacimiento: Mapped[date | None] = mapped_column(Date, nullable=True)
     edad: Mapped[int | None] = mapped_column(Integer, nullable=True)
     sexo: Mapped[str | None] = mapped_column(String(10), nullable=True)
     identidad_de_genero: Mapped[str | None] = mapped_column(String(50), nullable=True)
-
-    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
-    phone_01: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    phone_02: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    whatsapp: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     calle: Mapped[str | None] = mapped_column(String(255), nullable=True)
     numero: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -112,7 +106,7 @@ class CiudadanoLegacy(Base):
     seccion: Mapped[str | None] = mapped_column(String(10), nullable=True, index=True)
     cabecera_territorial: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    clave_electoral: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # clave_electoral clear column dropped (D-DATA-02c) — use clave_electoral_enc
     origen_ciudadano: Mapped[str | None] = mapped_column(String(50), nullable=True)
     rol: Mapped[str | None] = mapped_column(String(50), nullable=True)
     ocupacion: Mapped[str | None] = mapped_column(String(255), nullable=True)

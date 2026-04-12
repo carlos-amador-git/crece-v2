@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -115,3 +116,78 @@ async def get_me(
 ) -> User:
     """Return current authenticated user's profile."""
     return current_user
+
+
+# ── Impersonate (D-S5-03) ──────────────────────────────────
+
+
+class ImpersonateResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    impersonating_user_id: int
+    impersonator_id: int
+    expires_minutes: int = 15
+
+
+@router.post(
+    "/impersonate/{user_id}",
+    response_model=ImpersonateResponse,
+    dependencies=[Depends(RoleChecker([Role.ADMIN]))],
+)
+async def impersonate_user(
+    user_id: int,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> ImpersonateResponse:
+    """Generate a temporary JWT to view the dashboard as another user.
+
+    Admin-only. The token includes `impersonator_id` claim so audit trails
+    track both the real admin and the impersonated user (Gemini G5).
+    Token expires in 15 minutes.
+    """
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot impersonate yourself",
+        )
+
+    target = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+
+    expires = timedelta(minutes=15)
+    token = create_access_token(
+        data={
+            "sub": str(target.id),
+            "role": target.role,
+            "org_id": target.org_id,
+            "impersonator_id": current_user.id,
+        },
+        expires_delta=expires,
+    )
+
+    # Audit log — use raw connection to avoid asyncpg cast issues
+    import json as _json
+
+    meta_str = _json.dumps({"target_email": target.email, "target_role": target.role})
+    ip = request.client.host if request.client else "unknown"
+    ua = request.headers.get("user-agent", "unknown")
+
+    raw = await db.connection()
+    await raw.exec_driver_sql(
+        "INSERT INTO data_access_log "
+        "(user_id, org_id, table_name, row_id, action, fields, metadata_json, request_ip, user_agent, created_at) "
+        "VALUES ($1, $2, 'users', $3, 'impersonate', $4::varchar[], $5::jsonb, $6, $7, NOW())",
+        (current_user.id, current_user.org_id or 3, str(user_id), ["*"], meta_str, ip, ua),
+    )
+    await db.commit()
+
+    return ImpersonateResponse(
+        access_token=token,
+        impersonating_user_id=user_id,
+        impersonator_id=current_user.id,
+    )
