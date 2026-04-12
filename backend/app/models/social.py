@@ -19,6 +19,7 @@ class Platform(str, enum.Enum):
     BLUESKY = "BLUESKY"
     THREADS = "THREADS"
     TELEGRAM = "TELEGRAM"
+    NEWS = "NEWS"
 
     @classmethod
     def from_url(cls, url: str) -> "Platform | None":
