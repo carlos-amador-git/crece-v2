@@ -107,6 +107,14 @@ class CiudadanoLegacy(Base):
     cabecera_territorial: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # clave_electoral clear column dropped (D-DATA-02c) — use clave_electoral_enc
+
+    # HMAC blind indexes (D-DATA-02f) — deterministic SHA-256 for equality lookup
+    # without decrypting all _enc rows. Computed via app.services.pii.compute_hmac.
+    email_hmac: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    clave_electoral_hmac: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+
     origen_ciudadano: Mapped[str | None] = mapped_column(String(50), nullable=True)
     rol: Mapped[str | None] = mapped_column(String(50), nullable=True)
     ocupacion: Mapped[str | None] = mapped_column(String(255), nullable=True)

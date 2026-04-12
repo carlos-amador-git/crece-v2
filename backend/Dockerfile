@@ -50,6 +50,9 @@ RUN apt-get update && \
 # Copy installed packages from builder
 COPY --from=builder /install /install
 
+# Download spaCy Spanish model (persists across container rebuilds)
+RUN python -m spacy download es_core_news_md
+
 # Create non-root user
 RUN groupadd -r crece && useradd -r -g crece -d /app -s /sbin/nologin crece
 

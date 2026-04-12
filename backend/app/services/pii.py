@@ -23,6 +23,8 @@ Fields covered in ciudadanos_legacy:
 
 from __future__ import annotations
 
+import hashlib
+import hmac as _hmac
 import logging
 from typing import Literal
 
@@ -170,3 +172,88 @@ async def read_pii_fields(
         enc_col = _FIELD_TO_ENC_COLUMN[field]
         out[field] = getattr(row, enc_col, None)
     return out
+
+
+# ── HMAC blind indexes (D-DATA-02f) ─────────────────────────────
+
+
+def compute_hmac(value: str) -> str:
+    """Compute a deterministic HMAC-SHA256 of *value* for blind-index lookup.
+
+    Returns hex-encoded digest (64 chars). The key is PII_ENCRYPTION_KEY
+    encoded as UTF-8 bytes. The value is lowercased + stripped before
+    hashing so that ``compute_hmac("Foo@Bar.COM")`` equals
+    ``compute_hmac("foo@bar.com")``.
+    """
+    normalised = value.strip().lower()
+    return _hmac.new(
+        key=settings.PII_ENCRYPTION_KEY.encode("utf-8"),
+        msg=normalised.encode("utf-8"),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+
+
+async def backfill_hmac_indexes(db: AsyncSession) -> dict[str, int]:
+    """Backfill email_hmac and clave_electoral_hmac for all rows.
+
+    Decrypts each _enc value via pgcrypto, computes the HMAC in Python,
+    and writes it back. Processes in batches to limit memory usage.
+
+    Idempotent: skips rows that already have a non-NULL hmac value.
+
+    Returns counts of rows updated per field.
+    """
+    stats: dict[str, int] = {"email": 0, "clave_electoral": 0}
+    batch_size = 500
+
+    for field, enc_col, hmac_col in (
+        ("email", "email_enc", "email_hmac"),
+        ("clave_electoral", "clave_electoral_enc", "clave_electoral_hmac"),
+    ):
+        # Count eligible rows
+        count_result = await db.execute(
+            text(
+                f"SELECT COUNT(*) FROM ciudadanos_legacy "
+                f"WHERE {hmac_col} IS NULL AND {enc_col} IS NOT NULL"
+            )
+        )
+        total = count_result.scalar() or 0
+        if total == 0:
+            continue
+
+        logger.info("backfill_hmac: %s — %d rows to process", field, total)
+
+        offset = 0
+        while offset < total:
+            # Fetch batch: decrypt _enc in-DB, return id + plaintext
+            rows = await db.execute(
+                text(
+                    f"SELECT id, pgp_sym_decrypt(CAST({enc_col} AS bytea), :key) AS val "
+                    f"FROM ciudadanos_legacy "
+                    f"WHERE {hmac_col} IS NULL AND {enc_col} IS NOT NULL "
+                    f"ORDER BY id LIMIT :limit"
+                ),
+                {"key": settings.PII_ENCRYPTION_KEY, "limit": batch_size},
+            )
+            batch = rows.fetchall()
+            if not batch:
+                break
+
+            for row in batch:
+                if row.val:
+                    digest = compute_hmac(row.val)
+                    await db.execute(
+                        text(
+                            f"UPDATE ciudadanos_legacy "
+                            f"SET {hmac_col} = :hmac WHERE id = :id"
+                        ),
+                        {"hmac": digest, "id": row.id},
+                    )
+                    stats[field] += 1
+
+            offset += len(batch)
+
+        logger.info("backfill_hmac: %s — %d rows updated", field, stats[field])
+
+    await db.commit()
+    return stats

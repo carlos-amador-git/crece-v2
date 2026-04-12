@@ -24,7 +24,7 @@ export default defineConfig({
 
   /* Shared settings for all tests */
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: process.env.BASE_URL || "http://localhost:3005",
 
     /* Capture screenshot on failure for post-mortem analysis */
     screenshot: "only-on-failure",
