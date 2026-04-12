@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Instrument_Sans, DM_Sans } from "next/font/google";
 import { QueryProvider } from "@/lib/query-provider";
+import { PHProvider } from "./providers";
 import "./globals.css";
 
 const instrumentSans = Instrument_Sans({
@@ -35,7 +36,9 @@ export default function RootLayout({
       className={`${instrumentSans.variable} ${dmSans.variable}`}
     >
       <body className="min-h-screen bg-background font-body antialiased">
-        <QueryProvider>{children}</QueryProvider>
+        <PHProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </PHProvider>
         {/* Chatwoot widget — CRECE inbox */}
         <script
           dangerouslySetInnerHTML={{

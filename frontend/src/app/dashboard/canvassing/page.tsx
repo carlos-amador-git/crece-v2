@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import posthog from "posthog-js";
 import {
   Card,
   CardContent,
@@ -240,6 +241,15 @@ export default function CanvassingPage() {
   };
 
   const featureCount = geoData?.features?.length ?? 0;
+
+  // PostHog events
+  useEffect(() => {
+    if (featureCount > 0) posthog.capture("map_viewed", { feature_count: featureCount });
+  }, [featureCount]);
+  useEffect(() => {
+    if (filters.alcaldia_id) posthog.capture("geo_filter_applied", { filter: "alcaldia", value: filters.alcaldia_id });
+    if (filters.estrato) posthog.capture("stratum_filtered", { estrato: filters.estrato });
+  }, [filters.alcaldia_id, filters.estrato]);
 
   return (
     <div className="space-y-6">
