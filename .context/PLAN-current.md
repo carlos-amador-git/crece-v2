@@ -376,8 +376,258 @@ Todos los ajustes integrados en las tablas de subdivisiones arriba y en la ruta 
 ## Criterios de aceptación globales (revisados)
 
 - [x] 148+ tests siguen en verde al final de cada sprint (pendiente a verificar tras cada commit)
-- [ ] RLS + HNSW filtrado correctamente (test explícito S4.8)
-- [ ] Trends de al menos 1 alcaldía en `/dashboard/social`
-- [ ] Admin crea político en <5 min end-to-end (S5.6)
+- [x] RLS + HNSW filtrado correctamente (test explícito S4.8)
+- [x] Trends de al menos 1 alcaldía en `/dashboard/social`
+- [x] Admin crea político en <5 min end-to-end (S5.6)
 - [ ] Cero consola errors en las 16+ páginas del dashboard
+- [ ] Mapa canvassing geo con 9,631 ciudadanos reales (Sprint B)
+- [ ] Demo interna 30 min preparada (Sprint A)
+
+---
+
+# Sprint B — Canvassing Geo: Mapa de Quién Visitar (2026-04-12)
+
+**Fecha:** 2026-04-12
+**Estado:** EN EJECUCIÓN
+**Aprobado por CEO:** Sí (Opción B primero, luego A)
+**Branch:** `feat/canvassing-geo-map`
+
+## Contexto
+
+9,723 ciudadanos reales importados del CRECE Oracle APEX legacy (D-DATA-01 Ruta C).
+99% con coordenadas GPS (9,631/9,723). 3 alcaldías piloto: Cuauhtémoc (6,643),
+Miguel Hidalgo (2,267), Benito Juárez (813). Unidades territoriales con volatilidad
+electoral (0-100) y estrato socioeconómico. PII encriptado con pgcrypto (D-DATA-02).
+
+La infraestructura de canvassing (endpoints, modelos, hooks, page) ya existe al 80%.
+Lo que falta es:
+1. Endpoint que retorne ciudadanos_legacy como GeoJSON con filtros de segmentación
+2. Mapa MapLibre real reemplazando el placeholder "Mapa disponible proximamente"
+3. Filtros sidebar para segmentar por estrato, volatilidad, nivel_participacion
+
+**Killer feature:** "Mapa de quién visitar y dónde, segmentado por volatilidad electoral."
+
+## Inventario de lo que YA existe
+
+| Componente | Estado | Archivo |
+|---|---|---|
+| Backend canvassing: 7 endpoints (optimize, routes, nearby, etc.) | Funcional, opera sobre `Ciudadano` v2 | `backend/app/api/v1/endpoints/canvassing.py` |
+| Modelos: RutaCanvassing, PuntoRuta (PostGIS) | Funcional | `backend/app/models/canvassing.py` |
+| Service: optimize_route_postgis, nearest-neighbor CTE | Funcional | `backend/app/services/canvassing.py` |
+| CiudadanoLegacy modelo (lat/lon, seccion, UT FK) | Funcional, 9,723 rows | `backend/app/models/legacy.py` |
+| UnidadTerritorial (volatilidad, estrato, categoria) | Funcional, 5,552 rows | `backend/app/models/unidad_territorial.py` |
+| Endpoint /ciudadanos-legacy/ (safe rows + PII gated) | Funcional | `backend/app/api/v1/endpoints/ciudadanos_legacy.py` |
+| Frontend page canvassing (route list + placeholder map) | Stub mapa | `frontend/src/app/dashboard/canvassing/page.tsx` |
+| API hooks canvassing (useRoutes, useNearby, etc.) | Funcional | `frontend/src/lib/api/hooks/use-canvassing.ts` |
+| MapLibre GL JS v4.7.1 | Instalado | `frontend/package.json` |
+| ElectoralMap componente (template reutilizable) | Funcional | `frontend/src/components/maps/electoral-map.tsx` |
+| MapLegend componente | Funcional | `frontend/src/components/maps/map-legend.tsx` |
+
+## Tareas
+
+### B.1 — Endpoint `GET /canvassing/geo` (GeoJSON FeatureCollection)
+
+**Archivo:** `backend/app/api/v1/endpoints/canvassing.py` (agregar al router existente)
+
+**Query params:**
+- `alcaldia_id: int | None` — filtro por alcaldía INEGI
+- `estrato: str | None` — "MUY BAJO", "BAJO", "MEDIO BAJO", "MEDIO", "MEDIO ALTO/ALTO"
+- `volatilidad_min: float | None` — umbral mínimo (0-100)
+- `volatilidad_max: float | None` — umbral máximo
+- `nivel_participacion: int | None` — 1, 2 o 3
+- `contactado: str | None` — "SI", "NO"
+- `seccion: str | None` — sección electoral específica
+- `limit: int = 2000` (ge=1, le=5000) — MapLibre maneja miles de puntos con clustering
+
+**Response:** GeoJSON FeatureCollection donde cada Feature tiene:
+- `geometry`: Point(longitud_cd, latitud_cd)
+- `properties`: id, nombre (solo inicial + apellido), edad, sexo, nivel_educativo,
+  nivel_participacion, colonia_texto, seccion, estrato (from UT join),
+  volatilidad (from UT join), categoria (from UT join), contactado, lista
+
+**NO incluye:** email, phone, whatsapp, fecha_nacimiento, clave_electoral (PII)
+
+**Join:** `ciudadanos_legacy` LEFT JOIN `unidades_territoriales` ON `unidad_territorial_id`
+para obtener estrato, volatilidad, categoria.
+
+**Auth:** `get_current_user` + `RoleChecker([ADMIN, ANALYST])`. Scoped por `org_id`.
+
+**Criterio de aceptación:**
+- `curl /canvassing/geo?alcaldia_id=12` retorna GeoJSON válido con ~6,642 features
+- `curl /canvassing/geo?estrato=MEDIO+ALTO/ALTO&alcaldia_id=2` retorna ~200 features (BJ es MEDIO/MEDIO ALTO)
+- `curl /canvassing/geo?volatilidad_min=30` filtra correctamente
+- Response time < 2s para 5000 features
+
+**Dependencias:** Ninguna nueva. Reutiliza modelos existentes.
+
+### B.2 — Endpoint `GET /canvassing/geo-stats` (agregados para sidebar)
+
+**Archivo:** Mismo `canvassing.py`
+
+**Response:**
+```json
+{
+  "total": 9723,
+  "con_geo": 9631,
+  "por_alcaldia": [
+    {"alcaldia_id": 12, "nombre": "CUAUHTEMOC", "count": 6643},
+    {"alcaldia_id": 15, "nombre": "MIGUEL HIDALGO", "count": 2267},
+    {"alcaldia_id": 2, "nombre": "BENITO JUAREZ", "count": 813}
+  ],
+  "por_estrato": [
+    {"estrato": "MUY BAJO", "count": N},
+    {"estrato": "BAJO", "count": N},
+    ...
+  ],
+  "por_nivel_participacion": [
+    {"nivel": 1, "count": 137},
+    {"nivel": 2, "count": 171},
+    {"nivel": 3, "count": 294}
+  ]
+}
+```
+
+**Criterio:** Response time < 500ms. Counts coinciden con DB.
+
+### B.3 — Componente `CanvassingGeoMap` (MapLibre + clustering)
+
+**Archivo nuevo:** `frontend/src/components/maps/canvassing-geo-map.tsx`
+
+**Specs:**
+- MapLibre GL JS con center en CDMX (-99.133, 19.432), zoom 11
+- Estilo base: `https://demotiles.maplibre.org/style.json` (mismo que electoral-map)
+- GeoJSON source dinámico (se actualiza al cambiar filtros)
+- **Clustering:** activado a zoom < 14. Cluster circles con count label.
+- **Colores por estrato** (modo default):
+  - MUY BAJO: `#ef4444` (red)
+  - BAJO: `#f97316` (orange)
+  - MEDIO BAJO: `#eab308` (yellow)
+  - MEDIO: `#22c55e` (green)
+  - MEDIO ALTO/ALTO: `#3b82f6` (blue)
+- **Colores por nivel_participacion** (modo alternativo):
+  - 1: `#ef4444` (bajo)
+  - 2: `#eab308` (medio)
+  - 3: `#22c55e` (alto)
+  - null: `#94a3b8` (sin dato)
+- **Popup al click:** nombre (inicial), edad, colonia, sección, estrato, contactado
+- NavigationControl top-right
+- Reutilizar MapLegend existente
+
+**Props:** `data: GeoJSON.FeatureCollection`, `colorMode: "estrato" | "participacion"`, `className`
+
+**Criterio:** Renderiza 6,642 puntos de Cuauhtémoc sin jank. Clusters se expanden al hacer zoom.
+
+### B.4 — Filtros sidebar + hooks + integración en page
+
+**Archivos:**
+- `frontend/src/lib/api/hooks/use-canvassing.ts` (agregar `useCanvassingGeo`, `useCanvassingGeoStats`)
+- `frontend/src/app/dashboard/canvassing/page.tsx` (reescritura parcial)
+
+**UI Layout (nueva):**
+```
+┌─────────────────────────────────────────────────┐
+│ Smart Canvassing — Mapa de Campo        [+Ruta] │
+├──────────┬──────────────────────────────────────┤
+│ FILTROS  │                                      │
+│          │         MAPA MAPLIBRE                │
+│ Alcaldía │         (CanvassingGeoMap)           │
+│ Estrato  │                                      │
+│ Volat.   │                                      │
+│ Partic.  │                                      │
+│ Contact. │                                      │
+│          │                                      │
+│ STATS    │                                      │
+│ N total  │                                      │
+│ N filtrd │                                      │
+├──────────┴──────────────────────────────────────┤
+│ [Tab: Rutas]  [Tab: Puntos de visita]           │
+│ (contenido existente de RouteCard + puntos)     │
+└─────────────────────────────────────────────────┘
+```
+
+- Filtros en sidebar izq (lg:col-span-2)
+- Mapa ocupa el espacio principal (lg:col-span-3)
+- Contenido existente (rutas + puntos) se mueve a tabs debajo del mapa
+- Modo de color toggle: "Por Estrato" / "Por Participación"
+
+**Criterio:** Cambiar filtro refresca el mapa sin reload. Stats sidebar se actualizan.
+
+### B.5 — Smoke test endpoints + visual verification
+
+- `curl -H "Authorization: Bearer $TOKEN" /canvassing/geo?alcaldia_id=12 | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Features: {len(d[\"features\"])}')"` → ~6,642
+- `curl /canvassing/geo-stats` → JSON con totales correctos
+- Verificación visual: abrir `/dashboard/canvassing` en browser, confirmar mapa renderiza
+
+**Criterio:** Endpoints retornan data correcta. Mapa visible con pins.
+
+## Ruta crítica Sprint B
+
+```
+B.1 (endpoint geo) ──→ B.3 (component) ──→ B.4 (integration) ──→ B.5 (verify)
+B.2 (stats endpoint) ─┘                  ┘
+```
+
+B.1 y B.2 son paralelizables. B.3 puede arrancar con data mock mientras B.1 termina.
+B.4 necesita B.1 + B.2 + B.3. B.5 es verificación final.
+
+## Asignación de recursos Sprint B
+
+| Tarea | Agente(s) | Skill(s) | Herramientas |
+|---|---|---|---|
+| B.1 | `/backend` + `/geo` | `fastapi`, `postgis` | psql, curl |
+| B.2 | `/backend` | `fastapi` | psql |
+| B.3 | `/frontend` | `shadcn-ui`, `tailwindcss-v4` | MapLibre docs |
+| B.4 | `/frontend` + `/ui-design` | `shadcn-ui`, `react-ui-patterns` | — |
+| B.5 | `/test-v2` | — | curl, browser |
+
+## Decisiones pre-tomadas Sprint B
+
+### D-B-01: GeoJSON inline vs tile server
+**Decisión:** GeoJSON inline en el response del endpoint, NO tile server MVT.
+**Razón:** 9,723 puntos caben en un GeoJSON de ~2-3MB. MapLibre maneja esto sin
+problema con clustering. Un tile server añade complejidad innecesaria para este
+volumen. Si escala a 63K (import full), reconsiderar.
+
+### D-B-02: Agregar al router canvassing existente, NO crear router nuevo
+**Decisión:** Los endpoints B.1 y B.2 se agregan a `canvassing.py` existente.
+**Razón:** Conceptualmente es canvassing (segmentación de campo). Mantener un solo
+router evita fragmentación. Los endpoints legacy de rutas conviven sin conflicto.
+
+### D-B-03: Nombre privacy — solo inicial del nombre en el mapa
+**Decisión:** El GeoJSON retorna `nombre` como "A. Pérez" (inicial + apellido), no
+el nombre completo. El nombre completo solo se ve en el popup al hacer click.
+**Razón:** El mapa es visible para analyst + admin. Minimizar exposure de datos
+personales en la vista general.
+
+---
+
+# Sprint A — Demo Interna 30 min (post Sprint B)
+
+**Fecha:** 2026-04-12 (después de Sprint B)
+**Estado:** PENDIENTE
+
+## A.1 — Guion de demo
+
+**Audiencia:** Equipo MC + dirigentes piloto (Piña/Solano)
+**Duración:** 30 minutos
+**Formato:** Live demo sobre backend local + Vercel frontend (o localhost)
+
+### Escenas propuestas
+
+| Min | Escena | Login | Qué se muestra |
+|---|---|---|---|
+| 0-2 | Intro | — | Pitch: qué es CRECE v2, stack, alcance |
+| 2-8 | Dashboard político | Piña | KPIs, posts con NLP real, trends, sentiment |
+| 8-12 | **Mapa canvassing** | Admin | Filtrar por alcaldía + estrato, ver pins, zoom, popups |
+| 12-16 | Wizard onboarding | Admin | Crear "Político Demo", ver progress chain |
+| 16-20 | Plan IA + Kanban | Piña | Generar plan, ver tareas, mover estado |
+| 20-24 | Ciudadanos legacy | Admin | Listado safe, acceso PII con audit log |
+| 24-28 | Q&A | — | Preguntas |
+| 28-30 | Cierre | — | Roadmap Fase 2, próximos pasos |
+
+### Prep necesario
+- Verificar que el mapa canvassing B.5 funciona end-to-end
+- Verificar credenciales demo (admin, Piña, Solano)
+- Verificar Ollama corriendo para Plan IA live
+- Preparar 1-2 screenshots de respaldo por si algo falla en vivo
 

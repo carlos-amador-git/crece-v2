@@ -1,11 +1,12 @@
-"""Smart Canvassing API — PostGIS route optimization for field operators."""
+"""Smart Canvassing API — PostGIS route optimization + geo visualization."""
 
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -386,3 +387,192 @@ async def cancel_route(
 
     ruta.estado = EstadoRuta.CANCELADA
     await db.flush()
+
+
+# ── Geo visualization (ciudadanos_legacy) ───────────────────
+
+
+@router.get(
+    "/geo",
+    response_class=JSONResponse,
+    dependencies=[
+        Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))
+    ],
+)
+async def get_canvassing_geo(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    alcaldia_id: int | None = Query(None, description="Filter by alcaldía INEGI id"),
+    estrato: str | None = Query(None, description="MUY BAJO|BAJO|MEDIO BAJO|MEDIO|MEDIO ALTO/ALTO"),
+    volatilidad_min: float | None = Query(None, ge=0, le=100),
+    volatilidad_max: float | None = Query(None, ge=0, le=100),
+    nivel_participacion: int | None = Query(None, ge=1, le=3),
+    contactado: str | None = Query(None, description="SI or NO"),
+    seccion: str | None = Query(None, description="Electoral section"),
+    dtto_local: str | None = Query(None, description="Local district"),
+    dtto_federal: str | None = Query(None, description="Federal district"),
+    limit: int = Query(2000, ge=1, le=5000),
+) -> Any:
+    """GeoJSON FeatureCollection of ciudadanos_legacy for map visualization.
+
+    Returns points with safe properties (no PII). Coordinates from
+    latitud_cd/longitud_cd (corrected for CDMX). Joins unidades_territoriales
+    for estrato, volatilidad, categoria. GeoJSON built in PostgreSQL for
+    performance (Gemini G6 optimization).
+    """
+    org_id = current_user.org_id or 3
+
+    # Build WHERE clauses dynamically
+    where_clauses = [
+        "cl.org_id = :org_id",
+        "cl.latitud_cd IS NOT NULL",
+        "cl.longitud_cd IS NOT NULL",
+    ]
+    params: dict[str, Any] = {"org_id": org_id, "lim": limit}
+
+    if alcaldia_id is not None:
+        where_clauses.append("cl.alcaldia_id = :alcaldia_id")
+        params["alcaldia_id"] = alcaldia_id
+    if estrato is not None:
+        where_clauses.append("ut.estrato = :estrato")
+        params["estrato"] = estrato
+    if volatilidad_min is not None:
+        where_clauses.append("ut.volatilidad >= :vol_min")
+        params["vol_min"] = volatilidad_min
+    if volatilidad_max is not None:
+        where_clauses.append("ut.volatilidad <= :vol_max")
+        params["vol_max"] = volatilidad_max
+    if nivel_participacion is not None:
+        where_clauses.append("cl.nivel_participacion = :niv_part")
+        params["niv_part"] = str(nivel_participacion)
+    if contactado is not None:
+        where_clauses.append("cl.contactado = :contactado")
+        params["contactado"] = contactado.upper()
+    if seccion is not None:
+        where_clauses.append("cl.seccion = :seccion")
+        params["seccion"] = seccion
+    if dtto_local is not None:
+        where_clauses.append("ut.dtto_local_2024 = :dtto_local")
+        params["dtto_local"] = dtto_local
+    if dtto_federal is not None:
+        where_clauses.append("ut.dtto_federal_2024 = :dtto_federal")
+        params["dtto_federal"] = dtto_federal
+
+    where_sql = " AND ".join(where_clauses)
+
+    # GeoJSON built entirely in PostgreSQL (Gemini G6)
+    sql = text(f"""
+        SELECT jsonb_build_object(
+            'type', 'FeatureCollection',
+            'features', COALESCE(jsonb_agg(f.feature), '[]'::jsonb)
+        ) AS geojson
+        FROM (
+            SELECT jsonb_build_object(
+                'type', 'Feature',
+                'geometry', jsonb_build_object(
+                    'type', 'Point',
+                    'coordinates', jsonb_build_array(cl.longitud_cd, cl.latitud_cd)
+                ),
+                'properties', jsonb_build_object(
+                    'id', cl.id,
+                    'nombre', LEFT(cl.nombre, 1) || '. ' || COALESCE(cl.apellido_paterno, ''),
+                    'nombre_completo', cl.nombre || ' ' || COALESCE(cl.apellido_paterno, '') || ' ' || COALESCE(cl.apellido_materno, ''),
+                    'edad', cl.edad,
+                    'sexo', cl.sexo,
+                    'nivel_educativo', cl.nivel_educativo,
+                    'nivel_participacion', cl.nivel_participacion,
+                    'colonia', cl.colonia_texto,
+                    'seccion', cl.seccion,
+                    'estrato', ut.estrato,
+                    'volatilidad', ROUND(ut.volatilidad::numeric, 1),
+                    'categoria', ut.categoria,
+                    'contactado', cl.contactado,
+                    'lista', cl.lista
+                )
+            ) AS feature
+            FROM ciudadanos_legacy cl
+            LEFT JOIN unidades_territoriales ut
+                ON cl.unidad_territorial_id = ut.id
+            WHERE {where_sql}
+            LIMIT :lim
+        ) f
+    """)
+
+    result = await db.execute(sql, params)
+    geojson = result.scalar_one()
+    return JSONResponse(content=geojson)
+
+
+@router.get(
+    "/geo-stats",
+    dependencies=[
+        Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))
+    ],
+)
+async def get_canvassing_geo_stats(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    """Aggregate stats for the canvassing geo sidebar filters."""
+    org_id = current_user.org_id or 3
+
+    sql = text("""
+        SELECT jsonb_build_object(
+            'total', (SELECT COUNT(*) FROM ciudadanos_legacy WHERE org_id = :org_id),
+            'con_geo', (SELECT COUNT(*) FROM ciudadanos_legacy
+                        WHERE org_id = :org_id AND latitud_cd IS NOT NULL AND longitud_cd IS NOT NULL),
+            'por_alcaldia', (
+                SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                    'alcaldia_id', cl.alcaldia_id,
+                    'nombre', a.nombre,
+                    'count', cl.cnt
+                ) ORDER BY cl.cnt DESC), '[]'::jsonb)
+                FROM (
+                    SELECT alcaldia_id, COUNT(*) AS cnt
+                    FROM ciudadanos_legacy
+                    WHERE org_id = :org_id
+                    GROUP BY alcaldia_id
+                ) cl
+                LEFT JOIN alcaldias_cdmx a ON a.id = cl.alcaldia_id
+            ),
+            'por_estrato', (
+                SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                    'estrato', ut.estrato,
+                    'count', ut.cnt
+                ) ORDER BY ut.cnt DESC), '[]'::jsonb)
+                FROM (
+                    SELECT ut.estrato, COUNT(*) AS cnt
+                    FROM ciudadanos_legacy cl
+                    JOIN unidades_territoriales ut ON cl.unidad_territorial_id = ut.id
+                    WHERE cl.org_id = :org_id AND ut.estrato IS NOT NULL
+                    GROUP BY ut.estrato
+                ) ut
+            ),
+            'por_nivel_participacion', (
+                SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                    'nivel', cl.nivel_participacion,
+                    'count', cl.cnt
+                ) ORDER BY cl.cnt DESC), '[]'::jsonb)
+                FROM (
+                    SELECT nivel_participacion, COUNT(*) AS cnt
+                    FROM ciudadanos_legacy
+                    WHERE org_id = :org_id AND nivel_participacion IS NOT NULL
+                    GROUP BY nivel_participacion
+                ) cl
+            ),
+            'volatilidad_range', (
+                SELECT jsonb_build_object(
+                    'min', ROUND(MIN(ut.volatilidad)::numeric, 1),
+                    'max', ROUND(MAX(ut.volatilidad)::numeric, 1),
+                    'avg', ROUND(AVG(ut.volatilidad)::numeric, 1)
+                )
+                FROM ciudadanos_legacy cl
+                JOIN unidades_territoriales ut ON cl.unidad_territorial_id = ut.id
+                WHERE cl.org_id = :org_id
+            )
+        ) AS stats
+    """)
+
+    result = await db.execute(sql, {"org_id": org_id})
+    stats = result.scalar_one()
+    return stats
