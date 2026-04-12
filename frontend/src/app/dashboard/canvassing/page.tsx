@@ -57,6 +57,8 @@ import {
   Users,
   Filter,
 } from "lucide-react";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { MobileFilterSheet } from "@/components/responsive/mobile-filter-sheet";
 
 // Dynamic import to avoid SSR issues with MapLibre
 const CanvassingGeoMap = dynamic(
@@ -157,28 +159,6 @@ function RouteCard({
   );
 }
 
-function StatCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="stat-card-transition card-elevated flex items-center gap-3 rounded-lg bg-card p-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
-        {icon}
-      </div>
-      <div>
-        <p className="text-lg font-bold tabular-nums" data-numeric="true">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
-    </div>
-  );
-}
-
 // ── Main page ──────────────────────────────────────────────
 
 export default function CanvassingPage() {
@@ -241,6 +221,15 @@ export default function CanvassingPage() {
   };
 
   const featureCount = geoData?.features?.length ?? 0;
+
+  // Count active filters for mobile badge
+  const activeFilterCount = [
+    filters.alcaldia_id,
+    filters.estrato,
+    filters.nivel_participacion,
+    filters.contactado,
+    filters.volatilidad_min,
+  ].filter((v) => v != null && v !== "").length;
 
   // PostHog events
   useEffect(() => {
@@ -375,22 +364,26 @@ export default function CanvassingPage() {
           <StatCard
             label="Ciudadanos total"
             value={stats.total.toLocaleString()}
-            icon={<Users className="h-4 w-4 text-muted-foreground" />}
+            icon={Users}
+            variant="compact"
           />
           <StatCard
-            label="Con geolocalización"
+            label="Con geolocalizacion"
             value={stats.con_geo.toLocaleString()}
-            icon={<MapPin className="h-4 w-4 text-muted-foreground" />}
+            icon={MapPin}
+            variant="compact"
           />
           <StatCard
             label="En mapa (filtrado)"
             value={geoLoading ? "..." : featureCount.toLocaleString()}
-            icon={<Map className="h-4 w-4 text-muted-foreground" />}
+            icon={Map}
+            variant="compact"
           />
           <StatCard
             label="Volatilidad promedio"
-            value={stats.volatilidad_range?.avg ?? "—"}
-            icon={<Filter className="h-4 w-4 text-muted-foreground" />}
+            value={stats.volatilidad_range?.avg ?? "\u2014"}
+            icon={Filter}
+            variant="compact"
           />
         </div>
       ) : (
@@ -404,13 +397,13 @@ export default function CanvassingPage() {
       {/* Main content: filters + map */}
       <div className="grid gap-6 lg:grid-cols-6">
         {/* Filters sidebar */}
-        <aside className="space-y-4 lg:col-span-1" aria-label="Filtros de mapa">
+        <aside className="hidden lg:block lg:col-span-1" aria-label="Filtros de mapa">
           <Card className="glass-card rounded-xl">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Filtros</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Alcaldía */}
+              {/* Alcaldia */}
               <div className="space-y-1.5">
                 <label htmlFor="filter-alcaldia" className="text-xs font-medium text-muted-foreground">
                   Alcaldia
@@ -459,7 +452,7 @@ export default function CanvassingPage() {
                 </Select>
               </div>
 
-              {/* Nivel participación */}
+              {/* Nivel participacion */}
               <div className="space-y-1.5">
                 <label htmlFor="filter-participacion" className="text-xs font-medium text-muted-foreground">
                   Participacion
@@ -500,7 +493,7 @@ export default function CanvassingPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="SI">Sí</SelectItem>
+                    <SelectItem value="SI">Si</SelectItem>
                     <SelectItem value="NO">No</SelectItem>
                   </SelectContent>
                 </Select>
@@ -538,6 +531,68 @@ export default function CanvassingPage() {
             </CardContent>
           </Card>
         </aside>
+
+        {/* Mobile filter sheet (below lg) */}
+        <div className="lg:hidden">
+          <MobileFilterSheet
+            activeCount={activeFilterCount}
+            onClear={() => setFilters({ limit: 5000 })}
+          >
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Alcaldia</label>
+                <Select value={String(filters.alcaldia_id ?? "all")} onValueChange={(v) => updateFilter("alcaldia_id", v)}>
+                  <SelectTrigger aria-label="Filtrar por alcaldia"><SelectValue placeholder="Todas" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {stats?.por_alcaldia.map((a) => (
+                      <SelectItem key={a.alcaldia_id} value={String(a.alcaldia_id)}>{a.nombre} ({a.count.toLocaleString()})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Estrato</label>
+                <Select value={filters.estrato ?? "all"} onValueChange={(v) => updateFilter("estrato", v)}>
+                  <SelectTrigger aria-label="Filtrar por estrato"><SelectValue placeholder="Todos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {stats?.por_estrato.map((e) => (
+                      <SelectItem key={e.estrato} value={e.estrato}>{e.estrato} ({e.count.toLocaleString()})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Participacion</label>
+                <Select value={filters.nivel_participacion ? String(filters.nivel_participacion) : "all"} onValueChange={(v) => updateFilter("nivel_participacion", v)}>
+                  <SelectTrigger aria-label="Filtrar por nivel de participacion"><SelectValue placeholder="Todos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="3">Alto (3)</SelectItem>
+                    <SelectItem value="2">Medio (2)</SelectItem>
+                    <SelectItem value="1">Bajo (1)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Contactado</label>
+                <Select value={filters.contactado ?? "all"} onValueChange={(v) => updateFilter("contactado", v)}>
+                  <SelectTrigger aria-label="Filtrar por estado de contacto"><SelectValue placeholder="Todos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="SI">Si</SelectItem>
+                    <SelectItem value="NO">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Volatilidad min.</label>
+                <Input type="number" min={0} max={100} step={5} placeholder="0" aria-label="Volatilidad minima" value={filters.volatilidad_min ?? ""} onChange={(e) => updateFilter("volatilidad_min", e.target.value)} />
+              </div>
+            </div>
+          </MobileFilterSheet>
+        </div>
 
         {/* Map */}
         <section className="lg:col-span-5" aria-label="Mapa de canvassing">

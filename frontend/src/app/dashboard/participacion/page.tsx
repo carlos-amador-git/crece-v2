@@ -37,6 +37,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StatCard } from "@/components/dashboard/stat-card";
 
 // ── Config maps ───────────────────────────────────────────────────
 
@@ -96,47 +97,8 @@ function formatHours(hours: number): string {
 
 // ── Components ────────────────────────────────────────────────────
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  subtitle,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
-  subtitle?: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cta/10 text-cta">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="tabular-nums font-heading text-xl font-bold">{value}</p>
-          {subtitle && (
-            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function StatCardSkeleton() {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-4">
-        <Skeleton className="h-10 w-10 rounded-lg" />
-        <div className="space-y-2">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-6 w-16" />
-        </div>
-      </CardContent>
-    </Card>
-  );
+  return <Skeleton className="h-[72px] rounded-lg" />;
 }
 
 function SolicitudCard({ solicitud }: { solicitud: Solicitud }) {
@@ -338,19 +300,19 @@ export default function ParticipacionPage() {
               label="Tipo Mas Frecuente"
               value={topTipo ? TIPO_CONFIG[topTipo[0]].label : "--"}
               icon={MessageSquare}
-              subtitle={topTipo ? `${topTipo[1]} solicitudes` : undefined}
+              description={topTipo ? `${topTipo[1]} solicitudes` : undefined}
             />
             <StatCard
               label="Tiempo Promedio Resolucion"
               value={dashboardData?.avg_resolution_hours != null ? formatHours(dashboardData.avg_resolution_hours) : "--"}
               icon={Clock}
-              subtitle="promedio en horas"
+              description="promedio en horas"
             />
             <StatCard
               label="Por Estado"
               value={dashboardData?.por_estado?.nueva ?? 0}
               icon={ThumbsUp}
-              subtitle="solicitudes nuevas"
+              description="solicitudes nuevas"
             />
           </>
         )}
