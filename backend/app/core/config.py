@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     # ── Blindaje Legal ───────────────────────────────────
     TOPE_CAMPANA_MXN: float = 500_000.0
 
+    # ── Observability ────────────────────────────────────
+    BUGSINK_DSN: str = ""  # Sentry-compatible DSN for Bugsink error tracking
+
     # ── n8n Integration ──────────────────────────────────
     N8N_WEBHOOK_SECRET: str = ""
     N8N_CAMPAIGN_WEBHOOK_URL: str = ""  # n8n webhook URL for campaign dispatch

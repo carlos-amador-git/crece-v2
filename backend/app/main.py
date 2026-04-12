@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -13,6 +14,15 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.api.v1 import api_router
 from app.core.config import settings
 from app.core.database import engine
+
+# Bugsink error tracking (Sentry-compatible DSN)
+if settings.BUGSINK_DSN:
+    sentry_sdk.init(
+        dsn=settings.BUGSINK_DSN,
+        traces_sample_rate=0.1,
+        environment=settings.APP_ENV,
+        release=settings.APP_VERSION,
+    )
 
 logging.basicConfig(
     level=logging.DEBUG if settings.APP_DEBUG else logging.INFO,

@@ -35,6 +35,7 @@ dependencies = [
     "TikTokApi>=7.3.0",
     "google-api-python-client>=2.140.0",
     "sherlock-project>=0.15.0",
+    "sentry-sdk>=2.0.0",
 ]
 
 [project.optional-dependencies]
