@@ -110,7 +110,7 @@ function StatCard({
   return (
     <Card>
       <CardContent className="flex items-center gap-4 p-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FF6B00]/10 text-[#FF6B00]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cta/10 text-cta">
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
@@ -231,7 +231,7 @@ function TipoBreakdown({ porTipo }: { porTipo: Record<SolicitudTipo, number> }) 
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <BarChart3 className="h-4 w-4 text-[#FF6B00]" />
+          <BarChart3 className="h-4 w-4 text-cta" />
           Desglose por tipo
         </CardTitle>
       </CardHeader>
@@ -254,7 +254,7 @@ function TipoBreakdown({ porTipo }: { porTipo: Record<SolicitudTipo, number> }) 
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-[#FF6B00] transition-all duration-500"
+                  className="h-full rounded-full bg-cta transition-all duration-500"
                   style={{ width: `${pct}%` }}
                 />
               </div>

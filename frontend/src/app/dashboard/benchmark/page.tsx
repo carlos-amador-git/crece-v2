@@ -191,14 +191,19 @@ export default function BenchmarkPage() {
               <CardTitle>Comparacion IPD</CardTitle>
             </CardHeader>
             <CardContent>
-              <IpdRadarChart data={ipdA} compareTo={ipdB} />
+              <IpdRadarChart
+                data={ipdA}
+                compareTo={ipdB}
+                candidateName={detailA?.full_name ?? "Dirigente A"}
+                compareName={detailB?.full_name ?? "Dirigente B"}
+              />
               <div className="mt-4 flex justify-center gap-6 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="h-3 w-3 rounded-full bg-sky-500" />
                   {detailA?.full_name ?? "Dirigente A"}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full border-2 border-red-500 bg-transparent" />
+                  <span className="h-3 w-3 rounded-full border-2 border-orange-500 bg-transparent" />
                   {detailB?.full_name ?? "Dirigente B"}
                 </div>
               </div>
