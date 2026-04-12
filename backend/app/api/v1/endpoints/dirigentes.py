@@ -7,9 +7,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import Role, RoleChecker, get_current_user
-from app.models.dirigente import Dirigente
-from app.models.social import SentimentLabel, SocialPost, SocialProfile
+from app.core.security import Role, RoleChecker, get_current_user, hash_password
+from app.models.dirigente import Dirigente, DirigenteSyncStatus
+from app.models.social import Platform, SentimentLabel, SocialPost, SocialProfile
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.dirigente import (
@@ -17,6 +17,10 @@ from app.schemas.dirigente import (
     DirigenteCreate,
     DirigenteResponse,
     DirigenteUpdate,
+    OnboardingProgressResponse,
+    OnboardingProgressStep,
+    OnboardingRequest,
+    OnboardingResponse,
     SocialSummary,
 )
 from app.services.diagnostico import calculate_ipd
@@ -343,4 +347,192 @@ async def get_social_summary(
         avg_engagement=round(avg_engagement, 4),
         sentiment_breakdown=sentiment_breakdown,
         top_platforms=top_platforms,
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# S5 — Onboarding wizard endpoints
+# ─────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/onboard",
+    response_model=OnboardingResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RoleChecker([Role.ADMIN]))],
+)
+async def onboard_dirigente(
+    payload: OnboardingRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> OnboardingResponse:
+    """S5.3a — Crear User + Dirigente + SocialProfiles en una transacción.
+
+    Retorna 201 con `sync_status='pending'` inmediatamente (D-S5-01). Dispara
+    la Celery chain `onboard_dirigente_chain` para scrape inicial → NLP → IPD,
+    pero NO espera a que termine — el wizard UI consulta `/onboarding-progress`.
+    """
+    from datetime import UTC, datetime
+
+    # 1. Reject duplicate email
+    existing_user = await db.execute(
+        select(User).where(User.email == payload.email)
+    )
+    if existing_user.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Usuario con email {payload.email} ya existe",
+        )
+
+    # 2. Default org: admin's own org, or id=3 (MC CDMX root) per D16
+    org_id = payload.org_id or current_user.org_id or 3
+
+    # 3. Create Dirigente (without sync_status default so we override it)
+    dirigente = Dirigente(
+        full_name=payload.full_name,
+        cargo=payload.cargo,
+        partido=payload.partido,
+        estado=payload.estado,
+        municipio=payload.municipio,
+        seccion_electoral=payload.seccion_electoral,
+        org_id=org_id,
+        sync_status=DirigenteSyncStatus.PENDING,
+        sync_updated_at=datetime.now(UTC),
+    )
+    db.add(dirigente)
+    await db.flush()  # get dirigente.id
+
+    # 4. Create User for the new dirigente with role=cliente (viewer)
+    user = User(
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        full_name=payload.full_name,
+        role=Role.VIEWER,
+        is_active=True,
+        org_id=org_id,
+        dirigente_id=dirigente.id,
+    )
+    db.add(user)
+    await db.flush()
+
+    # 5. Create SocialProfiles (one per handle)
+    profiles_created = 0
+    for h in payload.handles:
+        try:
+            plat_enum = Platform[h.platform]
+        except KeyError:
+            continue  # ignore invalid platform silently (validated by Pydantic Literal)
+        profile = SocialProfile(
+            dirigente_id=dirigente.id,
+            platform=plat_enum,
+            handle=h.handle,
+            url=h.url,
+            followers_count=0,
+            following_count=0,
+            posts_count=0,
+        )
+        db.add(profile)
+        profiles_created += 1
+
+    await db.flush()
+    await db.commit()
+    await db.refresh(dirigente)
+
+    # 6. Fire-and-forget Celery chain (S5.3b). If the worker is down,
+    # the chain enqueue fails silently and sync_status stays 'pending'.
+    task_id: str | None = None
+    try:
+        from app.workers.tasks import onboard_dirigente_chain
+
+        result = onboard_dirigente_chain.delay(dirigente.id)
+        task_id = str(result.id)
+        dirigente.sync_task_id = task_id
+        await db.flush()
+        await db.commit()
+    except Exception:
+        # Don't block the response on a worker outage
+        pass
+
+    return OnboardingResponse(
+        dirigente_id=dirigente.id,
+        user_id=user.id,
+        sync_status=dirigente.sync_status.value,
+        task_id=task_id,
+        profiles_created=profiles_created,
+    )
+
+
+@router.get(
+    "/{dirigente_id}/onboarding-progress",
+    response_model=OnboardingProgressResponse,
+)
+async def get_onboarding_progress(
+    dirigente_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _current_user: Annotated[User, Depends(get_current_user)],
+) -> OnboardingProgressResponse:
+    """S5.4 — Poll del estado de onboarding."""
+    result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
+    dirigente = result.scalar_one_or_none()
+    if dirigente is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found"
+        )
+
+    status_map = {
+        DirigenteSyncStatus.PENDING: 0,
+        DirigenteSyncStatus.SCRAPING: 25,
+        DirigenteSyncStatus.ANALYZING: 55,
+        DirigenteSyncStatus.CALCULATING_IPD: 85,
+        DirigenteSyncStatus.READY: 100,
+        DirigenteSyncStatus.ERROR: 0,
+    }
+    progress_pct = status_map.get(dirigente.sync_status, 0)
+
+    def _step_status(step_order: int, current_order: int) -> str:
+        if dirigente.sync_status == DirigenteSyncStatus.ERROR and step_order == current_order:
+            return "error"
+        if step_order < current_order:
+            return "done"
+        if step_order == current_order:
+            return "running" if dirigente.sync_status != DirigenteSyncStatus.READY else "done"
+        return "pending"
+
+    order = {
+        DirigenteSyncStatus.PENDING: 0,
+        DirigenteSyncStatus.SCRAPING: 1,
+        DirigenteSyncStatus.ANALYZING: 2,
+        DirigenteSyncStatus.CALCULATING_IPD: 3,
+        DirigenteSyncStatus.READY: 4,
+        DirigenteSyncStatus.ERROR: -1,
+    }
+    current_order = order.get(dirigente.sync_status, 0)
+
+    steps = [
+        OnboardingProgressStep(
+            name="scraping",
+            status=_step_status(1, current_order),  # type: ignore[arg-type]
+        ),
+        OnboardingProgressStep(
+            name="analyzing",
+            status=_step_status(2, current_order),  # type: ignore[arg-type]
+        ),
+        OnboardingProgressStep(
+            name="calculating_ipd",
+            status=_step_status(3, current_order),  # type: ignore[arg-type]
+        ),
+        OnboardingProgressStep(
+            name="ready",
+            status="done" if dirigente.sync_status == DirigenteSyncStatus.READY else "pending",
+        ),
+    ]
+
+    return OnboardingProgressResponse(
+        dirigente_id=dirigente.id,
+        sync_status=dirigente.sync_status.value,
+        task_id=dirigente.sync_task_id,
+        error=dirigente.sync_error,
+        progress_pct=progress_pct,
+        steps=steps,
+        updated_at=dirigente.sync_updated_at,
     )

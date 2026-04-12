@@ -97,30 +97,51 @@ async def backfill_embeddings(db: AsyncSession, batch_size: int = 100) -> int:
 async def search_similar_posts(
     db: AsyncSession,
     query: str,
+    *,
+    org_id: int,
     limit: int = 10,
     min_similarity: float = 0.3,
 ) -> list[dict[str, Any]]:
-    """Find posts semantically similar to the query text."""
+    """Find posts semantically similar to the query text, scoped to one org.
+
+    S4.8 — Multi-tenant safety: `org_id` is REQUIRED (kw-only) so callers
+    cannot accidentally omit it. The query JOINs through
+    `social_profiles` → `dirigentes` and filters by `dirigentes.org_id`
+    before the HNSW ORDER BY. The planner may choose post-filter
+    (HNSW top-N then filter) or pre-filter (btree on dirigentes.org_id
+    then sequential) — BOTH are correct for isolation; we only care that
+    cross-org leak is impossible.
+
+    NOTE: `social_posts` has no direct `org_id` column — multi-tenancy is
+    mediated by the profile→dirigente→org chain. RLS on `social_posts`
+    would require adding that column first (future work).
+    """
     query_embedding = embed_text(query)
 
-    # Use cast() to avoid asyncpg confusing ::vector with bind params
+    # The JOIN ensures every row returned belongs to a dirigente of the
+    # caller's org. We use `similarity > min_sim` in WHERE so pgvector can
+    # still leverage the HNSW index via the ORDER BY clause.
     result = await db.execute(text("""
         SELECT
-            id,
-            content,
-            platform_post_id,
-            profile_id,
-            likes,
-            comments,
-            published_at,
-            1 - (embedding <=> cast(:query_emb AS vector)) AS similarity
-        FROM social_posts
-        WHERE embedding IS NOT NULL
-        AND 1 - (embedding <=> cast(:query_emb AS vector)) > :min_sim
-        ORDER BY embedding <=> cast(:query_emb AS vector)
+            sp.id,
+            sp.content,
+            sp.platform_post_id,
+            sp.profile_id,
+            sp.likes,
+            sp.comments,
+            sp.published_at,
+            1 - (sp.embedding <=> cast(:query_emb AS vector)) AS similarity
+        FROM social_posts sp
+        JOIN social_profiles prof ON prof.id = sp.profile_id
+        JOIN dirigentes d ON d.id = prof.dirigente_id
+        WHERE d.org_id = :org_id
+          AND sp.embedding IS NOT NULL
+          AND 1 - (sp.embedding <=> cast(:query_emb AS vector)) > :min_sim
+        ORDER BY sp.embedding <=> cast(:query_emb AS vector)
         LIMIT :limit
     """), {
         "query_emb": str(query_embedding),
+        "org_id": org_id,
         "min_sim": min_similarity,
         "limit": limit,
     })

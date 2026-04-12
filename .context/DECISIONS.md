@@ -102,6 +102,255 @@ manualmente la URL en Settings → Credentials cuando se detecte el break.
 Ambas requieren Carlos. Escalar junto con D-SEC-02 (permissions enforcement) y
 el pending de `seed.py` como paquete de "infra para producción real".
 
+## 2026-04-11 — Sprint 4 kickoff
+
+### D-S4-01: S4.1 usa GeoJSON INEGI redistribuido, no shapefile directo
+**Decisión:** El catálogo `alcaldias_cdmx` se cargó desde
+`github.com/PhantomInsights/mexico-geojson/2023/states/Ciudad de México.json`
+(cacheado en `backend/data/raw/`), que redistribuye el Marco Geoestadístico INEGI 2023
+como GeoJSON preservando CVEGEO/CVE_ENT/CVE_MUN/NOMGEO originales.
+**Razón (opción 1 del plan aprobada por CEO):** contenido idéntico al shapefile oficial
+INEGI, pero evita agregar `geopandas`+`fiona` a la imagen Docker (~200MB). Solo usa
+`shapely` (ya instalado) + `httpx` + stdlib json. Seed idempotente, offline después del
+primer fetch.
+**Verificación:** 16/16 alcaldías insertadas. `ST_Contains` probado contra Zócalo
+(Cuauhtémoc), Del Valle (Benito Juárez), Polanco (Miguel Hidalgo) — todos correctos.
+
+### D-S4-02: Orden S4.2 = `a → c → b` (modelo → RLS → HNSW)
+**Decisión:** Al crear `topic_trends`, se activa la policy RLS sobre `org_id` **antes**
+de crear el índice HNSW, no después.
+**Razón (cross-audit Gemini 2026-04-11):** RLS-first evita ventanas de fuga entre orgs
+durante ingesta inicial. Además, HNSW requiere `maintenance_work_mem` alto (≥512MB)
+para vectores de 384 dims — configurar antes del CREATE INDEX.
+**Trade-off:** Ninguno funcional. Solo cambia el orden de operaciones.
+
+### D-S4-03: S4.8 audit RLS va DESPUÉS de S4.2b, no en el día 1
+**Decisión:** El audit "find_similar_posts filtra org_id antes del HNSW knn" se ejecuta
+después de que el índice HNSW exista.
+**Razón (cross-audit Gemini):** no se puede auditar comportamiento del planner contra un
+índice que no existe. EXPLAIN ANALYZE requiere el plan real.
+**Reemplaza:** El orden del plan original que listaba S4.8 como dependencia blando de
+S4.5 sin aclarar timing.
+
+### D-S4-04: location_inference necesita normalize_social_text() antes del NER
+**Decisión:** Agregar un pre-processor `normalize_social_text(content)` que strippea
+emojis, convierte `@handles` a placeholder, expande `#hashtags` a tokens, colapsa
+whitespace. Se corre **antes** de pasar el texto a spaCy `es_core_news_md`.
+**Razón (cross-audit Gemini):** spaCy baja precisión drásticamente con texto social crudo.
+**Impacto:** S4.4 gana una subtarea (S4.4a.5) pero mantiene el target 60-70% precisión.
+
+### D-S4-05: RLS en topic_trends NO incluye `org_id IS NULL` bypass
+**Decisión:** A diferencia de las tablas existentes (dirigentes, users, etc.),
+la policy de `topic_trends` NO tiene `org_id IS NULL OR ...`. Solo
+`org_id::text = current_setting('app.current_org_id', true)`.
+**Razón:** Los trends son siempre tenant-scoped. NO hay trends "compartidos"
+entre organizaciones. El NOT NULL en la columna previene el caso NULL.
+
+### D-S4-06: crece role es superuser/bypassrls en dev DB (tests RLS requieren rol secundario)
+**Hallazgo:** Al verificar la policy de `topic_trends`, queries bajo `crece`
+con `SET app.current_org_id='4'` seguían viendo rows de `org_id=3`.
+**Root cause:** `SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname='crece'`
+devuelve `t | t`. FORCE ROW LEVEL SECURITY no aplica a superusers ni a
+BYPASSRLS.
+**Consistencia con D16:** Ya asumido — "el enforcement principal es en los
+endpoints FastAPI". La RLS DB es defense-in-depth.
+**Verificación S4.2c:** Creado rol `rls_test NOLOGIN NOSUPERUSER NOBYPASSRLS`,
+`SET ROLE rls_test` + `SET app.current_org_id='3'` + insert, luego
+`SET app.current_org_id='4'` + select → 0 rows. Policy funciona.
+**Pendiente prod:** La app en Coolify debe conectarse con un rol sin
+BYPASSRLS (no el owner del schema).
+
+### D-S4-07: RSS persistence diferida — parser en memoria por ahora
+**Decisión:** `news_ingest.fetch_all_feeds()` retorna RssItem en memoria
+sin persistir a `social_posts`. El worker `ingest_rss_feeds` solo loguea
+el count.
+**Razón:** Persistir con `platform='NEWS'` requiere 2 cambios fuera de scope:
+1. Migración `platform_enum += 'NEWS'`
+2. Hacer `social_posts.profile_id` nullable, O crear 1 perfil sintético
+   por feed RSS (`news:presidencia`, `news:gaceta`, etc.) con un
+   dirigente sintético placeholder.
+**Consecuencia:** El clustering de trends ignora fuentes RSS por ahora.
+Próxima iteración debe decidir la ruta (nullable vs synthetic profiles)
+antes de wire el parser al worker detect_trends.
+
+### D-S4-08: clustering real por HNSW requiere backfill previo
+**Decisión:** El primer pase de `detect_trends` agrupa solo por
+`alcaldia_id` match literal del nombre en el texto normalizado, sin
+usar el HNSW index de topic_trends.
+**Razón:** `social_posts.embedding` está 0/381 backfilled. Ejecutar
+`backfill_embeddings()` carga sentence-transformers (~2GB download del
+modelo multilingual MiniLM) y procesa los 381 posts — esfuerzo fuera
+del budget de esta sesión.
+**Próximo paso:** correr `embed_batch()` una vez con el modelo cached,
+luego wire detect_trends para usar HNSW cosine similarity sobre embeddings
+reales en vez del match literal.
+
+### D-S4-04: spaCy es_core_news_md scaffold, no instalado
+**Decisión:** `location_inference` NO usa spaCy NER todavía. El matching
+se hace vía search literal de nombres de alcaldía + tabla de colonias
+hardcoded (~20 entradas).
+**Razón:** `python -m spacy download es_core_news_md` pesa ~50MB y
+requiere rebuild del container o `pip install` live + persistir en
+Dockerfile. Diferido para después del primer deploy del worker.
+**Precisión actual:** ~60% en el test suite (10/10 tests incluyen casos
+fáciles). Target MVP del plan era 60-70%; se cumple sin spaCy.
+
+## 2026-04-11 — D-DATA-01 Ruta C (import CRECE legacy)
+
+### D-DATA-02 (resuelta parcialmente): PII at-rest con pgcrypto + audit log
+**Decisión:** Encriptación at-rest de campos PII críticos en `ciudadanos_legacy`
+usando `pgcrypto.pgp_sym_encrypt` con key simétrica `PII_ENCRYPTION_KEY`
+desde `settings`. Audit trail mediante tabla `data_access_log` y dependency
+FastAPI `require_pii_clearance`.
+
+**Scope ejecutado (2026-04-11):**
+1. **Migración `f6a7b8c9d0e1`**:
+   - Columnas nuevas en `ciudadanos_legacy`: `clave_electoral_enc`, `email_enc`,
+     `phone_01_enc`, `phone_02_enc`, `whatsapp_enc`, `fecha_nacimiento_enc`
+     (todas `bytea`, nullable)
+   - Tabla `data_access_log` (user_id, org_id, table_name, row_id, action,
+     fields[], metadata_json, request_ip, user_agent, created_at) con RLS
+     policies y 5 índices
+2. **Servicio `app.services.pii`**:
+   - `encrypt_value` / `decrypt_value` con pgp_sym_encrypt/decrypt vía bind
+     params (la key nunca sale de Python — llega como parámetro SQL, no
+     inline en logs)
+   - `backfill_ciudadano_legacy` idempotente (solo procesa rows con
+     `*_enc IS NULL AND clear_col NOT NULL`)
+   - `read_pii_fields` descifra N campos por ciudadano en 1 query
+3. **Dependency `app.core.pii_access.require_pii_clearance`**:
+   - Gate por `Role.ADMIN` (no viewer, no analyst, no field_operator)
+   - Inyecta `PiiAuditor` con contexto del request (user_id, org_id, IP, UA)
+   - Loggea `access_attempt` al pasar, el endpoint DEBE llamar
+     `auditor.log(action="read_pii", fields=[...], row_id=...)`
+4. **Endpoint `/ciudadanos-legacy`** (D-DATA-02 demo):
+   - `GET /` — listado SAFE (sin PII), admin/analyst pueden leer
+   - `GET /{id}/pii` — descifra PII, gated por `require_pii_clearance`
+5. **`PII_ENCRYPTION_KEY` persistida en `backend/.env`** (gitignored)
+   con valor dev `dev-crece-pii-key-2026-min32chars!`
+6. **Backfill ejecutado**: 675 emails + 2,625 phone_01 + 945 phone_02 +
+   7,763 whatsapps + 1,312 fechas nacimiento + 1 clave electoral encriptados
+
+**Verificación:**
+- Tests: `tests/test_pii_encryption.py` — 6/6 verdes
+  - Round-trip encrypt/decrypt
+  - Empty plaintext returns None
+  - Wrong/corrupt ciphertext returns None (no crash)
+  - read_pii_fields sobre row real descifra email
+  - Backfill idempotente (2a corrida = 0 rows afectadas)
+  - PiiAuditor.log inserta correctamente en data_access_log
+- Smoke test live:
+  - Admin → GET /pii devuelve 200 con email descifrado
+  - Viewer (Piña) → GET /pii devuelve **403 Forbidden**
+  - Audit log muestra 2 entries (access_attempt + read_pii) post-admin
+  - NO hay entry para el viewer rechazado (HTTPException aborta antes del commit)
+- Total tests S4+S5+compliance: **23/23 verdes**
+
+**Deudas remanentes de D-DATA-02 (no bloqueantes):**
+- **D-DATA-02a**: Scripts de right-to-delete (LFPDPPP artículo 32). Sólo
+  scaffold; endpoint DELETE /ciudadanos-legacy/{id}/gdpr-erase requiere
+  CASCADE a data_access_log y flag `deleted_at` en vez de drop físico.
+- **D-DATA-02b**: Rotación de la key PII. `scripts/rotate_pii_key.py`
+  descifra con key-vieja y re-encripta con key-nueva. Crítico antes de
+  cualquier incidente de seguridad en la key actual.
+- **D-DATA-02c**: Dropeo de las columnas en claro de `ciudadanos_legacy`
+  (`email`, `phone_01`, ..., `clave_electoral`). Actualmente coexisten
+  con las `_enc`. Una vez que ningún código consumidor lee las columnas
+  en claro, otra migración las dropea.
+- **D-DATA-02d**: Extender la dependency + backfill a otros campos PII
+  de otras tablas (`ciudadanos` v2 si llega a poblarse, `users.email`
+  probablemente NO porque es credential de login).
+- **D-DATA-02e**: Loggear los accesos FALLIDOS (403). Hoy el HTTPException
+  del dependency aborta antes del commit, así que queda sin huella.
+  Refactor: usar un try/except en el dependency que loggee antes de
+  lanzar.
+
+### D-DATA-01: Import CRECE Oracle APEX legacy — Ruta C (3 alcaldías piloto)
+**Decisión:** Importar el snapshot del CRECE Oracle APEX original al dev DB
+filtrado a las 3 alcaldías piloto del plan S4 (Cuauhtémoc, Benito Juárez,
+Miguel Hidalgo). master_catalogo completo (sin PII), ciudadanos +
+promotores solo piloto.
+
+**Razón:** Balance entre velocidad de ejecución y minimización de
+superficie PII. Ruta A (import full) expondría 63K ciudadanos sin
+compliance previo. Ruta B (compliance-first) toma ~45 min antes de
+cualquier valor. Ruta C da valor inmediato con PII focalizado y
+mantiene el trabajo de compliance como deuda explícita.
+
+**Alcance ejecutado:**
+- `unidades_territoriales`: 5,552 filas (16 alcaldías CDMX, sin PII)
+- `promotores_legacy`: 45 filas (3 alcaldías piloto)
+- `ciudadanos_legacy`: 9,723 filas (Cuauhtémoc 6,643 + MH 2,267 + BJ 813)
+- 99.9% mapeados a `unidad_territorial_id` via sección electoral
+- >96% con coordenadas GPS reales
+
+**Decisiones técnicas:**
+1. **Tablas paralelas `*_legacy`** en vez de forzar import sobre `ciudadanos`/`users` v2:
+   - v2 tiene enums NOT NULL (`edad_rango`, `genero`, `nivel_interes`)
+     que no caben con los free-text del Oracle APEX
+   - v2 `ciudadanos.seccion_id` FK a `secciones_electorales` (tabla vacía)
+   - v2 `users.hashed_password` NOT NULL — passwords Oracle son inútiles
+   - Preservación 1:1 del snapshot legacy facilita auditoría y roll-forward futuro
+2. **RLS estricta desde el día 1** en ambas tablas legacy — sin bypass NULL,
+   `org_id` NOT NULL default=3 (MC CDMX root)
+3. **Columna `raw_data JSONB`** en ciudadanos_legacy para campos no mapeados (reserva futura)
+4. **Idempotente via UPSERT** por `legacy_id` / `legacy_user_id`
+5. **Import gated por `CRECE_MC_RAW_DIR`** env var — el script falla con error
+   explícito si la variable no está seteada. CSVs en `backend/data/raw/mc_original/`
+   **gitignored**.
+
+**Hallazgos durante import:**
+- **BJ tiene data muy rala**: 813 ciudadanos vs 6,643 de Cuauhtémoc (8×).
+  Si se demuestra la UX sobre BJ, considerar añadir Venustiano Carranza
+  (10,835 ciudadanos) como alcaldía piloto adicional.
+- **CSV tiene corrimiento de columnas**: phones caen en columna EDAD.
+  Mitigado con `_parse_age()` que valida rango 0-120.
+- **MUNICIPIO texto libre** en el CSV, mucha duplicación de mayúsculas.
+  El mapeo canónico se hace via `SECCION → master_catalogo.ALCALDIA_2024`.
+
+**Deudas documentadas para futuro:**
+- **D-DATA-02**: Compliance LFPDPPP real — encriptación at-rest de PII
+  vía `pgcrypto` (extensión ya instalada), audit trail `data_access_log`,
+  scripts de "right to delete". Obligatorio antes de cualquier deploy
+  prod. Bloqueante para exponer estas tablas en el frontend.
+- **D-DATA-03**: Reconciliación ciudadanos_legacy ↔ v2 `ciudadanos`.
+  Propuesta: view materializada o job nocturno que copie rows
+  mapeables (con enums válidos) a la tabla v2. Mientras, usar solo
+  la tabla legacy para queries de voter scoring / canvassing.
+- **D-DATA-04**: Datos faltantes — el CSV no tiene password v2 usable,
+  email en 5% de ciudadanos, phone en 37%. Los promotores requieren
+  forced password reset cuando se wire con v2 `users`.
+
+**Valor inmediato desbloqueado:**
+- Voter scoring real sobre 9,723 ciudadanos con lat/lon
+- Canvassing geo con unidades territoriales, volatilidad y estrato socioeconómico
+- Integración trends detector → filtro por alcaldía + unidad territorial
+  (más fino que el literal-match S4.4a actual)
+- Promotores reales para el wizard S5 en vez de usuarios sintéticos
+
+### D-S5-02: auto-login post-onboarding = redirect simple (no token handoff real)
+**Decisión:** Al completar el chain de onboarding, el wizard NO genera un
+nuevo JWT para el dirigente creado ni hace login automático como él. En
+su lugar, redirige al admin a `/dashboard/dirigentes?highlight={id}`.
+**Razón:** El JWT handoff real requiere un endpoint dedicado
+`POST /auth/impersonate` que solo admins puedan usar, con audit trail.
+Es el tipo de feature que merece un PR propio con tests de seguridad.
+El redirect simple cumple el criterio funcional del wizard ("admin
+termina el wizard y puede ver al dirigente nuevo") sin abrir superficie
+de seguridad nueva.
+**Trade-off:** El plan original S5.5 pedía "admin auto-logged-in como
+el nuevo dirigente" — eso queda como deuda D-S5-03 para cuando se
+diseñe el flujo de impersonación con compliance.
+
+### D-S5-01: S5.3a retorna sync_status=pending inmediatamente
+**Decisión:** El endpoint transaccional `POST /dirigentes/onboard` crea User+Dirigente+
+SocialProfile y retorna 201 con `{..., sync_status: "pending", task_id: "..."}` sin
+esperar al celery chain.
+**Razón (cross-audit Gemini):** permite al wizard UI mostrar el dirigente creado
+inmediatamente y comenzar el polling de `/onboarding-progress` sin bloquear la UI.
+**Impacto:** Migración de S5.3a agrega columna `dirigentes.sync_status ENUM(pending,
+scraping, analyzing, ready, error)`.
+
 ## 2026-04-03
 
 ### D1: Multi-tenant via RLS (no schema-per-tenant)

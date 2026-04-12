@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     campaigns_integration,
     canvassing,
     ciudadanos,
+    ciudadanos_legacy,
     contenido,
     content_factory_integration,
     crm_integration,
@@ -30,6 +31,7 @@ from app.api.v1.endpoints import (
     planes,
     programas,
     social,
+    trends,
     voter_scoring,
     webhooks_integration,
 )
@@ -44,6 +46,11 @@ api_router.include_router(electoral.router, prefix="/electoral", tags=["electora
 api_router.include_router(benchmark.router, prefix="/benchmark", tags=["benchmark"])
 api_router.include_router(planes.router, prefix="/planes", tags=["planes"])
 api_router.include_router(ciudadanos.router, prefix="/ciudadanos", tags=["ciudadanos"])
+api_router.include_router(
+    ciudadanos_legacy.router,
+    prefix="/ciudadanos-legacy",
+    tags=["ciudadanos-legacy"],
+)
 api_router.include_router(eventos.router, prefix="/eventos", tags=["eventos"])
 api_router.include_router(programas.router, prefix="/programas", tags=["programas"])
 api_router.include_router(organizaciones.router, prefix="/organizaciones", tags=["organizaciones"])
@@ -65,3 +72,4 @@ api_router.include_router(api_keys.router, prefix="/api-keys", tags=["api-keys"]
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(osint.router, prefix="/osint", tags=["osint"])
 api_router.include_router(bot_detection.router, prefix="/bot-detection", tags=["bot-detection"])
+api_router.include_router(trends.router, prefix="/trends", tags=["trends"])

@@ -1,8 +1,9 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-11 09:40 local
-**Sesión activa:** cerrando
-**Main HEAD:** ver `git log --oneline -1 main`
+**Último update:** 2026-04-11 17:00 local
+**Sesión activa:** /sprint-implement D-DATA-02 — PII encryption at-rest + audit trail
+**Main HEAD:** `4d61ec0` (PR #6 merged)
+**Branch activo:** `fix/sprint-4-trends` @ pendiente commit D-DATA-02
 
 ---
 
@@ -20,10 +21,89 @@
 
 ### Sprints pendientes para siguiente sesión
 
-| Sprint | Esfuerzo | Prioridad |
+| Sprint | Esfuerzo | Prioridad | Avance |
+|---|---|---|---|
+| **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) | **9/11** funcionalmente cerrado (+2 scaffolds) |
+| **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) | **6/6 core** (auto-login real = deuda menor) |
+
+### Sesión 2026-04-11 tarde-3 — /sprint-implement luz verde all
+Commits en `fix/sprint-4-trends`:
+- `9efc76d` — S4.1 catálogo INEGI 16 alcaldías CDMX (ST_Contains verified)
+- `24b032d` — docs(s4) /sprint-review enriquecimiento + cross-audit Gemini
+- `59413bd` — S4.2 topic_trends + RLS + HNSW orden a→c→b (RLS verificada con rol no-priv)
+- `dac0039` — S4.4a location_inference con DB lookup + normalize_social_text + 10 tests
+- `bb01c46` — docs D-S4-05/06 y STATUS mid-session
+- `598c537` — Batch 1: S4.8 audit RLS + S4.3 seeds 136 cuentas + S4.6a queues + S4.7 RSS parser
+- `682b598` — Batch 2: S4.5 detect_trends + S4.6b label_trend_cluster + S4.7 ingest_rss_feeds task
+- `521fd6a` — Batch 3: S4.9 endpoint /trends/geo + /alcaldias + S4.10 TrendingAlcaldiaCard + E2E real
+
+**Tareas S4 — estado final**:
+| ID | Estado | Verificación |
 |---|---|---|
-| **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) |
-| **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) |
+| S4.1 | ✅ | 16 alcaldías INEGI PostGIS, ST_Contains 3/3 points |
+| S4.2a/b/c | ✅ | topic_trends + vector(384) + HNSW cosine + 2 RLS policies verificadas |
+| S4.3 | ✅ | 136 cuentas semilla YAML (target era 150) |
+| S4.4a + a.5 | ✅ | location_inference DB-backed + normalize_social_text + 10 tests |
+| S4.4b | ⏸ scaffold | spaCy es_core_news_md NO instalado (deuda D-S4-04) |
+| S4.5 | ✅ | detect_trends pipeline end-to-end, 1 trend real generado sobre posts de Piña |
+| S4.6a/b | ✅ | cola trends_labeling + Ollama batch labeling probado contra gemma3:12b live |
+| S4.7 | ✅ parser | fetch_all_feeds + parser RSS con 8 fuentes + 4 tests; persistencia diferida (D-S4-07) |
+| S4.8 | ✅ | search_similar_posts requiere org_id kw-only, cross-org leak imposible, 3 tests |
+| S4.9 | ✅ | GET /trends/geo + /alcaldias live, auth JWT, scopeado por org |
+| S4.10 | ✅ | TrendingAlcaldiaCard montado en /dashboard/social, tsc clean |
+| S4.11 | ✅ | E2E real: detect_trends sobre 381 posts dev DB → 1 trend BJ → label Ollama "Diálogo universitario..." |
+
+Dep nueva: `pgvector>=0.3.0` en pyproject.toml.
+Migraciones: `a1b2c3d4e5f6` (alcaldías) + `b2c3d4e5f6a7` (topic_trends + RLS + HNSW).
+Endpoints live: `/api/v1/trends/geo`, `/api/v1/trends/alcaldias`.
+Tests totales nuevos en S4: **17 verdes** (10 location_inference + 3 RLS audit + 4 RSS parser).
+
+**Deudas documentadas en DECISIONS**:
+- **D-S4-04**: spaCy es_core_news_md no instalado (skip por budget, S4.4b)
+- **D-S4-07**: RSS persistence requires `platform_enum += 'NEWS'` migration + synthetic profiles o profile_id nullable
+- **D-S4-08**: clustering semántico HNSW real requiere backfill_embeddings() sobre 381 posts existentes (primer pase agrupa solo por alcaldía)
+
+**Próximo paso recomendado**: arrancar S5 Wizard Onboarding (1.5 días nominal). Todos los blockers resueltos: RLS audited, topic_trends table ready, endpoints live, UI card mounted.
+
+### Sesión 2026-04-11 tarde-4 — D-DATA-01 Ruta C import CRECE legacy
+**Contexto:** el CEO aportó el zip `MC Tablas.zip` con 5 CSVs del CRECE Oracle APEX original. Aprobó Ruta C: importar 3 alcaldías piloto.
+
+**Tablas nuevas y datos importados:**
+- `unidades_territoriales` (5,552 rows, sin PII) — grano sección × colonia, con volatilidad, estrato, lista nominal, categoría P1..P5
+- `ciudadanos_legacy` (9,723 rows, RLS-scoped, PII sensible) — Cuauhtémoc 6,643 + Miguel Hidalgo 2,267 + Benito Juárez 813
+- `promotores_legacy` (45 rows) — super/mega/regular promotores de las 3 alcaldías piloto
+
+**Archivos nuevos:**
+- Migraciones: `c3d4e5f6a7b8` (unidades_territoriales) + `d4e5f6a7b8c9` (ciudadanos_legacy + promotores_legacy + RLS policies)
+- Modelos: `backend/app/models/unidad_territorial.py`, `backend/app/models/legacy.py`
+- Script: `backend/scripts/import_mc_original.py` (idempotente, gated por `CRECE_MC_RAW_DIR`)
+- `.gitignore`: `backend/data/raw/mc_original/` excluido del repo (PII)
+
+**Calidad de la data importada:**
+- 100% de ciudadanos linkeados a `unidad_territorial` via sección electoral
+- 99% con coordenadas GPS reales (9,632/9,723)
+- 100% de ciudadanos asignados a un promotor legacy
+- Top promotor: MCCDMXCUAUSUPERPROMOTORC3 con 903 ciudadanos
+
+**Hallazgos documentados en DECISIONS.md:**
+- D-DATA-01 (decisión Ruta C con alcance y trade-offs)
+- D-DATA-02 (compliance LFPDPPP pendiente — pgcrypto at-rest, audit log, right-to-delete)
+- D-DATA-03 (reconciliación legacy ↔ v2 pendiente)
+- D-DATA-04 (datos faltantes: solo 5% con email, 37% con phone)
+
+**Próximos pasos habilitados:**
+1. Voter scoring real sobre 9,723 ciudadanos con lat/lon
+2. Canvassing con unidades territoriales + volatilidad + estrato socioeconómico
+3. Trends detector puede filtrar por `unidad_territorial` (más fino que alcaldía)
+4. S5 wizard puede usar promotores reales en vez de usuarios sintéticos
+
+### Sesión 2026-04-11 tarde — /sprint-review
+- Plan S4+S5 revisado, enriquecido con subdivisiones y criterios medibles (ver `PLAN-current.md` sección "Plan revisado 2026-04-11")
+- Cross-audit con Gemini CLI aplicó 4 ajustes: orden correcto S4.2 `a→c→b`, S4.8 debe ir tras S4.2b (no antes), S4.4 necesita pre-processor de normalización social, S5.3a debe retornar `sync_status=pending` inmediatamente
+- Ruta crítica actualizada: `S4.1 ✅ → S4.2a → S4.2c (RLS) → S4.2b (HNSW) → S4.8 audit → S4.5`
+- Resources asignados por tarea (agentes + skills + herramientas)
+- **S4.1 ejecutado y verificado**: 16 alcaldías INEGI CDMX en PostGIS, `ST_Contains` OK contra 3 puntos conocidos. Commit `9efc76d` en `fix/sprint-4-trends`.
+- **Próximo paso**: S4.2a — crear tabla `topic_trends` con FKs a `alcaldias_cdmx` y `org_id`, SIN la columna vector todavía.
 
 ### Merges del día (en orden cronológico)
 

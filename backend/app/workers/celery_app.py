@@ -25,11 +25,30 @@ celery_app.conf.update(
         "app.workers.tasks.analyze_sentiment": {"queue": "nlp"},
         "app.workers.tasks.generate_plan": {"queue": "ai"},
         "app.workers.tasks.sync_electoral_data": {"queue": "data"},
+        # S4.5 trends detector → cola propia para aislar latencia
+        "app.workers.tasks.detect_trends": {"queue": "trends"},
+        # S4.6a Ollama batch labeling → cola dedicada con concurrency=2
+        # (el worker debe lanzarse con `-Q trends_labeling --concurrency 2`)
+        "app.workers.tasks.label_trend_cluster": {"queue": "trends_labeling"},
+        # S4.7 RSS ingest → comparte cola data
+        "app.workers.tasks.ingest_rss_feeds": {"queue": "data"},
+        # S5.3b onboarding chain → cola scraping (usa scrape_profile + nlp)
+        "app.workers.tasks.onboard_dirigente_chain": {"queue": "scraping"},
     },
     beat_schedule={
         "scrape-all-profiles-daily": {
             "task": "app.workers.tasks.scrape_all_profiles",
             "schedule": 86400.0,  # 24 hours
+        },
+        # S4.5 trends detector corre cada hora
+        "detect-trends-hourly": {
+            "task": "app.workers.tasks.detect_trends",
+            "schedule": 3600.0,
+        },
+        # S4.7 RSS ingest cada 3 horas
+        "ingest-rss-feeds-every-3h": {
+            "task": "app.workers.tasks.ingest_rss_feeds",
+            "schedule": 10800.0,
         },
     },
 )

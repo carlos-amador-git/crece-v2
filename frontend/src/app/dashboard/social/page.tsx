@@ -17,6 +17,7 @@ import {
 import { PostCard } from "@/components/social/post-card";
 import { SentimentPieChart } from "@/components/charts/sentiment-pie-chart";
 import { SentimentBadge } from "@/components/social/sentiment-badge";
+import { TrendingAlcaldiaCard } from "@/components/social/trending-alcaldia-card";
 import type { SocialFilters, SocialPost, SentimentDistribution } from "@/lib/api/types";
 import { AlertTriangle, MessageSquare, Search, Repeat2, Pen } from "lucide-react";
 
@@ -145,6 +146,9 @@ export default function SocialPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* S4.10 — Trending ahora en alcaldía (Sprint 4 Motor de Trends) */}
+      <TrendingAlcaldiaCard />
 
       {/* Filters */}
       <Card>

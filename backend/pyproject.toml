@@ -19,6 +19,7 @@ dependencies = [
     "pydantic[email]>=2.10.0",
     "pydantic-settings>=2.6.0",
     "geoalchemy2>=0.15.0",
+    "pgvector>=0.3.0",
     "python-multipart>=0.0.12",
     "sse-starlette>=2.1.0",
     "shapely>=2.0.0",

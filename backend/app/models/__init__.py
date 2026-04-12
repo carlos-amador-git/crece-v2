@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.models.alcaldia import AlcaldiaCDMX
 from app.models.alerta_crisis import AlertaCrisis
 from app.models.api_key import ApiKey
 from app.models.benchmark import Competidor, CompetidorSocialProfile
@@ -16,17 +17,21 @@ from app.models.encuesta import Encuesta
 from app.models.evento import Evento, EventoAsistente
 from app.models.gasto_electoral import AlertaCompliance, GastoElectoral
 from app.models.ia_content_registry import IaContentRegistry
+from app.models.legacy import CiudadanoLegacy, PromotorLegacy
 from app.models.metrica_social import MetricaSocial
 from app.models.organizacion import Organizacion
 from app.models.plan_ia import PlanIA
 from app.models.programa_social import ProgramaBeneficiario, ProgramaSocial
 from app.models.social import SentimentAnalysis, SocialPost, SocialProfile
 from app.models.solicitud import SeguimientoSolicitud, SolicitudCiudadana
+from app.models.topic_trend import TopicTrend
+from app.models.unidad_territorial import UnidadTerritorial
 from app.models.user import User
 from app.models.voter_score import VoterScore
 from app.models.voter_score_integration import VoterScoreIntegration
 
 __all__ = [
+    "AlcaldiaCDMX",
     "AlertaCompliance",
     "AlertaCrisis",
     "ApiKey",
@@ -35,6 +40,7 @@ __all__ = [
     "CampanaMensaje",
     "CampanaSegmento",
     "Ciudadano",
+    "CiudadanoLegacy",
     "Competidor",
     "CompetidorSocialProfile",
     "ContenidoGenerado",
@@ -50,6 +56,7 @@ __all__ = [
     "MetricaSocial",
     "Organizacion",
     "PlanIA",
+    "PromotorLegacy",
     "PuntoRuta",
     "ProgramaBeneficiario",
     "ProgramaSocial",
@@ -60,6 +67,8 @@ __all__ = [
     "SocialPost",
     "SocialProfile",
     "SolicitudCiudadana",
+    "TopicTrend",
+    "UnidadTerritorial",
     "User",
     "VoterScore",
     "VoterScoreIntegration",
