@@ -52,11 +52,12 @@ export function useCampanas() {
   });
 }
 
-export function useCampanaAnalytics(id?: number) {
+export function useCampanaAnalytics(id?: number, polling?: boolean) {
   return useQuery({
     queryKey: ["campana-analytics", id],
     queryFn: () => api.get<CampanaAnalytics>(`/campanas/${id}/analytics`),
     enabled: !!id,
+    refetchInterval: polling ? 5000 : false,
   });
 }
 
