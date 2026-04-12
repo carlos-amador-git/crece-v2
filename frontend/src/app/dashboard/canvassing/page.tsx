@@ -166,12 +166,12 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+    <div className="stat-card-transition card-elevated flex items-center gap-3 rounded-lg bg-card p-3">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
         {icon}
       </div>
       <div>
-        <p className="text-lg font-bold tabular-nums">{value}</p>
+        <p className="text-lg font-bold tabular-nums" data-numeric="true">{value}</p>
         <p className="text-xs text-muted-foreground">{label}</p>
       </div>
     </div>
@@ -258,7 +258,7 @@ export default function CanvassingPage() {
               setColorMode(v as "estrato" | "participacion")
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px]" aria-label="Modo de color del mapa">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -395,21 +395,21 @@ export default function CanvassingPage() {
       <div className="grid gap-6 lg:grid-cols-6">
         {/* Filters sidebar */}
         <aside className="space-y-4 lg:col-span-1" aria-label="Filtros de mapa">
-          <Card>
+          <Card className="glass-card rounded-xl">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Filtros</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {/* Alcaldía */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Alcaldía
+                <label htmlFor="filter-alcaldia" className="text-xs font-medium text-muted-foreground">
+                  Alcaldia
                 </label>
                 <Select
                   value={String(filters.alcaldia_id ?? "all")}
                   onValueChange={(v) => updateFilter("alcaldia_id", v)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="filter-alcaldia" aria-label="Filtrar por alcaldia">
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
                   <SelectContent>
@@ -428,14 +428,14 @@ export default function CanvassingPage() {
 
               {/* Estrato */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label htmlFor="filter-estrato" className="text-xs font-medium text-muted-foreground">
                   Estrato
                 </label>
                 <Select
                   value={filters.estrato ?? "all"}
                   onValueChange={(v) => updateFilter("estrato", v)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="filter-estrato" aria-label="Filtrar por estrato">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -451,8 +451,8 @@ export default function CanvassingPage() {
 
               {/* Nivel participación */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Participación
+                <label htmlFor="filter-participacion" className="text-xs font-medium text-muted-foreground">
+                  Participacion
                 </label>
                 <Select
                   value={
@@ -464,7 +464,7 @@ export default function CanvassingPage() {
                     updateFilter("nivel_participacion", v)
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="filter-participacion" aria-label="Filtrar por nivel de participacion">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -478,14 +478,14 @@ export default function CanvassingPage() {
 
               {/* Contactado */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label htmlFor="filter-contactado" className="text-xs font-medium text-muted-foreground">
                   Contactado
                 </label>
                 <Select
                   value={filters.contactado ?? "all"}
                   onValueChange={(v) => updateFilter("contactado", v)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="filter-contactado" aria-label="Filtrar por estado de contacto">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -498,15 +498,17 @@ export default function CanvassingPage() {
 
               {/* Volatilidad min */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Volatilidad mín.
+                <label htmlFor="filter-volatilidad" className="text-xs font-medium text-muted-foreground">
+                  Volatilidad min.
                 </label>
                 <Input
+                  id="filter-volatilidad"
                   type="number"
                   min={0}
                   max={100}
                   step={5}
                   placeholder="0"
+                  aria-label="Volatilidad minima"
                   value={filters.volatilidad_min ?? ""}
                   onChange={(e) =>
                     updateFilter("volatilidad_min", e.target.value)
@@ -529,7 +531,7 @@ export default function CanvassingPage() {
 
         {/* Map */}
         <section className="lg:col-span-5" aria-label="Mapa de canvassing">
-          <Card className="overflow-hidden">
+          <Card className="card-elevated overflow-hidden">
             <CardContent className="p-0">
               <div className="h-[500px] lg:h-[600px]">
                 {geoLoading ? (

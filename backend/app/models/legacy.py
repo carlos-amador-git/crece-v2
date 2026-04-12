@@ -140,5 +140,8 @@ class CiudadanoLegacy(Base):
     imported_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     promotor = relationship("PromotorLegacy", lazy="noload")

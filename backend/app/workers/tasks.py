@@ -525,23 +525,118 @@ def onboard_dirigente_chain(self, dirigente_id: int) -> dict:  # type: ignore[no
 
 @celery_app.task(name="app.workers.tasks.ingest_rss_feeds")
 def ingest_rss_feeds() -> dict:
-    """S4.7 — Fetch todos los RSS feeds y log items nuevos.
+    """D.9 — Fetch RSS feeds and persist to social_posts with platform='NEWS'.
 
-    Persistencia a `social_posts` está en deuda D-S4-07 (requiere
-    migración de platform_enum + profile_id nullable o synthetic
-    profiles). Por ahora solo logueamos para observabilidad del beat.
+    Creates synthetic SocialProfile records per RSS source (e.g.
+    handle='news:presidencia-mx') linked to a synthetic dirigente
+    (full_name='RSS News Bot'). Deduplicates by platform_post_id.
     """
     import asyncio
 
-    from app.services.news_ingest import fetch_all_feeds
+    from sqlalchemy import select, text
 
+    from app.models.social import Platform, PostType, SocialPost, SocialProfile
+    from app.services.news_ingest import RSS_SOURCES, RssItem, _platform_post_id, fetch_all_feeds
+
+    session = _get_sync_session()
     try:
-        items = asyncio.run(fetch_all_feeds())
+        items: list[RssItem] = asyncio.run(fetch_all_feeds())
         logger.info("ingest_rss_feeds fetched %d items", len(items))
-        return {"status": "ok", "items_fetched": len(items)}
+
+        if not items:
+            return {"status": "ok", "items_fetched": 0, "items_persisted": 0}
+
+        # Ensure synthetic dirigente exists for RSS feeds
+        row = session.execute(
+            text("SELECT id FROM dirigentes WHERE full_name = 'RSS News Bot' LIMIT 1")
+        ).first()
+        if row:
+            bot_dirigente_id = row[0]
+        else:
+            session.execute(
+                text(
+                    "INSERT INTO dirigentes (full_name, cargo, partido, estado, sync_status) "
+                    "VALUES ('RSS News Bot', 'Sistema', 'SISTEMA', 'CDMX', 'ready') "
+                    "ON CONFLICT DO NOTHING"
+                )
+            )
+            session.commit()
+            row = session.execute(
+                text("SELECT id FROM dirigentes WHERE full_name = 'RSS News Bot' LIMIT 1")
+            ).first()
+            bot_dirigente_id = row[0]
+
+        # Build source_name -> handle mapping
+        source_handles: dict[str, str] = {}
+        for feed in RSS_SOURCES:
+            slug = feed.name.lower().replace(" ", "-").replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+            source_handles[feed.name] = f"news:{slug}"
+
+        # Find-or-create synthetic profiles per source
+        profile_cache: dict[str, int] = {}
+        for source_name, handle in source_handles.items():
+            existing = session.execute(
+                select(SocialProfile.id).where(
+                    SocialProfile.handle == handle,
+                    SocialProfile.platform == Platform.NEWS,
+                )
+            ).scalar_one_or_none()
+            if existing:
+                profile_cache[source_name] = existing
+            else:
+                profile = SocialProfile(
+                    dirigente_id=bot_dirigente_id,
+                    platform=Platform.NEWS,
+                    handle=handle,
+                    url=None,
+                    followers_count=0,
+                    following_count=0,
+                    posts_count=0,
+                )
+                session.add(profile)
+                session.flush()
+                profile_cache[source_name] = profile.id
+
+        # Persist items, deduplicate by platform_post_id
+        persisted = 0
+        for item in items:
+            ppid = _platform_post_id(item)
+            profile_id = profile_cache.get(item.source)
+            if profile_id is None:
+                continue
+
+            exists = session.execute(
+                select(SocialPost.id).where(SocialPost.platform_post_id == ppid)
+            ).scalar_one_or_none()
+            if exists:
+                continue
+
+            post = SocialPost(
+                profile_id=profile_id,
+                platform_post_id=ppid,
+                content=f"{item.title}\n\n{item.summary}" if item.summary else item.title,
+                post_type=PostType.TEXT,
+                published_at=item.published or datetime.now(UTC),
+                likes=0,
+                comments=0,
+                shares=0,
+                views=0,
+                engagement_rate=0.0,
+                is_political=True,
+                raw_data={"link": item.link, "guid": item.guid, "source": item.source},
+            )
+            session.add(post)
+            persisted += 1
+
+        session.commit()
+        logger.info("ingest_rss_feeds persisted %d new items", persisted)
+        return {"status": "ok", "items_fetched": len(items), "items_persisted": persisted}
     except Exception as exc:
+        session.rollback()
         logger.exception("ingest_rss_feeds failed: %s", exc)
         return {"status": "error", "error": str(exc)}
+    finally:
+        session.close()
 
 
 @celery_app.task(name="app.workers.tasks.dispatch_scheduled_campaigns")

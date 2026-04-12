@@ -185,6 +185,8 @@ p {
 
 .glass-card {
   background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid hsl(var(--border) / 0.5);
   box-shadow:
     0 1px 2px hsl(var(--foreground) / 0.04),
@@ -193,6 +195,8 @@ p {
 
 .dark .glass-card {
   background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-color: hsl(var(--border) / 0.4);
   box-shadow:
     0 1px 2px hsl(0 0% 0% / 0.2),
@@ -203,16 +207,18 @@ p {
 
 .card-elevated {
   box-shadow:
-    0 1px 3px hsl(var(--foreground) / 0.04),
-    0 6px 24px hsl(var(--foreground) / 0.08);
-  transition: box-shadow 150ms ease-out, transform 150ms ease-out;
+    0 1px 2px hsl(var(--foreground) / 0.03),
+    0 4px 12px hsl(var(--foreground) / 0.06),
+    0 8px 28px hsl(var(--foreground) / 0.08);
+  transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1), transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-elevated:hover {
   box-shadow:
-    0 2px 4px hsl(var(--foreground) / 0.06),
-    0 8px 32px hsl(var(--foreground) / 0.1);
-  transform: translateY(-1px);
+    0 2px 4px hsl(var(--foreground) / 0.04),
+    0 8px 20px hsl(var(--foreground) / 0.08),
+    0 16px 40px hsl(var(--foreground) / 0.1);
+  transform: translateY(-2px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -293,6 +299,47 @@ p {
 
 .skeleton-animate {
   animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── Stat card smooth transitions ─────────────────────────── */
+
+.stat-card-transition {
+  transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card-transition {
+    transition: none;
+  }
+}
+
+/* ── BentoGrid entrance animations ────────────────────────── */
+
+@keyframes bento-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bento-enter {
+  animation: bento-fade-up 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.bento-enter-d1 { animation-delay: 60ms; }
+.bento-enter-d2 { animation-delay: 120ms; }
+.bento-enter-d3 { animation-delay: 180ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bento-enter {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 /* ── Login dot grid pulses ─────────────────────────────────── */

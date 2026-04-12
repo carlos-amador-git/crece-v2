@@ -1,18 +1,20 @@
 """D-DATA-02 — Endpoint que expone ciudadanos_legacy con PII protegido.
 
-Dos superficies:
+Tres superficies:
 - `GET /ciudadanos-legacy/` — listado público (admin/analyst),
   columnas seguras (nombre + geo + seccion + UT + metadata sin PII)
 - `GET /ciudadanos-legacy/{id}/pii` — decifrado, SOLO admin, audit-logged
+- `DELETE /ciudadanos-legacy/{id}/erase` — D.12 LFPDPPP soft-delete + PII wipe
 """
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -165,4 +167,80 @@ async def get_ciudadano_pii(
         whatsapp=decrypted.get("whatsapp"),
         fecha_nacimiento=decrypted.get("fecha_nacimiento"),
         clave_electoral=decrypted.get("clave_electoral"),
+    )
+
+
+class EraseConfirmation(BaseModel):
+    id: int
+    status: str
+    message: str
+
+
+@router.delete(
+    "/{ciudadano_id}/erase",
+    response_model=EraseConfirmation,
+    status_code=status.HTTP_200_OK,
+)
+async def erase_ciudadano(
+    ciudadano_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    auditor: Annotated[PiiAuditor, Depends(require_pii_clearance)],
+) -> EraseConfirmation:
+    """D.12 LFPDPPP — Soft-delete + PII wipe for right-to-erasure.
+
+    Admin-only (enforced by `require_pii_clearance`).
+    Sets `deleted_at = now()` and nullifies all `_enc` PII columns.
+    Logs the action to `data_access_log` with action='gdpr_erase'.
+    """
+    row = (
+        await db.execute(
+            select(CiudadanoLegacy).where(CiudadanoLegacy.id == ciudadano_id)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ciudadano not found"
+        )
+    if row.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ciudadano already erased",
+        )
+
+    # Soft-delete + nullify all _enc PII columns
+    now = datetime.now(UTC)
+    await db.execute(
+        text(
+            """
+            UPDATE ciudadanos_legacy
+            SET deleted_at = :now,
+                email_enc = NULL,
+                phone_01_enc = NULL,
+                phone_02_enc = NULL,
+                whatsapp_enc = NULL,
+                fecha_nacimiento_enc = NULL,
+                clave_electoral_enc = NULL
+            WHERE id = :id
+            """
+        ),
+        {"now": now, "id": ciudadano_id},
+    )
+
+    # Audit log
+    await auditor.log(
+        db=db,
+        table_name="ciudadanos_legacy",
+        row_id=str(ciudadano_id),
+        action="gdpr_erase",
+        fields=[
+            "email_enc", "phone_01_enc", "phone_02_enc",
+            "whatsapp_enc", "fecha_nacimiento_enc", "clave_electoral_enc",
+        ],
+        metadata={"erased_at": now.isoformat()},
+    )
+
+    return EraseConfirmation(
+        id=ciudadano_id,
+        status="erased",
+        message="PII eliminado y registro marcado como borrado (LFPDPPP).",
     )

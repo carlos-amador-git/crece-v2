@@ -104,6 +104,76 @@ def normalize_social_text(content: str) -> str:
     return re.sub(r"\s+", " ", "".join(out_chars)).strip()
 
 
+# ── spaCy NER (lazy-loaded) ────────────────────────────────────────────
+# BLOCKER: es_core_news_sm (or _md/_lg) is not installed in the Docker
+# image. spaCy 3.8.14 is present but `python -m spacy download
+# es_core_news_sm` must be added to the Dockerfile. Until then, the NER
+# pass is a no-op that logs a one-time warning.
+
+_spacy_nlp = None
+_spacy_load_attempted = False
+
+
+def _get_spacy_nlp():
+    """Lazy-load the Spanish spaCy model. Returns None if unavailable."""
+    global _spacy_nlp, _spacy_load_attempted
+    if _spacy_load_attempted:
+        return _spacy_nlp
+    _spacy_load_attempted = True
+    try:
+        import spacy
+        # Try models in order of preference
+        for model_name in ("es_core_news_md", "es_core_news_sm", "es_core_news_lg"):
+            try:
+                _spacy_nlp = spacy.load(model_name, disable=["parser", "lemmatizer"])
+                logger.info("spaCy NER loaded model: %s", model_name)
+                return _spacy_nlp
+            except OSError:
+                continue
+        logger.warning(
+            "spaCy NER: no Spanish model found (es_core_news_sm/md/lg). "
+            "Install via: python -m spacy download es_core_news_sm. "
+            "NER pass will be skipped until model is available."
+        )
+    except ImportError:
+        logger.warning("spaCy not installed — NER pass disabled")
+    return None
+
+
+async def _resolve_by_spacy_ner(
+    db: AsyncSession, normalized_text: str
+) -> tuple[int, str] | None:
+    """Extract GPE/LOC entities via spaCy and match against alcaldias_cdmx."""
+    nlp = _get_spacy_nlp()
+    if nlp is None:
+        return None
+
+    doc = nlp(normalized_text)
+    # Collect unique GPE/LOC entity texts
+    location_entities: list[str] = []
+    for ent in doc.ents:
+        if ent.label_ in ("GPE", "LOC") and ent.text.strip():
+            location_entities.append(ent.text.strip())
+
+    if not location_entities:
+        return None
+
+    # Try matching each entity against alcaldias_cdmx
+    result = await db.execute(
+        text("SELECT id, nombre FROM alcaldias_cdmx ORDER BY length(nombre) DESC")
+    )
+    alcaldias = result.all()
+
+    for entity in location_entities:
+        folded_entity = _strip_accents(entity.lower())
+        for aid, nombre in alcaldias:
+            folded_name = _strip_accents(nombre.lower())
+            if folded_entity == folded_name or folded_name in folded_entity:
+                return (aid, nombre)
+
+    return None
+
+
 async def _resolve_by_point(
     db: AsyncSession, lat: float, lon: float
 ) -> tuple[int, str] | None:
@@ -213,6 +283,22 @@ async def infer_location(
                 alcaldia_nombre=nombre,
                 confidence=0.75,
                 method="colonia_match",
+                evidence=evidence,
+            )
+
+    # 3b. spaCy NER — extract GPE/LOC entities from normalized text,
+    #     match against alcaldias table. Confidence between colonia (0.75)
+    #     and name_match (0.9) since NER can be noisy.
+    if normalized:
+        ner_match = await _resolve_by_spacy_ner(db, normalized)
+        if ner_match:
+            aid, nombre = ner_match
+            evidence.append(f"spacy_ner:{nombre}")
+            return LocationResult(
+                alcaldia_id=aid,
+                alcaldia_nombre=nombre,
+                confidence=0.8,
+                method="spacy_ner",
                 evidence=evidence,
             )
 

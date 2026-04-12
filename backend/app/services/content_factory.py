@@ -311,24 +311,51 @@ class ContentFactory:
         full_prompt_for_audit = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
 
         if provider == "ollama":
-            generated_text = await ContentFactory._generate_with_ollama(system_prompt, user_prompt)
-            model_name = f"ollama/{settings.OLLAMA_MODEL}"
-            tokens_in, tokens_out = 0, 0
+            for _attempt in range(2):
+                try:
+                    generated_text = await ContentFactory._generate_with_ollama(system_prompt, user_prompt)
+                    model_name = f"ollama/{settings.OLLAMA_MODEL}"
+                    tokens_in, tokens_out = 0, 0
+                    break
+                except Exception:
+                    if _attempt == 0:
+                        logger.warning("Ollama generation failed (attempt 1), retrying...")
+                        continue
+                    logger.exception("Ollama generation failed after 2 attempts")
+                    generated_text = "Error generando contenido. Intente nuevamente."
+                    model_name = f"ollama/{settings.OLLAMA_MODEL}"
+                    tokens_in, tokens_out = 0, 0
         else:
             if not settings.CLAUDE_API_KEY:
                 raise ValueError("CLAUDE_API_KEY no configurada y AI_PROVIDER=claude.")
             import anthropic
             client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
-            message = client.messages.create(
-                model=settings.CLAUDE_MODEL,
-                max_tokens=4096,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            generated_text = message.content[0].text
-            model_name = settings.CLAUDE_MODEL
-            tokens_in = message.usage.input_tokens
-            tokens_out = message.usage.output_tokens
+            generated_text = None
+            for _attempt in range(2):
+                try:
+                    message = client.messages.create(
+                        model=settings.CLAUDE_MODEL,
+                        max_tokens=4096,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_prompt}],
+                    )
+                    generated_text = message.content[0].text
+                    model_name = settings.CLAUDE_MODEL
+                    tokens_in = message.usage.input_tokens
+                    tokens_out = message.usage.output_tokens
+                    break
+                except Exception:
+                    if _attempt == 0:
+                        logger.warning("Claude API call failed (attempt 1), retrying...")
+                        continue
+                    logger.exception("Claude API call failed after 2 attempts")
+                    generated_text = "Error generando contenido. Intente nuevamente."
+                    model_name = settings.CLAUDE_MODEL
+                    tokens_in, tokens_out = 0, 0
+            if generated_text is None:
+                generated_text = "Error generando contenido. Intente nuevamente."
+                model_name = settings.CLAUDE_MODEL
+                tokens_in, tokens_out = 0, 0
 
         # Append INE disclaimer
         final_content = generated_text + _INE_DISCLAIMER
@@ -388,9 +415,25 @@ class ContentFactory:
 
         if provider == "ollama":
             model_name = f"ollama/{settings.OLLAMA_MODEL}"
-            async for chunk in ContentFactory._stream_with_ollama(system_prompt, user_prompt):
-                collected_text += chunk
-                yield json.dumps({"type": "chunk", "content": chunk})
+            stream_failed = False
+            for _attempt in range(2):
+                try:
+                    async for chunk in ContentFactory._stream_with_ollama(system_prompt, user_prompt):
+                        collected_text += chunk
+                        yield json.dumps({"type": "chunk", "content": chunk})
+                    stream_failed = False
+                    break
+                except Exception:
+                    if _attempt == 0:
+                        logger.warning("Ollama stream failed (attempt 1), retrying...")
+                        collected_text = ""
+                        stream_failed = True
+                        continue
+                    logger.exception("Ollama stream failed after 2 attempts")
+                    stream_failed = True
+            if stream_failed:
+                collected_text = "Error generando contenido. Intente nuevamente."
+                yield json.dumps({"type": "chunk", "content": collected_text})
         else:
             if not settings.CLAUDE_API_KEY:
                 yield json.dumps({"type": "error", "message": "CLAUDE_API_KEY no configurada."})
@@ -398,18 +441,34 @@ class ContentFactory:
             import anthropic
             client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
             model_name = settings.CLAUDE_MODEL
-            with client.messages.stream(
-                model=settings.CLAUDE_MODEL,
-                max_tokens=4096,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-            ) as stream:
-                for text in stream.text_stream:
-                    collected_text += text
-                    yield json.dumps({"type": "chunk", "content": text})
-                final_message = stream.get_final_message()
-                tokens_in = final_message.usage.input_tokens
-                tokens_out = final_message.usage.output_tokens
+            stream_failed = False
+            for _attempt in range(2):
+                try:
+                    with client.messages.stream(
+                        model=settings.CLAUDE_MODEL,
+                        max_tokens=4096,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_prompt}],
+                    ) as stream:
+                        for text in stream.text_stream:
+                            collected_text += text
+                            yield json.dumps({"type": "chunk", "content": text})
+                        final_message = stream.get_final_message()
+                        tokens_in = final_message.usage.input_tokens
+                        tokens_out = final_message.usage.output_tokens
+                    stream_failed = False
+                    break
+                except Exception:
+                    if _attempt == 0:
+                        logger.warning("Claude stream failed (attempt 1), retrying...")
+                        collected_text = ""
+                        stream_failed = True
+                        continue
+                    logger.exception("Claude stream failed after 2 attempts")
+                    stream_failed = True
+            if stream_failed:
+                collected_text = "Error generando contenido. Intente nuevamente."
+                yield json.dumps({"type": "chunk", "content": collected_text})
 
         # Append INE disclaimer
         final_content = collected_text + _INE_DISCLAIMER
