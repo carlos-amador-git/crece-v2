@@ -108,7 +108,7 @@ export default function CompliancePage() {
 
       {/* KPI Cards */}
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 md:grid-cols-4"
         aria-label="Metricas de compliance"
       >
         {reportLoading ? (
@@ -182,9 +182,9 @@ export default function CompliancePage() {
       </section>
 
       {/* Gastos Table + Alertas */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         {/* Gastos */}
-        <Card className="lg:col-span-3">
+        <Card className="md:col-span-1 lg:col-span-3">
           <CardHeader>
             <CardTitle>Gastos Registrados</CardTitle>
             <CardDescription>Trazabilidad de gastos de campana</CardDescription>
@@ -242,7 +242,7 @@ export default function CompliancePage() {
         </Card>
 
         {/* Alertas */}
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Alertas</CardTitle>
             <CardDescription>Alertas de cumplimiento activas</CardDescription>

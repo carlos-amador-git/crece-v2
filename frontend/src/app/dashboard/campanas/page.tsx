@@ -163,8 +163,8 @@ export default function CampanasPage() {
         </Dialog>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <section className="space-y-3 lg:col-span-3" aria-label="Lista de campanas">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+        <section className="space-y-3 md:col-span-1 lg:col-span-3" aria-label="Lista de campanas">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => <Card key={i} className="card-elevated"><CardContent className="p-5"><Skeleton className="mb-2 h-5 w-48" /><Skeleton className="h-16 w-full" /></CardContent></Card>)
           ) : !campanas || campanas.length === 0 ? (
@@ -172,7 +172,7 @@ export default function CampanasPage() {
           ) : campanas.map((c) => <CampanaCard key={c.id} campana={c} onSelect={setSelectedId} />)}
         </section>
 
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Analytics</CardTitle>
             <CardDescription>{selectedId ? `Campana #${selectedId}` : "Selecciona una campana"}</CardDescription>

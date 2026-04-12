@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { FadeUp } from "@/components/motion/fade-up";
 
 // ── Config maps ───────────────────────────────────────────────────
 
@@ -272,7 +273,7 @@ export default function ParticipacionPage() {
 
       {/* ── KPI Cards ──────────────────────────────────── */}
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 md:grid-cols-4"
         aria-label="Estadisticas de participacion"
       >
         {dashboardLoading ? (
@@ -291,29 +292,37 @@ export default function ParticipacionPage() {
           </Card>
         ) : (
           <>
-            <StatCard
-              label="Total Solicitudes"
-              value={dashboardData?.total ?? 0}
-              icon={Inbox}
-            />
-            <StatCard
-              label="Tipo Mas Frecuente"
-              value={topTipo ? TIPO_CONFIG[topTipo[0]].label : "--"}
-              icon={MessageSquare}
-              description={topTipo ? `${topTipo[1]} solicitudes` : undefined}
-            />
-            <StatCard
-              label="Tiempo Promedio Resolucion"
-              value={dashboardData?.avg_resolution_hours != null ? formatHours(dashboardData.avg_resolution_hours) : "--"}
-              icon={Clock}
-              description="promedio en horas"
-            />
-            <StatCard
-              label="Por Estado"
-              value={dashboardData?.por_estado?.nueva ?? 0}
-              icon={ThumbsUp}
-              description="solicitudes nuevas"
-            />
+            <FadeUp index={0}>
+              <StatCard
+                label="Total Solicitudes"
+                value={dashboardData?.total ?? 0}
+                icon={Inbox}
+              />
+            </FadeUp>
+            <FadeUp index={1}>
+              <StatCard
+                label="Tipo Mas Frecuente"
+                value={topTipo ? TIPO_CONFIG[topTipo[0]].label : "--"}
+                icon={MessageSquare}
+                description={topTipo ? `${topTipo[1]} solicitudes` : undefined}
+              />
+            </FadeUp>
+            <FadeUp index={2}>
+              <StatCard
+                label="Tiempo Promedio Resolucion"
+                value={dashboardData?.avg_resolution_hours != null ? formatHours(dashboardData.avg_resolution_hours) : "--"}
+                icon={Clock}
+                description="promedio en horas"
+              />
+            </FadeUp>
+            <FadeUp index={3}>
+              <StatCard
+                label="Por Estado"
+                value={dashboardData?.por_estado?.nueva ?? 0}
+                icon={ThumbsUp}
+                description="solicitudes nuevas"
+              />
+            </FadeUp>
           </>
         )}
       </section>

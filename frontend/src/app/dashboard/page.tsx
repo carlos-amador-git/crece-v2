@@ -22,6 +22,7 @@ import {
   Activity,
   Cpu,
 } from "lucide-react";
+import { FadeUp } from "@/components/motion/fade-up";
 
 // Electoral map hidden until INE shapefiles are loaded
 // const ElectoralMap = dynamic(
@@ -212,14 +213,10 @@ export default function OverviewPage() {
               const isTemaCard = card.key === "active_alerts";
               const temaText = kpiData.tema_urgente;
 
-              const delayClass = idx === 0 ? "" : idx === 1 ? "bento-enter-d1" : idx === 2 ? "bento-enter-d2" : "bento-enter-d3";
-
               return (
+                <FadeUp key={card.key} index={idx} className={isHero ? "col-span-2 xl:col-span-2" : "col-span-1"}>
                 <Card
-                  key={card.key}
-                  className={`card-elevated bento-enter ${delayClass} ${
-                    isHero ? "col-span-2 xl:col-span-2" : "col-span-1"
-                  } ${card.isAlerts ? "accent-bar-left" : ""}`}
+                  className={`card-elevated ${card.isAlerts ? "accent-bar-left" : ""}`}
                   data-active={card.isAlerts && hasActiveAlerts ? "true" : undefined}
                 >
                   <CardContent className={isHero ? "p-6" : "p-5"}>
@@ -294,6 +291,7 @@ export default function OverviewPage() {
                     </div>
                   </CardContent>
                 </Card>
+                </FadeUp>
               );
             })}
       </section>
@@ -358,9 +356,9 @@ export default function OverviewPage() {
       </div>
 
       {/* ── Charts Row ──────────────────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         {/* Sentiment trend -- larger */}
-        <Card className="lg:col-span-3">
+        <Card className="md:col-span-2 lg:col-span-3">
           <CardHeader>
             <CardTitle>Tendencia de Sentimiento</CardTitle>
             <CardDescription>Ultimos 30 dias</CardDescription>
@@ -379,7 +377,7 @@ export default function OverviewPage() {
         </Card>
 
         {/* Followers by platform */}
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-2 lg:col-span-2">
           <CardHeader>
             <CardTitle>Seguidores por Plataforma</CardTitle>
             <CardDescription>Audiencia total por red social</CardDescription>
@@ -430,9 +428,9 @@ export default function OverviewPage() {
       </div>
 
       {/* ── Bottom Row: Posts + Map ─────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         {/* Recent posts */}
-        <section className="space-y-3 lg:col-span-3" aria-label="Publicaciones recientes">
+        <section className="space-y-3 md:col-span-2 lg:col-span-3" aria-label="Publicaciones recientes">
           <h2 className="font-heading text-lg font-semibold">
             Publicaciones Recientes
           </h2>

@@ -46,7 +46,7 @@ export default function DirigenteDetailPage() {
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-32 w-full" />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-24 w-full" />
           ))}
@@ -91,7 +91,7 @@ export default function DirigenteDetailPage() {
       <ProfileHeader dirigente={dirigente} />
 
       {/* Quick stats */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Posts (7d)</p>
@@ -144,7 +144,7 @@ export default function DirigenteDetailPage() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Indice de Penetracion Digital</CardTitle>
@@ -227,7 +227,7 @@ export default function DirigenteDetailPage() {
             <h3 className="mb-3 font-heading text-lg font-semibold">
               Detalle de Secciones
             </h3>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
               {(dirigente.secciones ?? []).map((seccion) => (
                 <Card key={seccion.id}>
                   <CardContent className="p-4">

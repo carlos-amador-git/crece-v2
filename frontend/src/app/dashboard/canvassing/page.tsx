@@ -59,6 +59,7 @@ import {
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { MobileFilterSheet } from "@/components/responsive/mobile-filter-sheet";
+import { FadeUp } from "@/components/motion/fade-up";
 
 // Dynamic import to avoid SSR issues with MapLibre
 const CanvassingGeoMap = dynamic(
@@ -361,30 +362,38 @@ export default function CanvassingPage() {
       {/* Stats bar */}
       {stats ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard
-            label="Ciudadanos total"
-            value={stats.total.toLocaleString()}
-            icon={Users}
-            variant="compact"
-          />
-          <StatCard
-            label="Con geolocalizacion"
-            value={stats.con_geo.toLocaleString()}
-            icon={MapPin}
-            variant="compact"
-          />
-          <StatCard
-            label="En mapa (filtrado)"
-            value={geoLoading ? "..." : featureCount.toLocaleString()}
-            icon={Map}
-            variant="compact"
-          />
-          <StatCard
-            label="Volatilidad promedio"
-            value={stats.volatilidad_range?.avg ?? "\u2014"}
-            icon={Filter}
-            variant="compact"
-          />
+          <FadeUp index={0}>
+            <StatCard
+              label="Ciudadanos total"
+              value={stats.total.toLocaleString()}
+              icon={Users}
+              variant="compact"
+            />
+          </FadeUp>
+          <FadeUp index={1}>
+            <StatCard
+              label="Con geolocalizacion"
+              value={stats.con_geo.toLocaleString()}
+              icon={MapPin}
+              variant="compact"
+            />
+          </FadeUp>
+          <FadeUp index={2}>
+            <StatCard
+              label="En mapa (filtrado)"
+              value={geoLoading ? "..." : featureCount.toLocaleString()}
+              icon={Map}
+              variant="compact"
+            />
+          </FadeUp>
+          <FadeUp index={3}>
+            <StatCard
+              label="Volatilidad promedio"
+              value={stats.volatilidad_range?.avg ?? "\u2014"}
+              icon={Filter}
+              variant="compact"
+            />
+          </FadeUp>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -395,9 +404,9 @@ export default function CanvassingPage() {
       )}
 
       {/* Main content: filters + map */}
-      <div className="grid gap-6 lg:grid-cols-6">
+      <div className="grid gap-6 md:grid-cols-4 lg:grid-cols-6">
         {/* Filters sidebar */}
-        <aside className="hidden lg:block lg:col-span-1" aria-label="Filtros de mapa">
+        <aside className="hidden md:block md:col-span-1 lg:col-span-1" aria-label="Filtros de mapa">
           <Card className="glass-card rounded-xl">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Filtros</CardTitle>
@@ -532,8 +541,8 @@ export default function CanvassingPage() {
           </Card>
         </aside>
 
-        {/* Mobile filter sheet (below lg) */}
-        <div className="lg:hidden">
+        {/* Mobile filter sheet (below md) */}
+        <div className="md:hidden">
           <MobileFilterSheet
             activeCount={activeFilterCount}
             onClear={() => setFilters({ limit: 5000 })}
@@ -595,10 +604,10 @@ export default function CanvassingPage() {
         </div>
 
         {/* Map */}
-        <section className="lg:col-span-5" aria-label="Mapa de canvassing">
+        <section className="md:col-span-3 lg:col-span-5" aria-label="Mapa de canvassing">
           <Card className="card-elevated overflow-hidden">
             <CardContent className="p-0">
-              <div className="h-[500px] lg:h-[600px]">
+              <div className="h-[400px] md:h-[500px] lg:h-[600px]">
                 {geoLoading ? (
                   <div className="flex h-full items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

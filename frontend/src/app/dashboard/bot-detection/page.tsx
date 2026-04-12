@@ -174,7 +174,7 @@ export default function HealthDigitalPage() {
       {hasData && (
         <Card className={`${LEVEL_STYLES[analysis.overall_level].bg} ${LEVEL_STYLES[analysis.overall_level].border} border`}>
           <CardContent className="p-6">
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col items-center gap-6 md:flex-row md:items-center">
               {/* Semicircular donut gauge */}
               <div className="relative flex shrink-0 flex-col items-center">
                 <PieChart width={200} height={120}>
