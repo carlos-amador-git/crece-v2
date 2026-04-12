@@ -85,12 +85,12 @@ export default function SocialPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <header>
         <h1 className="font-heading text-2xl font-bold">Monitoreo Social</h1>
         <p className="text-sm text-muted-foreground">
           Seguimiento en tiempo real de publicaciones y sentimiento
         </p>
-      </div>
+      </header>
 
       {/* Crisis alert banner */}
       {activeCrisis && (
@@ -111,7 +111,7 @@ export default function SocialPage() {
       )}
 
       {/* Stats bar */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-3" aria-label="Estadisticas de publicaciones">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
@@ -145,7 +145,7 @@ export default function SocialPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </section>
 
       {/* S4.10 — Trending ahora en alcaldía (Sprint 4 Motor de Trends) */}
       <TrendingAlcaldiaCard />
@@ -155,8 +155,8 @@ export default function SocialPage() {
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar en publicaciones..." className="pl-9" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input placeholder="Buscar en publicaciones..." className="pl-9" aria-label="Buscar en publicaciones" />
             </div>
             <Select
               value={filters.platform ?? "all"}
@@ -203,8 +203,10 @@ export default function SocialPage() {
               size="sm"
               onClick={() => setHideRetweets(!hideRetweets)}
               className="gap-1.5 shrink-0"
+              aria-pressed={hideRetweets}
+              aria-label={hideRetweets ? "Mostrando solo publicaciones originales. Presiona para incluir retweets" : "Mostrando todas las publicaciones. Presiona para ocultar retweets"}
             >
-              <Repeat2 className="h-3.5 w-3.5" />
+              <Repeat2 className="h-3.5 w-3.5" aria-hidden="true" />
               {hideRetweets ? "Solo originales" : "Incluir RTs"}
             </Button>
           </div>
@@ -213,7 +215,7 @@ export default function SocialPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Post feed */}
-        <div className="space-y-3 lg:col-span-2">
+        <section className="space-y-3 lg:col-span-2" aria-label="Feed de publicaciones">
           <h2 className="font-heading text-lg font-semibold">
             Feed de Publicaciones
             <span className="ml-2 text-sm font-normal text-muted-foreground">
@@ -238,10 +240,10 @@ export default function SocialPage() {
           ) : (
             displayPosts.map((post) => <PostCard key={post.id} post={post} />)
           )}
-        </div>
+        </section>
 
         {/* Sidebar: distribution + top posts */}
-        <div className="space-y-6">
+        <aside className="space-y-6" aria-label="Analisis de sentimiento">
           <Card>
             <CardHeader>
               <CardTitle>Distribucion de Sentimiento</CardTitle>
@@ -279,7 +281,7 @@ export default function SocialPage() {
               ))}
             </CardContent>
           </Card>
-        </div>
+        </aside>
       </div>
     </div>
   );

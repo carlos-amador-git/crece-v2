@@ -23,7 +23,11 @@ from app.schemas.solicitud import (
 # Each rule: (regex_pattern, category, priority)
 _CATEGORIZATION_RULES: list[tuple[str, str, int]] = [
     (r"inseguridad|robo|asalto|violencia|crimen|delincuencia|balacera|extorsion", "seguridad", 1),
-    (r"bache|agua|luz|basura|drenaje|alcantarilla|alumbrado|pavimento|fugas", "servicios_publicos", 2),
+    (
+        r"bache|agua|luz|basura|drenaje|alcantarilla|alumbrado|pavimento|fugas",
+        "servicios_publicos",
+        2,
+    ),
     (r"hospital|clinica|salud|medicamento|enfermedad|ambulancia|doctor|medico", "salud", 2),
     (r"escuela|maestro|educacion|beca|universidad|preparatoria|kinder", "educacion", 3),
     (r"transporte|metrobus|metro|ruta|camion|trafico|vialidad|semaforo", "transporte", 3),
@@ -61,9 +65,7 @@ class ParticipacionService:
 
         # Build geometry from lat/lon
         if data.latitud is not None and data.longitud is not None:
-            solicitud_data["ubicacion"] = (
-                f"SRID=4326;POINT({data.longitud} {data.latitud})"
-            )
+            solicitud_data["ubicacion"] = f"SRID=4326;POINT({data.longitud} {data.latitud})"
 
         # Auto-categorize if no category provided
         if not solicitud_data.get("categoria"):
@@ -182,7 +184,7 @@ class ParticipacionService:
         org_id: int | None = None,
     ) -> ParticipacionDashboardStats:
         """Aggregate dashboard statistics for solicitudes ciudadanas."""
-        base_filter = True  # noqa: E712 — SQLAlchemy literal
+        base_filter = True
         if org_id is not None:
             base_filter = SolicitudCiudadana.org_id == org_id
 
@@ -257,9 +259,7 @@ class ParticipacionService:
             .order_by(func.count(SolicitudCiudadana.id).desc())
             .limit(10)
         )
-        top_colonias = [
-            {"colonia": row[0], "count": row[1]} for row in colonia_result.all()
-        ]
+        top_colonias = [{"colonia": row[0], "count": row[1]} for row in colonia_result.all()]
 
         return ParticipacionDashboardStats(
             total=total,

@@ -76,9 +76,7 @@ class VedaElectoralMiddleware(BaseHTTPMiddleware):
     - Health endpoints
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # Only check if veda is active
         if not _is_veda_active():
             return await call_next(request)

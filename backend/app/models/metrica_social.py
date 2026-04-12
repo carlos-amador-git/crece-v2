@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -35,9 +35,7 @@ class MetricaSocial(Base):
         nullable=False,
     )
 
-    __table_args__ = (
-        UniqueConstraint("profile_id", "periodo", name="uq_metrica_profile_periodo"),
-    )
+    __table_args__ = (UniqueConstraint("profile_id", "periodo", name="uq_metrica_profile_periodo"),)
 
     # relationships
     profile = relationship("SocialProfile", lazy="selectin")

@@ -32,7 +32,12 @@ class CompetidorSocialProfile(Base):
     )
     platform: Mapped[str] = mapped_column(
         Enum(
-            "TWITTER", "INSTAGRAM", "FACEBOOK", "TIKTOK", "YOUTUBE", "BLUESKY",
+            "TWITTER",
+            "INSTAGRAM",
+            "FACEBOOK",
+            "TIKTOK",
+            "YOUTUBE",
+            "BLUESKY",
             name="platform_enum",
             create_type=False,
         ),

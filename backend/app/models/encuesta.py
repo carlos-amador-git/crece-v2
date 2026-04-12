@@ -44,7 +44,12 @@ class Encuesta(Base):
 
     # Survey data
     intencion_voto: Mapped[IntencionVotoCiudadano] = mapped_column(
-        Enum(IntencionVotoCiudadano, name="intencion_voto_ciudadano", native_enum=True, create_type=False),
+        Enum(
+            IntencionVotoCiudadano,
+            name="intencion_voto_ciudadano",
+            native_enum=True,
+            create_type=False,
+        ),
         nullable=False,
     )
     nivel_certeza: Mapped[NivelCerteza] = mapped_column(

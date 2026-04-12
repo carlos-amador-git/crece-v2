@@ -79,7 +79,9 @@ class NLPAnalyzer:
             logger.warning("Failed to load pysentimiento models: %s", e)
 
         try:
-            from sentiment_analysis_spanish import sentiment_analysis  # type: ignore[import-untyped]
+            from sentiment_analysis_spanish import (
+                sentiment_analysis,  # type: ignore[import-untyped]
+            )
 
             self._sentiment_spanish = sentiment_analysis.SentimentAnalysisSpanish()
             logger.info("sentiment-analysis-spanish model loaded successfully")
@@ -148,11 +150,9 @@ class NLPAnalyzer:
         if self._spacy_nlp:
             doc = self._spacy_nlp(text[:5000])
             entities = [{"text": e.text, "label": e.label_} for e in doc.ents]
-            topics = list({
-                t.lemma_.lower()
-                for t in doc
-                if t.pos_ in ("NOUN", "PROPN") and len(t.text) > 2
-            })[:20]
+            topics = list(
+                {t.lemma_.lower() for t in doc if t.pos_ in ("NOUN", "PROPN") and len(t.text) > 2}
+            )[:20]
 
         return SentimentResult(
             sentiment_score=round(score, 4),
@@ -224,9 +224,7 @@ class NLPAnalyzer:
         if platform:
             # normalize_sentiment expects [-1, 1]; our raw_score is already
             # in that range (POS - NEG).
-            platform_adjusted = round(
-                _remap_to_unit(normalize_sentiment(raw_score, platform)), 4
-            )
+            platform_adjusted = round(_remap_to_unit(normalize_sentiment(raw_score, platform)), 4)
 
         return {
             "sentiment": sentiment_dict,

@@ -44,9 +44,7 @@ class SentimentService:
             self._emotion_analyzer = create_analyzer(task="emotion", lang="es")
             self._hate_analyzer = create_analyzer(task="hate_speech", lang="es")
         except ImportError:
-            logger.warning(
-                "pysentimiento not installed. Install with: pip install 'crece-v2[nlp]'"
-            )
+            logger.warning("pysentimiento not installed. Install with: pip install 'crece-v2[nlp]'")
         try:
             from sentiment_analysis_spanish import sentiment_analysis
 
@@ -119,16 +117,15 @@ class SentimentService:
         topics: list[str] = []
         if self._nlp is not None:
             doc = self._nlp(text[:5000])  # cap input length
-            entities = [
-                {"text": ent.text, "label": ent.label_}
-                for ent in doc.ents
-            ]
+            entities = [{"text": ent.text, "label": ent.label_} for ent in doc.ents]
             # Extract topics from nouns and proper nouns
-            topics = list({
-                token.lemma_.lower()
-                for token in doc
-                if token.pos_ in ("NOUN", "PROPN") and len(token.text) > 2
-            })[:20]
+            topics = list(
+                {
+                    token.lemma_.lower()
+                    for token in doc
+                    if token.pos_ in ("NOUN", "PROPN") and len(token.text) > 2
+                }
+            )[:20]
 
         return SentimentResult(
             sentiment_score=round(sentiment_score, 4),

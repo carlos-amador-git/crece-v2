@@ -10,14 +10,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
-class TipoPlan(str, enum.Enum):
+class TipoPlan(enum.StrEnum):
     DIAGNOSTICO = "DIAGNOSTICO"
     CONSOLIDACION = "CONSOLIDACION"
     CRISIS = "CRISIS"
     CONTENIDO = "CONTENIDO"
 
 
-class EstadoTarea(str, enum.Enum):
+class EstadoTarea(enum.StrEnum):
     TODO = "TODO"
     IN_PROGRESS = "IN_PROGRESS"
     DONE = "DONE"
@@ -55,7 +55,7 @@ class PlanIA(Base):
     # Relationships
     dirigente = relationship("Dirigente", back_populates="planes")
     generado_por = relationship("User")
-    tareas: Mapped[list["PlanTarea"]] = relationship(
+    tareas: Mapped[list[PlanTarea]] = relationship(
         "PlanTarea",
         back_populates="plan",
         cascade="all, delete-orphan",
@@ -91,9 +91,7 @@ class PlanTarea(Base):
         default=EstadoTarea.TODO,
     )
     cambios_historial: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    completado_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    completado_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

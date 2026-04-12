@@ -23,6 +23,10 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { formatNumber } from "@/lib/utils";
 import {
+  PieChart,
+  Pie,
+} from "recharts";
+import {
   Activity,
   AlertTriangle,
   Play,
@@ -171,8 +175,48 @@ export default function HealthDigitalPage() {
         <Card className={`${LEVEL_STYLES[analysis.overall_level].bg} ${LEVEL_STYLES[analysis.overall_level].border} border`}>
           <CardContent className="p-6">
             <div className="flex items-center gap-6">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-current" style={{ borderColor: analysis.overall_level === "green" ? "#059669" : analysis.overall_level === "yellow" ? "#d97706" : "#dc2626" }}>
-                <span className="font-heading text-3xl font-bold tabular-nums">{analysis.overall_health}</span>
+              {/* Semicircular donut gauge */}
+              <div className="relative flex shrink-0 flex-col items-center">
+                <PieChart width={200} height={120}>
+                  <Pie
+                    data={[
+                      {
+                        value: analysis.overall_health,
+                        fill: analysis.overall_level === "green"
+                          ? "#059669"
+                          : analysis.overall_level === "yellow"
+                            ? "#d97706"
+                            : "#dc2626",
+                      },
+                      {
+                        value: 100 - analysis.overall_health,
+                        fill: "hsl(var(--muted))",
+                      },
+                    ]}
+                    startAngle={180}
+                    endAngle={0}
+                    innerRadius={60}
+                    outerRadius={80}
+                    dataKey="value"
+                    stroke="none"
+                  />
+                </PieChart>
+                <span className="absolute left-1/2 top-[62px] -translate-x-1/2 font-heading text-2xl font-bold tabular-nums">
+                  {analysis.overall_health}
+                </span>
+                <span className={`-mt-4 text-xs font-medium ${
+                  analysis.overall_level === "green"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : analysis.overall_level === "yellow"
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-red-600 dark:text-red-400"
+                }`}>
+                  {analysis.overall_health >= 70
+                    ? "Saludable"
+                    : analysis.overall_health >= 40
+                      ? "En riesgo"
+                      : "Critico"}
+                </span>
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">

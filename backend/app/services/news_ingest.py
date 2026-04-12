@@ -25,11 +25,9 @@ from __future__ import annotations
 import hashlib
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 
 import httpx
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +42,11 @@ class RssFeed:
 RSS_SOURCES: list[RssFeed] = [
     # Oficiales / gobierno
     RssFeed("Presidencia MX", "https://www.gob.mx/presidencia/rss/prensa", "OFICIAL"),
-    RssFeed("Gaceta CDMX", "https://data.consejeria.cdmx.gob.mx/portal_old/gaceta-oficial-rss.xml", "GOBIERNO"),
+    RssFeed(
+        "Gaceta CDMX",
+        "https://data.consejeria.cdmx.gob.mx/portal_old/gaceta-oficial-rss.xml",
+        "GOBIERNO",
+    ),
     RssFeed("Congreso CDMX", "https://www.congresocdmx.gob.mx/feed/", "GOBIERNO"),
     RssFeed("IECM", "https://www.iecm.mx/feed/", "GOBIERNO"),
     # Medios nacionales con cobertura CDMX
@@ -79,11 +81,11 @@ def _parse_feed(xml_bytes: bytes, source: str) -> list[RssItem]:
     for item_match in re.finditer(r"<item[^>]*>(.*?)</item>", text_content, re.DOTALL):
         block = item_match.group(1)
 
-        def _field(tag: str) -> str:
+        def _field(tag: str, _block: str = block) -> str:
             # Handles both <tag>value</tag> and <tag><![CDATA[value]]></tag>
             m = re.search(
                 rf"<{tag}(?:\s[^>]*)?>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</{tag}>",
-                block,
+                _block,
                 re.DOTALL,
             )
             return unescape(m.group(1).strip()) if m else ""

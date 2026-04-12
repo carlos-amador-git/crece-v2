@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user
 from app.models.campana import Campana, CampanaMensaje, EstadoCampana, EstadoMensaje
@@ -14,7 +17,6 @@ from app.models.user import User
 from app.schemas.campana import (
     CampanaAnalytics,
     CampanaCreate,
-    CampanaMensajeResponse,
     CampanaPreviewResponse,
     CampanaResponse,
     CampanaSegmentoCreate,
@@ -24,6 +26,8 @@ from app.schemas.campana import (
 )
 from app.schemas.common import MessageResponse, PaginatedResponse
 from app.services.campaign_manager import CampaignManager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -61,9 +65,7 @@ async def list_campanas(
     total = total_result.scalar_one()
 
     query = (
-        query.order_by(Campana.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+        query.order_by(Campana.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     result = await db.execute(query)
     items = list(result.scalars().all())
@@ -116,9 +118,7 @@ async def get_campana(
     result = await db.execute(select(Campana).where(Campana.id == campana_id))
     campana = result.scalar_one_or_none()
     if campana is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
     return campana
 
 
@@ -139,9 +139,7 @@ async def update_campana(
     result = await db.execute(select(Campana).where(Campana.id == campana_id))
     campana = result.scalar_one_or_none()
     if campana is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
     if campana.estado not in (EstadoCampana.BORRADOR, EstadoCampana.PROGRAMADA):
         raise HTTPException(
@@ -176,9 +174,7 @@ async def add_segmento(
     result = await db.execute(select(Campana).where(Campana.id == campana_id))
     campana = result.scalar_one_or_none()
     if campana is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
     if campana.estado != EstadoCampana.BORRADOR:
         raise HTTPException(
@@ -186,7 +182,7 @@ async def add_segmento(
             detail="Segments can only be added to campaigns in BORRADOR state",
         )
 
-    count = await CampaignManager.build_segment(db, campana_id, payload)
+    await CampaignManager.build_segment(db, campana_id, payload)
 
     # Return the last inserted segment
     from sqlalchemy import desc
@@ -223,15 +219,11 @@ async def preparar_campana(
     try:
         total = await CampaignManager.prepare_campaign(db, campana_id)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     # Fetch a sample of prepared messages
     sample_result = await db.execute(
-        select(CampanaMensaje)
-        .where(CampanaMensaje.campana_id == campana_id)
-        .limit(5)
+        select(CampanaMensaje).where(CampanaMensaje.campana_id == campana_id).limit(5)
     )
     sample_msgs = list(sample_result.scalars().all())
 
@@ -273,9 +265,7 @@ async def enviar_campana(
     result = await db.execute(select(Campana).where(Campana.id == campana_id))
     campana = result.scalar_one_or_none()
     if campana is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
     if campana.estado != EstadoCampana.PROGRAMADA:
         raise HTTPException(
@@ -305,10 +295,46 @@ async def enviar_campana(
     # Build payload for Chatwoot-MX
     payload = await CampaignManager.get_campaign_payload(db, campana_id)
 
+    # Trigger n8n webhook if configured (D.1 — campaign dispatch via n8n)
+    n8n_execution_id = None
+    if settings.N8N_CAMPAIGN_WEBHOOK_URL:
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    settings.N8N_CAMPAIGN_WEBHOOK_URL,
+                    json={
+                        "campana_id": campana_id,
+                        "total_mensajes": len(payload),
+                        "payload": payload,
+                    },
+                    headers={"X-CRECE-Token": settings.N8N_CRECE_TOKEN},
+                )
+                if resp.status_code < 300:
+                    resp_data = (
+                        resp.json()
+                        if resp.headers.get("content-type", "").startswith("application/json")
+                        else {}
+                    )
+                    n8n_execution_id = resp_data.get("executionId")
+                    logger.info(
+                        "n8n campaign webhook triggered: campana=%d, execution=%s",
+                        campana_id,
+                        n8n_execution_id,
+                    )
+                else:
+                    logger.warning(
+                        "n8n webhook returned %d for campana %d",
+                        resp.status_code,
+                        campana_id,
+                    )
+        except httpx.HTTPError as exc:
+            logger.error("n8n webhook failed for campana %d: %s", campana_id, exc)
+
     return {
         "campana_id": campana_id,
         "estado": EstadoCampana.ENVIANDO,
         "total_mensajes": len(payload),
+        "n8n_execution_id": n8n_execution_id,
         "payload": payload,
     }
 
@@ -326,9 +352,7 @@ async def get_analytics(
     try:
         analytics = await CampaignManager.get_campaign_analytics(db, campana_id)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     return CampanaAnalytics(**analytics)
 
 
@@ -358,9 +382,7 @@ async def webhook_delivery(
             error=payload.error,
         )
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
     # Check if all messages have been processed, mark campaign as completed
     mensaje = await db.get(CampanaMensaje, payload.mensaje_id)
@@ -401,9 +423,7 @@ async def delete_campana(
     result = await db.execute(select(Campana).where(Campana.id == campana_id))
     campana = result.scalar_one_or_none()
     if campana is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
     if campana.estado == EstadoCampana.ENVIANDO:
         # Cancel rather than delete to preserve delivery audit trail

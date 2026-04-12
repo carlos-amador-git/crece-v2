@@ -18,22 +18,22 @@ to normalize cross-platform comparisons. A score of 0 means no correction.
 
 # Additive correction to raw sentiment score (-1.0 to 1.0 scale)
 SENTIMENT_BIAS_CORRECTION: dict[str, float] = {
-    "twitter": +0.08,     # counteract negative skew
-    "instagram": -0.06,   # counteract positive skew
-    "facebook": -0.04,    # counteract slight positive skew
-    "tiktok": 0.00,       # relatively neutral
-    "youtube": +0.03,     # slight negative skew in comments
-    "bluesky": 0.00,      # insufficient data, no correction
+    "twitter": +0.08,  # counteract negative skew
+    "instagram": -0.06,  # counteract positive skew
+    "facebook": -0.04,  # counteract slight positive skew
+    "tiktok": 0.00,  # relatively neutral
+    "youtube": +0.03,  # slight negative skew in comments
+    "bluesky": 0.00,  # insufficient data, no correction
 }
 
 # Multiplicative weight: how much to trust sentiment from each platform
 # (1.0 = full trust, lower = noisier platform)
 SENTIMENT_CONFIDENCE_WEIGHT: dict[str, float] = {
     "twitter": 0.85,
-    "instagram": 0.70,    # captions are short, less text signal
-    "facebook": 0.90,     # longer posts, more reliable text
-    "tiktok": 0.60,       # very short captions, mostly visual
-    "youtube": 0.80,      # descriptions are reliable
+    "instagram": 0.70,  # captions are short, less text signal
+    "facebook": 0.90,  # longer posts, more reliable text
+    "tiktok": 0.60,  # very short captions, mostly visual
+    "youtube": 0.80,  # descriptions are reliable
     "bluesky": 0.75,
 }
 
@@ -41,10 +41,10 @@ SENTIMENT_CONFIDENCE_WEIGHT: dict[str, float] = {
 # across platforms (base: Twitter = 1.0)
 ENGAGEMENT_NORMALIZATION: dict[str, float] = {
     "twitter": 1.00,
-    "instagram": 0.60,    # higher raw rates, normalize down
+    "instagram": 0.60,  # higher raw rates, normalize down
     "facebook": 0.80,
-    "tiktok": 0.40,       # very high raw rates
-    "youtube": 1.20,      # lower raw rates, normalize up
+    "tiktok": 0.40,  # very high raw rates
+    "youtube": 1.20,  # lower raw rates, normalize up
     "bluesky": 1.00,
 }
 

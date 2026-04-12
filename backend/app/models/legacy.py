@@ -11,9 +11,9 @@ Convivencia intencional con las tablas v2 (`ciudadanos`, `users`):
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,9 +24,7 @@ class PromotorLegacy(Base):
     __tablename__ = "promotores_legacy"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    legacy_user_id: Mapped[str] = mapped_column(
-        String(50), unique=True, nullable=False, index=True
-    )
+    legacy_user_id: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     org_id: Mapped[int] = mapped_column(
         ForeignKey("organizaciones.id", ondelete="CASCADE"),
         nullable=False,
@@ -37,9 +35,7 @@ class PromotorLegacy(Base):
         nullable=True,
         index=True,
     )
-    user_name: Mapped[str] = mapped_column(
-        String(100), unique=True, nullable=False, index=True
-    )
+    user_name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     password_hash_legacy: Mapped[str | None] = mapped_column(String(200), nullable=True)
     project_id_legacy: Mapped[str | None] = mapped_column(String(50), nullable=True)
     enabled: Mapped[str | None] = mapped_column(String(5), nullable=True)
@@ -49,18 +45,14 @@ class PromotorLegacy(Base):
     distrito_federal: Mapped[str | None] = mapped_column(String(10), nullable=True)
     distritos: Mapped[str | None] = mapped_column(String(100), nullable=True)
     distrito_local: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    imported_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class CiudadanoLegacy(Base):
     __tablename__ = "ciudadanos_legacy"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    legacy_id: Mapped[str] = mapped_column(
-        String(50), unique=True, nullable=False, index=True
-    )
+    legacy_id: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     org_id: Mapped[int] = mapped_column(
         ForeignKey("organizaciones.id", ondelete="CASCADE"),
         nullable=False,
@@ -85,15 +77,9 @@ class CiudadanoLegacy(Base):
     nombre: Mapped[str | None] = mapped_column(String(255), nullable=True)
     apellido_paterno: Mapped[str | None] = mapped_column(String(255), nullable=True)
     apellido_materno: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    fecha_nacimiento: Mapped[date | None] = mapped_column(Date, nullable=True)
     edad: Mapped[int | None] = mapped_column(Integer, nullable=True)
     sexo: Mapped[str | None] = mapped_column(String(10), nullable=True)
     identidad_de_genero: Mapped[str | None] = mapped_column(String(50), nullable=True)
-
-    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
-    phone_01: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    phone_02: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    whatsapp: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     calle: Mapped[str | None] = mapped_column(String(255), nullable=True)
     numero: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -112,7 +98,13 @@ class CiudadanoLegacy(Base):
     seccion: Mapped[str | None] = mapped_column(String(10), nullable=True, index=True)
     cabecera_territorial: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    clave_electoral: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # clave_electoral clear column dropped (D-DATA-02c) — use clave_electoral_enc
+
+    # HMAC blind indexes (D-DATA-02f) — deterministic SHA-256 for equality lookup
+    # without decrypting all _enc rows. Computed via app.services.pii.compute_hmac.
+    email_hmac: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    clave_electoral_hmac: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+
     origen_ciudadano: Mapped[str | None] = mapped_column(String(50), nullable=True)
     rol: Mapped[str | None] = mapped_column(String(50), nullable=True)
     ocupacion: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -134,17 +126,12 @@ class CiudadanoLegacy(Base):
 
     username_legacy: Mapped[str | None] = mapped_column(String(100), nullable=True)
     project_id_legacy: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    created_legacy: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    created_legacy: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by_legacy: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    updated_legacy: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    updated_legacy: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_by_legacy: Mapped[str | None] = mapped_column(String(100), nullable=True)
     raw_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    imported_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     promotor = relationship("PromotorLegacy", lazy="noload")

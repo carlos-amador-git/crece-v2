@@ -11,7 +11,7 @@ from app.models.plan_ia import EstadoTarea, TipoPlan
 class PlanGenerateRequest(BaseModel):
     dirigente_id: int
     tipo: TipoPlan
-    contexto_adicional: str | None = None
+    contexto_adicional: str | None = Field(None, max_length=2000)
     estructurado: bool = False  # Sprint 3: si True, genera PlanEstructurado JSON
 
 
@@ -38,14 +38,34 @@ class PlanApproveRequest(BaseModel):
 
 
 PlataformaLiteral = Literal[
-    "INSTAGRAM", "TWITTER", "FACEBOOK", "TIKTOK", "YOUTUBE",
-    "WHATSAPP", "LINKEDIN", "BLUESKY", "THREADS", "TELEGRAM", "CROSS"
+    "INSTAGRAM",
+    "TWITTER",
+    "FACEBOOK",
+    "TIKTOK",
+    "YOUTUBE",
+    "WHATSAPP",
+    "LINKEDIN",
+    "BLUESKY",
+    "THREADS",
+    "TELEGRAM",
+    "CROSS",
 ]
 
 FormatoLiteral = Literal[
-    "post_texto", "post_imagen", "video_corto", "video_largo",
-    "reel", "story", "live", "hilo", "carousel", "articulo",
-    "comentario", "respuesta", "evento", "otro"
+    "post_texto",
+    "post_imagen",
+    "video_corto",
+    "video_largo",
+    "reel",
+    "story",
+    "live",
+    "hilo",
+    "carousel",
+    "articulo",
+    "comentario",
+    "respuesta",
+    "evento",
+    "otro",
 ]
 
 
@@ -59,18 +79,15 @@ class PlanTareaBase(BaseModel):
     plataforma: PlataformaLiteral | None = None
     formato: FormatoLiteral | None = None
     frecuencia: str | None = Field(
-        None, max_length=100,
-        description="Ej: '3 veces por semana', '1 vez al día', 'una sola vez'"
+        None, max_length=100, description="Ej: '3 veces por semana', '1 vez al día', 'una sola vez'"
     )
     responsable: str | None = Field(None, max_length=100)
     deadline: datetime | None = None
     metrica_objetivo: str | None = Field(
-        None, max_length=200,
-        description="Nombre de la métrica (ej: 'engagement rate')"
+        None, max_length=200, description="Nombre de la métrica (ej: 'engagement rate')"
     )
     metrica_valor_objetivo: float | None = Field(
-        None, ge=0,
-        description="Valor numérico esperado al completar la tarea"
+        None, ge=0, description="Valor numérico esperado al completar la tarea"
     )
 
 
@@ -93,8 +110,7 @@ class PlanTareaUpdate(BaseModel):
 
 class PlanTareaCompleteRequest(BaseModel):
     metrica_valor_real: float = Field(
-        ..., ge=0,
-        description="Valor real alcanzado al completar la tarea"
+        ..., ge=0, description="Valor real alcanzado al completar la tarea"
     )
     nota: str | None = Field(None, max_length=500)
 

@@ -1,9 +1,9 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-11 17:00 local
-**Sesión activa:** /sprint-implement D-DATA-02 — PII encryption at-rest + audit trail
-**Main HEAD:** `4d61ec0` (PR #6 merged)
-**Branch activo:** `fix/sprint-4-trends` @ pendiente commit D-DATA-02
+**Último update:** 2026-04-12 01:20 local
+**Sesión activa:** /sprint-review Sprint B (Canvassing Geo) + Sprint A (Demo)
+**Main HEAD:** `1185921` (PR #7 merged)
+**Branch activo:** `feat/canvassing-geo-map` @ 2 commits (`78c3e87`, `0276661`)
 
 ---
 
@@ -25,6 +25,30 @@
 |---|---|---|---|
 | **S4 Motor de Trends MVP** | 7 días nominal | Alta (plan core) | **9/11** funcionalmente cerrado (+2 scaffolds) |
 | **S5 Wizard Onboarding** | 1.5 días nominal | Alta (demo crítica) | **6/6 core** (auto-login real = deuda menor) |
+
+### Sesión 2026-04-12 — Sprint B Canvassing Geo + Sprint A Demo
+Branch: `feat/canvassing-geo-map` (pendiente PR a main)
+
+**Sprint B — Canvassing Geo Map (killer feature):**
+- `78c3e87` — feat(canvassing): mapa geo con 9,631 ciudadanos reales + filtros + clustering
+  - Backend: `GET /canvassing/geo` (GeoJSON PostgreSQL-native) + `GET /canvassing/geo-stats`
+  - Frontend: `CanvassingGeoMap` component (MapLibre + clustering + popup)
+  - Page reescrita: filtros sidebar + mapa + stats bar + tabs rutas
+  - Hooks: `useCanvassingGeo`, `useCanvassingGeoStats`
+  - Verificado: BJ=812, CUA=5000(limit), filtros estrato/participación/contactado, tsc clean
+
+**Sprint A — Demo Interna:**
+- `0276661` — docs: guion demo 30 min para equipo MC
+  - 7 escenas: intro → dashboard → mapa canvassing → wizard → plan IA → PII → Q&A
+  - Checklist pre-demo + plan de respaldo
+
+**Cross-audit Gemini (integrado):**
+- G1: RLS verificada en ciudadanos_legacy (org_id scope)
+- G2: Umbral MVT a 15K registros (hoy 9,723, inline OK)
+- G3: Cluster property aggregation (documentado, no implementado — nice-to-have)
+- G4: Filtros dtto_local/dtto_federal agregados al endpoint
+- G5: Smoke test inmediato post-B.1 (ejecutado)
+- G6: GeoJSON construido en PostgreSQL (`jsonb_build_object` + `jsonb_agg`)
 
 ### Sesión 2026-04-11 tarde-3 — /sprint-implement luz verde all
 Commits en `fix/sprint-4-trends`:

@@ -25,6 +25,7 @@ def _get_model():
     if _model is None:
         try:
             from sentence_transformers import SentenceTransformer
+
             _model = SentenceTransformer(_MODEL_NAME)
             logger.info("Loaded embedding model: %s (dim=%d)", _MODEL_NAME, _EMBEDDING_DIM)
         except ImportError:
@@ -53,27 +54,34 @@ async def ensure_embedding_column(db: AsyncSession) -> None:
     Uses raw SQL since Alembic migrations may not be run yet.
     """
     await db.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-    await db.execute(text(f"""
+    await db.execute(
+        text(f"""
         ALTER TABLE social_posts
         ADD COLUMN IF NOT EXISTS embedding vector({_EMBEDDING_DIM})
-    """))
+    """)
+    )
     # Create HNSW index for fast similarity search
-    await db.execute(text(f"""
+    await db.execute(
+        text("""
         CREATE INDEX IF NOT EXISTS ix_social_posts_embedding
         ON social_posts
         USING hnsw (embedding vector_cosine_ops)
-    """))
+    """)
+    )
     await db.commit()
     logger.info("Embedding column and HNSW index ensured on social_posts")
 
 
 async def backfill_embeddings(db: AsyncSession, batch_size: int = 100) -> int:
     """Generate embeddings for posts that don't have one yet."""
-    result = await db.execute(text("""
+    result = await db.execute(
+        text("""
         SELECT id, content FROM social_posts
         WHERE embedding IS NULL AND content IS NOT NULL AND content != ''
         LIMIT :batch_size
-    """), {"batch_size": batch_size})
+    """),
+        {"batch_size": batch_size},
+    )
     rows = result.fetchall()
 
     if not rows:
@@ -83,7 +91,7 @@ async def backfill_embeddings(db: AsyncSession, batch_size: int = 100) -> int:
     texts = [r[1] for r in rows]
     embeddings = embed_batch(texts)
 
-    for post_id, emb in zip(ids, embeddings):
+    for post_id, emb in zip(ids, embeddings, strict=False):
         await db.execute(
             text("UPDATE social_posts SET embedding = :emb WHERE id = :id"),
             {"emb": str(emb), "id": post_id},
@@ -121,7 +129,8 @@ async def search_similar_posts(
     # The JOIN ensures every row returned belongs to a dirigente of the
     # caller's org. We use `similarity > min_sim` in WHERE so pgvector can
     # still leverage the HNSW index via the ORDER BY clause.
-    result = await db.execute(text("""
+    result = await db.execute(
+        text("""
         SELECT
             sp.id,
             sp.content,
@@ -139,12 +148,14 @@ async def search_similar_posts(
           AND 1 - (sp.embedding <=> cast(:query_emb AS vector)) > :min_sim
         ORDER BY sp.embedding <=> cast(:query_emb AS vector)
         LIMIT :limit
-    """), {
-        "query_emb": str(query_embedding),
-        "org_id": org_id,
-        "min_sim": min_similarity,
-        "limit": limit,
-    })
+    """),
+        {
+            "query_emb": str(query_embedding),
+            "org_id": org_id,
+            "min_sim": min_similarity,
+            "limit": limit,
+        },
+    )
 
     return [
         {

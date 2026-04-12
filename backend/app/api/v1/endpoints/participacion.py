@@ -47,7 +47,11 @@ def _build_seguimiento_response(seguimiento: object) -> SeguimientoResponse:
     """Build a SeguimientoResponse with usuario_nombre resolved."""
     usuario_nombre = None
     if hasattr(seguimiento, "usuario") and seguimiento.usuario is not None:
-        usuario_nombre = seguimiento.usuario.full_name if hasattr(seguimiento.usuario, "full_name") else str(seguimiento.usuario.id)
+        usuario_nombre = (
+            seguimiento.usuario.full_name
+            if hasattr(seguimiento.usuario, "full_name")
+            else str(seguimiento.usuario.id)
+        )
     return SeguimientoResponse(
         id=seguimiento.id,
         accion=seguimiento.accion,
@@ -63,9 +67,7 @@ def _build_solicitud_response(solicitud: SolicitudCiudadana) -> SolicitudRespons
     """Build a SolicitudResponse with nested seguimientos."""
     data = SolicitudResponse.model_validate(solicitud)
     if solicitud.seguimientos:
-        data.seguimientos = [
-            _build_seguimiento_response(s) for s in solicitud.seguimientos
-        ]
+        data.seguimientos = [_build_seguimiento_response(s) for s in solicitud.seguimientos]
     return data
 
 
@@ -161,7 +163,7 @@ async def chatwoot_webhook(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process webhook",
-        )
+        ) from None
 
 
 # ── CRUD endpoints ───────────────────────────────────────────
@@ -361,7 +363,7 @@ async def assign_solicitud(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
-        )
+        ) from exc
 
 
 @router.post(
@@ -388,4 +390,4 @@ async def respond_solicitud(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
-        )
+        ) from exc

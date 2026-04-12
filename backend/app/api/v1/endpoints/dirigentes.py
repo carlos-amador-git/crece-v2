@@ -9,9 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user, hash_password
 from app.models.dirigente import Dirigente, DirigenteSyncStatus
-from app.models.social import Platform, SentimentLabel, SocialPost, SocialProfile
+from app.models.social import Platform, SocialPost, SocialProfile
 from app.models.user import User
-from app.schemas.common import PaginatedResponse
 from app.schemas.dirigente import (
     DiagnosticoResponse,
     DirigenteCreate,
@@ -123,7 +122,7 @@ async def get_dirigente(
 
     # Enrich: stats (7d)
     seven_days_ago = datetime.now(UTC) - timedelta(days=7)
-    thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
+    datetime.now(UTC) - timedelta(days=30)
 
     profiles_result = await db.execute(
         select(SocialProfile).where(SocialProfile.dirigente_id == dirigente_id)
@@ -134,7 +133,6 @@ async def get_dirigente(
     total_posts_7d = 0
     total_engagement_7d = 0.0
     sentiment_sum = 0.0
-    sentiment_count = 0
 
     if profile_ids:
         stats_r = await db.execute(
@@ -151,9 +149,9 @@ async def get_dirigente(
         total_posts_7d = int(row[0])
         total_engagement_7d = float(row[1]) if row[1] else 0.0
         sentiment_sum = float(row[2]) if row[2] else 0.5
-        sentiment_count = int(row[0])
+        int(row[0])
 
-    total_followers = sum(p.followers_count for p in profiles)
+    sum(p.followers_count for p in profiles)
 
     base["stats"] = {
         "total_posts_7d": total_posts_7d,
@@ -375,9 +373,7 @@ async def onboard_dirigente(
     from datetime import UTC, datetime
 
     # 1. Reject duplicate email
-    existing_user = await db.execute(
-        select(User).where(User.email == payload.email)
-    )
+    existing_user = await db.execute(select(User).where(User.email == payload.email))
     if existing_user.scalar_one_or_none() is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -475,9 +471,7 @@ async def get_onboarding_progress(
     result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
 
     status_map = {
         DirigenteSyncStatus.PENDING: 0,

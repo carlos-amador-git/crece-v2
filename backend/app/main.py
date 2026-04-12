@@ -4,15 +4,28 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import IntegrityError
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.api.v1 import api_router
 from app.core.config import settings
 from app.core.database import engine
+from app.core.limiter import limiter
+
+# Bugsink error tracking (Sentry-compatible DSN)
+if settings.BUGSINK_DSN:
+    sentry_sdk.init(
+        dsn=settings.BUGSINK_DSN,
+        traces_sample_rate=0.1,
+        environment=settings.APP_ENV,
+        release=settings.APP_VERSION,
+    )
 
 logging.basicConfig(
     level=logging.DEBUG if settings.APP_DEBUG else logging.INFO,
@@ -50,17 +63,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Proxy headers — ensures redirects use https behind Cloudflare/Coolify
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
+# E.1 — Rate limiting (P0 security)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# E.4 — Proxy headers with restricted trusted_hosts (P1 security)
+app.add_middleware(
+    ProxyHeadersMiddleware,
+    trusted_hosts=["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+)
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True if settings.CORS_ORIGINS != ["*"] else False,
+    allow_credentials=settings.CORS_ORIGINS != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ── Exception handlers ──────────────────────────────────────
 # D-OBS-01: antes de este handler, cualquier IntegrityError levantaba un 500

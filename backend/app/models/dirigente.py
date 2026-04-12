@@ -45,9 +45,7 @@ class Dirigente(Base):
     )
     sync_task_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     sync_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    sync_updated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    sync_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

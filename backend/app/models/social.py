@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
-class Platform(str, enum.Enum):
+class Platform(enum.StrEnum):
     TWITTER = "TWITTER"
     INSTAGRAM = "INSTAGRAM"
     FACEBOOK = "FACEBOOK"
@@ -19,9 +19,10 @@ class Platform(str, enum.Enum):
     BLUESKY = "BLUESKY"
     THREADS = "THREADS"
     TELEGRAM = "TELEGRAM"
+    NEWS = "NEWS"
 
     @classmethod
-    def from_url(cls, url: str) -> "Platform | None":
+    def from_url(cls, url: str) -> Platform | None:
         """Detect the platform of a given URL.
 
         Returns the matching Platform or None if no known pattern matches.
@@ -37,7 +38,7 @@ class Platform(str, enum.Enum):
         if u.startswith("www."):
             u = u[4:]
 
-        host_map: dict[str, "Platform"] = {
+        host_map: dict[str, Platform] = {
             "twitter.com": cls.TWITTER,
             "x.com": cls.TWITTER,
             "mobile.twitter.com": cls.TWITTER,
@@ -70,14 +71,14 @@ class Platform(str, enum.Enum):
         return None
 
 
-class SentimentLabel(str, enum.Enum):
+class SentimentLabel(enum.StrEnum):
     POSITIVE = "POSITIVE"
     NEGATIVE = "NEGATIVE"
     NEUTRAL = "NEUTRAL"
     MIXED = "MIXED"
 
 
-class PostType(str, enum.Enum):
+class PostType(enum.StrEnum):
     TEXT = "TEXT"
     IMAGE = "IMAGE"
     VIDEO = "VIDEO"
@@ -104,9 +105,7 @@ class SocialProfile(Base):
     followers_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     following_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     posts_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    last_scraped_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_scraped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     dirigente = relationship("Dirigente", back_populates="social_profiles")
@@ -124,17 +123,13 @@ class SocialPost(Base):
         nullable=False,
         index=True,
     )
-    platform_post_id: Mapped[str] = mapped_column(
-        String(255), unique=True, nullable=False
-    )
+    platform_post_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
     post_type: Mapped[PostType] = mapped_column(
         Enum(PostType, name="post_type_enum", create_type=False),
         nullable=False,
     )
-    published_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     likes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     comments: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     shares: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

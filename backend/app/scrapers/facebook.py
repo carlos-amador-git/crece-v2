@@ -16,6 +16,7 @@ Configuration (env vars / ``.env``):
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import logging
 import re
@@ -89,9 +90,7 @@ class FacebookScraper(BaseScraper):
         3. Empty list if both fail
         """
         if not self._has_cookies():
-            logger.warning(
-                "Facebook cookies not configured (FACEBOOK_C_USER / FACEBOOK_XS)."
-            )
+            logger.warning("Facebook cookies not configured (FACEBOOK_C_USER / FACEBOOK_XS).")
             return []
 
         # ── Tier 1: curl-cffi (fast, no browser) ──────────────────
@@ -129,7 +128,11 @@ class FacebookScraper(BaseScraper):
             )
 
             if resp.status_code != 200 or "login" in resp.url.lower():
-                logger.warning("curl-cffi Facebook request failed: status=%d url=%s", resp.status_code, resp.url[:80])
+                logger.warning(
+                    "curl-cffi Facebook request failed: status=%d url=%s",
+                    resp.status_code,
+                    resp.url[:80],
+                )
                 return []
 
             html = resp.text
@@ -262,9 +265,7 @@ class FacebookScraper(BaseScraper):
 
                 # Check for existing post (dedup).
                 existing = session.execute(
-                    select(SocialPost).where(
-                        SocialPost.platform_post_id == platform_post_id
-                    )
+                    select(SocialPost).where(SocialPost.platform_post_id == platform_post_id)
                 ).scalar_one_or_none()
 
                 if existing is not None:
@@ -411,9 +412,7 @@ class FacebookScraper(BaseScraper):
         try:
             from facebook_page_info_scraper import FacebookPageInfoScraper
         except ImportError:
-            logger.debug(
-                "facebook-page-info-scraper not installed — skipping metadata fallback"
-            )
+            logger.debug("facebook-page-info-scraper not installed — skipping metadata fallback")
             return {"followers_count": 0, "following_count": 0, "posts_count": 0}
 
         try:
@@ -443,9 +442,7 @@ class FacebookScraper(BaseScraper):
             }
 
         except Exception as exc:
-            logger.warning(
-                "facebook-page-info-scraper failed for %s: %s", handle, exc
-            )
+            logger.warning("facebook-page-info-scraper failed for %s: %s", handle, exc)
             return {"followers_count": 0, "following_count": 0, "posts_count": 0}
 
     def _stats_from_playwright(self, handle: str) -> dict[str, int]:
@@ -486,9 +483,7 @@ class FacebookScraper(BaseScraper):
             }
 
         except Exception as exc:
-            logger.warning(
-                "Playwright stats extraction failed for %s: %s", handle, exc
-            )
+            logger.warning("Playwright stats extraction failed for %s: %s", handle, exc)
             return {"followers_count": 0, "following_count": 0, "posts_count": 0}
 
 
@@ -530,7 +525,7 @@ def _extract_page_name(page_title: str, handle: str) -> str:
     ``PageName - Home | Facebook``.
     """
     if "|" in page_title:
-        return page_title.split("|")[0].strip().rstrip(" - Home").strip()
+        return page_title.split("|")[0].strip().removesuffix(" - Home").strip()
     if "-" in page_title:
         return page_title.split("-")[0].strip()
     return handle
@@ -574,21 +569,21 @@ def _extract_posts_from_html_json(html: str, handle: str) -> list[dict[str, Any]
         comment_count = _safe_int(comment_counts[i]) if i < len(comment_counts) else 0
         created = None
         if i < len(creation_times):
-            try:
+            with contextlib.suppress(ValueError, OSError):
                 created = datetime.fromtimestamp(int(creation_times[i]), tz=UTC)
-            except (ValueError, OSError):
-                pass
 
-        posts.append({
-            "post_id": f"fb_{handle}_{text_hash}",
-            "text": text,
-            "handle": handle,
-            "published_at": created or datetime.now(UTC),
-            "likes": likes,
-            "comments": comment_count,
-            "shares": share_count,
-            "_source": "curl_cffi",
-        })
+        posts.append(
+            {
+                "post_id": f"fb_{handle}_{text_hash}",
+                "text": text,
+                "handle": handle,
+                "published_at": created or datetime.now(UTC),
+                "likes": likes,
+                "comments": comment_count,
+                "shares": share_count,
+                "_source": "curl_cffi",
+            }
+        )
 
     return posts
 
@@ -599,12 +594,15 @@ def _extract_page_name_from_body(body_text: str, handle: str) -> str:
     Facebook pages show the page name near the top, followed by follower count.
     Pattern: line with a name, then "X seguidores" or "X followers".
     """
-    lines = [l.strip() for l in body_text.split("\n") if l.strip() and l.strip() != "Facebook"]
+    lines = [ln.strip() for ln in body_text.split("\n") if ln.strip() and ln.strip() != "Facebook"]
     for i, line in enumerate(lines):
-        if i + 1 < len(lines) and re.search(r"seguidores|followers", lines[i + 1], re.IGNORECASE):
-            # This line is likely the page name
-            if len(line) > 2 and line[0].isupper():
-                return line
+        if (
+            i + 1 < len(lines)
+            and re.search(r"seguidores|followers", lines[i + 1], re.IGNORECASE)
+            and len(line) > 2
+            and line[0].isupper()
+        ):
+            return line
     return handle
 
 
@@ -666,13 +664,13 @@ def _parse_body_into_posts(
     # ── Phase 2: Find post boundaries ─────────────────────────
     # A post starts when a line begins with the page name AND is followed
     # by a date-like line (e.g. "3 de octubre de 2025", "31 de marzo a las")
-    _DATE_RE = re.compile(
-        r"^\d{1,2}\s+de\s+\w+|"          # "3 de octubre de 2025"
-        r"^(?:ayer|hoy|hace)|"            # "ayer", "hoy", "hace 2 h"
-        r"^\d+\s+de\s+\w+\s+de\s+\d{4}|" # full date
-        r"^\d+\s+de\s+\w+\s+a\s+las|"    # "31 de marzo a las 6:09"
+    date_re = re.compile(
+        r"^\d{1,2}\s+de\s+\w+|"  # "3 de octubre de 2025"
+        r"^(?:ayer|hoy|hace)|"  # "ayer", "hoy", "hace 2 h"
+        r"^\d+\s+de\s+\w+\s+de\s+\d{4}|"  # full date
+        r"^\d+\s+de\s+\w+\s+a\s+las|"  # "31 de marzo a las 6:09"
         r"^\d+\s*(?:día|dias|hora|horas|min|semana|sem)|"  # "1 día", "2 horas"
-        r"^\d+\s*[dhmsw]\b",             # "1d", "2h", "3m"
+        r"^\d+\s*[dhmsw]\b",  # "1d", "2h", "3m"
         re.IGNORECASE,
     )
 
@@ -681,7 +679,7 @@ def _parse_body_into_posts(
         if line.lower().startswith(name_lower):
             # Check if next non-empty line looks like a date
             for j in range(i + 1, min(i + 3, len(cleaned_lines))):
-                if _DATE_RE.match(cleaned_lines[j]):
+                if date_re.match(cleaned_lines[j]):
                     post_starts.append(i)
                     break
 
@@ -698,7 +696,7 @@ def _parse_body_into_posts(
 
         # Try to extract the date from the first line after the page name
         date_line = content_lines[0] if content_lines else ""
-        if _DATE_RE.match(date_line):
+        if date_re.match(date_line):
             content_lines = content_lines[1:]  # skip date line from content
 
         # Skip lines after "Publicaciones", "Filtros" (section headers)
@@ -724,15 +722,17 @@ def _parse_body_into_posts(
         seen_hashes.add(content_hash)
 
         post_id = f"fb_{handle}_{content_hash}"
-        posts.append({
-            "post_id": post_id,
-            "text": clean_text,
-            "handle": handle,
-            "published_at": datetime.now(UTC),
-            "likes": likes,
-            "comments": comments,
-            "shares": shares,
-        })
+        posts.append(
+            {
+                "post_id": post_id,
+                "text": clean_text,
+                "handle": handle,
+                "published_at": datetime.now(UTC),
+                "likes": likes,
+                "comments": comments,
+                "shares": shares,
+            }
+        )
 
     return posts
 

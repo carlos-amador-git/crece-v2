@@ -30,11 +30,13 @@ def scrape_profile(self, profile_id: int, platform: str) -> dict:  # type: ignor
     try:
         scraper = get_scraper(platform)
         result = scraper.scrape(profile_id)
-        logger.info("Scraped %d new posts for profile %d (%s)", result["new_posts"], profile_id, platform)
+        logger.info(
+            "Scraped %d new posts for profile %d (%s)", result["new_posts"], profile_id, platform
+        )
         return result
     except Exception as exc:
         logger.error("Scrape failed for profile %d: %s", profile_id, exc)
-        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from None
 
 
 @celery_app.task(bind=True, name="app.workers.tasks.analyze_sentiment", max_retries=2)
@@ -51,7 +53,7 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
 
         session = _get_sync_session()
         try:
-            from app.models.social import SentimentAnalysis, SocialPost, SocialProfile
+            from app.models.social import SentimentAnalysis, SocialPost
 
             post = session.get(SocialPost, post_id)
             if post is None:
@@ -109,7 +111,7 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
             session.close()
     except Exception as exc:
         logger.error("Sentiment analysis failed for post %d: %s", post_id, exc)
-        raise self.retry(exc=exc, countdown=30)
+        raise self.retry(exc=exc, countdown=30) from None
 
 
 def _check_toxicity_alert(session, post_id: int, post, result: dict) -> None:
@@ -170,7 +172,9 @@ def _check_toxicity_alert(session, post_id: int, post, result: dict) -> None:
         perfil_id=post.profile_id,
         tipo="toxicity_spike",
         severidad=severity,
-        descripcion=f"Detectados {toxic_count} posts toxicos en las ultimas 2 horas para este perfil",
+        descripcion=(
+            f"Detectados {toxic_count} posts toxicos en las ultimas 2 horas para este perfil"
+        ),
         post_ids=[post_id],
         estado="nueva",
     )
@@ -184,7 +188,9 @@ def _check_toxicity_alert(session, post_id: int, post, result: dict) -> None:
 
 
 @celery_app.task(bind=True, name="app.workers.tasks.generate_plan", max_retries=1)
-def generate_plan(self, dirigente_id: int, tipo: str, user_id: int, contexto: str | None = None) -> dict:  # type: ignore[no-untyped-def]
+def generate_plan(
+    self, dirigente_id: int, tipo: str, user_id: int, contexto: str | None = None
+) -> dict:  # type: ignore[no-untyped-def]
     """Generate an AI plan (runs synchronously in worker context)."""
     try:
         logger.info("Generating %s plan for dirigente %d", tipo, dirigente_id)
@@ -192,7 +198,7 @@ def generate_plan(self, dirigente_id: int, tipo: str, user_id: int, contexto: st
         return {"dirigente_id": dirigente_id, "tipo": tipo, "status": "generated"}
     except Exception as exc:
         logger.error("Plan generation failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from None
 
 
 @celery_app.task(name="app.workers.tasks.sync_electoral_data")
@@ -239,10 +245,9 @@ def detect_trends(self, org_id: int | None = None, lookback_hours: int = 24) -> 
     semántico por embedding se habilita cuando el backfill de embeddings
     sobre los 381 posts de dev DB se corre (backfill_embeddings()).
     """
-    from sqlalchemy import select, text
+    from sqlalchemy import text
 
     from app.models.topic_trend import TopicTrend
-    from app.models.alcaldia import AlcaldiaCDMX
 
     logger.info("detect_trends starting (org_id=%s)", org_id)
     session = _get_sync_session()
@@ -269,9 +274,7 @@ def detect_trends(self, org_id: int | None = None, lookback_hours: int = 24) -> 
         #    mencionan explícitamente una alcaldía)
         from app.services.location_inference import normalize_social_text
 
-        alcaldia_rows = session.execute(
-            text("SELECT id, nombre FROM alcaldias_cdmx")
-        ).fetchall()
+        alcaldia_rows = session.execute(text("SELECT id, nombre FROM alcaldias_cdmx")).fetchall()
         alcaldia_by_name = {r[1]: r[0] for r in alcaldia_rows}
 
         from collections import defaultdict
@@ -323,7 +326,7 @@ def detect_trends(self, org_id: int | None = None, lookback_hours: int = 24) -> 
     except Exception as exc:
         session.rollback()
         logger.exception("detect_trends failed: %s", exc)
-        raise self.retry(exc=exc, countdown=120)
+        raise self.retry(exc=exc, countdown=120) from None
     finally:
         session.close()
 
@@ -340,9 +343,8 @@ def label_trend_cluster(self, trend_id: int) -> dict:  # type: ignore[no-untyped
     al runtime Ollama local/remoto. Prompt estricto: 1 línea, <50 chars,
     castellano, sin emojis.
     """
-    from sqlalchemy import text as sql_text
-
     import httpx
+    from sqlalchemy import text as sql_text
 
     from app.core.config import settings
 
@@ -360,7 +362,7 @@ def label_trend_cluster(self, trend_id: int) -> dict:  # type: ignore[no-untyped
         if row is None:
             return {"status": "not_found", "trend_id": trend_id}
 
-        _, alcaldia_id, post_count, alcaldia_nombre, sample = row
+        _, _alcaldia_id, _post_count, alcaldia_nombre, sample = row
         post_ids = (sample or {}).get("post_ids", []) if isinstance(sample, dict) else []
 
         posts_content: list[str] = []
@@ -399,7 +401,7 @@ def label_trend_cluster(self, trend_id: int) -> dict:  # type: ignore[no-untyped
     except Exception as exc:
         session.rollback()
         logger.warning("label_trend_cluster %d failed: %s", trend_id, exc)
-        raise self.retry(exc=exc, countdown=30)
+        raise self.retry(exc=exc, countdown=30) from None
     finally:
         session.close()
 
@@ -426,7 +428,8 @@ def onboard_dirigente_chain(self, dirigente_id: int) -> dict:  # type: ignore[no
     el progreso se expone via `dirigentes.sync_status`. Si algún paso
     falla, se setea status='error' + sync_error.
     """
-    from datetime import UTC, datetime as _dt
+    from datetime import UTC
+    from datetime import datetime as _dt
 
     from sqlalchemy import text as sql_text
 
@@ -450,9 +453,7 @@ def onboard_dirigente_chain(self, dirigente_id: int) -> dict:  # type: ignore[no
         # something to work on.
         _set_status("scraping")
         profile_rows = session.execute(
-            sql_text(
-                "SELECT id, platform, handle FROM social_profiles WHERE dirigente_id = :id"
-            ),
+            sql_text("SELECT id, platform, handle FROM social_profiles WHERE dirigente_id = :id"),
             {"id": dirigente_id},
         ).fetchall()
 
@@ -471,9 +472,7 @@ def onboard_dirigente_chain(self, dirigente_id: int) -> dict:  # type: ignore[no
                     exc,
                 )
             session.execute(
-                sql_text(
-                    "UPDATE social_profiles SET last_scraped_at = :ts WHERE id = :id"
-                ),
+                sql_text("UPDATE social_profiles SET last_scraped_at = :ts WHERE id = :id"),
                 {"ts": _dt.now(UTC), "id": prof_id},
             )
         session.commit()
@@ -518,27 +517,186 @@ def onboard_dirigente_chain(self, dirigente_id: int) -> dict:  # type: ignore[no
             session.commit()
         except Exception:
             pass
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from None
     finally:
         session.close()
 
 
 @celery_app.task(name="app.workers.tasks.ingest_rss_feeds")
 def ingest_rss_feeds() -> dict:
-    """S4.7 — Fetch todos los RSS feeds y log items nuevos.
+    """D.9 — Fetch RSS feeds and persist to social_posts with platform='NEWS'.
 
-    Persistencia a `social_posts` está en deuda D-S4-07 (requiere
-    migración de platform_enum + profile_id nullable o synthetic
-    profiles). Por ahora solo logueamos para observabilidad del beat.
+    Creates synthetic SocialProfile records per RSS source (e.g.
+    handle='news:presidencia-mx') linked to a synthetic dirigente
+    (full_name='RSS News Bot'). Deduplicates by platform_post_id.
     """
     import asyncio
 
-    from app.services.news_ingest import fetch_all_feeds
+    from sqlalchemy import select, text
 
+    from app.models.social import Platform, PostType, SocialPost, SocialProfile
+    from app.services.news_ingest import RSS_SOURCES, RssItem, _platform_post_id, fetch_all_feeds
+
+    session = _get_sync_session()
     try:
-        items = asyncio.run(fetch_all_feeds())
+        items: list[RssItem] = asyncio.run(fetch_all_feeds())
         logger.info("ingest_rss_feeds fetched %d items", len(items))
-        return {"status": "ok", "items_fetched": len(items)}
+
+        if not items:
+            return {"status": "ok", "items_fetched": 0, "items_persisted": 0}
+
+        # Ensure synthetic dirigente exists for RSS feeds
+        row = session.execute(
+            text("SELECT id FROM dirigentes WHERE full_name = 'RSS News Bot' LIMIT 1")
+        ).first()
+        if row:
+            bot_dirigente_id = row[0]
+        else:
+            session.execute(
+                text(
+                    "INSERT INTO dirigentes (full_name, cargo, partido, estado, sync_status) "
+                    "VALUES ('RSS News Bot', 'Sistema', 'SISTEMA', 'CDMX', 'ready') "
+                    "ON CONFLICT DO NOTHING"
+                )
+            )
+            session.commit()
+            row = session.execute(
+                text("SELECT id FROM dirigentes WHERE full_name = 'RSS News Bot' LIMIT 1")
+            ).first()
+            bot_dirigente_id = row[0]
+
+        # Build source_name -> handle mapping
+        source_handles: dict[str, str] = {}
+        for feed in RSS_SOURCES:
+            slug = (
+                feed.name.lower()
+                .replace(" ", "-")
+                .replace("á", "a")
+                .replace("é", "e")
+                .replace("í", "i")
+                .replace("ó", "o")
+                .replace("ú", "u")
+            )
+            source_handles[feed.name] = f"news:{slug}"
+
+        # Find-or-create synthetic profiles per source
+        profile_cache: dict[str, int] = {}
+        for source_name, handle in source_handles.items():
+            existing = session.execute(
+                select(SocialProfile.id).where(
+                    SocialProfile.handle == handle,
+                    SocialProfile.platform == Platform.NEWS,
+                )
+            ).scalar_one_or_none()
+            if existing:
+                profile_cache[source_name] = existing
+            else:
+                profile = SocialProfile(
+                    dirigente_id=bot_dirigente_id,
+                    platform=Platform.NEWS,
+                    handle=handle,
+                    url=None,
+                    followers_count=0,
+                    following_count=0,
+                    posts_count=0,
+                )
+                session.add(profile)
+                session.flush()
+                profile_cache[source_name] = profile.id
+
+        # Persist items, deduplicate by platform_post_id
+        persisted = 0
+        for item in items:
+            ppid = _platform_post_id(item)
+            profile_id = profile_cache.get(item.source)
+            if profile_id is None:
+                continue
+
+            exists = session.execute(
+                select(SocialPost.id).where(SocialPost.platform_post_id == ppid)
+            ).scalar_one_or_none()
+            if exists:
+                continue
+
+            post = SocialPost(
+                profile_id=profile_id,
+                platform_post_id=ppid,
+                content=f"{item.title}\n\n{item.summary}" if item.summary else item.title,
+                post_type=PostType.TEXT,
+                published_at=item.published or datetime.now(UTC),
+                likes=0,
+                comments=0,
+                shares=0,
+                views=0,
+                engagement_rate=0.0,
+                is_political=True,
+                raw_data={"link": item.link, "guid": item.guid, "source": item.source},
+            )
+            session.add(post)
+            persisted += 1
+
+        session.commit()
+        logger.info("ingest_rss_feeds persisted %d new items", persisted)
+        return {"status": "ok", "items_fetched": len(items), "items_persisted": persisted}
     except Exception as exc:
+        session.rollback()
         logger.exception("ingest_rss_feeds failed: %s", exc)
         return {"status": "error", "error": str(exc)}
+    finally:
+        session.close()
+
+
+@celery_app.task(name="app.workers.tasks.dispatch_scheduled_campaigns")
+def dispatch_scheduled_campaigns() -> dict:
+    """D.3 — Auto-start campaigns whose fecha_programada has passed.
+
+    Runs every 5 minutes via Celery beat. Finds campaigns in PROGRAMADA
+    state with fecha_programada <= now(), triggers the send flow via
+    the /enviar endpoint logic (n8n webhook dispatch).
+    """
+    import httpx
+
+    from app.core.config import settings
+    from app.models.campana import Campana, EstadoCampana
+
+    session = _get_sync_session()
+    try:
+        now = datetime.now(UTC)
+        campaigns = (
+            session.query(Campana)
+            .filter(
+                Campana.estado == EstadoCampana.PROGRAMADA,
+                Campana.fecha_programada.isnot(None),
+                Campana.fecha_programada <= now,
+            )
+            .all()
+        )
+
+        if not campaigns:
+            return {"status": "ok", "dispatched": 0}
+
+        dispatched = []
+        for campana in campaigns:
+            # Trigger via internal API call (reuses /enviar logic)
+            try:
+                resp = httpx.post(
+                    f"http://localhost:8000/api/v1/campanas/{campana.id}/enviar",
+                    headers={"X-API-Key": settings.N8N_CRECE_TOKEN or settings.JWT_SECRET},
+                    timeout=30.0,
+                )
+                if resp.status_code < 300:
+                    dispatched.append(campana.id)
+                    logger.info("Auto-dispatched campaign %d", campana.id)
+                else:
+                    logger.warning(
+                        "Campaign %d auto-dispatch failed: %d %s",
+                        campana.id,
+                        resp.status_code,
+                        resp.text[:200],
+                    )
+            except httpx.HTTPError as exc:
+                logger.error("Campaign %d dispatch error: %s", campana.id, exc)
+
+        return {"status": "ok", "dispatched": len(dispatched), "ids": dispatched}
+    finally:
+        session.close()

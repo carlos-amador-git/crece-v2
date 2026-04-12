@@ -34,7 +34,7 @@ def _validate_username(username: str) -> str:
     """Sanitise and validate the target username.
 
     Rules:
-    - Must be 1–64 characters
+    - Must be 1-64 characters
     - Only alphanumeric, underscore, hyphen, and period allowed
     - No shell metacharacters
     """
@@ -97,8 +97,7 @@ async def investigate_username(
     sherlock_bin = shutil.which("sherlock")
     if sherlock_bin is None:
         raise SherlockNotFoundError(
-            "sherlock binary not found on PATH. "
-            "Install with: pip install sherlock-project"
+            "sherlock binary not found on PATH. Install with: pip install sherlock-project"
         )
 
     with TemporaryDirectory() as tmpdir:
@@ -109,7 +108,8 @@ async def investigate_username(
             username,
             "--print-found",
             "--no-color",
-            "--output", str(output_file),
+            "--output",
+            str(output_file),
         ]
 
         logger.info("Running sherlock for username=%r (timeout=%ds)", username, timeout)
@@ -125,7 +125,7 @@ async def investigate_username(
                 process.communicate(),
                 timeout=timeout,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Kill the zombie process before raising
             try:
                 process.kill()
@@ -134,7 +134,7 @@ async def investigate_username(
                 pass
             raise SherlockTimeoutError(
                 f"Sherlock timed out after {timeout}s for username={username!r}"
-            )
+            ) from None
 
         stdout = stdout_bytes.decode("utf-8", errors="replace")
         stderr = stderr_bytes.decode("utf-8", errors="replace")
@@ -146,9 +146,7 @@ async def investigate_username(
                 username,
                 stderr[:500],
             )
-            raise RuntimeError(
-                f"Sherlock exited with code {process.returncode}: {stderr[:300]}"
-            )
+            raise RuntimeError(f"Sherlock exited with code {process.returncode}: {stderr[:300]}")
 
         results = _parse_sherlock_output(stdout)
         logger.info(

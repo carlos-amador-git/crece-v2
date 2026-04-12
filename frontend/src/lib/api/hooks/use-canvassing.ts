@@ -192,3 +192,65 @@ export function useCancelRoute() {
     },
   });
 }
+
+// ── Geo visualization (ciudadanos_legacy) ──────────────────
+
+export interface CanvassingGeoFilters {
+  alcaldia_id?: number;
+  estrato?: string;
+  volatilidad_min?: number;
+  volatilidad_max?: number;
+  nivel_participacion?: number;
+  contactado?: string;
+  seccion?: string;
+  dtto_local?: string;
+  dtto_federal?: string;
+  limit?: number;
+}
+
+export interface GeoStatsAlcaldia {
+  alcaldia_id: number;
+  nombre: string;
+  count: number;
+}
+
+export interface GeoStatsEstrato {
+  estrato: string;
+  count: number;
+}
+
+export interface GeoStatsNivel {
+  nivel: string;
+  count: number;
+}
+
+export interface CanvassingGeoStats {
+  total: number;
+  con_geo: number;
+  por_alcaldia: GeoStatsAlcaldia[];
+  por_estrato: GeoStatsEstrato[];
+  por_nivel_participacion: GeoStatsNivel[];
+  volatilidad_range: { min: number; max: number; avg: number };
+}
+
+export function useCanvassingGeo(filters: CanvassingGeoFilters) {
+  const qs = Object.entries(filters)
+    .filter(([, v]) => v !== undefined && v !== null && v !== "")
+    .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+    .join("&");
+  return useQuery<GeoJSON.FeatureCollection>({
+    queryKey: ["canvassing-geo", filters],
+    queryFn: () =>
+      api.get<GeoJSON.FeatureCollection>(
+        `/canvassing/geo${qs ? `?${qs}` : ""}`
+      ),
+  });
+}
+
+export function useCanvassingGeoStats() {
+  return useQuery<CanvassingGeoStats>({
+    queryKey: ["canvassing-geo-stats"],
+    queryFn: () =>
+      api.get<CanvassingGeoStats>("/canvassing/geo-stats"),
+  });
+}

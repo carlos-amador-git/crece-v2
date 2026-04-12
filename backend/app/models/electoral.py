@@ -13,15 +13,13 @@ class SeccionElectoral(Base):
     __tablename__ = "secciones_electorales"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    seccion: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
+    seccion: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
     estado: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     distrito_federal: Mapped[str] = mapped_column(String(10), nullable=False)
     distrito_local: Mapped[str] = mapped_column(String(10), nullable=False)
     municipio: Mapped[str] = mapped_column(String(200), nullable=False)
     geometry = mapped_column(
-        geoalchemy2.Geometry(
-            geometry_type="MULTIPOLYGON", srid=4326, dimension=2
-        ),
+        geoalchemy2.Geometry(geometry_type="MULTIPOLYGON", srid=4326, dimension=2),
         nullable=True,
     )
 

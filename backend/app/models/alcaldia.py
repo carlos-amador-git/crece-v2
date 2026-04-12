@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import geoalchemy2
-from sqlalchemy import Float, Integer, String
+from sqlalchemy import Float, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base

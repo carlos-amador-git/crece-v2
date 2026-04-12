@@ -68,7 +68,9 @@ export default function CampanasPage() {
   const [form, setForm] = useState({ nombre: "", tipo: "", plantilla: "", dirigente_id: "", mensaje: "", segmento: "todos" });
 
   const { data: campanas, isLoading } = useCampanas();
-  const { data: analytics } = useCampanaAnalytics(selectedId ?? undefined);
+  const selectedCampana = campanas?.find((c) => c.id === selectedId);
+  const isEnviando = selectedCampana?.estado === "activa" || selectedCampana?.estado === "programada";
+  const { data: analytics } = useCampanaAnalytics(selectedId ?? undefined, isEnviando);
   const { data: dirigentesData } = useDirigentes({ per_page: 50 });
   const { data: ciudadanosData } = useCiudadanos({ per_page: 1 });
   const createCampana = useCreateCampana();

@@ -19,7 +19,7 @@ import logging
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class BotSignal:
     """A single bot indicator with a name, score contribution, and explanation."""
+
     name: str
     score: float  # 0.0 to 1.0 contribution
     detail: str
@@ -35,6 +36,7 @@ class BotSignal:
 @dataclass
 class BotAnalysisResult:
     """Result of bot analysis for a single account."""
+
     handle: str
     platform: str
     bot_probability: float  # 0.0 (human) to 1.0 (bot)
@@ -77,36 +79,44 @@ def _analyze_username(handle: str) -> list[BotSignal]:
 
     # Pattern: random alphanumeric with 8+ trailing digits
     if re.search(r"\d{8,}$", handle):
-        signals.append(BotSignal(
-            "username_trailing_digits",
-            0.3,
-            f"Username '{handle}' has 8+ trailing digits",
-        ))
+        signals.append(
+            BotSignal(
+                "username_trailing_digits",
+                0.3,
+                f"Username '{handle}' has 8+ trailing digits",
+            )
+        )
 
     # Pattern: very short handle with random chars
     if len(handle) <= 5 and re.match(r"^[a-z]{2,3}\d{2,3}$", handle, re.I):
-        signals.append(BotSignal(
-            "username_short_random",
-            0.2,
-            f"Username '{handle}' looks auto-generated (short + random)",
-        ))
+        signals.append(
+            BotSignal(
+                "username_short_random",
+                0.2,
+                f"Username '{handle}' looks auto-generated (short + random)",
+            )
+        )
 
     # Pattern: default-style names (user123456, bot_, etc.)
     if re.match(r"^(user|bot|test|fake|spam)\d+", handle, re.I):
-        signals.append(BotSignal(
-            "username_suspicious_prefix",
-            0.4,
-            f"Username '{handle}' starts with suspicious prefix",
-        ))
+        signals.append(
+            BotSignal(
+                "username_suspicious_prefix",
+                0.4,
+                f"Username '{handle}' starts with suspicious prefix",
+            )
+        )
 
     # Pattern: excessive underscores or dots
     special_count = handle.count("_") + handle.count(".")
     if special_count >= 4:
-        signals.append(BotSignal(
-            "username_excessive_separators",
-            0.15,
-            f"Username '{handle}' has {special_count} separators",
-        ))
+        signals.append(
+            BotSignal(
+                "username_excessive_separators",
+                0.15,
+                f"Username '{handle}' has {special_count} separators",
+            )
+        )
 
     return signals
 
@@ -126,40 +136,50 @@ def _analyze_profile(profile: dict) -> list[BotSignal]:
     if following > 0 and followers > 0:
         ratio = followers / following
         if ratio < 0.05 and following > 500:
-            signals.append(BotSignal(
-                "low_follower_ratio",
-                0.35,
-                f"Very low follower/following ratio: {ratio:.3f} ({followers}/{following})",
-            ))
+            signals.append(
+                BotSignal(
+                    "low_follower_ratio",
+                    0.35,
+                    f"Very low follower/following ratio: {ratio:.3f} ({followers}/{following})",
+                )
+            )
         elif ratio < 0.2 and following > 200:
-            signals.append(BotSignal(
-                "low_follower_ratio",
-                0.15,
-                f"Low follower/following ratio: {ratio:.3f} ({followers}/{following})",
-            ))
+            signals.append(
+                BotSignal(
+                    "low_follower_ratio",
+                    0.15,
+                    f"Low follower/following ratio: {ratio:.3f} ({followers}/{following})",
+                )
+            )
 
     # Zero posts but many following — lurker bot pattern
     if posts == 0 and following > 100:
-        signals.append(BotSignal(
-            "zero_posts_many_following",
-            0.25,
-            f"No posts but following {following} accounts",
-        ))
+        signals.append(
+            BotSignal(
+                "zero_posts_many_following",
+                0.25,
+                f"No posts but following {following} accounts",
+            )
+        )
 
     # No avatar or bio
     if not profile.get("has_avatar", True):
-        signals.append(BotSignal(
-            "no_avatar",
-            0.15,
-            "Account has no profile picture",
-        ))
+        signals.append(
+            BotSignal(
+                "no_avatar",
+                0.15,
+                "Account has no profile picture",
+            )
+        )
 
     if not profile.get("bio") and not profile.get("description"):
-        signals.append(BotSignal(
-            "no_bio",
-            0.10,
-            "Account has no bio/description",
-        ))
+        signals.append(
+            BotSignal(
+                "no_bio",
+                0.10,
+                "Account has no bio/description",
+            )
+        )
 
     # Account age — very new accounts with high activity
     created_at = profile.get("created_at")
@@ -171,17 +191,21 @@ def _analyze_profile(profile: dict) -> list[BotSignal]:
                 created = created_at
             age_days = (datetime.now(UTC) - created).days
             if age_days < 30 and posts > 100:
-                signals.append(BotSignal(
-                    "new_account_high_activity",
-                    0.30,
-                    f"Account is {age_days} days old with {posts} posts",
-                ))
+                signals.append(
+                    BotSignal(
+                        "new_account_high_activity",
+                        0.30,
+                        f"Account is {age_days} days old with {posts} posts",
+                    )
+                )
             elif age_days < 7 and following > 200:
-                signals.append(BotSignal(
-                    "new_account_mass_following",
-                    0.35,
-                    f"Account is {age_days} days old following {following} accounts",
-                ))
+                signals.append(
+                    BotSignal(
+                        "new_account_mass_following",
+                        0.35,
+                        f"Account is {age_days} days old following {following} accounts",
+                    )
+                )
         except (ValueError, TypeError):
             pass
 
@@ -207,17 +231,21 @@ def _analyze_posts(posts: list[dict]) -> list[BotSignal]:
             dup_count = sum(duplicates.values())
             dup_ratio = dup_count / len(contents)
             if dup_ratio > 0.5:
-                signals.append(BotSignal(
-                    "high_content_duplication",
-                    0.40,
-                    f"{dup_count}/{len(contents)} posts are duplicates ({dup_ratio:.0%})",
-                ))
+                signals.append(
+                    BotSignal(
+                        "high_content_duplication",
+                        0.40,
+                        f"{dup_count}/{len(contents)} posts are duplicates ({dup_ratio:.0%})",
+                    )
+                )
             elif dup_ratio > 0.2:
-                signals.append(BotSignal(
-                    "content_duplication",
-                    0.20,
-                    f"{dup_count}/{len(contents)} posts are duplicates ({dup_ratio:.0%})",
-                ))
+                signals.append(
+                    BotSignal(
+                        "content_duplication",
+                        0.20,
+                        f"{dup_count}/{len(contents)} posts are duplicates ({dup_ratio:.0%})",
+                    )
+                )
 
     # Check posting frequency — bots post at regular intervals
     timestamps = []
@@ -235,8 +263,7 @@ def _analyze_posts(posts: list[dict]) -> list[BotSignal]:
     if len(timestamps) >= 5:
         timestamps.sort()
         intervals = [
-            (timestamps[i + 1] - timestamps[i]).total_seconds()
-            for i in range(len(timestamps) - 1)
+            (timestamps[i + 1] - timestamps[i]).total_seconds() for i in range(len(timestamps) - 1)
         ]
 
         # Check for suspiciously regular intervals (std dev < 5% of mean)
@@ -244,31 +271,38 @@ def _analyze_posts(posts: list[dict]) -> list[BotSignal]:
             mean_interval = sum(intervals) / len(intervals)
             if mean_interval > 0:
                 variance = sum((x - mean_interval) ** 2 for x in intervals) / len(intervals)
-                std_dev = variance ** 0.5
+                std_dev = variance**0.5
                 cv = std_dev / mean_interval  # coefficient of variation
 
                 if cv < 0.05 and len(intervals) >= 5:
-                    signals.append(BotSignal(
-                        "regular_posting_interval",
-                        0.35,
-                        f"Posts at suspiciously regular intervals (CV={cv:.3f}, mean={mean_interval:.0f}s)",
-                    ))
+                    signals.append(
+                        BotSignal(
+                            "regular_posting_interval",
+                            0.35,
+                            f"Posts at suspiciously regular intervals "
+                            f"(CV={cv:.3f}, mean={mean_interval:.0f}s)",
+                        )
+                    )
                 elif cv < 0.15 and len(intervals) >= 10:
-                    signals.append(BotSignal(
-                        "semi_regular_posting",
-                        0.15,
-                        f"Posts at somewhat regular intervals (CV={cv:.3f})",
-                    ))
+                    signals.append(
+                        BotSignal(
+                            "semi_regular_posting",
+                            0.15,
+                            f"Posts at somewhat regular intervals (CV={cv:.3f})",
+                        )
+                    )
 
         # Check for burst posting (many posts in short window)
         burst_threshold = 60  # seconds
         burst_count = sum(1 for i in intervals if i < burst_threshold)
         if burst_count > len(intervals) * 0.5 and burst_count >= 3:
-            signals.append(BotSignal(
-                "burst_posting",
-                0.25,
-                f"{burst_count} posts within {burst_threshold}s intervals",
-            ))
+            signals.append(
+                BotSignal(
+                    "burst_posting",
+                    0.25,
+                    f"{burst_count} posts within {burst_threshold}s intervals",
+                )
+            )
 
     # Check engagement ratio — low engagement on high-volume posting
     engagement_ratios = []
@@ -282,11 +316,13 @@ def _analyze_posts(posts: list[dict]) -> list[BotSignal]:
     if engagement_ratios and len(engagement_ratios) >= 5:
         avg_engagement = sum(engagement_ratios) / len(engagement_ratios)
         if avg_engagement < 0.001:
-            signals.append(BotSignal(
-                "zero_engagement",
-                0.20,
-                f"Near-zero engagement rate: {avg_engagement:.4f}",
-            ))
+            signals.append(
+                BotSignal(
+                    "zero_engagement",
+                    0.20,
+                    f"Near-zero engagement rate: {avg_engagement:.4f}",
+                )
+            )
 
     return signals
 
@@ -371,9 +407,9 @@ def analyze_followers_batch(
         "suspicious": suspicious_count,
         "humans": classifications.get("human", 0),
         "bot_percentage": round(bot_count / len(results) * 100, 1) if results else 0,
-        "suspicious_percentage": round(
-            (bot_count + suspicious_count) / len(results) * 100, 1
-        ) if results else 0,
+        "suspicious_percentage": round((bot_count + suspicious_count) / len(results) * 100, 1)
+        if results
+        else 0,
         "results": [r.to_dict() for r in results],
         "analyzed_at": datetime.now(UTC).isoformat(),
     }

@@ -62,7 +62,7 @@ def _get_sync_session() -> Session:
 def _sleep_with_jitter(attempt: int) -> None:
     """Exponential backoff with full jitter (AWS-style)."""
     ceiling = min(_BACKOFF_BASE**attempt, _BACKOFF_MAX)
-    sleep_time = random.uniform(0, ceiling)  # noqa: S311
+    sleep_time = random.uniform(0, ceiling)
     logger.debug("Backoff attempt %d — sleeping %.1fs", attempt, sleep_time)
     time.sleep(sleep_time)
 
@@ -111,8 +111,7 @@ class TwitterScraper(BaseScraper):
             return self._scweet_client
         except ImportError:
             logger.warning(
-                "Scweet library not installed — pip install Scweet. "
-                "Falling back to twscrape/httpx."
+                "Scweet library not installed — pip install Scweet. Falling back to twscrape/httpx."
             )
             self._scweet_available = False
             return None
@@ -218,9 +217,7 @@ class TwitterScraper(BaseScraper):
             self._twscrape_available = True
             return self._twscrape_api
         except ImportError:
-            logger.warning(
-                "twscrape is not installed — Twitter scraper Tier 2 unavailable"
-            )
+            logger.warning("twscrape is not installed — Twitter scraper Tier 2 unavailable")
             self._twscrape_available = False
             return None
 
@@ -290,9 +287,7 @@ class TwitterScraper(BaseScraper):
 
         for attempt in range(_MAX_RETRIES):
             try:
-                with httpx.Client(
-                    timeout=_HTTPX_TIMEOUT, follow_redirects=True
-                ) as client:
+                with httpx.Client(timeout=_HTTPX_TIMEOUT, follow_redirects=True) as client:
                     resp = client.get(url, headers=headers)
 
                 if resp.status_code == 429:
@@ -399,9 +394,7 @@ class TwitterScraper(BaseScraper):
 
         for attempt in range(_MAX_RETRIES):
             try:
-                with httpx.Client(
-                    timeout=_HTTPX_TIMEOUT, follow_redirects=True
-                ) as client:
+                with httpx.Client(timeout=_HTTPX_TIMEOUT, follow_redirects=True) as client:
                     resp = client.get(url, headers=headers)
 
                 if resp.status_code == 429:
@@ -443,9 +436,7 @@ class TwitterScraper(BaseScraper):
         if match:
             try:
                 data = json.loads(match.group(1))
-                user = _deep_find_key(data, "user_results") or _deep_find_key(
-                    data, "user"
-                )
+                user = _deep_find_key(data, "user_results") or _deep_find_key(data, "user")
                 if user and isinstance(user, dict):
                     legacy = user.get("legacy") or user
                     return {
@@ -498,9 +489,7 @@ class TwitterScraper(BaseScraper):
             logger.info("Falling back to twscrape (Tier 2) for @%s", handle)
             for attempt in range(_MAX_RETRIES):
                 try:
-                    tweets = asyncio.run(
-                        self._fetch_tweets_twscrape(handle, limit=limit)
-                    )
+                    tweets = asyncio.run(self._fetch_tweets_twscrape(handle, limit=limit))
                     if tweets:
                         return tweets
                     logger.info("twscrape returned 0 tweets for @%s", handle)
@@ -538,10 +527,7 @@ class TwitterScraper(BaseScraper):
             platform_post_id = str(raw_data.get("tweet_id") or "")
         else:
             platform_post_id = str(
-                raw_data.get("id_str")
-                or raw_data.get("id")
-                or raw_data.get("rest_id")
-                or ""
+                raw_data.get("id_str") or raw_data.get("id") or raw_data.get("rest_id") or ""
             )
 
         # ── Resolve content ─────────────────────────────────
@@ -572,26 +558,10 @@ class TwitterScraper(BaseScraper):
             shares = raw_data.get("retweets", 0)
             views = 0  # Scweet does not expose view counts
         else:
-            likes = (
-                raw_data.get("likeCount")
-                or raw_data.get("favorite_count")
-                or 0
-            )
-            comments = (
-                raw_data.get("replyCount")
-                or raw_data.get("reply_count")
-                or 0
-            )
-            shares = (
-                raw_data.get("retweetCount")
-                or raw_data.get("retweet_count")
-                or 0
-            )
-            views = (
-                raw_data.get("viewCount")
-                or raw_data.get("view_count")
-                or 0
-            )
+            likes = raw_data.get("likeCount") or raw_data.get("favorite_count") or 0
+            comments = raw_data.get("replyCount") or raw_data.get("reply_count") or 0
+            shares = raw_data.get("retweetCount") or raw_data.get("retweet_count") or 0
+            views = raw_data.get("viewCount") or raw_data.get("view_count") or 0
 
         return {
             "platform_post_id": platform_post_id,
@@ -711,8 +681,7 @@ class TwitterScraper(BaseScraper):
                                 platform_post_id=parsed["platform_post_id"],
                                 content=parsed["content"],
                                 post_type=parsed["post_type"],
-                                published_at=parsed["published_at"]
-                                or datetime.now(UTC),
+                                published_at=parsed["published_at"] or datetime.now(UTC),
                                 likes=parsed["likes"],
                                 comments=parsed["comments"],
                                 shares=parsed["shares"],
@@ -720,9 +689,7 @@ class TwitterScraper(BaseScraper):
                                 raw_data=parsed["raw_data"],
                                 scraped_at=datetime.now(UTC),
                             )
-                            .on_conflict_do_nothing(
-                                index_elements=["platform_post_id"]
-                            )
+                            .on_conflict_do_nothing(index_elements=["platform_post_id"])
                         )
                         result = session.execute(stmt)
                         if result.rowcount and result.rowcount > 0:
@@ -781,11 +748,7 @@ class TwitterScraper(BaseScraper):
     def _parse_tweet_date(raw_data: dict[str, Any]) -> datetime | None:
         """Extract and parse the tweet creation timestamp."""
         # Scweet uses 'timestamp', twscrape uses 'date', legacy uses 'created_at'
-        date_val = (
-            raw_data.get("timestamp")
-            or raw_data.get("date")
-            or raw_data.get("created_at")
-        )
+        date_val = raw_data.get("timestamp") or raw_data.get("date") or raw_data.get("created_at")
         if date_val is None:
             return None
 
@@ -810,9 +773,7 @@ class TwitterScraper(BaseScraper):
             ):
                 try:
                     dt = datetime.strptime(date_val, fmt)
-                    return (
-                        dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
-                    )
+                    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
                 except ValueError:
                     continue
 
@@ -837,9 +798,7 @@ class TwitterScraper(BaseScraper):
 
             # Scweet does not distinguish video vs image in media dict
             # Video URLs typically contain /ext_tw_video/ or /amplify_video/
-            has_video = any(
-                "video" in str(url).lower() for url in image_links
-            )
+            has_video = any("video" in str(url).lower() for url in image_links)
             if has_video:
                 return PostType.VIDEO
 
@@ -851,11 +810,7 @@ class TwitterScraper(BaseScraper):
         # twscrape / syndication format
         media = raw_data.get("media") or {}
         if isinstance(media, dict):
-            media_list = (
-                media.get("all", [])
-                or media.get("photos", [])
-                or media.get("videos", [])
-            )
+            media_list = media.get("all", []) or media.get("photos", []) or media.get("videos", [])
         elif isinstance(media, list):
             media_list = media
         else:
@@ -898,9 +853,7 @@ def _strip_html_tags(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text).strip()
 
 
-def _extract_tweets_from_json(
-    data: Any, results: list[dict[str, Any]], depth: int = 0
-) -> None:
+def _extract_tweets_from_json(data: Any, results: list[dict[str, Any]], depth: int = 0) -> None:
     """Recursively search a nested dict/list for tweet-like objects."""
     if depth > 15:
         return

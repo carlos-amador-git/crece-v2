@@ -64,7 +64,7 @@ async def chatwoot_webhook(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid JSON payload",
-        )
+        ) from None
 
     # Handle raw Chatwoot payload (has "event" key) vs n8n-preprocessed (has "tipo" key)
     if "event" in raw and "tipo" not in raw:
@@ -125,11 +125,32 @@ async def _handle_message_reply(db: AsyncSession, data: dict) -> dict:
     if not ciudadano_id:
         return {"status": "skipped", "reason": "no ciudadano_id in payload"}
 
+    # D.2b — Opt-out handler (LFPDPPP / WABA compliance)
+    if mensaje and mensaje.strip().upper() in ("STOP", "BAJA", "CANCELAR", "NO MAS"):
+        from app.models.ciudadano import Ciudadano
+
+        result = await db.execute(select(Ciudadano).where(Ciudadano.id == ciudadano_id))
+        ciudadano = result.scalar_one_or_none()
+        if ciudadano:
+            ciudadano.no_contactar = True
+            await db.flush()
+            logger.info("Opt-out: ciudadano %d marked no_contactar=True", ciudadano_id)
+            return {"status": "opt_out", "ciudadano_id": ciudadano_id}
+
+    # D.2 fix: resolve org_id from the ciudadano record
+    org_id = data.get("org_id")
+    if not org_id:
+        from app.models.ciudadano import Ciudadano
+
+        c_result = await db.execute(select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id))
+        org_id = c_result.scalar_one_or_none() or 3  # fallback MC CDMX
+
     try:
         from app.models.crm_interaccion import CrmInteraccion
 
         interaccion = CrmInteraccion(
             ciudadano_id=ciudadano_id,
+            org_id=org_id,
             tipo="respuesta_entrante",
             canal=canal,
             resultado="recibido",
@@ -154,9 +175,7 @@ async def _handle_contact_created(db: AsyncSession, data: dict) -> dict:
         return {"status": "skipped", "reason": "no telefono in payload"}
 
     # Check if already exists
-    result = await db.execute(
-        select(Ciudadano).where(Ciudadano.telefono == telefono).limit(1)
-    )
+    result = await db.execute(select(Ciudadano).where(Ciudadano.telefono == telefono).limit(1))
     existing = result.scalar_one_or_none()
     if existing is not None:
         return {"status": "exists", "ciudadano_id": existing.id}
@@ -169,7 +188,7 @@ async def _handle_contact_created(db: AsyncSession, data: dict) -> dict:
         seccion_id=data.get("seccion_id", 1),  # Must be enriched later
         edad_rango=data.get("edad_rango", "26-35"),
         registrado_por_id=data.get("registrado_por_id", 1),
-        org_id=data.get("org_id"),
+        org_id=data.get("org_id") or 3,  # D.2 fix: default MC CDMX org
     )
     db.add(ciudadano)
     await db.flush()
@@ -187,10 +206,16 @@ async def _handle_propuesta(db: AsyncSession, data: dict) -> dict:
         return {"status": "skipped", "reason": "no ciudadano_id in payload"}
 
     try:
+        # D.2 fix: resolve org_id from ciudadano
+        from app.models.ciudadano import Ciudadano
         from app.models.crm_interaccion import CrmInteraccion
+
+        c_result = await db.execute(select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id))
+        prop_org_id = c_result.scalar_one_or_none() or 3
 
         interaccion = CrmInteraccion(
             ciudadano_id=ciudadano_id,
+            org_id=prop_org_id,
             tipo="propuesta",
             canal=data.get("canal", "chatwoot"),
             resultado="registrada",

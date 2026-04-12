@@ -186,43 +186,46 @@ export default function OverviewPage() {
       {/* ── Crisis Alerts ──────────────────────────────────── */}
       {hasActiveAlerts && <CrisisAlertList limit={3} />}
 
-      {/* ── KPI Cards ───────────────────────────────────────── */}
+      {/* ── KPI Cards — BentoGrid ─────────────────────────────── */}
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 grid-cols-2 xl:grid-cols-4"
         aria-label="Indicadores clave"
       >
         {kpiLoading
           ? Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="card-elevated">
-                <CardContent className="p-5">
+              <Card key={i} className={`card-elevated bento-enter ${i < 2 ? "col-span-2 xl:col-span-2" : "col-span-1"}`}>
+                <CardContent className={i < 2 ? "p-6" : "p-5"}>
                   <Skeleton className="h-4 w-24 mb-3" />
-                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className={i < 2 ? "h-10 w-20" : "h-8 w-16"} />
                 </CardContent>
               </Card>
             ))
-          : kpiCards.map((card) => {
+          : kpiCards.map((card, idx) => {
               const rawValue = kpiData[card.key];
               const change = kpiData[card.changeKey];
               const hasChange = change !== null && change !== undefined;
               const isPositive = hasChange && (change as number) >= 0;
               const showPulse = card.isAlerts && hasActiveAlerts;
+              const isHero = idx < 2;
 
               // Special rendering for "Tema Urgente" — show the alert text
               const isTemaCard = card.key === "active_alerts";
               const temaText = kpiData.tema_urgente;
 
+              const delayClass = idx === 0 ? "" : idx === 1 ? "bento-enter-d1" : idx === 2 ? "bento-enter-d2" : "bento-enter-d3";
+
               return (
                 <Card
                   key={card.key}
-                  className={`card-elevated ${
-                    card.isAlerts ? "accent-bar-left" : ""
-                  }`}
+                  className={`card-elevated bento-enter ${delayClass} ${
+                    isHero ? "col-span-2 xl:col-span-2" : "col-span-1"
+                  } ${card.isAlerts ? "accent-bar-left" : ""}`}
                   data-active={card.isAlerts && hasActiveAlerts ? "true" : undefined}
                 >
-                  <CardContent className="p-5">
+                  <CardContent className={isHero ? "p-6" : "p-5"}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">
+                        <p className={`font-medium text-muted-foreground ${isHero ? "text-sm" : "text-sm"}`}>
                           {card.title}
                         </p>
                         {card.subtitle && (
@@ -232,7 +235,7 @@ export default function OverviewPage() {
                         )}
                       </div>
                       <div className="relative">
-                        <card.icon className="h-4.5 w-4.5 text-muted-foreground" />
+                        <card.icon className={`text-muted-foreground ${isHero ? "h-5 w-5" : "h-4.5 w-4.5"}`} />
                         {showPulse && (
                           <span
                             className="absolute -right-0.5 -top-0.5 block h-2 w-2 rounded-full bg-red-500 pulse-dot"
@@ -241,7 +244,7 @@ export default function OverviewPage() {
                         )}
                       </div>
                     </div>
-                    <div className="mt-2 flex items-end justify-between">
+                    <div className={`flex items-end justify-between ${isHero ? "mt-4" : "mt-2"}`}>
                       {isTemaCard ? (
                         <p
                           className={`line-clamp-2 text-sm font-semibold ${
@@ -253,7 +256,7 @@ export default function OverviewPage() {
                         </p>
                       ) : (
                         <p
-                          className="tabular-nums font-heading text-2xl font-bold"
+                          className={`tabular-nums font-heading font-bold ${isHero ? "text-3xl" : "text-2xl"}`}
                           data-numeric="true"
                         >
                           {card.format(Number(rawValue))}
@@ -267,11 +270,12 @@ export default function OverviewPage() {
                                 ? "text-emerald-600 dark:text-emerald-400"
                                 : "text-red-600 dark:text-red-400"
                             }`}
+                            aria-label={`${isPositive ? "Aumento" : "Disminucion"} de ${Math.abs(change as number)} por ciento`}
                           >
                             {isPositive ? (
-                              <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" />
+                              <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" aria-hidden="true" />
                             ) : (
-                              <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" />
+                              <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" aria-hidden="true" />
                             )}
                             <span data-numeric="true" className="tabular-nums">
                               {Math.abs(change as number)}%
@@ -281,6 +285,7 @@ export default function OverviewPage() {
                           <span
                             className="text-xs font-medium text-muted-foreground/60 tabular-nums"
                             title="Sin histórico suficiente para calcular delta"
+                            aria-label="Sin cambio disponible"
                           >
                             —
                           </span>
@@ -362,9 +367,9 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             {sentimentLoading ? (
-              <Skeleton className="h-[300px] w-full" />
+              <Skeleton className="h-[300px] w-full" aria-label="Cargando datos de sentimiento" />
             ) : trendData.length === 0 ? (
-              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground" role="status">
                 Sin datos de sentimiento disponibles
               </div>
             ) : (

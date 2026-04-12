@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import Role, RoleChecker, get_current_user_or_api_key
+from app.core.security import Role, RoleChecker, get_current_user
 from app.models.ciudadano import Ciudadano, Escolaridad, IntencionVotoCiudadano
 from app.models.user import User
 from app.schemas.ciudadano import CiudadanoCreate, CiudadanoResponse, CiudadanoUpdate
@@ -27,7 +27,7 @@ def _build_geometry_wkt(lat: float | None, lon: float | None) -> str | None:
 @router.get("/", response_model=PaginatedResponse[CiudadanoResponse])
 async def list_ciudadanos(
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    _current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     seccion_id: int | None = None,
@@ -66,10 +66,7 @@ async def list_ciudadanos(
         count_query = count_query.where(Ciudadano.org_id == org_id)
     if search:
         pattern = f"%{search}%"
-        search_filter = (
-            Ciudadano.nombre.ilike(pattern)
-            | Ciudadano.apellido_paterno.ilike(pattern)
-        )
+        search_filter = Ciudadano.nombre.ilike(pattern) | Ciudadano.apellido_paterno.ilike(pattern)
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
 
@@ -96,7 +93,7 @@ async def list_ciudadanos(
 @router.get("/promotores", response_model=PaginatedResponse[CiudadanoResponse])
 async def list_promotores(
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    _current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> PaginatedResponse[CiudadanoResponse]:
@@ -129,7 +126,7 @@ async def list_promotores(
 async def stats_by_seccion(
     seccion_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    _current_user: Annotated[User, Depends(get_current_user)],
 ) -> EncuestaResumen:
     """Return aggregated intencion_voto breakdown for ciudadanos in a section."""
     query = (
@@ -164,7 +161,7 @@ async def stats_by_seccion(
 async def list_ciudadanos_by_seccion(
     seccion_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    _current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> PaginatedResponse[CiudadanoResponse]:
@@ -197,7 +194,7 @@ async def list_ciudadanos_by_seccion(
 async def get_ciudadano(
     ciudadano_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    _current_user: Annotated[User, Depends(get_current_user)],
 ) -> Ciudadano:
     """Get a single ciudadano by ID."""
     result = await db.execute(select(Ciudadano).where(Ciudadano.id == ciudadano_id))
@@ -216,7 +213,7 @@ async def get_ciudadano(
 async def create_ciudadano(
     payload: CiudadanoCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> Ciudadano:
     """Create a new ciudadano. Requires at least field_operator role."""
     data = payload.model_dump(exclude={"latitud", "longitud"})

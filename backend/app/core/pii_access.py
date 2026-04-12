@@ -107,6 +107,45 @@ async def require_pii_clearance(
     - Retorna un `PiiAuditor` con contexto del request.
     """
     if current_user.role != Role.ADMIN:
+        # Log the denied attempt BEFORE raising, using a direct insert
+        # so the audit trail persists even though the request will fail.
+        import json as _json
+
+        await db.execute(
+            text(
+                """
+                INSERT INTO data_access_log (
+                    user_id, org_id, table_name, row_id, action,
+                    fields, metadata_json, request_ip, user_agent
+                )
+                VALUES (
+                    :user_id, :org_id, :table_name, NULL, :action,
+                    CAST(:fields AS VARCHAR[]), CAST(:metadata AS JSONB),
+                    :request_ip, :user_agent
+                )
+                """
+            ),
+            {
+                "user_id": current_user.id,
+                "org_id": current_user.org_id,
+                "table_name": "ciudadanos_legacy",
+                "action": "access_denied",
+                "fields": [],
+                "metadata": _json.dumps(
+                    {
+                        "endpoint": str(request.url.path),
+                        "role": current_user.role.value
+                        if hasattr(current_user.role, "value")
+                        else str(current_user.role),
+                        "reason": "non-admin PII access attempt",
+                    }
+                ),
+                "request_ip": (request.client.host if request.client else None),
+                "user_agent": request.headers.get("user-agent"),
+            },
+        )
+        await db.commit()
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acceso a PII restringido a administradores (D-DATA-02 LFPDPPP).",
