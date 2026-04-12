@@ -542,3 +542,57 @@ def ingest_rss_feeds() -> dict:
     except Exception as exc:
         logger.exception("ingest_rss_feeds failed: %s", exc)
         return {"status": "error", "error": str(exc)}
+
+
+@celery_app.task(name="app.workers.tasks.dispatch_scheduled_campaigns")
+def dispatch_scheduled_campaigns() -> dict:
+    """D.3 — Auto-start campaigns whose fecha_programada has passed.
+
+    Runs every 5 minutes via Celery beat. Finds campaigns in PROGRAMADA
+    state with fecha_programada <= now(), triggers the send flow via
+    the /enviar endpoint logic (n8n webhook dispatch).
+    """
+    import httpx
+
+    from app.core.config import settings
+    from app.models.campana import Campana, EstadoCampana
+
+    session = _get_sync_session()
+    try:
+        now = datetime.now(UTC)
+        campaigns = (
+            session.query(Campana)
+            .filter(
+                Campana.estado == EstadoCampana.PROGRAMADA,
+                Campana.fecha_programada.isnot(None),
+                Campana.fecha_programada <= now,
+            )
+            .all()
+        )
+
+        if not campaigns:
+            return {"status": "ok", "dispatched": 0}
+
+        dispatched = []
+        for campana in campaigns:
+            # Trigger via internal API call (reuses /enviar logic)
+            try:
+                resp = httpx.post(
+                    f"http://localhost:8000/api/v1/campanas/{campana.id}/enviar",
+                    headers={"X-API-Key": settings.N8N_CRECE_TOKEN or settings.JWT_SECRET},
+                    timeout=30.0,
+                )
+                if resp.status_code < 300:
+                    dispatched.append(campana.id)
+                    logger.info("Auto-dispatched campaign %d", campana.id)
+                else:
+                    logger.warning(
+                        "Campaign %d auto-dispatch failed: %d %s",
+                        campana.id, resp.status_code, resp.text[:200],
+                    )
+            except httpx.HTTPError as exc:
+                logger.error("Campaign %d dispatch error: %s", campana.id, exc)
+
+        return {"status": "ok", "dispatched": len(dispatched), "ids": dispatched}
+    finally:
+        session.close()

@@ -78,8 +78,10 @@ class Settings(BaseSettings):
     # ── Blindaje Legal ───────────────────────────────────
     TOPE_CAMPANA_MXN: float = 500_000.0
 
-    # ── Webhooks ─────────────────────────────────────────
+    # ── n8n Integration ──────────────────────────────────
     N8N_WEBHOOK_SECRET: str = ""
+    N8N_CAMPAIGN_WEBHOOK_URL: str = ""  # n8n webhook URL for campaign dispatch
+    N8N_CRECE_TOKEN: str = ""  # shared secret for CRECE→n8n auth (Gemini G1)
 
     # ── App ───────────────────────────────────────────────
     APP_ENV: str = "development"

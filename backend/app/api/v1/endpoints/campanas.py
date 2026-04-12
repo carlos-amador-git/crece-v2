@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user
 from app.models.campana import Campana, CampanaMensaje, EstadoCampana, EstadoMensaje
+
+logger = logging.getLogger(__name__)
 from app.models.user import User
 from app.schemas.campana import (
     CampanaAnalytics,
@@ -305,10 +310,40 @@ async def enviar_campana(
     # Build payload for Chatwoot-MX
     payload = await CampaignManager.get_campaign_payload(db, campana_id)
 
+    # Trigger n8n webhook if configured (D.1 — campaign dispatch via n8n)
+    n8n_execution_id = None
+    if settings.N8N_CAMPAIGN_WEBHOOK_URL:
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    settings.N8N_CAMPAIGN_WEBHOOK_URL,
+                    json={
+                        "campana_id": campana_id,
+                        "total_mensajes": len(payload),
+                        "payload": payload,
+                    },
+                    headers={"X-CRECE-Token": settings.N8N_CRECE_TOKEN},
+                )
+                if resp.status_code < 300:
+                    resp_data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                    n8n_execution_id = resp_data.get("executionId")
+                    logger.info(
+                        "n8n campaign webhook triggered: campana=%d, execution=%s",
+                        campana_id, n8n_execution_id,
+                    )
+                else:
+                    logger.warning(
+                        "n8n webhook returned %d for campana %d",
+                        resp.status_code, campana_id,
+                    )
+        except httpx.HTTPError as exc:
+            logger.error("n8n webhook failed for campana %d: %s", campana_id, exc)
+
     return {
         "campana_id": campana_id,
         "estado": EstadoCampana.ENVIANDO,
         "total_mensajes": len(payload),
+        "n8n_execution_id": n8n_execution_id,
         "payload": payload,
     }
 

@@ -50,6 +50,11 @@ celery_app.conf.update(
             "task": "app.workers.tasks.ingest_rss_feeds",
             "schedule": 10800.0,
         },
+        # D.3 campaign scheduler — check every 5 min for scheduled campaigns
+        "dispatch-scheduled-campaigns": {
+            "task": "app.workers.tasks.dispatch_scheduled_campaigns",
+            "schedule": 300.0,
+        },
     },
 )
 
