@@ -72,68 +72,41 @@ def decode_access_token(token: str) -> dict[str, Any]:
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> Any:
-    """Decode JWT and return the active User ORM object."""
-    from app.models.user import User  # avoid circular import
-
-    payload = decode_access_token(token)
-    user_id: str | None = payload.get("sub")
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload",
-        )
-    result = await db.execute(select(User).where(User.id == int(user_id)))
-    user = result.scalar_one_or_none()
-    if user is None or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or inactive",
-        )
-    return user
-
-
-class RoleChecker:
-    """Dependency factory: require that the current user has one of the allowed roles.
-
-    Usage:
-        @router.get("/admin-only", dependencies=[Depends(RoleChecker([Role.ADMIN]))])
-    """
-
-    def __init__(self, allowed_roles: list[Role]) -> None:
-        self.allowed_roles = allowed_roles
-
-    async def __call__(
-        self,
-        current_user: Annotated[Any, Depends(get_current_user)],
-    ) -> Any:
-        if current_user.role not in self.allowed_roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions",
-            )
-        return current_user
-
-
-# ── API Key + JWT dual auth ──────────────────────────────
-
-
-async def get_current_user_or_api_key(
     request: Request,
     token: Annotated[str | None, Depends(oauth2_scheme_optional)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Any:
     """Authenticate via JWT token OR X-API-Key header.
 
-    JWT: Standard bearer token auth for web dashboard.
-    API Key: For n8n and external integrations via X-API-Key header.
+    1. If Authorization: Bearer <token> is present -> JWT flow.
+    2. Else if X-API-Key header is present -> API key lookup.
+    3. Otherwise -> 401.
+
+    This unified dependency replaces the former split between
+    get_current_user (JWT-only) and get_current_user_or_api_key.
     """
     from app.models.api_key import ApiKey  # avoid circular import
     from app.models.user import User  # avoid circular import
 
-    # 1. Check X-API-Key header first
+    # ── Path 1: JWT bearer token ────────────────────────────
+    if token:
+        payload = decode_access_token(token)
+        user_id: str | None = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+            )
+        result = await db.execute(select(User).where(User.id == int(user_id)))
+        user = result.scalar_one_or_none()
+        if user is None or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive",
+            )
+        return user
+
+    # ── Path 2: X-API-Key header ────────────────────────────
     api_key_raw = request.headers.get("X-API-Key")
     if api_key_raw:
         key_hash = hashlib.sha256(api_key_raw.encode()).hexdigest()
@@ -160,11 +133,35 @@ async def get_current_user_or_api_key(
             )
         return user
 
-    # 2. Fall back to JWT
-    if token:
-        return await get_current_user(token=token, db=db)
-
+    # ── No credentials provided ─────────────────────────────
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Authentication required",
     )
+
+
+class RoleChecker:
+    """Dependency factory: require that the current user has one of the allowed roles.
+
+    Usage:
+        @router.get("/admin-only", dependencies=[Depends(RoleChecker([Role.ADMIN]))])
+    """
+
+    def __init__(self, allowed_roles: list[Role]) -> None:
+        self.allowed_roles = allowed_roles
+
+    async def __call__(
+        self,
+        current_user: Annotated[Any, Depends(get_current_user)],
+    ) -> Any:
+        if current_user.role not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        return current_user
+
+
+# get_current_user_or_api_key has been merged into get_current_user above.
+# Keep this alias for any imports that haven't been updated yet.
+get_current_user_or_api_key = get_current_user

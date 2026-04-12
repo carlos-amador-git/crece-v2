@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.database import get_db
-from app.core.security import get_current_user_or_api_key
+from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.integration import (
@@ -33,7 +33,7 @@ router = APIRouter()
 async def generate_content_endpoint(
     payload: ContentGenerateRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ContentPieceResponse:
     """Generate multi-platform content for a dirigente using Claude AI."""
     try:
@@ -60,7 +60,7 @@ async def generate_content_endpoint(
 async def generate_content_stream_endpoint(
     payload: ContentGenerateRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> EventSourceResponse:
     """Stream content generation via Server-Sent Events."""
     return EventSourceResponse(
@@ -80,7 +80,7 @@ async def generate_content_stream_endpoint(
 @router.get("/pieces", response_model=PaginatedResponse[ContentPieceResponse])
 async def list_pieces(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int | None = None,
     estado: str | None = None,
     fecha_desde: datetime | None = None,
@@ -133,7 +133,7 @@ async def list_pieces(
 async def get_piece(
     piece_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ContentPieceResponse:
     """Get a single content piece by UUID."""
     from uuid import UUID
@@ -169,7 +169,7 @@ async def update_variant(
     platform: str,
     payload: VariantUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> dict:
     """Update a specific platform variant before publishing."""
     from uuid import UUID
@@ -219,7 +219,7 @@ async def update_variant(
 async def approve_piece(
     piece_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> dict:
     """Approve a content piece for publishing."""
     from uuid import UUID

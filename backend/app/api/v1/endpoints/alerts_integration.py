@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user_or_api_key
+from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.integration import AlertaCrisisResponse, AlertaStatusUpdate
 
@@ -20,7 +20,7 @@ _VALID_ALERT_STATUSES = {"vista", "atendida", "descartada"}
 @router.get("/", response_model=list[AlertaCrisisResponse])
 async def list_alerts(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
     severity: str | None = None,
     alert_status: str | None = Query(None, alias="status"),
     since: datetime | None = None,
@@ -52,7 +52,7 @@ async def update_alert_status(
     alert_id: int,
     payload: AlertaStatusUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> dict:
     """Change alert status to: vista, atendida, or descartada."""
     from app.models.alerta_crisis import AlertaCrisis
