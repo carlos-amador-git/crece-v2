@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,6 +55,7 @@ class SystemStatusResponse(BaseModel):
 
 @router.get("/overview", response_model=KpiOverviewResponse)
 async def get_overview(
+    request: "Request",
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     period: Annotated[
@@ -64,19 +65,28 @@ async def get_overview(
 ) -> KpiOverviewResponse:
     """Aggregated KPIs for the dashboard overview.
 
-    If the user has a dirigente_id, scopes data to their dirigente only.
-    The ``period`` parameter controls the time window for posts and alerts
-    (total dirigentes and IPD are always all-time).
+    Scoping rules:
+    - Dirigente user: sees only their own dirigente's data.
+    - Non-admin with org_id: sees all dirigentes in their org.
+    - Admin: sees org from X-Org-Id header, or all if not set.
+    The ``period`` parameter controls the time window for posts and alerts.
     """
     # Auto-scope for dirigente users
     user_dirigente_id = getattr(current_user, "dirigente_id", None)
+    user_org_id = getattr(current_user, "org_id", None)
     now = datetime.now(UTC)
+
+    # Resolve effective org_id: admin can switch via X-Org-Id header
+    effective_org_id: int | None = user_org_id
+    if current_user.role == "admin":
+        header_org = request.headers.get("x-org-id")
+        if header_org and header_org.isdigit():
+            effective_org_id = int(header_org)
 
     days = PERIOD_TO_DAYS[period]
     window_start = now - timedelta(days=days)
     prev_window_start = window_start - timedelta(days=days)
 
-    # Keep legacy names (24h/7d) for minimal diff below — they now track the period.
     last_24h = window_start
     prev_24h = prev_window_start
     last_7d = window_start
@@ -84,18 +94,30 @@ async def get_overview(
 
     from app.models.social import SocialProfile
 
-    # Total dirigentes (scoped if user is a dirigente)
+    # ── Helper: add org_id filter to a dirigente-based query ──
+    def _org_filter(q, model=Dirigente):
+        """Apply org_id filtering unless admin with no org selected."""
+        if user_dirigente_id:
+            return q.where(model.id == user_dirigente_id) if model == Dirigente else q
+        if effective_org_id is not None:
+            return q.where(model.org_id == effective_org_id) if hasattr(model, "org_id") else q
+        return q
+
+    # Total dirigentes (scoped)
     if user_dirigente_id:
         total_dirigentes = 1
         dirigentes_prev_count = 1
     else:
-        total_result = await db.execute(select(func.count(Dirigente.id)))
+        total_q = select(func.count(Dirigente.id))
+        if effective_org_id is not None:
+            total_q = total_q.where(Dirigente.org_id == effective_org_id)
+        total_result = await db.execute(total_q)
         total_dirigentes = total_result.scalar() or 0
-        # Count dirigentes that existed before the window started.
-        # We assume Dirigente.created_at is populated and deletions are soft/rare.
-        prev_result = await db.execute(
-            select(func.count(Dirigente.id)).where(Dirigente.created_at < window_start)
-        )
+
+        prev_q = select(func.count(Dirigente.id)).where(Dirigente.created_at < window_start)
+        if effective_org_id is not None:
+            prev_q = prev_q.where(Dirigente.org_id == effective_org_id)
+        prev_result = await db.execute(prev_q)
         dirigentes_prev_count = prev_result.scalar() or 0
 
     # Avg IPD — real calculation via diagnostico service
@@ -104,6 +126,8 @@ async def get_overview(
         dirigente_query = select(Dirigente)
         if user_dirigente_id:
             dirigente_query = dirigente_query.where(Dirigente.id == user_dirigente_id)
+        elif effective_org_id is not None:
+            dirigente_query = dirigente_query.where(Dirigente.org_id == effective_org_id)
         dirigentes_result = await db.execute(dirigente_query)
         dirigentes_list = list(dirigentes_result.scalars().all())
         if dirigentes_list:
@@ -113,24 +137,30 @@ async def get_overview(
                 ipd_sum += diag.ipd_score
             avg_ipd = round(ipd_sum / len(dirigentes_list), 1)
 
-    # Posts last 24h (scoped)
-    posts_query = select(func.count(SocialPost.id)).where(SocialPost.scraped_at >= last_24h)
+    # Posts in period (scoped by org via profile→dirigente)
+    posts_query = select(func.count(SocialPost.id)).where(
+        SocialPost.scraped_at >= last_24h
+    ).join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
     if user_dirigente_id:
+        posts_query = posts_query.where(SocialProfile.dirigente_id == user_dirigente_id)
+    elif effective_org_id is not None:
         posts_query = posts_query.join(
-            SocialProfile, SocialPost.profile_id == SocialProfile.id
-        ).where(SocialProfile.dirigente_id == user_dirigente_id)
+            Dirigente, SocialProfile.dirigente_id == Dirigente.id
+        ).where(Dirigente.org_id == effective_org_id)
     posts_24h_result = await db.execute(posts_query)
     posts_24h = posts_24h_result.scalar() or 0
 
-    # Posts previous 24h
+    # Posts previous period
     posts_prev_query = select(func.count(SocialPost.id)).where(
         SocialPost.scraped_at >= prev_24h,
         SocialPost.scraped_at < last_24h,
-    )
+    ).join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
     if user_dirigente_id:
+        posts_prev_query = posts_prev_query.where(SocialProfile.dirigente_id == user_dirigente_id)
+    elif effective_org_id is not None:
         posts_prev_query = posts_prev_query.join(
-            SocialProfile, SocialPost.profile_id == SocialProfile.id
-        ).where(SocialProfile.dirigente_id == user_dirigente_id)
+            Dirigente, SocialProfile.dirigente_id == Dirigente.id
+        ).where(Dirigente.org_id == effective_org_id)
     posts_prev_result = await db.execute(posts_prev_query)
     posts_prev = posts_prev_result.scalar() or 0
 
@@ -164,6 +194,10 @@ async def get_overview(
     audiencia_query = select(func.coalesce(func.sum(SocialProfile.followers_count), 0))
     if user_dirigente_id:
         audiencia_query = audiencia_query.where(SocialProfile.dirigente_id == user_dirigente_id)
+    elif effective_org_id is not None:
+        audiencia_query = audiencia_query.join(
+            Dirigente, SocialProfile.dirigente_id == Dirigente.id
+        ).where(Dirigente.org_id == effective_org_id)
     total_audiencia = (await db.execute(audiencia_query)).scalar() or 0
 
     # contactos_periodo: CRM interactions in window (best-effort, graceful if tables missing)

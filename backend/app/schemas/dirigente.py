@@ -55,6 +55,23 @@ class DiagnosticoResponse(BaseModel):
     recommendations: list[str]
 
 
+class FlashAnalysisResponse(BaseModel):
+    """Quick 5-minute analysis of a dirigente from existing DB data."""
+
+    dirigente_name: str
+    periodo: str  # "Ultimos 7 dias"
+    total_posts: int
+    avg_sentiment: float  # -1 to 1
+    sentiment_label: str  # "Positivo" / "Negativo" / "Neutral"
+    engagement_avg: float  # percentage
+    engagement_delta: float  # vs previous period %
+    top_post_content: str | None  # most liked post
+    top_post_likes: int
+    followers_total: int
+    platforms_active: int
+    suggested_action: str  # computed from data patterns
+
+
 class SocialSummary(BaseModel):
     dirigente_id: int
     total_followers: int

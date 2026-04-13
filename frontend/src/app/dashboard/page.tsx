@@ -23,6 +23,7 @@ import {
   Cpu,
 } from "lucide-react";
 import { FadeUp } from "@/components/motion/fade-up";
+import { CompetitorSnapshotCard } from "@/components/dashboard/competitor-snapshot-card";
 
 // Electoral map hidden until INE shapefiles are loaded
 // const ElectoralMap = dynamic(
@@ -426,6 +427,11 @@ export default function OverviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Competitor Snapshot ──────────────────────────────── */}
+      <FadeUp index={0}>
+        <CompetitorSnapshotCard />
+      </FadeUp>
 
       {/* ── Bottom Row: Posts + Map ─────────────────────────── */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">

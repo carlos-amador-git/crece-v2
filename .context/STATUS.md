@@ -1,9 +1,89 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-12 01:20 local
-**Sesión activa:** /sprint-review Sprint B (Canvassing Geo) + Sprint A (Demo)
-**Main HEAD:** `1185921` (PR #7 merged)
-**Branch activo:** `feat/canvassing-geo-map` @ 2 commits (`78c3e87`, `0276661`)
+**Ultimo update:** 2026-04-13 10:15 local
+**Sesion activa:** /sprint-implement Sprint E Multi-Tenant (Carlos)
+**Branch activo:** `feat/sprint-c-hardening`
+
+---
+
+## Sesion 2026-04-13 — Sprint E Multi-Tenant + War Room
+
+### Fase 1: Multi-Tenant 3 Orgs (COMPLETADA)
+- 3 organizaciones: MC-CDMX (id=1), GOB-OAXACA (id=2), CDMX-IND (id=3)
+- 9 usuarios: admin + analista + campo + 6 dirigentes (Pina, Solano, Pineda, Nolasco, Jimenez, Cravioto)
+- 6 dirigentes con 15 social profiles (Twitter, Instagram, Facebook, TikTok)
+- org_id en JWT token y /auth/me response (con org_nombre, org_slug)
+- Dirigentes endpoint filtra por org_id para non-admin users
+- Admin tenant switcher en topbar con dropdown de 3 orgs
+- Watermark "DATOS SIMULACION" banner para orgs sinteticas (gob-oaxaca, cdmx-ind)
+- get_db_rls dependency listo para RLS enforcement (SET LOCAL app.current_org_id)
+- X-Org-Id header en API client para admin tenant switching
+- Login page: 7 demo buttons agrupados por org con colores (accent, amber, violet)
+
+### Fase 2: Poblar Orgs (COMPLETADA)
+- 13 sample posts para 4 nuevos dirigentes (con sentimiento y engagement)
+- 2 planes IA (Oaxaca: posicionamiento turistico, CDMX-IND: estrategia legislativa)
+- Total DB: 19 posts, 3 planes, 15 social profiles, 6 dirigentes, 3 orgs
+
+### Fase 3: Login UX (COMPLETADA)
+- Demo buttons agrupados por org: MC CDMX (accent), GOB OAXACA (amber), CDMX IND (violet)
+- Campos se llenan visualmente al click (ya existia de sesion anterior)
+
+### Fase 4: War Room (COMPLETADA)
+- E.4.2 HECHO: 5 formatos guiones de campo en Content Factory
+- E.4.1 HECHO: CompetitorSnapshotCard widget en dashboard (datos demo MC-CDMX vs Batres/Taboada)
+- E.4.3 HECHO: GET /dirigentes/{id}/flash-analysis — 5 metricas + suggested_action
+
+### Sprint F Review (mismo dia)
+- F1 HECHO: Dashboard overview endpoint scoped por org_id (X-Org-Id header)
+- F2 HECHO: Competitor widget en dashboard
+- F3 HECHO: Flash Analysis endpoint (SQL aggregations, sin LLM)
+- F4 HECHO: org_id hardening en voter_scoring (segments, by-seccion) + encuestas + social posts
+
+### Archivos modificados
+**Backend:**
+- `app/schemas/user.py` — org_id, org_nombre, org_slug en UserResponse
+- `app/api/v1/endpoints/auth.py` — org_id en JWT, org details en /me
+- `app/api/v1/endpoints/dirigentes.py` — org_id scoping para non-admin
+- `app/core/database.py` — get_db_rls + get_org_id_from_user
+- `scripts/seed.py` — 3 orgs, 9 users, 6 dirigentes, 15 profiles
+- `scripts/seed_multitenant.py` — NEW: idempotent multi-tenant seed
+- `scripts/seed_org_data.py` — NEW: sample posts + plans para nuevas orgs
+
+**Frontend:**
+- `src/lib/api/types.ts` — org_id, org_nombre, org_slug en User
+- `src/lib/api/client.ts` — X-Org-Id header
+- `src/lib/auth.ts` — OrgContext, activeOrg, setActiveOrg
+- `src/components/layout/topbar.tsx` — tenant switcher dropdown + org badge
+- `src/app/dashboard/layout.tsx` — SyntheticDataBanner watermark
+- `src/app/login/page.tsx` — 7 demo buttons grouped by org
+- `src/app/dashboard/contenido/page.tsx` — 5 guiones de campo formats
+
+### DB state post-sprint
+| Tabla | Count |
+|-------|-------|
+| organizaciones | 3 |
+| users | 9 |
+| dirigentes | 6 |
+| social_profiles | 15 |
+| social_posts | 19 |
+| planes_ia | 3 |
+| alcaldias_cdmx | 16 |
+| ciudadanos_legacy | 9,723 |
+| ciudadanos_v2 | 205 |
+| unidades_territoriales | 5,552 |
+
+### Verificacion visual (screenshots)
+- Login: 7 demo buttons x 3 orgs (/tmp/crece-login-multitenant.png)
+- Dashboard admin: tenant switcher "MC CDMX" (/tmp/crece-dashboard-admin.png)
+- Tenant dropdown: 3 orgs + "datos simulacion" label (/tmp/crece-tenant-switcher.png)
+- GOB-OAXACA watermark: amber banner visible (/tmp/crece-oaxaca-watermark.png)
+- Pineda dashboard: isolated data, 20.8K followers, 3 posts (/tmp/crece-pineda-dashboard.png)
+- Content Factory: 5 guiones de campo in formato dropdown (/tmp/crece-guiones-campo.png)
+
+---
+
+## Anterior
 
 ---
 

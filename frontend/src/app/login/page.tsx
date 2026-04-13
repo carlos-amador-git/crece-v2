@@ -247,36 +247,103 @@ function LoginForm() {
           {/* Demo access buttons */}
           <div className="space-y-2">
             <p className="text-center text-xs font-medium text-muted-foreground">Acceso Demo</p>
-            {[
-              { label: "Administrador", email: "admin@consultoriamd.com", password: "crece2026!" },
-              { label: "Alejandro Pina", email: "pina@crece.mx", password: "demo2026!" },
-              { label: "Rafael Solano", email: "solano@crece.mx", password: "demo2026!" },
-            ].map((demo) => (
-              <Button
-                key={demo.email}
-                type="button"
-                variant="outline"
-                className="w-full border-accent/30 text-accent hover:bg-accent/10 hover:text-accent transition-colors duration-150"
-                disabled={loading}
-                onClick={async () => {
-                  setEmail(demo.email);
-                  setPassword(demo.password);
-                  setError(null);
-                  setLoading(true);
-                  try {
-                    await login({ email: demo.email, password: demo.password });
-                    router.push("/dashboard");
-                  } catch (err: unknown) {
-                    const message = err instanceof Error ? err.message : "Error al acceder";
-                    setError(message);
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                {demo.label}
-              </Button>
-            ))}
+            <div className="space-y-1">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 pl-1">MC CDMX</p>
+              {[
+                { label: "Admin", email: "admin@consultoriamd.com", password: "crece2026!" },
+                { label: "Alejandro Pina", email: "pina@crece.mx", password: "demo2026!" },
+                { label: "Rafael Solano", email: "solano@crece.mx", password: "demo2026!" },
+              ].map((demo) => (
+                <Button
+                  key={demo.email}
+                  type="button"
+                  variant="outline"
+                  className="w-full border-accent/30 text-accent hover:bg-accent/10 hover:text-accent transition-colors duration-150"
+                  disabled={loading}
+                  onClick={async () => {
+                    setEmail(demo.email);
+                    setPassword(demo.password);
+                    setError(null);
+                    setLoading(true);
+                    try {
+                      await login({ email: demo.email, password: demo.password });
+                      router.push("/dashboard");
+                    } catch (err: unknown) {
+                      const message = err instanceof Error ? err.message : "Error al acceder";
+                      setError(message);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  {demo.label}
+                </Button>
+              ))}
+            </div>
+            <div className="space-y-1 pt-1">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 pl-1">Gob Oaxaca</p>
+              {[
+                { label: "Saymi Pineda", email: "pineda@crece.mx", password: "demo2026!" },
+                { label: "Yesenia Nolasco", email: "nolasco@crece.mx", password: "demo2026!" },
+              ].map((demo) => (
+                <Button
+                  key={demo.email}
+                  type="button"
+                  variant="outline"
+                  className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 transition-colors duration-150 dark:text-amber-400"
+                  disabled={loading}
+                  onClick={async () => {
+                    setEmail(demo.email);
+                    setPassword(demo.password);
+                    setError(null);
+                    setLoading(true);
+                    try {
+                      await login({ email: demo.email, password: demo.password });
+                      router.push("/dashboard");
+                    } catch (err: unknown) {
+                      const message = err instanceof Error ? err.message : "Error al acceder";
+                      setError(message);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  {demo.label}
+                </Button>
+              ))}
+            </div>
+            <div className="space-y-1 pt-1">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 pl-1">CDMX Independiente</p>
+              {[
+                { label: "Gaby Jimenez", email: "jimenez@crece.mx", password: "demo2026!" },
+                { label: "Cesar Cravioto", email: "cravioto@crece.mx", password: "demo2026!" },
+              ].map((demo) => (
+                <Button
+                  key={demo.email}
+                  type="button"
+                  variant="outline"
+                  className="w-full border-violet-500/30 text-violet-600 hover:bg-violet-500/10 hover:text-violet-600 transition-colors duration-150 dark:text-violet-400"
+                  disabled={loading}
+                  onClick={async () => {
+                    setEmail(demo.email);
+                    setPassword(demo.password);
+                    setError(null);
+                    setLoading(true);
+                    try {
+                      await login({ email: demo.email, password: demo.password });
+                      router.push("/dashboard");
+                    } catch (err: unknown) {
+                      const message = err instanceof Error ? err.message : "Error al acceder";
+                      setError(message);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  {demo.label}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {/* Forgot password */}

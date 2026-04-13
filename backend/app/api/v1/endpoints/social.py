@@ -10,6 +10,7 @@ from sqlalchemy.types import Date
 
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user
+from app.models.dirigente import Dirigente
 from app.models.social import Platform, SentimentLabel, SocialPost, SocialProfile
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
@@ -46,7 +47,7 @@ async def list_posts(
     platform_enum = Platform(platform.upper()) if platform else None
     sentiment_enum = SentimentLabel(sentiment.upper()) if sentiment else None
 
-    # Auto-scope for dirigente users
+    # Auto-scope: dirigente users see only their own; org users see their org
     effective_dirigente_id = dirigente_id
     if current_user.dirigente_id is not None:
         effective_dirigente_id = current_user.dirigente_id
@@ -54,6 +55,11 @@ async def list_posts(
     filters = []
     if effective_dirigente_id is not None:
         filters.append(SocialProfile.dirigente_id == effective_dirigente_id)
+    elif current_user.org_id is not None and current_user.role != "admin":
+        # Non-admin org user: scope to their org's dirigentes
+        filters.append(SocialProfile.dirigente_id.in_(
+            select(Dirigente.id).where(Dirigente.org_id == current_user.org_id)
+        ))
     if platform_enum is not None:
         filters.append(SocialProfile.platform == platform_enum)
     if sentiment_enum is not None:

@@ -93,16 +93,19 @@ async def train_model(
 )
 async def get_segment_distribution(
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     org_id: int | None = None,
 ) -> list[SegmentDistribution]:
     """Return the distribution of voter segments for dashboard charts."""
+    # Auto-scope by user's org for non-admin
+    effective_org = org_id or (current_user.org_id if current_user.role != "admin" else None)
+
     query = select(
         VoterScore.segmento,
         func.count(VoterScore.id).label("cnt"),
     ).group_by(VoterScore.segmento)
-    if org_id is not None:
-        query = query.where(VoterScore.org_id == org_id)
+    if effective_org is not None:
+        query = query.where(VoterScore.org_id == effective_org)
 
     result = await db.execute(query)
     rows = result.all()
@@ -127,14 +130,18 @@ async def get_segment_distribution(
 )
 async def list_scores_by_seccion(
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     limit: int = Query(50, ge=1, le=500),
 ) -> list[SeccionScoreSummary]:
     """Aggregated voter scores grouped by electoral section.
 
     Returns one row per section that has at least one scored citizen, ordered
     by total citizens desc. Used by the scoring dashboard table.
+    Auto-scoped by user's org_id for non-admin users.
     """
+    # Auto-scope by user's org for non-admin
+    effective_org = current_user.org_id if current_user.role != "admin" else None
+
     # Aggregate per seccion_id in a single query
     agg_query = (
         select(
@@ -148,6 +155,8 @@ async def list_scores_by_seccion(
         .order_by(func.count(VoterScore.id).desc())
         .limit(limit)
     )
+    if effective_org is not None:
+        agg_query = agg_query.where(VoterScore.org_id == effective_org)
     agg_rows = (await db.execute(agg_query)).all()
 
     if not agg_rows:
@@ -166,6 +175,8 @@ async def list_scores_by_seccion(
         .where(Ciudadano.seccion_id.in_(seccion_ids))
         .group_by(Ciudadano.seccion_id, VoterScore.segmento)
     )
+    if effective_org is not None:
+        seg_query = seg_query.where(VoterScore.org_id == effective_org)
     seg_rows = (await db.execute(seg_query)).all()
 
     seg_by_seccion: dict[int, dict[str, int]] = {}

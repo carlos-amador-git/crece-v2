@@ -1,8 +1,9 @@
 "use client";
 
-import { useAuth } from "@/lib/auth";
+import { useAuth, type OrgContext } from "@/lib/auth";
 import { useSidebarStore } from "@/lib/store";
 import { useAlerts } from "@/lib/api/hooks/use-overview";
+import { api } from "@/lib/api/client";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,8 +27,18 @@ import {
   LogOut,
   User,
   ChevronRight,
+  Building2,
+  Check,
 } from "lucide-react";
 import { useState, useEffect, useCallback, Fragment } from "react";
+
+interface OrgListItem {
+  id: number;
+  nombre: string;
+  slug: string;
+  tipo: string;
+  config?: { is_demo?: boolean; has_synthetic_data?: boolean } | null;
+}
 
 /** Map pathname segments to human-readable labels */
 const segmentLabels: Record<string, string> = {
@@ -59,12 +70,32 @@ function useBreadcrumbs() {
 }
 
 export function Topbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, activeOrg, setActiveOrg } = useAuth();
   const { setMobileOpen } = useSidebarStore();
   const breadcrumbs = useBreadcrumbs();
   const [darkMode, setDarkMode] = useState(false);
   const { data: unreadAlerts } = useAlerts(true);
   const hasNotifications = (unreadAlerts?.length ?? 0) > 0;
+  const [orgList, setOrgList] = useState<OrgListItem[]>([]);
+  const isAdmin = user?.role === "admin";
+
+  // Fetch org list for admin tenant switcher
+  useEffect(() => {
+    if (!isAdmin) return;
+    api
+      .get<{ items: OrgListItem[] }>("/organizaciones/?page_size=50")
+      .then((res) => setOrgList(res.items))
+      .catch(() => {});
+  }, [isAdmin]);
+
+  const handleOrgSwitch = useCallback(
+    (org: OrgListItem) => {
+      setActiveOrg({ id: org.id, nombre: org.nombre, slug: org.slug });
+      // Force refresh to load new org data
+      window.location.reload();
+    },
+    [setActiveOrg]
+  );
 
   useEffect(() => {
     const stored = localStorage.getItem("crece_theme");
@@ -157,6 +188,51 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-1">
+        {/* Tenant switcher — admin only */}
+        {isAdmin && orgList.length > 1 && (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-xs font-medium"
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">
+                    {activeOrg?.nombre ?? "Todas las orgs"}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Cambiar organizacion
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {orgList.map((org) => (
+                  <DropdownMenuItem
+                    key={org.id}
+                    onClick={() => handleOrgSwitch(org)}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{org.nombre}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {org.slug}
+                        {org.config?.has_synthetic_data && " · datos simulacion"}
+                      </span>
+                    </div>
+                    {activeOrg?.id === org.id && (
+                      <Check className="h-4 w-4 text-accent" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Separator orientation="vertical" className="mx-1 h-6" />
+          </>
+        )}
+
         {/* Theme toggle */}
         <Button
           variant="ghost"
@@ -230,6 +306,14 @@ export function Topbar() {
                 >
                   {displayRole}
                 </Badge>
+                {activeOrg && (
+                  <Badge
+                    variant="outline"
+                    className="w-fit text-[10px] font-medium"
+                  >
+                    {activeOrg.nombre}
+                  </Badge>
+                )}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

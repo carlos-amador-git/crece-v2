@@ -37,7 +37,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install only runtime libraries (no compilers)
+# Install runtime libraries + Chromium for scrapers (Facebook, TikTok)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libpq5 \
@@ -45,13 +45,29 @@ RUN apt-get update && \
         libproj25 \
         gdal-bin \
         curl \
+        chromium \
+        chromium-driver \
+        libnss3 \
+        libatk-bridge2.0-0 \
+        libdrm2 \
+        libxkbcommon0 \
+        libgbm1 \
+        fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
+
+# Configure Chromium for headless scraping (no sandbox in container)
+ENV CHROME_BIN=/usr/bin/chromium \
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver \
+    PLAYWRIGHT_BROWSERS_PATH=/usr/lib/chromium
 
 # Copy installed packages from builder
 COPY --from=builder /install /install
 
-# Download spaCy Spanish model (persists across container rebuilds)
+# Download spaCy Spanish model
 RUN python -m spacy download es_core_news_md
+
+# Install Playwright Chromium (uses system chromium)
+RUN playwright install chromium 2>/dev/null || true
 
 # Create non-root user
 RUN groupadd -r crece && useradd -r -g crece -d /app -s /sbin/nologin crece

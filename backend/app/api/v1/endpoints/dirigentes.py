@@ -16,6 +16,7 @@ from app.schemas.dirigente import (
     DirigenteCreate,
     DirigenteResponse,
     DirigenteUpdate,
+    FlashAnalysisResponse,
     OnboardingProgressResponse,
     OnboardingProgressStep,
     OnboardingRequest,
@@ -44,10 +45,13 @@ async def list_dirigentes(
     query = select(Dirigente)
     count_query = select(func.count(Dirigente.id))
 
-    # Auto-scope for dirigente users
+    # Auto-scope: dirigente users see only their own; other users see their org's dirigentes
     if current_user.dirigente_id is not None:
         query = query.where(Dirigente.id == current_user.dirigente_id)
         count_query = count_query.where(Dirigente.id == current_user.dirigente_id)
+    elif current_user.org_id is not None and current_user.role != "admin":
+        query = query.where(Dirigente.org_id == current_user.org_id)
+        count_query = count_query.where(Dirigente.org_id == current_user.org_id)
 
     if estado:
         query = query.where(Dirigente.estado == estado)
@@ -278,6 +282,144 @@ async def get_diagnostico(
     if dirigente is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
     return await calculate_ipd(db, dirigente)
+
+
+@router.get("/{dirigente_id}/flash-analysis", response_model=FlashAnalysisResponse)
+async def get_flash_analysis(
+    dirigente_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    days: int = Query(7, ge=1, le=90, description="Ventana de analisis en dias"),
+) -> FlashAnalysisResponse:
+    """Flash Analysis: quick aggregated snapshot of a dirigente's digital presence.
+
+    Pure SQL aggregations — no LLM call. Returns sentiment, engagement,
+    top post, and a suggested action computed from data patterns.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    # Scope check: viewer users can only see their own dirigente
+    if current_user.dirigente_id is not None and current_user.dirigente_id != dirigente_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes acceso a este dirigente",
+        )
+
+    # Fetch dirigente
+    result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
+    dirigente = result.scalar_one_or_none()
+    if dirigente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+
+    # Fetch profiles
+    profiles_result = await db.execute(
+        select(SocialProfile).where(SocialProfile.dirigente_id == dirigente_id)
+    )
+    profiles = list(profiles_result.scalars().all())
+    profile_ids = [p.id for p in profiles]
+
+    followers_total = sum(p.followers_count for p in profiles)
+    platforms_active = len(profiles)
+
+    now = datetime.now(UTC)
+    period_start = now - timedelta(days=days)
+    prev_period_start = period_start - timedelta(days=days)
+    periodo = f"Ultimos {days} dias"
+
+    # Defaults for empty data
+    total_posts = 0
+    avg_sentiment = 0.0
+    engagement_avg = 0.0
+    engagement_delta = 0.0
+    top_post_content: str | None = None
+    top_post_likes = 0
+
+    if profile_ids:
+        # Current period aggregations
+        stats_r = await db.execute(
+            select(
+                func.count(SocialPost.id),
+                func.avg(SocialPost.sentiment_score),
+                func.avg(SocialPost.engagement_rate),
+            ).where(
+                SocialPost.profile_id.in_(profile_ids),
+                SocialPost.published_at >= period_start,
+            )
+        )
+        row = stats_r.one()
+        total_posts = int(row[0])
+        avg_sentiment = round(float(row[1]), 3) if row[1] is not None else 0.0
+        engagement_avg = round(float(row[2]), 3) if row[2] is not None else 0.0
+
+        # Previous period engagement for delta calculation
+        prev_r = await db.execute(
+            select(func.avg(SocialPost.engagement_rate)).where(
+                SocialPost.profile_id.in_(profile_ids),
+                SocialPost.published_at >= prev_period_start,
+                SocialPost.published_at < period_start,
+            )
+        )
+        prev_engagement = prev_r.scalar_one()
+        if prev_engagement is not None and float(prev_engagement) > 0:
+            engagement_delta = round(
+                ((engagement_avg - float(prev_engagement)) / float(prev_engagement)) * 100, 1
+            )
+
+        # Top post by likes in current period
+        top_r = await db.execute(
+            select(SocialPost.content, SocialPost.likes)
+            .where(
+                SocialPost.profile_id.in_(profile_ids),
+                SocialPost.published_at >= period_start,
+            )
+            .order_by(SocialPost.likes.desc())
+            .limit(1)
+        )
+        top_row = top_r.one_or_none()
+        if top_row is not None:
+            top_post_content = top_row[0]
+            top_post_likes = int(top_row[1])
+
+    # Sentiment label
+    if avg_sentiment > 0.1:
+        sentiment_label = "Positivo"
+    elif avg_sentiment < -0.1:
+        sentiment_label = "Negativo"
+    else:
+        sentiment_label = "Neutral"
+
+    # Suggested action logic
+    if total_posts == 0:
+        suggested_action = "Sin publicaciones en el periodo. Activar calendario editorial."
+    elif avg_sentiment < -0.2:
+        suggested_action = (
+            "Atencion: sentimiento negativo predominante. "
+            "Considerar respuesta o reposicionamiento."
+        )
+    elif engagement_avg < 2.0:
+        suggested_action = (
+            "El engagement esta por debajo del promedio. "
+            "Incrementar contenido interactivo."
+        )
+    elif avg_sentiment > 0.3 and engagement_avg > 3.0:
+        suggested_action = "Buen momento. Capitalizar con contenido de valor."
+    else:
+        suggested_action = "Rendimiento estable. Mantener frecuencia de publicacion."
+
+    return FlashAnalysisResponse(
+        dirigente_name=dirigente.full_name,
+        periodo=periodo,
+        total_posts=total_posts,
+        avg_sentiment=avg_sentiment,
+        sentiment_label=sentiment_label,
+        engagement_avg=engagement_avg,
+        engagement_delta=engagement_delta,
+        top_post_content=top_post_content,
+        top_post_likes=top_post_likes,
+        followers_total=followers_total,
+        platforms_active=platforms_active,
+        suggested_action=suggested_action,
+    )
 
 
 @router.get("/{dirigente_id}/social-summary", response_model=SocialSummary)

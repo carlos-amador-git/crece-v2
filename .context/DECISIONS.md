@@ -1,5 +1,25 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-04-13
+
+### D-MT-01: Multi-Tenant via org_id application-level filtering
+**Decision:** Multi-tenant isolation implemented at application level (org_id filtering in endpoints) rather than pure PostgreSQL RLS enforcement.
+**Razon:** RLS policies exist in the DB (`app.current_org_id` setting) but enforcing them requires `SET LOCAL` on every session, which complicates the FastAPI dependency chain. Application-level filtering via `current_user.org_id` is simpler and already works for most endpoints. `get_db_rls` dependency is ready for future migration.
+**Trade-off:** Requires each endpoint to explicitly filter by org_id. Defense-in-depth RLS available but not actively enforced.
+
+### D-MT-02: Admin tenant switching via X-Org-Id header + localStorage
+**Decision:** Admin users switch orgs via a dropdown in the topbar. The selected org is stored in localStorage as `crece_active_org_id` and sent as `X-Org-Id` header on every API request.
+**Razon:** Simpler than server-side session management. Survives page reloads. Backend `get_db_rls` respects the header for admin role only.
+**Trade-off:** Non-admin users cannot switch orgs (correct behavior — they see only their org's data).
+
+### D-MT-03: Synthetic data orgs flagged via config JSONB + watermark
+**Decision:** Orgs with synthetic data have `config.has_synthetic_data = true`. Frontend shows amber "DATOS SIMULACION" banner when viewing these orgs.
+**Razon:** Prevents confusion between real (MC-CDMX with 9,723 legacy citizens) and demo data. Visible to all users, not just admin.
+
+### D-MT-04: 5 guiones de campo as content factory formats (not separate module)
+**Decision:** The 5 field script formats (talking_points, guion_contraste, script_puerta, briefing_crisis, narrativa_territorial) are added as formato options in the existing Content Factory, not as a separate module.
+**Razon:** Reuses existing generation dialog, backend endpoint, and content lifecycle (borrador→aprobado→publicado). Avoids creating a parallel system.
+
 ## 2026-04-12
 
 ### D-DESIGN-01: Design Review Enrique — 10 respuestas completas (2026-04-12)

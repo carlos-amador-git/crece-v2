@@ -70,7 +70,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # E.4 — Proxy headers with restricted trusted_hosts (P1 security)
 app.add_middleware(
     ProxyHeadersMiddleware,
-    trusted_hosts=["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+    trusted_hosts=["*"],
 )
 
 # CORS
@@ -81,6 +81,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── HTTPS redirect fix for reverse proxies (Cloudflare tunnel) ──
+# FastAPI's trailing-slash redirects use the request's scheme, which is
+# HTTP inside the container. When behind an HTTPS proxy this produces
+# mixed-content redirects (https→http) that Safari blocks.
+@app.middleware("http")
+async def fix_https_redirects(request: Request, call_next):
+    response = await call_next(request)
+    if (
+        response.status_code in (301, 302, 307, 308)
+        and request.headers.get("x-forwarded-proto") == "https"
+    ):
+        location = response.headers.get("location", "")
+        if location.startswith("http://"):
+            response.headers["location"] = "https://" + location[7:]
+    return response
 
 
 # ── Exception handlers ──────────────────────────────────────
