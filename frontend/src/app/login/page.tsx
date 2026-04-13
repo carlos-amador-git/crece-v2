@@ -259,6 +259,8 @@ function LoginForm() {
                 className="w-full border-accent/30 text-accent hover:bg-accent/10 hover:text-accent transition-colors duration-150"
                 disabled={loading}
                 onClick={async () => {
+                  setEmail(demo.email);
+                  setPassword(demo.password);
                   setError(null);
                   setLoading(true);
                   try {
