@@ -92,7 +92,7 @@ export function Topbar() {
     });
   }, []);
 
-  const initials = user
+  const initials = user?.full_name
     ? user.full_name
         .split(" ")
         .map((w) => w[0])

@@ -2,6 +2,32 @@
 
 ## 2026-04-12
 
+### D-DESIGN-01: Design Review Enrique — 10 respuestas completas (2026-04-12)
+**Fuente:** Enrique (md-design-system), session 015 + peer message 2026-04-12 21:45
+**Brief original:** `.context/BRIEF-UX-PARA-ENRIQUE.md`
+
+| # | Pregunta | Respuesta | Estado |
+|---|----------|-----------|--------|
+| 1 | Fonts — ¿migrar a Satoshi + General Sans? | **NO** — Instrument Sans + DM Sans se quedan. Cada producto mantiene identidad. CEO aprobó, Gemini disintió pero overruled. | No action needed |
+| 2 | Tablet md: breakpoints en 17 páginas | **SÍ** — gap real, tablets reciben layout phone. Sprint siguiente. | **PENDIENTE** |
+| 3 | Canvassing mobile — MobileFilterSheet | **SÍ** — usar componente del DS. | Done (d0975e2) |
+| 4 | Radar chart daltonismo | **SÍ** — dashes/dots + naranja. | Done (b0321a4) |
+| 5 | Kanban @dnd-kit | **Phase 2** — botones "→" cumplen S3.7. | Diferido |
+| 6 | Electoral page stub | **ELIMINAR** del sidebar. | Done (b0321a4) |
+| 7 | Health score gauge | **SÍ** — donut semicircular. | Done (b0321a4) |
+| 8 | StatCard duplicado | **SÍ** — extraer a DS (3 variants: default/compact/hero). | Done (d0975e2) |
+| 9 | Animaciones CSS → Framer Motion | **SELECTIVA** — SÍ: bento-fade-up (stagger), stat-card-transition. NO: pulse-dot ni decorativos. | **PENDIENTE** |
+| 10 | Lenis smooth scroll | **SÍ trial** — standalone sin GSAP (gsapSync=false). | Done (d0975e2) |
+
+**Trabajo de Enrique en el DS (commit 2b00f0b):**
+- StatCard: prop `variant` (default/compact/hero) + `description` + type exportado
+- SmoothScrollProvider: prop `gsapSync` (false=standalone RAF, true=ScrollTrigger sync)
+- MobileFilterSheet: ya export-ready, sin cambios necesarios
+
+**Pendientes accionables:**
+1. md: breakpoints en 17 páginas (#2) — usar ResponsiveTable, MobileFilterSheet, useBreakpoint del DS
+2. Framer Motion selectiva (#9) — bento-fade-up stagger, stat-card-transition enter/exit
+
 ### D-B-01: GeoJSON inline, no tile server MVT
 **Decisión:** El endpoint `/canvassing/geo` retorna GeoJSON FeatureCollection
 completo en el response, construido en PostgreSQL con `jsonb_build_object` +

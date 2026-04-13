@@ -12,9 +12,13 @@ export async function injectAuthState(page: Page): Promise<void> {
   const fakeUser = {
     id: 1,
     email: "test@crece.mx",
-    nombre: "Test User",
+    nombre: "Test",
+    apellido_paterno: "User",
+    full_name: "Test User",
     rol: "admin",
+    role: "admin",
     is_active: true,
+    org_id: 3,
   };
 
   // Intercept the /auth/me call and return a mock user
@@ -26,12 +30,14 @@ export async function injectAuthState(page: Page): Promise<void> {
     })
   );
 
-  // Set localStorage tokens before navigating to any dashboard page.
-  // We need to visit the origin first so localStorage is scoped correctly.
+  // Visit login first to establish origin scope for localStorage and cookies
   await page.goto("/login", { waitUntil: "commit" });
   await page.evaluate(() => {
     localStorage.setItem("crece_access_token", "fake-token-for-e2e");
     localStorage.setItem("crece_refresh_token", "fake-refresh-for-e2e");
+    // Cookie for server-side middleware auth check
+    document.cookie =
+      "crece_access_token=fake-token-for-e2e; path=/; max-age=86400; SameSite=Lax";
   });
 }
 

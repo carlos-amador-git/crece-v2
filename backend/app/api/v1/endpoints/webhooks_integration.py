@@ -118,6 +118,8 @@ async def _handle_chatwoot_direct(db: AsyncSession, raw: dict) -> dict:
 
 async def _handle_message_reply(db: AsyncSession, data: dict) -> dict:
     """Update CRM interaction when a citizen replies via Chatwoot."""
+    from app.models.ciudadano import Ciudadano
+
     ciudadano_id = data.get("ciudadano_id")
     mensaje = data.get("mensaje", "")
     canal = data.get("canal", "chatwoot")
@@ -125,25 +127,29 @@ async def _handle_message_reply(db: AsyncSession, data: dict) -> dict:
     if not ciudadano_id:
         return {"status": "skipped", "reason": "no ciudadano_id in payload"}
 
+    # Validate ciudadano exists and resolve org_id
+    result = await db.execute(select(Ciudadano).where(Ciudadano.id == ciudadano_id))
+    ciudadano = result.scalar_one_or_none()
+    if not ciudadano:
+        return {"status": "skipped", "reason": "ciudadano_id not found"}
+
+    # Validate org_id if provided in payload
+    payload_org_id = data.get("org_id")
+    if payload_org_id and int(payload_org_id) != ciudadano.org_id:
+        logger.warning(
+            "org_id mismatch: payload=%s, ciudadano=%s, ciudadano_id=%s",
+            payload_org_id, ciudadano.org_id, ciudadano_id,
+        )
+        return {"status": "rejected", "reason": "org_id mismatch"}
+
+    org_id = ciudadano.org_id
+
     # D.2b — Opt-out handler (LFPDPPP / WABA compliance)
     if mensaje and mensaje.strip().upper() in ("STOP", "BAJA", "CANCELAR", "NO MAS"):
-        from app.models.ciudadano import Ciudadano
-
-        result = await db.execute(select(Ciudadano).where(Ciudadano.id == ciudadano_id))
-        ciudadano = result.scalar_one_or_none()
-        if ciudadano:
-            ciudadano.no_contactar = True
-            await db.flush()
-            logger.info("Opt-out: ciudadano %d marked no_contactar=True", ciudadano_id)
-            return {"status": "opt_out", "ciudadano_id": ciudadano_id}
-
-    # D.2 fix: resolve org_id from the ciudadano record
-    org_id = data.get("org_id")
-    if not org_id:
-        from app.models.ciudadano import Ciudadano
-
-        c_result = await db.execute(select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id))
-        org_id = c_result.scalar_one_or_none() or 3  # fallback MC CDMX
+        ciudadano.no_contactar = True
+        await db.flush()
+        logger.info("Opt-out: ciudadano %d marked no_contactar=True", ciudadano_id)
+        return {"status": "opt_out", "ciudadano_id": ciudadano_id}
 
     try:
         from app.models.crm_interaccion import CrmInteraccion
@@ -206,16 +212,28 @@ async def _handle_propuesta(db: AsyncSession, data: dict) -> dict:
         return {"status": "skipped", "reason": "no ciudadano_id in payload"}
 
     try:
-        # D.2 fix: resolve org_id from ciudadano
         from app.models.ciudadano import Ciudadano
         from app.models.crm_interaccion import CrmInteraccion
 
-        c_result = await db.execute(select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id))
-        prop_org_id = c_result.scalar_one_or_none() or 3
+        c_result = await db.execute(
+            select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id)
+        )
+        ciudadano_org_id = c_result.scalar_one_or_none()
+        if ciudadano_org_id is None:
+            return {"status": "skipped", "reason": "ciudadano_id not found"}
+
+        # Validate org_id if provided in payload
+        payload_org_id = data.get("org_id")
+        if payload_org_id and int(payload_org_id) != ciudadano_org_id:
+            logger.warning(
+                "org_id mismatch in propuesta: payload=%s, ciudadano=%s",
+                payload_org_id, ciudadano_org_id,
+            )
+            return {"status": "rejected", "reason": "org_id mismatch"}
 
         interaccion = CrmInteraccion(
             ciudadano_id=ciudadano_id,
-            org_id=prop_org_id,
+            org_id=ciudadano_org_id,
             tipo="propuesta",
             canal=data.get("canal", "chatwoot"),
             resultado="registrada",

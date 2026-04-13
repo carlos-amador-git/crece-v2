@@ -13,6 +13,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- btree_gist: GiST index support for exclusion constraints
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
+-- pgvector: vector similarity search (embeddings, HNSW indexes)
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- Verify extensions loaded
 DO $$
 BEGIN
@@ -21,5 +24,6 @@ BEGIN
     RAISE NOTICE '  pg_trgm:    %', (SELECT extversion FROM pg_extension WHERE extname = 'pg_trgm');
     RAISE NOTICE '  pgcrypto:   %', (SELECT extversion FROM pg_extension WHERE extname = 'pgcrypto');
     RAISE NOTICE '  btree_gist: %', (SELECT extversion FROM pg_extension WHERE extname = 'btree_gist');
+    RAISE NOTICE '  vector:     %', (SELECT extversion FROM pg_extension WHERE extname = 'vector');
 END
 $$;
