@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +30,7 @@ router = APIRouter()
 
 @router.get("/")
 async def list_dirigentes(
+    request: "Request",
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
@@ -41,17 +42,25 @@ async def list_dirigentes(
     """List dirigentes with IPD scores and platform counts.
 
     If user has dirigente_id, only show their own dirigente.
+    Admin can switch org via X-Org-Id header.
     """
     query = select(Dirigente)
     count_query = select(func.count(Dirigente.id))
+
+    # Resolve effective org_id: admin can switch via X-Org-Id header
+    effective_org_id: int | None = getattr(current_user, "org_id", None)
+    if current_user.role == "admin":
+        header_org = request.headers.get("x-org-id")
+        if header_org and header_org.isdigit():
+            effective_org_id = int(header_org)
 
     # Auto-scope: dirigente users see only their own; other users see their org's dirigentes
     if current_user.dirigente_id is not None:
         query = query.where(Dirigente.id == current_user.dirigente_id)
         count_query = count_query.where(Dirigente.id == current_user.dirigente_id)
-    elif current_user.org_id is not None and current_user.role != "admin":
-        query = query.where(Dirigente.org_id == current_user.org_id)
-        count_query = count_query.where(Dirigente.org_id == current_user.org_id)
+    elif effective_org_id is not None:
+        query = query.where(Dirigente.org_id == effective_org_id)
+        count_query = count_query.where(Dirigente.org_id == effective_org_id)
 
     if estado:
         query = query.where(Dirigente.estado == estado)

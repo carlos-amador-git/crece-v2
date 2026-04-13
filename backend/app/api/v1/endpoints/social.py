@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import and_, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import Date
@@ -26,6 +26,7 @@ router = APIRouter()
 
 @router.get("/posts", response_model=PaginatedResponse[SocialPostResponse])
 async def list_posts(
+    request: "Request",
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int | None = None,
@@ -47,6 +48,13 @@ async def list_posts(
     platform_enum = Platform(platform.upper()) if platform else None
     sentiment_enum = SentimentLabel(sentiment.upper()) if sentiment else None
 
+    # Resolve effective org_id: admin can switch via X-Org-Id header
+    effective_org_id: int | None = getattr(current_user, "org_id", None)
+    if current_user.role == "admin":
+        header_org = request.headers.get("x-org-id")
+        if header_org and header_org.isdigit():
+            effective_org_id = int(header_org)
+
     # Auto-scope: dirigente users see only their own; org users see their org
     effective_dirigente_id = dirigente_id
     if current_user.dirigente_id is not None:
@@ -55,10 +63,10 @@ async def list_posts(
     filters = []
     if effective_dirigente_id is not None:
         filters.append(SocialProfile.dirigente_id == effective_dirigente_id)
-    elif current_user.org_id is not None and current_user.role != "admin":
-        # Non-admin org user: scope to their org's dirigentes
+    elif effective_org_id is not None:
+        # Scope to org's dirigentes (works for admin with X-Org-Id and non-admin)
         filters.append(SocialProfile.dirigente_id.in_(
-            select(Dirigente.id).where(Dirigente.org_id == current_user.org_id)
+            select(Dirigente.id).where(Dirigente.org_id == effective_org_id)
         ))
     if platform_enum is not None:
         filters.append(SocialProfile.platform == platform_enum)

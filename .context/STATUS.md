@@ -1,8 +1,31 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-04-13 10:15 local
-**Sesion activa:** /sprint-implement Sprint E Multi-Tenant (Carlos)
+**Ultimo update:** 2026-04-13 17:10 local
+**Sesion activa:** Sesion 2 — Whisper + Geo enrich + Org scoping fix
 **Branch activo:** `feat/sprint-c-hardening`
+
+---
+
+## Sesion 2026-04-13 tarde — Whisper Pipeline + Geo Enrich + Org Scoping
+
+### Tarea 1: Enriquecer secciones_geo_cdmx con master_catalogo.csv (COMPLETADA)
+- Script: `backend/scripts/enrich_secciones_catalogo.py`
+- 5,531 filas actualizadas, 5,495/5,589 enriquecidas
+- Columnas agregadas: volatilidad, estrato, lista_nominal, categoria, dtto_local_cat, dtto_fed_cat, alcaldia, nivel_socioeconomico
+- 94 secciones sin match en CSV (existentes en shapefile pero sin estructura MC)
+
+### Tarea 2: Whisper pipeline para posts sin texto (EN PROGRESO)
+- Script: `backend/scripts/whisper_tiktok_pipeline.py`
+- Pipeline: yt-dlp download → ffmpeg → whisper-cli (ggml-small) → UPDATE DB
+- TikTok batch: ~62% éxito (31/50 transcritos), mayoria discursos politicos
+- Posts sin voz marcados con `raw_data.needs_ocr = true`
+- Facebook + Instagram batch en cola
+
+### Tarea 3: Dashboard org scoping fix (COMPLETADA)
+- Bug: admin endpoint `/dirigentes/` no leia X-Org-Id header → todos los dirigentes visibles
+- Fix: `dirigentes.py` y `social.py` ahora leen X-Org-Id para admin tenant switching
+- Verificado visualmente: MC-CDMX 17.3K audiencia vs GOB-OAXACA 60.8K
+- Followers chart, posts list, KPIs — todo scoped correctamente por org
 
 ---
 
