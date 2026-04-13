@@ -117,3 +117,4 @@ backend/.config/
 backend/.pki/
 backend/.wdm/
 backend/data/models/*.pkl
+backend/.env.scraping-keys
