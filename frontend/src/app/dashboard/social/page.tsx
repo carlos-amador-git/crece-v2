@@ -111,7 +111,7 @@ export default function SocialPage() {
       )}
 
       {/* Stats bar */}
-      <section className="grid gap-3 sm:grid-cols-3" aria-label="Estadisticas de publicaciones">
+      <section className="grid gap-3 grid-cols-1 sm:grid-cols-3" aria-label="Estadisticas de publicaciones">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
@@ -213,9 +213,9 @@ export default function SocialPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-3">
         {/* Post feed */}
-        <section className="space-y-3 lg:col-span-2" aria-label="Feed de publicaciones">
+        <section className="space-y-3 md:col-span-2 lg:col-span-2" aria-label="Feed de publicaciones">
           <h2 className="font-heading text-lg font-semibold">
             Feed de Publicaciones
             <span className="ml-2 text-sm font-normal text-muted-foreground">

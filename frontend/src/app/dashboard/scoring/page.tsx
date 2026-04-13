@@ -121,7 +121,7 @@ export default function ScoringPage() {
 
       {/* KPI Cards */}
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 md:grid-cols-4"
         aria-label="Metricas de scoring"
       >
         {kpiLoading ? (
@@ -186,9 +186,9 @@ export default function ScoringPage() {
       </section>
 
       {/* Charts + Table */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         {/* Pie Chart */}
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Distribucion por Segmento</CardTitle>
             <CardDescription>Proporcion de votantes por clasificacion</CardDescription>
@@ -232,7 +232,7 @@ export default function ScoringPage() {
         </Card>
 
         {/* Heatmap Table */}
-        <Card className="lg:col-span-3">
+        <Card className="md:col-span-1 lg:col-span-3">
           <CardHeader>
             <CardTitle>Scoring por Seccion</CardTitle>
             <CardDescription>
