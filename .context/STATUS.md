@@ -4,6 +4,79 @@
 **Sesion activa:** Sesion 2 — Whisper + Geo enrich + Org scoping fix
 **Branch activo:** `feat/sprint-c-hardening`
 
+
+---
+
+## Sesion 2026-04-13 noche — /sprint-review NLP + Framework Político
+
+**Alcance:** 8 fases completadas en una sesión con cross-audits Gemini + Perplexity.
+
+### Fases ejecutadas
+
+| Fase | Deliverable |
+|---|---|
+| **A** Setup | Ollama + HF verificado (topics degradado por cache xlm-roberta, fix post-cleanup) |
+| **B** Endpoints RTs+dedup | `/dashboard/overview`, `/social/sentiment-timeline`, `/social/posts` filtran RTs + min_length. Piña timeline -0.163 (antes -0.295) |
+| **C** NLP reprocess | 260/3,709 posts con controversy + toxicity + platform-adjusted. Script idempotente. Pausado por decisión arquitectural (no bloquea producto) |
+| **D.0** Framework político | 4 tablas nuevas, 32 reglas default v1, API `/framework/*`, audit log verificado con override + rollback |
+| **D.2** Validación encuestas | Migration `encuestas_publicas` + servicio `divergencia_encuestas.py` threshold 30%. Scraper scope: Oraculus + Demoscopía (peer md-research investigó, reporte en md-research/analysis/) |
+| **D.3** Admin panel | `/dashboard/admin/clasificacion` — UI 3 pasos: generar prompt → pegar JSON de Claude/Gemini/Perplexity → aplicar framework |
+| **E** Charts lab | `tools/charts-lab/` con Plotly — Treemap + Stream + Sunburst con datos reales |
+| **F.1** UI niveles análisis | `/dashboard/settings/analisis-politico` — 4 niveles amigables (Rápido→Enriquecido→Contextual→Personalizado) |
+
+### Decisiones arquitecturales clave
+
+- **D-NLP-01**: Framework 3 capas (NLP técnico + LLM contextual + Matriz rule-based configurable)
+- **D-NLP-02-03**: Defaults +1/-1/0 suaves (Gemini recomendación). Admin org + admin MD editan
+- **D-NLP-04**: Colapsar Layer 2+3 descartado — Gemma 12B lento (5+ min/post)
+- **D-NLP-05**: Validación externa opción B (alerta divergencia >30%)
+- **NEW**: Pipeline MANUAL operado por MD Consultoría. Zero infra LLM. 3 IAs externas (Claude Code + Gemini CLI + Perplexity web) deliberan. Costo $0. Cadencia semanal. Fine-tune modelo propio = evolución natural (no deuda) cuando tengamos 500+ validaciones por tenant.
+
+### Archivos nuevos
+
+**Backend (14 archivos):**
+- `migrations/versions/f7a8b9c0d1e2_political_framework.py`
+- `migrations/versions/g8b9c0d1e2f3_encuestas_publicas.py`
+- `app/services/political_framework.py`
+- `app/services/divergencia_encuestas.py`
+- `app/nlp/political_llm_prompt.py`
+- `app/api/v1/endpoints/political_framework.py`
+- `app/api/v1/endpoints/admin_classification.py`
+- `scripts/seed_political_framework.py`
+- `scripts/reprocess_nlp_full.py`
+- `scripts/llm_political_pilot.py` (abandonado — Gemma lento)
+
+**Frontend (2 páginas nuevas):**
+- `src/app/dashboard/settings/analisis-politico/page.tsx`
+- `src/app/dashboard/admin/clasificacion/page.tsx`
+- Sidebar con sección "Admin MD" (solo role=admin)
+- Badge "Analisis Contextual · 3 IAs deliberaron" en dashboard
+
+**Tools:**
+- `tools/charts-lab/index.html` + README
+
+**Docs (5 archivos):**
+- `docs/AUDITORIA-SENTIMENT-2026-04-13.md`
+- `docs/CHARTS-LAB-DECISIONES.md`
+- `docs/NLP-MODELOS-INVESTIGACION.md`
+- `docs/POLITICAL-FRAMEWORK-DEFAULTS.md`
+- `docs/OPERACION-MD-CLASIFICACION-SEMANAL.md`
+
+### DB state
+
+- 5 tablas nuevas (`contexto_politico`, `framework_matrix_defaults`, `framework_overrides_org`, `framework_audit_log`, `encuestas_publicas`)
+- 11 columnas nuevas en `social_posts` (tono, target, sentimiento_politico_ajustado, controversy, toxicity, topics, platform_adjusted, nlp_model_version, llm_razon, llm_modelo, llm_processed_at)
+- `dirigentes.rol_politico` — 2 oposición (Piña, Solano), 4 oficialismo
+- 32 reglas v1 sembradas en `framework_matrix_defaults`
+- 5 contextos políticos (federal, CDMX, Oaxaca, NL, Jalisco)
+- 5 posts clasificados como prueba end-to-end (ia_fuente=claude)
+
+### Peer coordination
+
+- Peer `08rystzm` (md-research) investigó scrapers encuestas MX en paralelo
+- Reporte en `md-research/analysis/20260413-mexican-polls-scrapers-crece.md`
+- Oraculus JSON inline = scraper 30 líneas · Demoscopía CDMX/Oaxaca obligatorio
+- Plan para FASE D.2 implementación real (5-6h) pendiente de siguiente sesión
 ---
 
 ## Sesion 2026-04-13 tarde — Whisper Pipeline + Geo Enrich + Org Scoping

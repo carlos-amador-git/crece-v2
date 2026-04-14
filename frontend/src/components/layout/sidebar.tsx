@@ -33,6 +33,8 @@ import {
   MapPin,
   Vote,
   Bot,
+  ClipboardList,
+  Sliders,
 } from "lucide-react";
 
 const sections = [
@@ -67,9 +69,17 @@ const sections = [
   {
     label: "Sistema",
     items: [
+      { href: "/dashboard/settings/analisis-politico", label: "Analisis Politico", icon: Sliders, prefetch: false },
       // prefetch disabled: evita 404 de RSC prefetch si el bundle de /settings
       // no está aún en el deploy más reciente; la página carga en navegación real.
       { href: "/dashboard/settings", label: "Configuracion", icon: Settings, prefetch: false },
+    ],
+  },
+  {
+    label: "Admin MD",
+    adminOnly: true,
+    items: [
+      { href: "/dashboard/admin/clasificacion", label: "Clasificacion Manual", icon: ClipboardList, prefetch: false },
     ],
   },
 ];
@@ -157,7 +167,12 @@ export function Sidebar() {
         {/* ── Navigation ───────────────────────────────────── */}
         <ScrollArea className="flex-1 py-4">
           <nav aria-label="Navegacion principal">
-            {sections.map((section) => (
+            {sections.filter((section) => {
+              if ((section as { adminOnly?: boolean }).adminOnly) {
+                return user?.role === "admin";
+              }
+              return true;
+            }).map((section) => (
               <div key={section.label} className="mb-4">
                 {/* Section label with decorative line */}
                 {!collapsed && (

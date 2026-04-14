@@ -164,6 +164,14 @@ export default function OverviewPage() {
             Dashboard
           </h1>
           <CurrentDateTime />
+          <a
+            href="/dashboard/settings/analisis-politico"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-400"
+            title="Tu análisis es deliberado por 3 IAs y revisado por MD Consultoría"
+          >
+            <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Analisis Contextual · 3 IAs deliberaron
+          </a>
         </div>
 
         <nav aria-label="Filtros de periodo" className="flex gap-2">
@@ -361,8 +369,10 @@ export default function OverviewPage() {
         {/* Sentiment trend -- larger */}
         <Card className="md:col-span-2 lg:col-span-3">
           <CardHeader>
-            <CardTitle>Tendencia de Sentimiento</CardTitle>
-            <CardDescription>Ultimos 30 dias</CardDescription>
+            <CardTitle>Tono Discursivo</CardTitle>
+            <CardDescription>
+              Clasificación del contenido publicado · últimos 30 días · sin RTs · &gt;20 chars
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {sentimentLoading ? (

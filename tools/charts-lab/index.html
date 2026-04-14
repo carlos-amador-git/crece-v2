@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>CRECE — Charts Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+<style>
+  :root {
+    --bg: #fafafa;
+    --text: #18181b;
+    --accent: #ea580c;
+    --border: #e5e5e5;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    background: var(--card);
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  h1 { margin: 0 0 4px 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .subtitle { color: #71717a; font-size: 13px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: var(--card);
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .controls label { font-size: 13px; font-weight: 500; color: #52525b; }
+  .controls select, .controls input {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    font-size: 13px;
+  }
+  .chart-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .chart-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+  }
+  .chart-title h2 { margin: 0; font-size: 18px; font-weight: 600; }
+  .chart-title .meta { color: #71717a; font-size: 12px; }
+  .chart { width: 100%; min-height: 400px; }
+  .status { padding: 12px 16px; background: #fff7ed; color: #c2410c; border-radius: 6px; margin-bottom: 16px; font-size: 13px; }
+  .status.error { background: #fef2f2; color: #991b1b; }
+  .status.ok { background: #f0fdf4; color: #166534; }
+  button {
+    background: var(--accent); color: white; border: none;
+    padding: 8px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 500;
+  }
+  button:hover { opacity: 0.9; }
+</style>
+</head>
+<body>
+<header>
+  <h1>CRECE — Charts Lab</h1>
+  <div class="subtitle">Evaluación de visualizaciones con datos reales · Treemap · Stream · Sunburst</div>
+</header>
+
+<div class="container">
+
+<div class="controls">
+  <label>API:
+    <input id="api-url" type="text" value="http://localhost:8002/api/v1" size="40">
+  </label>
+  <label>Token:
+    <input id="api-token" type="password" size="30" placeholder="pega el JWT">
+  </label>
+  <label>Org:
+    <select id="org-id">
+      <option value="1">MC-CDMX (1)</option>
+      <option value="2">GOB-OAXACA (2)</option>
+      <option value="3">CDMX-IND (3)</option>
+    </select>
+  </label>
+  <button onclick="loadAll()">Cargar datos</button>
+  <button onclick="loginDemo()">Login demo (admin)</button>
+  <span id="status" class="status" style="display:none"></span>
+</div>
+
+<!-- ── Chart 1: Treemap ────────────────────────────────────────────── -->
+<div class="chart-section">
+  <div class="chart-title">
+    <h2>🟩 Treemap — Engagement por dirigente × plataforma</h2>
+    <span class="meta">Color semafórico por sentimiento promedio · tamaño = total de interacciones</span>
+  </div>
+  <div id="treemap" class="chart"></div>
+</div>
+
+<!-- ── Chart 2: Stream graph ───────────────────────────────────────── -->
+<div class="chart-section">
+  <div class="chart-title">
+    <h2>🌊 Stream — Evolución sentimiento por plataforma</h2>
+    <span class="meta">Últimos 30 días · click en leyenda para toggle</span>
+  </div>
+  <div id="stream" class="chart"></div>
+</div>
+
+<!-- ── Chart 3: Sunburst ───────────────────────────────────────────── -->
+<div class="chart-section">
+  <div class="chart-title">
+    <h2>🌞 Sunburst — Jerarquía org › dirigente › plataforma</h2>
+    <span class="meta">Click en un sector para drill-down</span>
+  </div>
+  <div id="sunburst" class="chart"></div>
+</div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function setStatus(msg, type = '') {
+  const el = $('status');
+  el.textContent = msg;
+  el.className = 'status ' + type;
+  el.style.display = msg ? 'inline-block' : 'none';
+}
+
+async function loginDemo() {
+  const api = $('api-url').value;
+  try {
+    const r = await fetch(`${api}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'username=admin@consultoriamd.com&password=crece2026!',
+    });
+    const d = await r.json();
+    if (!d.access_token) throw new Error('No token');
+    $('api-token').value = d.access_token;
+    setStatus('Login OK — admin', 'ok');
+  } catch (e) {
+    setStatus('Login falló: ' + e.message, 'error');
+  }
+}
+
+async function apiGet(path) {
+  const api = $('api-url').value;
+  const token = $('api-token').value;
+  const orgId = $('org-id').value;
+  if (!token) throw new Error('Sin token. Click "Login demo"');
+  const r = await fetch(`${api}${path}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Org-Id': orgId,
+    },
+  });
+  if (!r.ok) throw new Error(`${path}: ${r.status}`);
+  return r.json();
+}
+
+async function loadAll() {
+  setStatus('Cargando...');
+  try {
+    const dirigentes = await apiGet('/dirigentes/?page_size=20');
+    const items = dirigentes.items || [];
+    if (items.length === 0) throw new Error('No hay dirigentes en esta org');
+
+    renderTreemap(items);
+    renderSunburst(items);
+
+    // Stream: load sentiment timeline for first dirigente
+    const dId = items[0].id;
+    const stream = await apiGet(`/social/sentiment-timeline?dirigente_id=${dId}`);
+    renderStream(stream, items[0].full_name);
+
+    setStatus(`Cargado: ${items.length} dirigentes, ${stream.length} puntos de sentimiento`, 'ok');
+  } catch (e) {
+    setStatus('Error: ' + e.message, 'error');
+  }
+}
+
+function sentimentColor(score) {
+  // -1 → red, 0 → amber, +1 → green
+  if (score == null || isNaN(score)) return '#a1a1aa';
+  if (score > 0.2) return '#16a34a';
+  if (score < -0.1) return '#dc2626';
+  return '#f59e0b';
+}
+
+function renderTreemap(dirigentes) {
+  const labels = [];
+  const parents = [];
+  const values = [];
+  const colors = [];
+  const ids = [];
+
+  ids.push('Total'); labels.push('Total'); parents.push(''); values.push(0); colors.push('#f4f4f5');
+
+  for (const d of dirigentes) {
+    const dId = 'd_' + d.id;
+    ids.push(dId);
+    labels.push(d.full_name);
+    parents.push('Total');
+    values.push(0);  // sum from children
+    colors.push(sentimentColor(d.ipd_score ? (d.ipd_score - 5) / 5 : 0));
+
+    for (const sp of (d.social_profiles || [])) {
+      const pid = dId + '_' + sp.platform;
+      const interactions = (sp.followers_count || 0);
+      ids.push(pid);
+      labels.push(`${sp.platform}<br>${(sp.followers_count||0).toLocaleString()}`);
+      parents.push(dId);
+      values.push(interactions);
+      colors.push(sentimentColor(0.1));
+    }
+  }
+
+  Plotly.newPlot('treemap', [{
+    type: 'treemap',
+    ids, labels, parents, values,
+    marker: { colors },
+    textinfo: 'label+value',
+    textfont: { size: 12 },
+    hoverinfo: 'label+value',
+  }], {
+    margin: { t: 10, l: 10, r: 10, b: 10 },
+    height: 500,
+  }, { responsive: true, displayModeBar: false });
+}
+
+function renderStream(timeline, title) {
+  if (!timeline || timeline.length === 0) {
+    $('stream').innerHTML = '<p style="padding:40px;color:#71717a;text-align:center">Sin datos para el dirigente seleccionado</p>';
+    return;
+  }
+  const x = timeline.map(t => t.date);
+  const pos = timeline.map(t => t.positive_pct || 0);
+  const neu = timeline.map(t => t.neutral_pct || 0);
+  const neg = timeline.map(t => -(t.negative_pct || 0));  // below zero line
+
+  Plotly.newPlot('stream', [
+    { x, y: pos, name: 'Positivo', type: 'scatter', mode: 'none', stackgroup: 'one', fillcolor: '#16a34a' },
+    { x, y: neu, name: 'Neutral', type: 'scatter', mode: 'none', stackgroup: 'one', fillcolor: '#a1a1aa' },
+    { x, y: neg, name: 'Negativo', type: 'scatter', mode: 'none', stackgroup: 'two', fillcolor: '#dc2626' },
+  ], {
+    title: { text: title, font: { size: 13 } },
+    showlegend: true,
+    legend: { orientation: 'h', y: -0.15 },
+    xaxis: { showgrid: false },
+    yaxis: { title: '% distribución', ticksuffix: '%' },
+    margin: { t: 40, l: 50, r: 10, b: 40 },
+    height: 420,
+  }, { responsive: true, displayModeBar: false });
+}
+
+function renderSunburst(dirigentes) {
+  const labels = ['Organización'];
+  const parents = [''];
+  const values = [0];
+  const colors = ['#f4f4f5'];
+  const ids = ['org'];
+
+  for (const d of dirigentes) {
+    const dId = 'd_' + d.id;
+    ids.push(dId);
+    labels.push(d.full_name.split(' ').slice(0, 2).join(' '));
+    parents.push('org');
+    values.push(0);
+    colors.push('#fed7aa');
+
+    for (const sp of (d.social_profiles || [])) {
+      const pid = dId + '_' + sp.platform;
+      ids.push(pid);
+      labels.push(sp.platform);
+      parents.push(dId);
+      values.push(sp.followers_count || 1);
+      const col = {
+        TWITTER: '#1da1f2', INSTAGRAM: '#e4405f',
+        FACEBOOK: '#1877f2', TIKTOK: '#000000', YOUTUBE: '#ff0000',
+      }[sp.platform] || '#71717a';
+      colors.push(col);
+    }
+  }
+
+  Plotly.newPlot('sunburst', [{
+    type: 'sunburst',
+    ids, labels, parents, values,
+    marker: { colors },
+    branchvalues: 'total',
+    textfont: { size: 11 },
+    insidetextorientation: 'radial',
+  }], {
+    margin: { t: 10, l: 10, r: 10, b: 10 },
+    height: 500,
+  }, { responsive: true, displayModeBar: false });
+}
+</script>
+</body>
+</html>

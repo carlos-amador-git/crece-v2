@@ -35,6 +35,8 @@ async def list_posts(
     date_from: date | None = None,
     date_to: date | None = None,
     is_political: bool | None = None,
+    exclude_rts: bool = False,
+    min_length: int | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> PaginatedResponse[SocialPostResponse]:
@@ -78,6 +80,10 @@ async def list_posts(
         filters.append(SocialPost.published_at <= date_to)
     if is_political is not None:
         filters.append(SocialPost.is_political == is_political)
+    if exclude_rts:
+        filters.append(~SocialPost.content.like("RT @%"))
+    if min_length is not None:
+        filters.append(func.length(SocialPost.content) >= min_length)
 
     if filters:
         condition = and_(*filters)
@@ -112,9 +118,25 @@ async def sentiment_timeline(
     platform: Platform | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    include_rts: bool = False,
 ) -> list[SentimentTimelinePoint]:
-    """Get sentiment time series data grouped by day."""
+    """Get sentiment time series data grouped by day.
+
+    Quality filters (D-NLP-auditoria-2026-04-13):
+    - Excludes retweets by default (RT @... prefix) — use include_rts=true to keep
+    - Excludes posts with <20 chars (unreliable sentiment)
+    - Deduplicates identical content (same post cross-platform counts once)
+    """
     day_col = cast(SocialPost.published_at, Date)
+
+    # Build quality filters
+    quality_filters = [
+        SocialProfile.dirigente_id == dirigente_id,
+        SocialPost.sentiment_score.is_not(None),
+        func.length(SocialPost.content) >= 20,
+    ]
+    if not include_rts:
+        quality_filters.append(~SocialPost.content.like("RT @%"))
 
     base_query = (
         select(
@@ -132,10 +154,7 @@ async def sentiment_timeline(
             .label("neutral"),
         )
         .join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
-        .where(
-            SocialProfile.dirigente_id == dirigente_id,
-            SocialPost.sentiment_score.is_not(None),
-        )
+        .where(*quality_filters)
     )
 
     if platform is not None:

@@ -549,3 +549,70 @@ scraping, analyzing, ready, error)`.
 - 3 analizadores: username, profile metadata, post patterns
 - Threshold: ≥0.70 = likely_bot, ≥0.40 = suspicious, <0.40 = human
 - Razón: para MVP, heurísticas son suficientes y explicables. ML requiere labeled data.
+
+---
+
+## D-NLP-01: Framework político de 3 capas (2026-04-13)
+
+**Contexto:** CEO + Gemini alinearon diseño de clasificación de sentimiento político.
+
+**Decisión:** Arquitectura de 3 capas con guardrails:
+1. NLP técnico (pysentimiento + Cardiff + Citizenlab) — determinista
+2. LLM contextualizado (Gemma3:12b) — clasifica tono + target SIN emitir juicio
+3. Framework político rule-based CONFIGURABLE por tenant — emite sentiment_politico_ajustado
+
+**Guardrails:**
+- Rangos acotados: cada celda puede moverse ±1 del default
+- Audit log en `framework_audit_log`
+- UI siempre muestra "Tu score" (config) + "Score estándar" (defaults)
+- Solo admin_org y admin_MD pueden editar
+
+**Defaults iniciales:** escala suave +1/-1/0 (no +2/-2) según recomendación Gemini.
+
+**Razón:** evita incentivos perversos, transparencia radical, honesto sobre límites.
+
+## D-NLP-02: Defaults asumidos por Claude (2026-04-13, CEO dijo "continuar" sin detallar)
+
+Los 4 votos conservadores que propuse se asumen como aprobados:
+1. Defaults matriz = **+1/-1/0 (escala suave)** — Gemini recommendation
+2. Validación externa con encuestas públicas = **deuda v2**, solo documentar ahora
+3. Quién edita matriz = **admin org + admin MD solamente**
+4. Matriz rule-based ahora + LLM fine-tuned = **deuda v2**
+
+**Razón:** CEO autorizó continuar sin modificaciones, mis votos son conservadores y reversibles.
+
+## D-NLP-03: Orden de ejecución (2026-04-13)
+
+A (setup) → B (endpoints fix) → D.0 (framework schema) → C (analyze_full batch bg) + D.1 (LLM contextual bg) → E (charts-lab) → F (dashboard integration) → G (cierre)
+
+**Razón:** B primero por impacto/tiempo inmediato. Framework D.0 antes de D.1 porque define target categories. C y D.1 paralelizables en background.
+
+## D-NLP-04: Colapso Layer 2+3 en Gemma contextualizado (2026-04-13)
+
+**Cambio:** La "matriz rule-based" deja de ser capa de cálculo. Se convierte en **referencia publicada editable** que se inyecta como contexto en el prompt de Gemma3:12b.
+
+**Arquitectura final:**
+- Layer 1: NLP técnico (pysentimiento, Cardiff NLP, Citizenlab) — determinista
+- Layer 2 COLAPSADA: Gemma3:12b recibe (post + rol_dirigente + matriz_efectiva_tenant + contexto_politico) → emite (tono, target, score_politico, razón) en un solo paso
+
+**Mantiene:**
+- Matriz editable por tenant (`framework_overrides_org`)
+- Audit log de cambios
+- UI dos columnas (score tenant vs score default) — calculando default también con Gemma usando matriz default en el prompt
+
+**Elimina:**
+- No hay paso "matriz SQL calcula score"
+- No hay branching "si matriz cubre el caso devuelvo X, si no devuelvo 0"
+
+**Roadmap v2 (no deuda):** Cuando se acumulen 500+ posts con output validado por CEO/analystas, entrenar LoRA sobre BETO con ese corpus. Reemplaza Gemma por modelo determinista más rápido.
+
+**Razón CEO:** "no quiero deuda técnica" sobre LLM. Colapsar en Gemma con in-context learning es equivalente pragmático sin re-entrenar un modelo ahora.
+
+## D-NLP-05: Validación externa opción B (2026-04-13)
+
+**Decisión:** Implementar comparador sentiment CRECE vs encuestas públicas, con alerta en dashboard cuando divergencia > 30%.
+
+**Fuentes:** Oraculus (agregador), Parametría, Enkoll, Mitofsky, Reforma, El Financiero
+**Granularidad:** Ancla en contexto — encuestas de aprobación del gobierno del ámbito (Sheinbaum federal, Brugada CDMX, Jara Oaxaca) — no encuestas de cada dirigente.
+**Tabla:** `encuestas_publicas` (fuente, fecha, ámbito, actor, metrica, valor_pct)
+**UI:** Badge en dashboard overview "Atención: score diverge ${pct}% vs tendencia encuestas"
