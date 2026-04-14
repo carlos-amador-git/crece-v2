@@ -121,7 +121,12 @@ class SocialProfile(Base):
     posts_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_scraped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     data_source: Mapped[DataSource] = mapped_column(
-        Enum(DataSource, name="data_source_enum", create_type=False),
+        Enum(
+            DataSource,
+            name="data_source_enum",
+            create_type=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
         default=DataSource.AUTOMATED_SCRAPER,
         server_default="automated_scraper",
