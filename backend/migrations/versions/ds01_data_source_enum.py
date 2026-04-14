@@ -25,7 +25,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers
 revision: str = "ds01_data_source_enum"
-down_revision: Union[str, None] = "g8b9c0d1e2f3"
+down_revision: Union[str, None] = "h9c0d1e2f3g4"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
