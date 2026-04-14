@@ -37,18 +37,36 @@ class IAScores(BaseModel):
     confidence: str  # low/medium/high según volumen
 
 
+def _require_tenant_access(user: User, post_org_id: int | None) -> None:
+    """Admin puede ver cualquier org; viewer solo su propia org."""
+    if user.role == "admin":
+        return
+    if post_org_id is None or user.org_id != post_org_id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Sin acceso a data de otra organización",
+        )
+
+
 @router.get("/posts/{post_id}/ia", response_model=IAScores)
 async def get_ia_por_post(
     post_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> IAScores:
     post_row = (await db.execute(
-        text("SELECT id, platform_post_id, profile_id FROM social_posts WHERE id = :id"),
+        text("""
+            SELECT p.id, p.platform_post_id, p.profile_id, d.org_id
+            FROM social_posts p
+            JOIN social_profiles sp ON sp.id = p.profile_id
+            JOIN dirigentes d ON d.id = sp.dirigente_id
+            WHERE p.id = :id
+        """),
         {"id": post_id},
     )).first()
     if not post_row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Post no existe")
+    _require_tenant_access(current_user, post_row[3])
 
     scores_sql = text("""
         SELECT
@@ -143,8 +161,16 @@ class IADirigenteSummary(BaseModel):
 async def get_ia_summary_dirigente(
     dirigente_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> IADirigenteSummary:
+    d_row = (await db.execute(
+        text("SELECT org_id FROM dirigentes WHERE id = :id"),
+        {"id": dirigente_id},
+    )).first()
+    if not d_row:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Dirigente no existe")
+    _require_tenant_access(current_user, d_row[0])
+
     sql = text("""
         WITH post_scores AS (
             SELECT

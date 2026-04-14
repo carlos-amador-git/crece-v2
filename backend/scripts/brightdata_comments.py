@@ -39,7 +39,12 @@ DATASETS = {
     "YOUTUBE": "gd_lk9q0ew71spt1mxywf",
 }
 
-HASH_SALT = os.environ.get("COMMENT_AUTHOR_SALT", "crece-v2-lfpdppp-salt-2026")
+HASH_SALT = os.environ.get("COMMENT_AUTHOR_SALT")
+if not HASH_SALT:
+    raise RuntimeError(
+        "COMMENT_AUTHOR_SALT env var obligatoria — sin fallback hardcoded por seguridad LFPDPPP. "
+        "Definir en .env.scraping-keys o pasar explícito."
+    )
 
 
 def author_hash(platform: str, commenter_id: str | None) -> str:
