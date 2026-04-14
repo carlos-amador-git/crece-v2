@@ -29,6 +29,7 @@ from app.api.v1.endpoints import (
     indice_aceptacion,
     metricas_sociales,
     organizaciones,
+    privacy_arco,
     osint,
     participacion,
     planes,
@@ -85,3 +86,4 @@ api_router.include_router(political_framework.router, prefix="/framework", tags=
 api_router.include_router(admin_classification.router, prefix="/admin/classification", tags=["admin-classification"])
 api_router.include_router(admin_overview.router, prefix="/admin", tags=["admin-overview"])
 api_router.include_router(indice_aceptacion.router, prefix="/social", tags=["indice-aceptacion"])
+api_router.include_router(privacy_arco.router, prefix="", tags=["privacy-arco"])

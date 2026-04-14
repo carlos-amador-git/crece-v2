@@ -55,6 +55,11 @@ celery_app.conf.update(
             "task": "app.workers.tasks.dispatch_scheduled_campaigns",
             "schedule": 300.0,
         },
+        # LFPDPPP retention: cleanup social_comments >180d daily at 3 AM MX
+        "cleanup-old-comments-daily": {
+            "task": "app.workers.retention_tasks.cleanup_old_comments",
+            "schedule": 86400.0,
+        },
     },
 )
 
