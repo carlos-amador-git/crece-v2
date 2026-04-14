@@ -38,6 +38,40 @@ export function useDirigente(id: number | string) {
   });
 }
 
+export interface CrecimientoPlatform {
+  platform: string;
+  handle: string;
+  followers_now: number;
+  delta_pct: { "7d": number | null; "30d": number | null; "90d": number | null };
+  trend_30v30_pct: number | null;
+  semaforo: "verde" | "ambar" | "rojo" | "desconocido";
+  data_source: string;
+  last_manual_update: string | null;
+  stale_manual: boolean;
+}
+
+export interface CrecimientoSeriesPoint {
+  taken_at: string;
+  platform: string;
+  followers: number;
+  posts: number;
+}
+
+export interface CrecimientoResponse {
+  dirigente_id: number;
+  platforms: CrecimientoPlatform[];
+  series: CrecimientoSeriesPoint[];
+}
+
+export function useDirigenteCrecimiento(id: number | string) {
+  return useQuery({
+    queryKey: ["dirigente-crecimiento", id],
+    queryFn: () => api.get<CrecimientoResponse>(`/dirigentes/${id}/crecimiento`),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useCreateDirigente() {
   const queryClient = useQueryClient();
   return useMutation({
