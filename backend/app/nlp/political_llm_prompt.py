@@ -44,10 +44,55 @@ Responde JSON únicamente:
 {{"tono":"...","target":"...","es_rt":false,"razon":"una frase"}}"""
 
 
+PROMPT_V3_COMMENT = """Analiza este comment de {plataforma} dirigido a un post del dirigente "{dirigente_nombre}" (rol político: {rol_politico}). Responde SOLO JSON válido.
+
+Comment: "{texto}"
+
+Clasifica:
+1. TONO (elige uno):
+- critico: cuestiona, denuncia, señala fallas
+- propositivo: propone soluciones
+- celebratorio: celebra logros, apoya
+- informativo: hechos sin postura
+- solidario: condolencias, apoyo emocional
+- ataque: ataque directo a persona/institución
+- personal: contenido íntimo sin carga política
+
+2. TARGET principal (elige uno):
+- dirigente: el autor del post original (respuesta directa a él)
+- gobierno: gobierno/funcionarios en turno
+- oposicion: partidos opositores
+- ciudadania: la gente en general
+- medios: prensa, periodistas
+- autopromocion: el comentarista se promueve a sí mismo
+- tema_especifico: un tema (sin atacar actor)
+- otro
+
+Responde JSON únicamente:
+{{"tono":"...","target":"...","razon":"una frase"}}"""
+
+
 def build_prompt(*, texto: str, plataforma: str) -> str:
     """Build compact prompt (v2). Only classifies tono+target, no score."""
     texto_clean = texto[:800].replace('"', "'")  # truncate + escape
     return PROMPT_V2.format(texto=texto_clean, plataforma=plataforma)
+
+
+def build_comment_prompt(
+    *,
+    texto: str,
+    plataforma: str,
+    dirigente_nombre: str,
+    rol_politico: str,
+) -> str:
+    """Build comment classification prompt (v3). target=dirigente available."""
+    texto_clean = texto[:800].replace('"', "'")
+    return PROMPT_V3_COMMENT.format(
+        texto=texto_clean,
+        plataforma=plataforma,
+        dirigente_nombre=dirigente_nombre,
+        rol_politico=rol_politico,
+    )
 
 
 def parse_response(raw: str) -> dict[str, Any] | None:
