@@ -2,9 +2,11 @@
 
 import { useParams } from "next/navigation";
 // import dynamic from "next/dynamic";
-import { useDirigente } from "@/lib/api/hooks/use-dirigentes";
+import { useDirigente, useDirigenteCrecimiento } from "@/lib/api/hooks/use-dirigentes";
 import { useSentimentTrend } from "@/lib/api/hooks/use-social";
 import { usePlanes } from "@/lib/api/hooks/use-planes";
+import { TendenciaPorRedWidget } from "@/components/charts/tendencia-por-red-widget";
+import { SemaforoCrecimiento } from "@/components/dashboard/semaforo-crecimiento";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +36,7 @@ export default function DirigenteDetailPage() {
   const { data: dirigente, isLoading, isError } = useDirigente(id);
   const { data: sentimentTrendData } = useSentimentTrend(30, dirigente?.id);
   const { data: planesData } = usePlanes(undefined, 1);
+  const { data: crecimiento } = useDirigenteCrecimiento(id);
 
   const sentimentTrend = sentimentTrendData ?? [];
   // Filter plans for this dirigente
@@ -198,6 +201,13 @@ export default function DirigenteDetailPage() {
                 />
               </CardContent>
             </Card>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <TendenciaPorRedWidget series={crecimiento?.series ?? []} />
+            </div>
+            <SemaforoCrecimiento platforms={crecimiento?.platforms ?? []} />
           </div>
           <div>
             <h3 className="mb-3 font-heading text-lg font-semibold">

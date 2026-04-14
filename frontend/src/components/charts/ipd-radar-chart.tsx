@@ -30,13 +30,16 @@ export function IpdRadarChart({
     return <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">Sin datos de IPD disponibles</div>;
   }
 
+  // B1 post-cross-audit Gemini: radar muestra sólo fuerza por plataforma (cada eje
+  // ya integra alcance+engagement+frecuencia en el IPD 0-10). Engagement global se
+  // muestra como KPI/bar aparte en EngagementBarChart. YouTube NO se oculta aunque
+  // sea 0 — la carencia penaliza platform coverage y debe ser visible.
   const chartData = [
     { axis: "Twitter", value: data.twitter ?? 0, compare: compareTo?.twitter },
     { axis: "Instagram", value: data.instagram ?? 0, compare: compareTo?.instagram },
     { axis: "Facebook", value: data.facebook ?? 0, compare: compareTo?.facebook },
     { axis: "TikTok", value: data.tiktok ?? 0, compare: compareTo?.tiktok },
     { axis: "YouTube", value: data.youtube ?? 0, compare: compareTo?.youtube },
-    { axis: "Engagement", value: data.engagement ?? 0, compare: compareTo?.engagement },
   ];
 
   return (

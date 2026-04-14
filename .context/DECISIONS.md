@@ -1,5 +1,44 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-04-13 (noche) — Cirugía Módulo Dirigente (Joy)
+
+Cross-audit Gemini (dos pases — segundo vía Carlos por fallo de capacity CLI) + refinamientos de Carlos.
+
+### D-DS-01 — Snapshots diarios (no on-demand)
+`social_profile_snapshots` con snapshot diario por perfil. Razones: costo API bajo, consistencia histórica ante fallos, permite backfill manual. FK por `profile_id` (no handle) — sobrevive cambios de username.
+
+### D-DS-02 — Denormalización 3 columnas
+`dirigente_id`, `org_id`, `platform` en snapshots. RLS performante sin JOIN + queries time-series por plataforma rápidas (consumidas por admin overview de Carlos).
+
+### D-DS-03 — enum data_source (veto de Gemini al bool)
+`automated_scraper` / `manual_host_ingest` / `official_api`. Documenta *por qué* el perfil es manual. Worker filtra `WHERE data_source != 'manual_host_ingest'`. Aplica a YouTube + TikTok v7.3.3 (Carlos confirmó ambos bloquean IP del container Docker).
+
+### D-DS-04 — Alerta deuda de frescura 48h
+`last_manual_update DATETIME` en `social_profiles` + semáforo marca `stale_manual=true` si supera 48h. Evita que dashboard mienta silenciosamente con data vieja.
+
+### D-DS-05 — Extender task existente, no crear nueva
+`app.workers.tasks.scrape_all_profiles` ahora inserta snapshot al final del scrape de cada perfil. Garantiza que el dato del snapshot refleja el recién raspado.
+
+### D-DS-06 — YouTube Docker IP block → opción 3
+`data_source='manual_host_ingest'` + ingesta manual host-side. Descartadas: proxy residential (costo + TOS), Celery worker en host (no aplica a Coolify prod). Reconsiderable si el cliente escala.
+
+### D-DS-07 — Dos migrations Alembic separadas
+`ds01_data_source_enum` (aditiva no-breaking) + `ds02_social_profile_snapshots`. Facilita rollback si una falla.
+
+### D-DS-08 — Radar IPD B1 (5 ejes, engagement aparte)
+Quitar eje "Engagement" del radar. El IPD 0-10 por plataforma ya integra alcance+engagement+frecuencia — tener el eje global duplicaba. Engagement sigue como `EngagementBarChart` separado.
+
+### D-DS-09 — YouTube NO se oculta del radar
+Si un dirigente no tiene canal YouTube, el eje muestra 0. La carencia penaliza platform coverage y debe ser visible. Metodológicamente correcto (Gemini).
+
+### D-DS-10 — Orden de ejecución d → b → a → c → e
+Viewer redirect primero (frontend trivial, limpia tablero). b construye datos (migrations + task + endpoint). a corrige visualización con datos frescos. c y e consumen b.
+
+### D-DS-11 — Switcher Treemap/Stream/Sunburst sobre MISMA data
+Honra charts-lab. Un solo widget con botones que alternan visualización, no tres widgets separados. Sin deps nuevas — Sunburst aproximado con doble Pie concéntrico (recharts primitives).
+
+---
+
 ## 2026-04-13
 
 ### D-MT-01: Multi-Tenant via org_id application-level filtering
