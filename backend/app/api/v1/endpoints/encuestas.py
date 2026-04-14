@@ -33,7 +33,7 @@ def _build_geometry_wkt(lat: float | None, lon: float | None) -> str | None:
 @router.get("/", response_model=PaginatedResponse[EncuestaResponse])
 async def list_encuestas(
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     seccion_id: int | None = None,
@@ -42,9 +42,15 @@ async def list_encuestas(
     fecha_desde: date | None = None,
     fecha_hasta: date | None = None,
 ) -> PaginatedResponse[EncuestaResponse]:
-    """List encuestas with filtering and pagination."""
+    """List encuestas with filtering and pagination. Auto-scoped by org."""
+    effective_org = current_user.org_id if current_user.role != "admin" else None
+
     query = select(Encuesta)
     count_query = select(func.count(Encuesta.id))
+
+    if effective_org is not None:
+        query = query.where(Encuesta.org_id == effective_org)
+        count_query = count_query.where(Encuesta.org_id == effective_org)
 
     if seccion_id is not None:
         query = query.where(Encuesta.seccion_id == seccion_id)

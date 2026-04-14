@@ -3,9 +3,10 @@ Seed demo data for participacion ciudadana and campanas.
 Idempotent — checks for existing data before inserting.
 
 Run with: python -m scripts.seed_demo_data
-Or via Docker: docker exec crece-backend python scripts/seed_demo_data.py
 """
 from __future__ import annotations
+
+import os
 
 import asyncio
 import sys
@@ -28,7 +29,7 @@ from app.models.solicitud import (
     TipoSolicitud,
 )
 
-ORG_ID = 3
+ORG_ID = int(os.environ.get("CRECE_DEMO_ORG_ID", "1"))
 
 # ── Demo solicitudes ciudadanas ──────────────────────────────────────────
 

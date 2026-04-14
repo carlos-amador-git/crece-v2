@@ -52,6 +52,8 @@ async def login(
     token_data = {"sub": str(user.id), "role": user.role.value}
     if user.dirigente_id is not None:
         token_data["dirigente_id"] = str(user.dirigente_id)
+    if user.org_id is not None:
+        token_data["org_id"] = user.org_id
     token = create_access_token(data=token_data)
     return Token(access_token=token)
 
@@ -121,9 +123,21 @@ async def forgot_password(
 @router.get("/me", response_model=UserResponse)
 async def get_me(
     current_user: Annotated[User, Depends(get_current_user)],
-) -> User:
-    """Return current authenticated user's profile."""
-    return current_user
+) -> UserResponse:
+    """Return current authenticated user's profile with org details."""
+    org = getattr(current_user, "organizacion", None)
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        role=current_user.role,
+        is_active=current_user.is_active,
+        dirigente_id=current_user.dirigente_id,
+        org_id=current_user.org_id,
+        org_nombre=org.nombre if org else None,
+        org_slug=org.slug if org else None,
+        created_at=current_user.created_at,
+    )
 
 
 # ── Impersonate (D-S5-03) ──────────────────────────────────

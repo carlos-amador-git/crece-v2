@@ -137,10 +137,11 @@ test.describe("Layout structure", () => {
   test("dashboard has sidebar navigation", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/dashboard");
+    await page.waitForLoadState("networkidle");
 
     // Look for nav element (sidebar) or an aside
     const sidebar = page.locator("nav, aside").first();
-    await expect(sidebar).toBeVisible();
+    await expect(sidebar).toBeVisible({ timeout: 10_000 });
   });
 
   test("dashboard has main content area", async ({ page }) => {

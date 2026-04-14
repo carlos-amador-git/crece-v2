@@ -1,6 +1,52 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-04-13
+
+### D-MT-01: Multi-Tenant via org_id application-level filtering
+**Decision:** Multi-tenant isolation implemented at application level (org_id filtering in endpoints) rather than pure PostgreSQL RLS enforcement.
+**Razon:** RLS policies exist in the DB (`app.current_org_id` setting) but enforcing them requires `SET LOCAL` on every session, which complicates the FastAPI dependency chain. Application-level filtering via `current_user.org_id` is simpler and already works for most endpoints. `get_db_rls` dependency is ready for future migration.
+**Trade-off:** Requires each endpoint to explicitly filter by org_id. Defense-in-depth RLS available but not actively enforced.
+
+### D-MT-02: Admin tenant switching via X-Org-Id header + localStorage
+**Decision:** Admin users switch orgs via a dropdown in the topbar. The selected org is stored in localStorage as `crece_active_org_id` and sent as `X-Org-Id` header on every API request.
+**Razon:** Simpler than server-side session management. Survives page reloads. Backend `get_db_rls` respects the header for admin role only.
+**Trade-off:** Non-admin users cannot switch orgs (correct behavior — they see only their org's data).
+
+### D-MT-03: Synthetic data orgs flagged via config JSONB + watermark
+**Decision:** Orgs with synthetic data have `config.has_synthetic_data = true`. Frontend shows amber "DATOS SIMULACION" banner when viewing these orgs.
+**Razon:** Prevents confusion between real (MC-CDMX with 9,723 legacy citizens) and demo data. Visible to all users, not just admin.
+
+### D-MT-04: 5 guiones de campo as content factory formats (not separate module)
+**Decision:** The 5 field script formats (talking_points, guion_contraste, script_puerta, briefing_crisis, narrativa_territorial) are added as formato options in the existing Content Factory, not as a separate module.
+**Razon:** Reuses existing generation dialog, backend endpoint, and content lifecycle (borrador→aprobado→publicado). Avoids creating a parallel system.
+
 ## 2026-04-12
+
+### D-DESIGN-01: Design Review Enrique — 10 respuestas completas (2026-04-12)
+**Fuente:** Enrique (md-design-system), session 015 + peer message 2026-04-12 21:45
+**Brief original:** `.context/BRIEF-UX-PARA-ENRIQUE.md`
+
+| # | Pregunta | Respuesta | Estado |
+|---|----------|-----------|--------|
+| 1 | Fonts — ¿migrar a Satoshi + General Sans? | **NO** — Instrument Sans + DM Sans se quedan. Cada producto mantiene identidad. CEO aprobó, Gemini disintió pero overruled. | No action needed |
+| 2 | Tablet md: breakpoints en 17 páginas | **SÍ** — gap real, tablets reciben layout phone. Sprint siguiente. | **PENDIENTE** |
+| 3 | Canvassing mobile — MobileFilterSheet | **SÍ** — usar componente del DS. | Done (d0975e2) |
+| 4 | Radar chart daltonismo | **SÍ** — dashes/dots + naranja. | Done (b0321a4) |
+| 5 | Kanban @dnd-kit | **Phase 2** — botones "→" cumplen S3.7. | Diferido |
+| 6 | Electoral page stub | **ELIMINAR** del sidebar. | Done (b0321a4) |
+| 7 | Health score gauge | **SÍ** — donut semicircular. | Done (b0321a4) |
+| 8 | StatCard duplicado | **SÍ** — extraer a DS (3 variants: default/compact/hero). | Done (d0975e2) |
+| 9 | Animaciones CSS → Framer Motion | **SELECTIVA** — SÍ: bento-fade-up (stagger), stat-card-transition. NO: pulse-dot ni decorativos. | **PENDIENTE** |
+| 10 | Lenis smooth scroll | **SÍ trial** — standalone sin GSAP (gsapSync=false). | Done (d0975e2) |
+
+**Trabajo de Enrique en el DS (commit 2b00f0b):**
+- StatCard: prop `variant` (default/compact/hero) + `description` + type exportado
+- SmoothScrollProvider: prop `gsapSync` (false=standalone RAF, true=ScrollTrigger sync)
+- MobileFilterSheet: ya export-ready, sin cambios necesarios
+
+**Pendientes accionables:**
+1. md: breakpoints en 17 páginas (#2) — usar ResponsiveTable, MobileFilterSheet, useBreakpoint del DS
+2. Framer Motion selectiva (#9) — bento-fade-up stagger, stat-card-transition enter/exit
 
 ### D-B-01: GeoJSON inline, no tile server MVT
 **Decisión:** El endpoint `/canvassing/geo` retorna GeoJSON FeatureCollection
@@ -503,3 +549,97 @@ scraping, analyzing, ready, error)`.
 - 3 analizadores: username, profile metadata, post patterns
 - Threshold: ≥0.70 = likely_bot, ≥0.40 = suspicious, <0.40 = human
 - Razón: para MVP, heurísticas son suficientes y explicables. ML requiere labeled data.
+
+---
+
+## D-NLP-01: Framework político de 3 capas (2026-04-13)
+
+**Contexto:** CEO + Gemini alinearon diseño de clasificación de sentimiento político.
+
+**Decisión:** Arquitectura de 3 capas con guardrails:
+1. NLP técnico (pysentimiento + Cardiff + Citizenlab) — determinista
+2. LLM contextualizado (Gemma3:12b) — clasifica tono + target SIN emitir juicio
+3. Framework político rule-based CONFIGURABLE por tenant — emite sentiment_politico_ajustado
+
+**Guardrails:**
+- Rangos acotados: cada celda puede moverse ±1 del default
+- Audit log en `framework_audit_log`
+- UI siempre muestra "Tu score" (config) + "Score estándar" (defaults)
+- Solo admin_org y admin_MD pueden editar
+
+**Defaults iniciales:** escala suave +1/-1/0 (no +2/-2) según recomendación Gemini.
+
+**Razón:** evita incentivos perversos, transparencia radical, honesto sobre límites.
+
+## D-NLP-02: Defaults asumidos por Claude (2026-04-13, CEO dijo "continuar" sin detallar)
+
+Los 4 votos conservadores que propuse se asumen como aprobados:
+1. Defaults matriz = **+1/-1/0 (escala suave)** — Gemini recommendation
+2. Validación externa con encuestas públicas = **deuda v2**, solo documentar ahora
+3. Quién edita matriz = **admin org + admin MD solamente**
+4. Matriz rule-based ahora + LLM fine-tuned = **deuda v2**
+
+**Razón:** CEO autorizó continuar sin modificaciones, mis votos son conservadores y reversibles.
+
+## D-NLP-03: Orden de ejecución (2026-04-13)
+
+A (setup) → B (endpoints fix) → D.0 (framework schema) → C (analyze_full batch bg) + D.1 (LLM contextual bg) → E (charts-lab) → F (dashboard integration) → G (cierre)
+
+**Razón:** B primero por impacto/tiempo inmediato. Framework D.0 antes de D.1 porque define target categories. C y D.1 paralelizables en background.
+
+## D-NLP-04: Colapso Layer 2+3 en Gemma contextualizado (2026-04-13)
+
+**Cambio:** La "matriz rule-based" deja de ser capa de cálculo. Se convierte en **referencia publicada editable** que se inyecta como contexto en el prompt de Gemma3:12b.
+
+**Arquitectura final:**
+- Layer 1: NLP técnico (pysentimiento, Cardiff NLP, Citizenlab) — determinista
+- Layer 2 COLAPSADA: Gemma3:12b recibe (post + rol_dirigente + matriz_efectiva_tenant + contexto_politico) → emite (tono, target, score_politico, razón) en un solo paso
+
+**Mantiene:**
+- Matriz editable por tenant (`framework_overrides_org`)
+- Audit log de cambios
+- UI dos columnas (score tenant vs score default) — calculando default también con Gemma usando matriz default en el prompt
+
+**Elimina:**
+- No hay paso "matriz SQL calcula score"
+- No hay branching "si matriz cubre el caso devuelvo X, si no devuelvo 0"
+
+**Roadmap v2 (no deuda):** Cuando se acumulen 500+ posts con output validado por CEO/analystas, entrenar LoRA sobre BETO con ese corpus. Reemplaza Gemma por modelo determinista más rápido.
+
+**Razón CEO:** "no quiero deuda técnica" sobre LLM. Colapsar en Gemma con in-context learning es equivalente pragmático sin re-entrenar un modelo ahora.
+
+## D-NLP-05: Validación externa opción B (2026-04-13)
+
+**Decisión:** Implementar comparador sentiment CRECE vs encuestas públicas, con alerta en dashboard cuando divergencia > 30%.
+
+**Fuentes:** Oraculus (agregador), Parametría, Enkoll, Mitofsky, Reforma, El Financiero
+**Granularidad:** Ancla en contexto — encuestas de aprobación del gobierno del ámbito (Sheinbaum federal, Brugada CDMX, Jara Oaxaca) — no encuestas de cada dirigente.
+**Tabla:** `encuestas_publicas` (fuente, fecha, ámbito, actor, metrica, valor_pct)
+**UI:** Badge en dashboard overview "Atención: score diverge ${pct}% vs tendencia encuestas"
+
+---
+
+## 2026-04-14 — Índice de Aceptación (IA) MVP
+
+**D-IA-01: Stack scraping para comments = Brightdata**
+- Descubrimiento: ya había BRIGHTDATA_API_KEY + CRAWLBASE + SCRAPERAPI en `.env.scraping-keys` (commit fc18c8a integró Brightdata FB).
+- Bot detection en TikTok/YouTube desde Docker ≠ problema con Brightdata (proxies residenciales suyos).
+- Datasets identificados: `gd_lkf2st302ap89utw5k` (TT), `gd_lkay758p1eanlolqw8` (FB), `gd_ltppn085pokosxh13` (IG), `gd_lk9q0ew71spt1mxywf` (YT).
+- Costo: free tier Brightdata cubre MVP.
+
+**D-IA-02: LFPDPPP compliance — author_hash SHA256**
+- social_comments guarda `author_hash = SHA256(platform:commenter_id:salt)` no PII crudo.
+- Permite tracking mismo autor entre posts sin almacenar identificadores personales.
+- Cumple minimización de datos. Pendiente: actualizar Aviso de Privacidad CRECE con finalidad "análisis estadístico político agregado".
+
+**D-IA-03: 3 capas IA viables free**
+- Aprobación: (pos_comments + celebratorio + solidario) / total — viable todas plataformas
+- Rechazo: (neg_comments + ataque + critico) / total — viable todas
+- Expansión: % authors nuevos vs históricos — viable con datos acumulados
+- Activación (followers vs engagers) y Fantasmas (seguidores dormidos) → no viable free, requiere tokens Business Meta o Twitter API Pro
+
+**D-IA-04: Framework comments = pysentimiento + reglas keyword + matriz política**
+- Costo $0 (todo local)
+- Script: `backend/scripts/nlp_comments_batch.py`
+- Keywords por tono (critico/ataque/propositivo/solidario/celebratorio/informativo/personal) + target (gobierno/oposicion/ciudadania/autopromocion/medios/tema_especifico)
+- Polaridad -1/0/+1 derivada de sentiment + tono

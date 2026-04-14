@@ -12,10 +12,18 @@ import { createElement } from "react";
 import type { User, AuthTokens, LoginCredentials } from "@/lib/api/types";
 import { api, ApiError } from "@/lib/api/client";
 
+export interface OrgContext {
+  id: number;
+  nombre: string;
+  slug: string;
+}
+
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  activeOrg: OrgContext | null;
+  setActiveOrg: (org: OrgContext | null) => void;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
 }
@@ -25,6 +33,18 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeOrg, setActiveOrgState] = useState<OrgContext | null>(null);
+
+  const setActiveOrg = useCallback((org: OrgContext | null) => {
+    setActiveOrgState(org);
+    if (org) {
+      localStorage.setItem("crece_active_org_id", String(org.id));
+      localStorage.setItem("crece_active_org", JSON.stringify(org));
+    } else {
+      localStorage.removeItem("crece_active_org_id");
+      localStorage.removeItem("crece_active_org");
+    }
+  }, []);
 
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem("crece_access_token");
@@ -35,6 +55,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userData = await api.get<User>("/auth/me");
       setUser(userData);
+      // Restore active org from localStorage or set from user's org
+      const stored = localStorage.getItem("crece_active_org");
+      if (stored) {
+        try {
+          setActiveOrgState(JSON.parse(stored));
+        } catch {
+          // Invalid stored org — set from user
+        }
+      }
+      if (!stored && userData.org_id && userData.org_nombre && userData.org_slug) {
+        const org = { id: userData.org_id, nombre: userData.org_nombre, slug: userData.org_slug };
+        setActiveOrgState(org);
+        localStorage.setItem("crece_active_org_id", String(org.id));
+        localStorage.setItem("crece_active_org", JSON.stringify(org));
+      }
     } catch {
       localStorage.removeItem("crece_access_token");
       localStorage.removeItem("crece_refresh_token");
@@ -78,9 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem("crece_access_token");
     localStorage.removeItem("crece_refresh_token");
+    localStorage.removeItem("crece_active_org_id");
+    localStorage.removeItem("crece_active_org");
     // Clear server-side auth cookie
     document.cookie = "crece_access_token=; path=/; max-age=0";
     setUser(null);
+    setActiveOrgState(null);
     window.location.href = "/login";
   }, []);
 
@@ -91,6 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
+        activeOrg,
+        setActiveOrg,
         login,
         logout,
       },

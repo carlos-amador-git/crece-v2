@@ -1,9 +1,209 @@
 # CRECE v2.0 — Status
 
-**Último update:** 2026-04-12 01:20 local
-**Sesión activa:** /sprint-review Sprint B (Canvassing Geo) + Sprint A (Demo)
-**Main HEAD:** `1185921` (PR #7 merged)
-**Branch activo:** `feat/canvassing-geo-map` @ 2 commits (`78c3e87`, `0276661`)
+**Ultimo update:** 2026-04-13 17:10 local
+**Sesion activa:** Sesion 2 — Whisper + Geo enrich + Org scoping fix
+**Branch activo:** `feat/sprint-c-hardening`
+
+
+---
+
+## Sesion 2026-04-13 noche — /sprint-review NLP + Framework Político
+
+**Alcance:** 8 fases completadas en una sesión con cross-audits Gemini + Perplexity.
+
+### Fases ejecutadas
+
+### Sprint 1 operativo (en esta sesión)
+- 95 posts clasificados por Claude Opus 4.6 via admin panel
+  - MC-CDMX: 35 posts (24 Piña oposición +0.38, 11 Solano oposición -0.09)
+  - GOB-OAXACA: 30 posts Pineda oficialismo (+0.47 promedio)
+  - CDMX-IND: 30 posts Jiménez/Cravioto oficialismo (+0.52 / +1.00)
+- 0 errores en batch processing
+- Admin panel `/dashboard/admin/clasificacion` validado visualmente end-to-end
+- Guardrail acceso: dirigente bloqueado (pantalla "Acceso restringido"), admin accede
+- Badge "Analisis Contextual · 3 IAs deliberaron" visible en dashboard
+
+### Sprint 2 NLP batch (corriendo en background al cierre)
+- Script: `docker exec crece-backend python scripts/reprocess_nlp_full.py`
+- Progreso al cierre: 2,180/3,709 posts con `nlp_model_version='multi-model-v1'`
+- Topics model xlm-roberta re-descargado correctamente post cache clean
+- Velocidad: ~4.6 posts/sec, ETA ~7 min al momento del handoff
+- Idempotente: reanudable si se interrumpe
+
+### Pendiente para próxima sesión
+1. Dashboard admin operativo `/dashboard/admin/overview` (CEO aprobó mockup)
+2. Scrapers encuestas Oraculus + Demoscopía (peer md-research entregó plan)
+3. Commit final con Sprint 1+2 results
+4. Implementar charts (Treemap/Stream/Sunburst) en dashboard cliente
+
+
+| Fase | Deliverable |
+|---|---|
+| **A** Setup | Ollama + HF verificado (topics degradado por cache xlm-roberta, fix post-cleanup) |
+| **B** Endpoints RTs+dedup | `/dashboard/overview`, `/social/sentiment-timeline`, `/social/posts` filtran RTs + min_length. Piña timeline -0.163 (antes -0.295) |
+| **C** NLP reprocess | 260/3,709 posts con controversy + toxicity + platform-adjusted. Script idempotente. Pausado por decisión arquitectural (no bloquea producto) |
+| **D.0** Framework político | 4 tablas nuevas, 32 reglas default v1, API `/framework/*`, audit log verificado con override + rollback |
+| **D.2** Validación encuestas | Migration `encuestas_publicas` + servicio `divergencia_encuestas.py` threshold 30%. Scraper scope: Oraculus + Demoscopía (peer md-research investigó, reporte en md-research/analysis/) |
+| **D.3** Admin panel | `/dashboard/admin/clasificacion` — UI 3 pasos: generar prompt → pegar JSON de Claude/Gemini/Perplexity → aplicar framework |
+| **E** Charts lab | `tools/charts-lab/` con Plotly — Treemap + Stream + Sunburst con datos reales |
+| **F.1** UI niveles análisis | `/dashboard/settings/analisis-politico` — 4 niveles amigables (Rápido→Enriquecido→Contextual→Personalizado) |
+
+### Decisiones arquitecturales clave
+
+- **D-NLP-01**: Framework 3 capas (NLP técnico + LLM contextual + Matriz rule-based configurable)
+- **D-NLP-02-03**: Defaults +1/-1/0 suaves (Gemini recomendación). Admin org + admin MD editan
+- **D-NLP-04**: Colapsar Layer 2+3 descartado — Gemma 12B lento (5+ min/post)
+- **D-NLP-05**: Validación externa opción B (alerta divergencia >30%)
+- **NEW**: Pipeline MANUAL operado por MD Consultoría. Zero infra LLM. 3 IAs externas (Claude Code + Gemini CLI + Perplexity web) deliberan. Costo $0. Cadencia semanal. Fine-tune modelo propio = evolución natural (no deuda) cuando tengamos 500+ validaciones por tenant.
+
+### Archivos nuevos
+
+**Backend (14 archivos):**
+- `migrations/versions/f7a8b9c0d1e2_political_framework.py`
+- `migrations/versions/g8b9c0d1e2f3_encuestas_publicas.py`
+- `app/services/political_framework.py`
+- `app/services/divergencia_encuestas.py`
+- `app/nlp/political_llm_prompt.py`
+- `app/api/v1/endpoints/political_framework.py`
+- `app/api/v1/endpoints/admin_classification.py`
+- `scripts/seed_political_framework.py`
+- `scripts/reprocess_nlp_full.py`
+- `scripts/llm_political_pilot.py` (abandonado — Gemma lento)
+
+**Frontend (2 páginas nuevas):**
+- `src/app/dashboard/settings/analisis-politico/page.tsx`
+- `src/app/dashboard/admin/clasificacion/page.tsx`
+- Sidebar con sección "Admin MD" (solo role=admin)
+- Badge "Analisis Contextual · 3 IAs deliberaron" en dashboard
+
+**Tools:**
+- `tools/charts-lab/index.html` + README
+
+**Docs (5 archivos):**
+- `docs/AUDITORIA-SENTIMENT-2026-04-13.md`
+- `docs/CHARTS-LAB-DECISIONES.md`
+- `docs/NLP-MODELOS-INVESTIGACION.md`
+- `docs/POLITICAL-FRAMEWORK-DEFAULTS.md`
+- `docs/OPERACION-MD-CLASIFICACION-SEMANAL.md`
+
+### DB state
+
+- 5 tablas nuevas (`contexto_politico`, `framework_matrix_defaults`, `framework_overrides_org`, `framework_audit_log`, `encuestas_publicas`)
+- 11 columnas nuevas en `social_posts` (tono, target, sentimiento_politico_ajustado, controversy, toxicity, topics, platform_adjusted, nlp_model_version, llm_razon, llm_modelo, llm_processed_at)
+- `dirigentes.rol_politico` — 2 oposición (Piña, Solano), 4 oficialismo
+- 32 reglas v1 sembradas en `framework_matrix_defaults`
+- 5 contextos políticos (federal, CDMX, Oaxaca, NL, Jalisco)
+- 5 posts clasificados como prueba end-to-end (ia_fuente=claude)
+
+### Peer coordination
+
+- Peer `08rystzm` (md-research) investigó scrapers encuestas MX en paralelo
+- Reporte en `md-research/analysis/20260413-mexican-polls-scrapers-crece.md`
+- Oraculus JSON inline = scraper 30 líneas · Demoscopía CDMX/Oaxaca obligatorio
+- Plan para FASE D.2 implementación real (5-6h) pendiente de siguiente sesión
+---
+
+## Sesion 2026-04-13 tarde — Whisper Pipeline + Geo Enrich + Org Scoping
+
+### Tarea 1: Enriquecer secciones_geo_cdmx con master_catalogo.csv (COMPLETADA)
+- Script: `backend/scripts/enrich_secciones_catalogo.py`
+- 5,531 filas actualizadas, 5,495/5,589 enriquecidas
+- Columnas agregadas: volatilidad, estrato, lista_nominal, categoria, dtto_local_cat, dtto_fed_cat, alcaldia, nivel_socioeconomico
+- 94 secciones sin match en CSV (existentes en shapefile pero sin estructura MC)
+
+### Tarea 2: Whisper pipeline para posts sin texto (EN PROGRESO)
+- Script: `backend/scripts/whisper_tiktok_pipeline.py`
+- Pipeline: yt-dlp download → ffmpeg → whisper-cli (ggml-small) → UPDATE DB
+- TikTok batch: ~62% éxito (31/50 transcritos), mayoria discursos politicos
+- Posts sin voz marcados con `raw_data.needs_ocr = true`
+- Facebook + Instagram batch en cola
+
+### Tarea 3: Dashboard org scoping fix (COMPLETADA)
+- Bug: admin endpoint `/dirigentes/` no leia X-Org-Id header → todos los dirigentes visibles
+- Fix: `dirigentes.py` y `social.py` ahora leen X-Org-Id para admin tenant switching
+- Verificado visualmente: MC-CDMX 17.3K audiencia vs GOB-OAXACA 60.8K
+- Followers chart, posts list, KPIs — todo scoped correctamente por org
+
+---
+
+## Sesion 2026-04-13 — Sprint E Multi-Tenant + War Room
+
+### Fase 1: Multi-Tenant 3 Orgs (COMPLETADA)
+- 3 organizaciones: MC-CDMX (id=1), GOB-OAXACA (id=2), CDMX-IND (id=3)
+- 9 usuarios: admin + analista + campo + 6 dirigentes (Pina, Solano, Pineda, Nolasco, Jimenez, Cravioto)
+- 6 dirigentes con 15 social profiles (Twitter, Instagram, Facebook, TikTok)
+- org_id en JWT token y /auth/me response (con org_nombre, org_slug)
+- Dirigentes endpoint filtra por org_id para non-admin users
+- Admin tenant switcher en topbar con dropdown de 3 orgs
+- Watermark "DATOS SIMULACION" banner para orgs sinteticas (gob-oaxaca, cdmx-ind)
+- get_db_rls dependency listo para RLS enforcement (SET LOCAL app.current_org_id)
+- X-Org-Id header en API client para admin tenant switching
+- Login page: 7 demo buttons agrupados por org con colores (accent, amber, violet)
+
+### Fase 2: Poblar Orgs (COMPLETADA)
+- 13 sample posts para 4 nuevos dirigentes (con sentimiento y engagement)
+- 2 planes IA (Oaxaca: posicionamiento turistico, CDMX-IND: estrategia legislativa)
+- Total DB: 19 posts, 3 planes, 15 social profiles, 6 dirigentes, 3 orgs
+
+### Fase 3: Login UX (COMPLETADA)
+- Demo buttons agrupados por org: MC CDMX (accent), GOB OAXACA (amber), CDMX IND (violet)
+- Campos se llenan visualmente al click (ya existia de sesion anterior)
+
+### Fase 4: War Room (COMPLETADA)
+- E.4.2 HECHO: 5 formatos guiones de campo en Content Factory
+- E.4.1 HECHO: CompetitorSnapshotCard widget en dashboard (datos demo MC-CDMX vs Batres/Taboada)
+- E.4.3 HECHO: GET /dirigentes/{id}/flash-analysis — 5 metricas + suggested_action
+
+### Sprint F Review (mismo dia)
+- F1 HECHO: Dashboard overview endpoint scoped por org_id (X-Org-Id header)
+- F2 HECHO: Competitor widget en dashboard
+- F3 HECHO: Flash Analysis endpoint (SQL aggregations, sin LLM)
+- F4 HECHO: org_id hardening en voter_scoring (segments, by-seccion) + encuestas + social posts
+
+### Archivos modificados
+**Backend:**
+- `app/schemas/user.py` — org_id, org_nombre, org_slug en UserResponse
+- `app/api/v1/endpoints/auth.py` — org_id en JWT, org details en /me
+- `app/api/v1/endpoints/dirigentes.py` — org_id scoping para non-admin
+- `app/core/database.py` — get_db_rls + get_org_id_from_user
+- `scripts/seed.py` — 3 orgs, 9 users, 6 dirigentes, 15 profiles
+- `scripts/seed_multitenant.py` — NEW: idempotent multi-tenant seed
+- `scripts/seed_org_data.py` — NEW: sample posts + plans para nuevas orgs
+
+**Frontend:**
+- `src/lib/api/types.ts` — org_id, org_nombre, org_slug en User
+- `src/lib/api/client.ts` — X-Org-Id header
+- `src/lib/auth.ts` — OrgContext, activeOrg, setActiveOrg
+- `src/components/layout/topbar.tsx` — tenant switcher dropdown + org badge
+- `src/app/dashboard/layout.tsx` — SyntheticDataBanner watermark
+- `src/app/login/page.tsx` — 7 demo buttons grouped by org
+- `src/app/dashboard/contenido/page.tsx` — 5 guiones de campo formats
+
+### DB state post-sprint
+| Tabla | Count |
+|-------|-------|
+| organizaciones | 3 |
+| users | 9 |
+| dirigentes | 6 |
+| social_profiles | 15 |
+| social_posts | 19 |
+| planes_ia | 3 |
+| alcaldias_cdmx | 16 |
+| ciudadanos_legacy | 9,723 |
+| ciudadanos_v2 | 205 |
+| unidades_territoriales | 5,552 |
+
+### Verificacion visual (screenshots)
+- Login: 7 demo buttons x 3 orgs (/tmp/crece-login-multitenant.png)
+- Dashboard admin: tenant switcher "MC CDMX" (/tmp/crece-dashboard-admin.png)
+- Tenant dropdown: 3 orgs + "datos simulacion" label (/tmp/crece-tenant-switcher.png)
+- GOB-OAXACA watermark: amber banner visible (/tmp/crece-oaxaca-watermark.png)
+- Pineda dashboard: isolated data, 20.8K followers, 3 posts (/tmp/crece-pineda-dashboard.png)
+- Content Factory: 5 guiones de campo in formato dropdown (/tmp/crece-guiones-campo.png)
+
+---
+
+## Anterior
 
 ---
 
@@ -301,3 +501,34 @@ Ver `.context/DECISIONS.md` sección "Deudas técnicas encontradas durante cross
 ### Organización raíz (post PR #6 seed fix)
 - `id=3, slug=mc-cdmx, nombre='Movimiento Ciudadano CDMX', tipo=PARTIDO`
 - Todos los users del seed scopados a esta org automáticamente
+
+---
+
+## 2026-04-14 — Sprint IA-1 completado + cirugía dirigente (Joy)
+
+### Carlos (feat/sprint-c-hardening)
+
+Sprint IA-1 — Índice de Aceptación MVP:
+- Migration `h9c0d1e2f3g4_social_comments` aplicada
+- 200 comments reales TikTok ingestados (Brightdata dataset gd_lkf2st302ap89utw5k)
+- 200 comments clasificados con framework (comment-framework-v1)
+- Endpoint `/api/v1/social/posts/{id}/ia` — 3 scores + breakdown
+- Endpoint `/api/v1/social/dirigentes/{id}/ia-summary` — top aprobación/rechazo
+- LFPDPPP compliance: author_hash SHA256, cero PII crudo
+- Test real: post Piña 7357909824622890245 → 11.5% aprobación / 20% rechazo / 68.5% neutral
+
+YouTube ingesta (tangencial): 56 videos ingestados via host macOS (YT bloquea Docker).
+
+### Joy (feat/dirigente-surgery)
+- 5 commits: redirect viewer + migrations + radar B1 + widget Tendencia + docs
+- 2 migrations Alembic: ds01 (enum data_source) + ds02 (social_profile_snapshots)
+- Widget Tendencia con switcher Treemap/Stream/Sunburst
+- Semáforo de crecimiento + alerta 48h data_source='manual_host_ingest'
+- Pre-merge: rebase ds01/ds02 sobre h9c0d1e2f3g4
+
+### Pendiente
+- Cross-audit Gemini del resultado IA-1 + cirugía Joy
+- Merge coordinado de las 2 ramas
+- UI widget IA en `/dashboard/social/[post_id]` (Sprint IA-2)
+- Ingestar más comments: FB/IG/YouTube para posts restantes
+- Aviso Privacidad CRECE actualizado (LFPDPPP)

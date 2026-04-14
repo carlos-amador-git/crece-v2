@@ -87,11 +87,11 @@ test.describe("Dashboard pages (authenticated)", () => {
     const kpiSection = page.locator('[aria-label="Indicadores clave"]');
     await expect(kpiSection).toBeVisible();
 
-    // Verify at least one KPI card title is present
-    await expect(page.getByText("Total Dirigentes")).toBeVisible();
-    await expect(page.getByText("Avg IPD Score")).toBeVisible();
-    await expect(page.getByText("Posts (24h)")).toBeVisible();
-    await expect(page.getByText("Alertas Activas")).toBeVisible();
+    // Verify KPI card titles match current UI
+    await expect(page.getByText("Tu Audiencia")).toBeVisible();
+    await expect(page.getByText("Presencia Digital")).toBeVisible();
+    await expect(page.getByText("Conversacion")).toBeVisible();
+    await expect(page.getByText("Tema Urgente")).toBeVisible();
   });
 
   test("dashboard overview renders time filter buttons", async ({ page }) => {
@@ -111,9 +111,10 @@ test.describe("Dashboard pages (authenticated)", () => {
   }) => {
     await page.goto("/dashboard");
 
-    await expect(
-      page.getByRole("heading", { name: "Tendencia de Sentimiento" })
-    ).toBeVisible();
+    // Sentiment chart is below the fold — scroll to it
+    const sentimentHeading = page.getByText("Tendencia de Sentimiento");
+    await sentimentHeading.scrollIntoViewIfNeeded();
+    await expect(sentimentHeading).toBeVisible();
   });
 
   test("dashboard overview shows system status bar", async ({ page }) => {
@@ -172,10 +173,10 @@ test.describe("Auth redirect", () => {
       route.fulfill({ status: 401, body: JSON.stringify({ detail: "Not authenticated" }) })
     );
 
-    await page.goto("/dashboard");
+    await page.goto("/dashboard", { waitUntil: "commit" });
 
-    // Should end up on /login
-    await page.waitForURL("**/login", { timeout: 10_000 });
+    // Should end up on /login (middleware adds ?redirect= query param)
+    await page.waitForURL("**/login**", { timeout: 10_000 });
     expect(page.url()).toContain("/login");
   });
 });

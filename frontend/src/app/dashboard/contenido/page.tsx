@@ -22,6 +22,14 @@ import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
 import { FileText, Plus, Loader2, Sparkles } from "lucide-react";
 
 const FORMATOS: ContenidoFormato[] = ["post", "reel", "story", "carrusel", "video", "infografia"];
+const GUIONES_CAMPO = [
+  { value: "talking_points", label: "Talking Points", desc: "Puntos clave para discurso o entrevista" },
+  { value: "guion_contraste", label: "Guion de Contraste", desc: "Comparacion vs postura rival" },
+  { value: "script_puerta", label: "Script Puerta a Puerta", desc: "Guion para promotores en campo" },
+  { value: "briefing_crisis", label: "Briefing de Crisis", desc: "Respuesta rapida a incidente" },
+  { value: "narrativa_territorial", label: "Narrativa Territorial", desc: "Mensaje adaptado a colonia/seccion" },
+];
+const ALL_FORMATOS = [...FORMATOS, ...GUIONES_CAMPO.map((g) => g.value)] as ContenidoFormato[];
 const ESTADOS: ContenidoEstado[] = ["borrador", "revisado", "aprobado", "publicado"];
 const TONOS = ["formal", "cercano", "energico", "informativo", "motivacional"];
 
@@ -79,7 +87,20 @@ export default function ContenidoPage() {
                 <label className="text-sm font-medium">Formato</label>
                 <Select value={genForm.formato} onValueChange={(v) => setGenForm((f) => ({ ...f, formato: v }))}>
                   <SelectTrigger><SelectValue placeholder="Seleccionar formato" /></SelectTrigger>
-                  <SelectContent>{FORMATOS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    <p className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">Contenido Digital</p>
+                    {FORMATOS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                    <div className="my-1 border-t" />
+                    <p className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">Guiones de Campo</p>
+                    {GUIONES_CAMPO.map((g) => (
+                      <SelectItem key={g.value} value={g.value}>
+                        <div className="flex flex-col">
+                          <span>{g.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{g.desc}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
@@ -105,7 +126,7 @@ export default function ContenidoPage() {
       </header>
 
       <div className="flex flex-wrap gap-3">
-        <FilterSelect value={filters.formato} onValueChange={(v) => setFilters((f) => ({ ...f, formato: v as ContenidoFormato | undefined }))} placeholder="Formato" options={toOpts(FORMATOS)} allLabel="Todos los formatos" />
+        <FilterSelect value={filters.formato} onValueChange={(v) => setFilters((f) => ({ ...f, formato: v as ContenidoFormato | undefined }))} placeholder="Formato" options={toOpts(ALL_FORMATOS)} allLabel="Todos los formatos" />
         <FilterSelect value={filters.estado} onValueChange={(v) => setFilters((f) => ({ ...f, estado: v as ContenidoEstado | undefined }))} placeholder="Estado" options={toOpts(ESTADOS)} allLabel="Todos los estados" />
       </div>
 

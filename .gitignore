@@ -113,3 +113,8 @@ frontend/.env.production
 # Datos originales del CRECE Oracle APEX con PII de ~63K ciudadanos.
 # NUNCA commitear. Gated por env var CRECE_MC_RAW_DIR.
 backend/data/raw/mc_original/
+backend/.config/
+backend/.pki/
+backend/.wdm/
+backend/data/models/*.pkl
+backend/.env.scraping-keys

@@ -11,6 +11,9 @@ export interface User {
   avatar_url?: string;
   is_active: boolean;
   dirigente_id?: number | null;
+  org_id?: number | null;
+  org_nombre?: string | null;
+  org_slug?: string | null;
 }
 
 export interface AuthTokens {

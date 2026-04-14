@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { usePlan } from "@/lib/api/hooks/use-planes";
+import { PlanTareasList } from "@/components/planes/plan-tareas-list";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -193,10 +194,16 @@ export default function PlanDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Plan content */}
+      {/* Tareas estructuradas — Sprint 0.5a (Claude + Gemini deliberado) */}
+      <div>
+        <h2 className="mb-3 font-heading text-lg font-semibold">Tareas con metas medibles</h2>
+        <PlanTareasList planId={plan.id} />
+      </div>
+
+      {/* Plan content markdown (fallback / visión narrativa) */}
       <Card>
         <CardHeader>
-          <CardTitle>Contenido del Plan</CardTitle>
+          <CardTitle>Contenido narrativo del plan</CardTitle>
         </CardHeader>
         <CardContent>
           <PlanMarkdown content={plan.contenido} />

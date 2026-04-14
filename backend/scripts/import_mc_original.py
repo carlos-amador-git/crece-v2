@@ -433,16 +433,18 @@ async def import_ciudadanos(
 
 
 async def _flush_ciudadano_batch(session: AsyncSession, batch: list[dict]) -> int:
+    # PII columns were dropped (D-DATA-02c). Write to _enc columns via pgcrypto.
+    pii_key = os.environ.get("PII_ENCRYPTION_KEY", "dev-crece-pii-key-2026-min32chars!")
     sql = text(
         """
         INSERT INTO ciudadanos_legacy (
             legacy_id, org_id, alcaldia_id, unidad_territorial_id,
             promotor_legacy_id, nombre, apellido_paterno, apellido_materno,
-            fecha_nacimiento, edad, sexo, identidad_de_genero, email,
-            phone_01, phone_02, whatsapp, calle, numero, numero_interior,
+            fecha_nacimiento_enc, edad, sexo, identidad_de_genero, email_enc,
+            phone_01_enc, phone_02_enc, whatsapp_enc, calle, numero, numero_interior,
             colonia_texto, codigo_postal, municipio_texto, direccion_libre,
             manzana, latitud, longitud, latitud_cd, longitud_cd,
-            seccion, cabecera_territorial, clave_electoral, origen_ciudadano,
+            seccion, cabecera_territorial, clave_electoral_enc, origen_ciudadano,
             rol, ocupacion, nivel_educativo, nivel_participacion,
             disposicion_tiempo, temas_de_interes, red_social,
             red_social_descripcion, residencia_si_no, contactado, respuesta,
@@ -453,11 +455,18 @@ async def _flush_ciudadano_batch(session: AsyncSession, batch: list[dict]) -> in
         VALUES (
             :legacy_id, :org_id, :alcaldia_id, :unidad_territorial_id,
             :promotor_legacy_id, :nombre, :apellido_paterno, :apellido_materno,
-            :fecha_nacimiento, :edad, :sexo, :identidad_de_genero, :email,
-            :phone_01, :phone_02, :whatsapp, :calle, :numero, :numero_interior,
+            CASE WHEN CAST(:fecha_nacimiento AS text) IS NOT NULL THEN pgp_sym_encrypt(CAST(:fecha_nacimiento AS text), CAST(:pii_key AS text)) END,
+            :edad, :sexo, :identidad_de_genero,
+            CASE WHEN CAST(:email AS text) IS NOT NULL THEN pgp_sym_encrypt(CAST(:email AS text), CAST(:pii_key AS text)) END,
+            CASE WHEN CAST(:phone_01 AS text) IS NOT NULL THEN pgp_sym_encrypt(CAST(:phone_01 AS text), CAST(:pii_key AS text)) END,
+            CASE WHEN CAST(:phone_02 AS text) IS NOT NULL THEN pgp_sym_encrypt(CAST(:phone_02 AS text), CAST(:pii_key AS text)) END,
+            CASE WHEN CAST(:whatsapp AS text) IS NOT NULL THEN pgp_sym_encrypt(CAST(:whatsapp AS text), CAST(:pii_key AS text)) END,
+            :calle, :numero, :numero_interior,
             :colonia_texto, :codigo_postal, :municipio_texto, :direccion_libre,
             :manzana, :latitud, :longitud, :latitud_cd, :longitud_cd,
-            :seccion, :cabecera_territorial, :clave_electoral, :origen_ciudadano,
+            :seccion, :cabecera_territorial,
+            CASE WHEN CAST(:clave_electoral AS text) IS NOT NULL THEN pgp_sym_encrypt(CAST(:clave_electoral AS text), CAST(:pii_key AS text)) END,
+            :origen_ciudadano,
             :rol, :ocupacion, :nivel_educativo, :nivel_participacion,
             :disposicion_tiempo, :temas_de_interes, :red_social,
             :red_social_descripcion, :residencia_si_no, :contactado, :respuesta,
@@ -474,6 +483,10 @@ async def _flush_ciudadano_batch(session: AsyncSession, batch: list[dict]) -> in
         """
     )
     for params in batch:
+        params["pii_key"] = pii_key
+        # pgp_sym_encrypt needs text, not datetime
+        if params.get("fecha_nacimiento") is not None:
+            params["fecha_nacimiento"] = str(params["fecha_nacimiento"])
         await session.execute(sql, params)
     return len(batch)
 

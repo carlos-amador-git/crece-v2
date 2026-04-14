@@ -12,7 +12,10 @@
 services:
   # ── Database ────────────────────────────────────────────────
   db:
-    image: postgis/postgis:16-3.4
+    build:
+      context: ../../docker/postgres
+      dockerfile: Dockerfile
+    image: crece-db:16-postgis-pgvector
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

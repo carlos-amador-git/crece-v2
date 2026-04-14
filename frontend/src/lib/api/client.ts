@@ -16,11 +16,17 @@ function getToken(): string | null {
   return localStorage.getItem("crece_access_token");
 }
 
+function getActiveOrgId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("crece_active_org_id");
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   const token = getToken();
+  const orgId = getActiveOrgId();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
@@ -28,6 +34,9 @@ async function request<T>(
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  }
+  if (orgId) {
+    headers["X-Org-Id"] = orgId;
   }
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {

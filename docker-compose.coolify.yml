@@ -22,7 +22,10 @@ services:
 
   # PostgreSQL 16 + PostGIS 3.4 (electoral maps, canvassing routes, citizen geolocation)
   db:
-    image: postgis/postgis:16-3.4
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    image: crece-db:16-postgis-pgvector
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-crece}

@@ -3,6 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    admin_classification,
+    admin_overview,
     alerts_integration,
     api_keys,
     auth,
@@ -24,11 +26,13 @@ from app.api.v1.endpoints import (
     eventos,
     geo,
     health,
+    indice_aceptacion,
     metricas_sociales,
     organizaciones,
     osint,
     participacion,
     planes,
+    political_framework,
     programas,
     social,
     trends,
@@ -77,3 +81,7 @@ api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboar
 api_router.include_router(osint.router, prefix="/osint", tags=["osint"])
 api_router.include_router(bot_detection.router, prefix="/bot-detection", tags=["bot-detection"])
 api_router.include_router(trends.router, prefix="/trends", tags=["trends"])
+api_router.include_router(political_framework.router, prefix="/framework", tags=["political-framework"])
+api_router.include_router(admin_classification.router, prefix="/admin/classification", tags=["admin-classification"])
+api_router.include_router(admin_overview.router, prefix="/admin", tags=["admin-overview"])
+api_router.include_router(indice_aceptacion.router, prefix="/social", tags=["indice-aceptacion"])
