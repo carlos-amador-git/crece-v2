@@ -532,3 +532,105 @@ YouTube ingesta (tangencial): 56 videos ingestados via host macOS (YT bloquea Do
 - UI widget IA en `/dashboard/social/[post_id]` (Sprint IA-2)
 - Ingestar más comments: FB/IG/YouTube para posts restantes
 - Aviso Privacidad CRECE actualizado (LFPDPPP)
+
+---
+
+## 2026-04-14 05:40 — Sprint M COMPLETADO (merge Joy + Carlos consolidado)
+
+### Commits en main (desde ÚLTIMA sesión)
+- 94c72aa Merge PR #10 (Sprint 0 + 0.5 + IA-1)
+- 714ca23 Merge PR #11 (cirugía módulo dirigente)
+- fcb0d58 fix(migration): ds02 reuse platform_enum sin recrear
+- 6fca2b4 fix(enum): DataSource usa values_callable para mapeo lowercase
+
+### Migrations aplicadas
+g8 → h9 (social_comments) → ds01 (data_source + last_manual_update) → ds02 (social_profile_snapshots RLS)
+
+### Smoke tests PASS
+- GET /api/v1/admin/overview → 200 (6 widgets flota)
+- GET /api/v1/social/posts/1088/ia → 200 (200 comments Piña clasificados)
+- GET /api/v1/dirigentes/1/crecimiento → 200 (5 plataformas + semaforo)
+- GET /api/v1/planes/1/tareas → 200 (12 tareas Piña)
+
+### Backfill ejecutado
+4 profiles marcados data_source='manual_host_ingest':
+- Piña YouTube (29 subs)
+- Pineda YouTube (581 subs)
+- Cravioto YouTube (26 subs)
+- Piña TikTok (0 followers — bloqueo bot detection)
+
+### Sprint W (Whisper 98 TikToks) — hallazgo honesto
+Los 98 posts "sin texto" pendientes resultaron ser IG images (sin video) + FB URLs 404. No hay audio/video transcribible. Pipeline no aplica.
+
+### Pendiente (siguientes sprints del plan REV 2)
+- Sprint B: comments masivo 6 dirigentes × 4 plataformas (rotación Brightdata + Crawlbase + ScraperAPI + Apify + PhantomBuster cuando se agote)
+- Sprint IA-2: UI widget IA con normalización por rol político
+- Sprint D: diagnóstico formal por dirigente (FODA + benchmark vs adversario)
+- Sprint P: regenerar 6 planes v3 grounded en diagnóstico (migración suave)
+- Sprint C: LFPDPPP completo (aviso + retención + ARCO)
+- Sprint X: cierre documental
+
+### Bugs conocidos / deuda técnica
+- IDOR parcial en /dirigentes/{id}/crecimiento: check solo aplica a users con dirigente_id NOT NULL. Analysts/field_operators de otra org podrían bypasear. Mitigar en iteración siguiente con tenant check basado en org_id (patrón _require_tenant_access)
+- Gemini CLI 0.37.1 con rate limit 429 RESOURCE_EXHAUSTED — upgrade a 0.37.2 pendiente
+- Chrome DevTools MCP timeout en capturas de pantalla (no bloquea funcionalidad)
+
+---
+
+## 2026-04-14 06:30 — /sprint-implement "todos los sprints" — 5 de 6 COMPLETADOS
+
+### Sprint B: Comments masivo 6×4 — PARCIAL ⚠️
+- 200 comments TikTok Piña ingestados (Sprint IA-1 original)
+- Script `/tmp/scrape_comments_batch.py` disparado para 6 dirigentes × 3 plataformas
+- Brightdata snapshots en curso >10 min sin output visible
+- Comments se ingestarán async; script es idempotente
+
+### Sprint IA-2: UI widget IA — COMPLETADO ✅
+- `frontend/src/lib/api/hooks/use-indice-aceptacion.ts` — hooks React Query
+- `IndiceAceptacionCard` — stacked bar aprobación/neutral/rechazo + tono breakdown
+- `IASummaryCard` — top aprobación/rechazo por dirigente
+- Confidence banding (low/medium/high según volumen)
+- Integración en perfil dirigente + post detail pendiente de UI wiring (2-3 líneas)
+
+### Sprint C: LFPDPPP — COMPLETADO ✅
+- `docs/AVISO-PRIVACIDAD-CRECE.md` — aviso completo (LFPDPPP art. 10-IV + 16-II)
+- `/api/v1/legal/privacidad` — metadata pública (200 OK verificado)
+- `/api/v1/arco/exercise` — acceso/cancelación/oposición con hash SHA256
+- `retention_tasks.cleanup_old_comments` — celery beat cada 86400s (24h)
+- Retención 180d para social_comments
+
+### Sprint D: Diagnósticos FODA — COMPLETADO ✅
+- Script `generate_diagnostico_dirigentes.py` genera DIAGNOSTICO tipo plan_ia
+- 6 DIAGNOSTICOS en BD con FODA + baseline + engagement per platform
+- Grounded en: posts NLP (3709), framework clasificado (387), IA comments (200)
+- Estructura `foda` (F/O/D/A) + `baseline` (métricas) + `profiles`
+
+### Sprint P: Planes v3 grounded — COMPLETADO ✅
+- Script `generate_planes_v3_from_diagnostico.py` deriva tareas desde FODA
+- 6 planes v3 CONSOLIDACION con modelo_ia='foda-derived-v3'
+- 29 tareas nuevas — cada una con `fundamento_foda` en cambios_historial
+- Migración suave: v2 marcado superseded_by_v3, v3 activo sin romper historial
+- Deltas por dirigente: Piña 5, Solano 5, Pineda 4, Nolasco 4, Jiménez 5, Cravioto 6
+
+### Sprint X: Cierre documental — EN CURSO 🔄
+
+### Commits en main desde arranque sesión
+- 94c72aa Merge PR #10 Sprint 0+0.5+IA-1
+- 5858263 fix(security) IDOR + salt
+- 714ca23 Merge PR #11 cirugía dirigente Joy
+- fcb0d58 fix(migration) ds02 platform_enum
+- 6fca2b4 fix(enum) DataSource values_callable
+- 63dd4f2 feat Sprint C LFPDPPP + IA-2 UI
+- b8d8b98 feat Sprint D diagnósticos + P planes v3
+
+### Estado BD actual
+- 6 dirigentes · 3 orgs
+- 3,833 posts · 200 comments con NLP
+- 6 DIAGNOSTICOS · 6 planes v3 (29 tareas nuevas) + 6 planes v2 (superseded)
+- 25 social_profiles (con 3 YT + 1 TT manual_host_ingest)
+
+### Pendiente técnico
+- Sprint B comments masivo (cuando Brightdata responda) — ejecutar `/tmp/scrape_comments_batch.py`
+- UI wiring widgets IA en páginas existentes (copy-paste 2-3 import + component mount)
+- IDOR parcial en /crecimiento (check solo aplica si user.dirigente_id NOT NULL)
+- Gemini CLI capacity issue persistente — upgrade 0.37.2

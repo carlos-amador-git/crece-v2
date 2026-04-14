@@ -682,3 +682,30 @@ A (setup) → B (endpoints fix) → D.0 (framework schema) → C (analyze_full b
 - Script: `backend/scripts/nlp_comments_batch.py`
 - Keywords por tono (critico/ataque/propositivo/solidario/celebratorio/informativo/personal) + target (gobierno/oposicion/ciudadania/autopromocion/medios/tema_especifico)
 - Polaridad -1/0/+1 derivada de sentiment + tono
+
+---
+
+## 2026-04-14 06:30 — Sprint /sprint-implement multiple (Sprints B+C+IA-2+D+P+X)
+
+**D-SI-01: Arquitectura DIAGNOSTICO → PLAN v3 grounded**
+- Tipo DIAGNOSTICO en planes_ia almacena FODA + KPI baseline + estructura_json
+- Plan v3 CONSOLIDACION deriva tareas via `derive_tareas_from_foda()` 
+- Cada tarea v3 tiene `fundamento_foda` en cambios_historial — trazabilidad
+- Migración suave: v2 marcado `superseded_by_v3`, v3 con `supersedes_plan_ids[]`
+
+**D-SI-02: LFPDPPP endpoints públicos**
+- GET /api/v1/legal/privacidad devuelve metadata del aviso
+- POST /api/v1/arco/exercise acepta acceso/cancelación/oposición con hash SHA256
+- Cron diario `cleanup_old_comments` borra social_comments >180d
+- Aviso de Privacidad completo en docs/AVISO-PRIVACIDAD-CRECE.md
+
+**D-SI-03: IA UI widget con confidence banding**
+- IndiceAceptacionCard: stacked bar + tonos + confidence low/medium/high
+- IASummaryCard: top aprobación/rechazo del dirigente
+- Post-normalización rol político pendiente Sprint siguiente
+
+**D-SI-04: Sprint B comments scale pending Brightdata**
+- Scraper batch corriendo background 8+ min sin output visible
+- Brightdata snapshot queue lenta con múltiples URLs simultáneos
+- 200 comments Piña TikTok ingestados (Sprint IA-1 original)
+- Expansión 6×4 pendiente — script idempotente, se puede re-correr
