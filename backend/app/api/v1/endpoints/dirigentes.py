@@ -111,15 +111,45 @@ async def list_dirigentes(
 async def get_dirigente(
     dirigente_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> dict:
-    """Get a single dirigente by ID with enriched data for the dashboard."""
+    """Get a single dirigente by ID with enriched data for the dashboard.
+
+    Scope enforcement (P0 — data leak fix 2026-04-14):
+    - Viewer con ``dirigente_id`` asignado sólo puede ver su propio dirigente.
+    - Non-admin sólo puede ver dirigentes de su misma ``org_id``.
+    - Admin bypasses ambos checks (puede cambiar org vía X-Org-Id a futuro).
+
+    Patrón idéntico al ya aplicado en ``/flash-analysis`` y ``/crecimiento``.
+    """
     from datetime import UTC, datetime, timedelta
+
+    # Viewer (o cualquier user con dirigente_id) sólo ve el suyo.
+    if (
+        current_user.dirigente_id is not None
+        and current_user.dirigente_id != dirigente_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes acceso a este dirigente",
+        )
 
     result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+
+    # Org-level isolation para non-admin.
+    if (
+        current_user.role != "admin"
+        and dirigente.org_id is not None
+        and current_user.org_id is not None
+        and dirigente.org_id != current_user.org_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Dirigente pertenece a otra organizacion",
+        )
 
     # Base response
     base = DirigenteResponse.model_validate(dirigente).model_dump()
