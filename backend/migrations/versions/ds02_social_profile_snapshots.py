@@ -22,6 +22,15 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
+
+# Reuse existing platform_enum from social_profiles migration — do NOT re-create.
+platform_enum_ref = postgresql.ENUM(
+    "TWITTER", "INSTAGRAM", "FACEBOOK", "TIKTOK", "YOUTUBE",
+    "BLUESKY", "THREADS", "TELEGRAM", "NEWS",
+    name="platform_enum",
+    create_type=False,
+)
 
 # revision identifiers
 revision: str = "ds02_social_profile_snapshots"
@@ -52,23 +61,7 @@ def upgrade() -> None:
             sa.ForeignKey("organizaciones.id", ondelete="CASCADE"),
             nullable=False,
         ),
-        sa.Column(
-            "platform",
-            sa.Enum(
-                "TWITTER",
-                "INSTAGRAM",
-                "FACEBOOK",
-                "TIKTOK",
-                "YOUTUBE",
-                "BLUESKY",
-                "THREADS",
-                "TELEGRAM",
-                "NEWS",
-                name="platform_enum",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("platform", platform_enum_ref, nullable=False),
         sa.Column("followers_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("posts_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column(
