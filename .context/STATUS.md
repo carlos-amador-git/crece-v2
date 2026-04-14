@@ -13,6 +13,30 @@
 
 ### Fases ejecutadas
 
+### Sprint 1 operativo (en esta sesión)
+- 95 posts clasificados por Claude Opus 4.6 via admin panel
+  - MC-CDMX: 35 posts (24 Piña oposición +0.38, 11 Solano oposición -0.09)
+  - GOB-OAXACA: 30 posts Pineda oficialismo (+0.47 promedio)
+  - CDMX-IND: 30 posts Jiménez/Cravioto oficialismo (+0.52 / +1.00)
+- 0 errores en batch processing
+- Admin panel `/dashboard/admin/clasificacion` validado visualmente end-to-end
+- Guardrail acceso: dirigente bloqueado (pantalla "Acceso restringido"), admin accede
+- Badge "Analisis Contextual · 3 IAs deliberaron" visible en dashboard
+
+### Sprint 2 NLP batch (corriendo en background al cierre)
+- Script: `docker exec crece-backend python scripts/reprocess_nlp_full.py`
+- Progreso al cierre: 2,180/3,709 posts con `nlp_model_version='multi-model-v1'`
+- Topics model xlm-roberta re-descargado correctamente post cache clean
+- Velocidad: ~4.6 posts/sec, ETA ~7 min al momento del handoff
+- Idempotente: reanudable si se interrumpe
+
+### Pendiente para próxima sesión
+1. Dashboard admin operativo `/dashboard/admin/overview` (CEO aprobó mockup)
+2. Scrapers encuestas Oraculus + Demoscopía (peer md-research entregó plan)
+3. Commit final con Sprint 1+2 results
+4. Implementar charts (Treemap/Stream/Sunburst) en dashboard cliente
+
+
 | Fase | Deliverable |
 |---|---|
 | **A** Setup | Ollama + HF verificado (topics degradado por cache xlm-roberta, fix post-cleanup) |

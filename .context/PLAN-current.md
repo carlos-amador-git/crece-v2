@@ -1,212 +1,177 @@
-# Plan Sprint NLP+Charts — 2026-04-13 tarde
+# Plan Sprint Cierre — 2026-04-13 noche
 
-**Origen:** `/sprint-review` sobre 4 acciones derivadas de auditoría sentiment + charts lab
+**Origen:** `/sprint-review` de pendientes post-commit `118ce13` (framework político)
 **Branch:** `feat/sprint-c-hardening`
-**Docs fuente:** `docs/AUDITORIA-SENTIMENT-2026-04-13.md`, `docs/NLP-MODELOS-INVESTIGACION.md`, `docs/CHARTS-LAB-DECISIONES.md`
-**Estado:** CEO dio luz verde, ejecutando
+**Estado:** **REVISIÓN — esperando aprobación CEO antes de ejecutar**
 
 ---
 
-## Las 4 acciones originales (del CEO)
+## Contexto
 
-1. Re-procesar 3,709 posts con `analyze_full()` (controversy + toxicity + topics + platform-adjusted)
-2. LLM contextualizado Gemma3:12b con prompt tono+target+imagen por rol político
-3. Reconstruir charts-lab persistente (Treemap, Stream, Sunburst) con datos reales
-4. Fix RTs exclusion + dedup cross-platform en endpoints dashboard
+El sprint previo cerró el framework político (3 capas, admin panel, UI niveles, charts lab, docs). Quedan 4 pendientes claros para "terminar la sesión":
 
----
-
-## División en fases (revisada)
-
-Re-ordené por **impacto/tiempo** y **paralelización**. La fase 4 del CEO (endpoints fix) va primero porque es rápida y desbloquea UI inmediatamente. La re-procesada de NLP va en background mientras se hace lo demás.
-
-### FASE A — Preparación (10 min)
-- **A.1** Verificar Ollama up + `gemma3:12b` cargado localmente
-- **A.2** Smoke test `analyze_full()` sobre 3 posts variados (validar que HF models cargan)
-- **A.3** Verificar versión de pysentimiento/torch en venv Python
-
-**Criterio:** los 3 modelos HF cargan sin error, analyze_full devuelve dict completo para 3 posts.
-
-### FASE B — Endpoints fix RTs + dedup (1h, PRIMERO por impacto/tiempo)
-Ataca las anomalías #2 y #3 de la auditoría sin esperar al re-proceso NLP.
-
-- **B.1** `dashboard.py /overview` — excluir RTs (`content NOT LIKE 'RT @%'`) + dedup `DISTINCT ON (content LEFT 100)` en agregación de avg_sentiment
-- **B.2** `social.py /sentiment-timeline` — mismo filtro RT + dedup
-- **B.3** `social.py /posts` — filtro `?exclude_rts=true` opcional
-- **B.4** Excluir posts < 20 chars del avg_sentiment (nueva regla `length >= 20`)
-- **B.5** Frontend: renombrar KPI "Sentimiento" → "Tono discursivo" con tooltip explicando
-- **B.6** Verificación visual con Chrome DevTools: antes/después para MC-CDMX + GOB-OAXACA
-
-**Criterio:** Piña avg cambia de -0.295 a ~-0.165, Solano cambia signo (-0.090 → +0.071). Tooltip explica.
-
-### FASE C — Re-proceso analyze_full (background, 2-4h)
-Desbloquea los 4 campos faltantes (controversy, toxicity, topics, platform-adjusted).
-
-- **C.1** Migration Alembic: agregar columnas a `social_posts`:
-  - `controversy_score FLOAT`
-  - `toxicity_score FLOAT`
-  - `topics JSONB` (lista de `{label, score}`)
-  - `platform_adjusted_sentiment FLOAT`
-  - `nlp_model_version VARCHAR(50)` ("multi-model-v1")
-- **C.2** Script `backend/scripts/reprocess_nlp_full.py`:
-  - Query posts con `nlp_model_version IS NULL OR != 'multi-model-v1'`
-  - Llama `analyze_full(content, platform=sp.platform.lower())`
-  - Persiste 5 nuevos campos
-  - Idempotente (skip si ya procesado con v1)
-- **C.3** Smoke test con 50 posts primero, validar output
-- **C.4** Batch full 3,709 posts en background, log cada 100
-- **C.5** Query verificación: distribución topics, toxicity media, controversy media
-
-**Criterio:** 3,709 posts con los 4 campos nuevos poblados, topics cubren 8 categorías, ≥ 80% posts con al menos 1 topic.
-
-### FASE D — LLM contextualizado Gemma (background + foreground iterativo, 3-5h)
-Ataca la anomalía #1 (sentimiento técnico ≠ imagen política).
-
-- **D.1** Diseño prompt v1 con el CEO en este chat (tono + target + imagen_dirigente + relevancia)
-- **D.2** Script piloto `backend/scripts/llm_contextual_pilot.py` sobre 20 posts mezcla (5 Piña + 5 Cravioto + 5 Pineda + 5 RTs)
-- **D.3** Revisar output, iterar prompt con el CEO (2-3 rondas)
-- **D.4** Migration: `social_posts` agrega columnas `tono_discurso`, `target_politico`, `imagen_dirigente`, `relevancia_politica`, `llm_razon`, `llm_modelo`
-- **D.5** Script batch full `backend/scripts/llm_contextual_batch.py`:
-  - Recibe rol del dirigente (oficialismo/oposición/independiente) de `dirigentes.partido` + heurística
-  - Llama Ollama local vía HTTP POST
-  - Parsea JSON response, persiste
-  - Reintentos con backoff
-- **D.6** Batch en background sobre 3,709 posts (estimado 4-5h Mac M-series)
-- **D.7** Agregado: por dirigente, distribución de tonos + target más frecuente + avg imagen_dirigente
-
-**Criterio:** 3,709 posts con tono clasificado, 95%+ con target coherente, CEO valida 20 posts pilot.
-
-### FASE E — Charts lab persistente (2h)
-Reconstruye el HTML perdido con datos reales.
-
-- **E.1** Crear `tools/charts-lab/index.html` con Plotly CDN
-- **E.2** Fetch a API local para traer:
-  - Engagement por plataforma por dirigente (para Treemap)
-  - Sentiment timeline con nuevas métricas (para Stream)
-  - Jerarquía dirigente→plataforma→post_type (para Sunburst)
-- **E.3** 3 gráficos renderizados, interactivos (filtros, toggle leyenda, tooltip)
-- **E.4** Control: selector de org + período + dirigente
-- **E.5** README explica cómo correrlo (servir con `python -m http.server`)
-
-**Criterio:** `tools/charts-lab/index.html` persiste en repo, abre en navegador, datos reales de la DB.
-
-### FASE F — Dashboard integration (foreground, 2-3h)
-Mueve los 3 gráficos del lab al dashboard donde corresponda.
-
-- **F.1** Componente `<EngagementTreemap />` en `frontend/src/components/charts/`
-- **F.2** Componente `<SentimentStream />` con toggle global + por plataforma
-- **F.3** Componente `<DirigenteSunburst />` jerarquía
-- **F.4** Asignación a páginas según el mapeo de `docs/CHARTS-LAB-DECISIONES.md`:
-  - Treemap → `/dashboard` (overview)
-  - Stream → `/dashboard/social`
-  - Sunburst → `/dashboard/dirigentes` (o `/dashboard/radiografia` nuevo)
-- **F.5** Verificación visual Chrome, screenshots antes/después
-
-**Criterio:** los 3 gráficos montados, usan hooks de react-query con org scoping, screenshots guardados.
-
-### FASE G — Documentación + Cierre (30 min)
-- **G.1** Actualizar `.context/STATUS.md` con resultados
-- **G.2** Registrar decisiones en `.context/DECISIONS.md` (prompt LLM, rol política heurística)
-- **G.3** Commit final con granularidad por fase
-- **G.4** Reporte al CEO
+1. **Clasificación inicial real** de top 60 posts por org (usar el admin panel construido)
+2. **Scrapers encuestas públicas** (Oraculus + Demoscopía) — plan del peer md-research listo
+3. **NLP reprocess reanudar** (3,449 posts restantes con controversy/toxicity/topics)
+4. **Topics model cache fix** (xlm-roberta corrupto)
 
 ---
 
-## Dependencias y paralelización
+## Sprints propuestos
+
+### Sprint 1 — Clasificación inicial operativa (1-1.5 h)
+**Objetivo:** Validar end-to-end el admin panel construido. Las 3 orgs pasan de 0% cobertura a ~60-80 posts clasificados cada una.
+
+| Subtarea | Archivos | Duración | Criterio |
+|---|---|---|---|
+| S1.1 Generar prompt MC-CDMX 30 posts | Panel admin | 2 min | 30 posts top engagement |
+| S1.2 Clasificar con Claude (yo) | chat mismo | 5 min | JSON array 30 items válidos |
+| S1.3 Aplicar vía /batch | Panel admin | 1 min | processed=30 failed=0 |
+| S1.4 Verificar dashboard cliente MC-CDMX | Chrome visual | 3 min | Scores políticos visibles |
+| S1.5 Repetir para GOB-OAXACA | — | 15 min | Igual para org 2 |
+| S1.6 Repetir para CDMX-IND | — | 15 min | Igual para org 3 |
+| S1.7 Cross-audit Gemini muestra 10 posts | gemini CLI | 10 min | Gemini valida/corrige ≤ 20% |
+| S1.8 Screenshot dashboards actualizados | Chrome | 5 min | 3 screenshots en `/tmp/` |
+| S1.9 Pruebas robustez admin panel (Gemini) | Panel admin | 10 min | Upload JSON mal formado, post_ids inexistentes, volumen > 60 posts |
+
+**Dependencias:** Ninguna (panel ya construido, APIs funcionan).
+**Paralelizable:** No (pipeline secuencial).
+**Recursos:** Claude Code (yo) + admin panel + Chrome DevTools.
+
+### Sprint 2 — NLP reprocess reanudar + Topics cache (30-45 min)
+**Objetivo:** Completar los 3,449 posts restantes con campos nuevos de `analyze_full()`.
+
+| Subtarea | Archivos | Duración | Criterio |
+|---|---|---|---|
+| S2.1 Limpiar cache xlm-roberta | `~/.cache/huggingface/hub/` | 5 min | Directorio borrado |
+| S2.2 Re-descargar modelo (~2GB) | pip + primera llamada | 10-15 min | `predict_topics()` devuelve lista |
+| S2.3 Smoke test con 5 posts | reprocess_nlp_full.py | 3 min | Topics JSONB poblado |
+| S2.4 Batch full (background) | reprocess_nlp_full.py | 30-60 min bg | 3,709 con nlp_model_version=v1 |
+| S2.5 Query verificación coverage | SQL | 2 min | 100% procesados |
+
+**Dependencias:** S2.1 → S2.2 → S2.3 → S2.4
+**Paralelizable:** S2.4 (background) con Sprint 3
+**Recursos:** Bash, Python backend container.
+
+### Sprint 3 — Scrapers encuestas públicas (3-5 h)
+**Objetivo:** Implementar scrapers Oraculus + Demoscopía según plan del peer md-research.
+
+**S3.0 PRE-REQUISITO (nuevo, por Gemini)** — 30 min validación manual
+- Abrir Oraculus `/aprobacion-presidencial/` en browser, validar que el JSON inline sigue en línea ~138
+- Abrir Demoscopía `/aprobacionEstado/ciudad-de-mexico/` y `/aprobacionEstado/oaxaca/`, validar que Flourish IDs están expuestos en HTML
+- Documentar los regex exactos que funcionan HOY (puede cambiar mañana)
+- Si algo cambió vs reporte peer: ajustar antes de codear
+
+| Subtarea | Archivos | Duración | Criterio |
+|---|---|---|---|
+| S3.1 Scraper Oraculus federal | `backend/scrapers/oraculus.py` (nuevo) | 45 min | JSON inline parseado, 7+ presidentes extraídos |
+| S3.2 Persistir en `encuestas_publicas` | script seed | 15 min | ≥ 50 encuestas Sheinbaum últimos 6 meses |
+| S3.3 Scraper Demoscopía CDMX | `backend/scrapers/demoscopia.py` | 60 min | Brugada aprobación mensual ≥ 3 puntos |
+| S3.4 Scraper Demoscopía Oaxaca | mismo archivo | 30 min | Jara aprobación mensual ≥ 3 puntos |
+| S3.5 Celery task scheduler | `backend/app/workers/tasks.py` | 20 min | Cron diario a las 14:00 MX |
+| S3.6 Servicio divergencia + endpoint | `divergencia_encuestas.py` + endpoint `/dashboard/divergencia` | 30 min | Query mensual devuelve dict con flag alert |
+| S3.7 Badge "Atención divergencia >30%" en UI | dashboard page | 20 min | Visible cuando alert=true |
+| S3.8 Test end-to-end | — | 15 min | Datos reales visibles en dashboard |
+
+**Dependencias:** S3.1-S3.4 independientes entre sí, S3.6 depende de S3.2
+**Paralelizable:** S3.1+S3.3 foreground si hago uno y el peer hace otro
+**Recursos:** python-expert, fastapi skill, httpx + regex, Alembic.
+
+### Sprint 4 — Cierre documental + commit (15 min)
+**Objetivo:** Cerrar la sesión con docs actualizados.
+
+| Subtarea | Archivos | Duración | Criterio |
+|---|---|---|---|
+| S4.1 Actualizar STATUS.md con resultados S1+S2+S3 | `.context/STATUS.md` | 5 min | Sección nueva |
+| S4.2 Registrar decisiones | `.context/DECISIONS.md` | 3 min | D-SCRAPER-01 para Oraculus |
+| S4.3 Commit + push | git | 2 min | Commit pusheable a origin |
+| S4.4 Reporte final al CEO | text | 5 min | Tabla con deliverables |
+
+**Dependencias:** Después de S1-S3
+**Recursos:** Edit + git.
+
+---
+
+## Dependencias visuales
 
 ```
-FASE A (setup 10min)
-  │
-  ├──> FASE B (endpoints fix 1h) ──> listo para UI
-  │
-  └──> FASE C (re-proceso NLP 2-4h background) ──┐
-                                                 │
-          FASE D (LLM Gemma 3-5h background) ────┤
-                                                 │
-                  FASE E (charts lab 2h) ────────┤
-                                                 │
-                 FASE F (dashboard 2-3h) ────────┘
-                                                 │
-                                       FASE G (cierre 30min)
+Sprint 1 (clasificación operativa) ───────────┐
+                                              │
+Sprint 2.1-2.3 (topics cache fix) ──> S2.4 bg │
+                                          │   │
+            Sprint 3 (scrapers) ──────────┘   │
+                                              │
+                         Sprint 4 (cierre) <──┘
 ```
 
-**Estrategia:** FASE B primero (rápido, alto impacto). FASE C y D corren en background mientras yo hago FASE E foreground. FASE F depende de C (para tener los datos) y E (para tener los componentes). FASE G al final.
+Sprint 1 + Sprint 2 + Sprint 3 **pueden hacerse en cualquier orden** una vez sus dependencias internas resuelvan. Sugiero:
+- **Sprint 1 primero** (más corto, valida todo lo ya hecho)
+- **Sprint 2.4 batch NLP en background** mientras se hace Sprint 3
+- **Sprint 3 foreground**
+- **Sprint 4 al final**
 
 ---
 
-## Recursos asignados
+## Recursos asignados por sprint
 
-| Fase | Skill/Agent | Herramientas |
+| Sprint | Agent/Skill | Herramientas |
 |---|---|---|
-| A | python-expert, systematic-debugging | Bash, Ollama HTTP |
-| B | backend, nextjs15, frontend | Edit, Bash, Chrome DevTools |
-| C | pgvector, fastapi, python-expert | Alembic, psycopg2, analyze_full |
-| D | ollama skill, claude-api, bullmq-specialist | Ollama HTTP, JSON parsing |
-| E | frontend-design, ui-ux-pro-max | Plotly CDN, HTML |
-| F | frontend, tailwindcss4, nextjs15 | Recharts/Plotly, shadcn-ui |
-| G | technical-writer | Edit, git |
+| 1 | Claude Opus 4.6 (clasificador) + systematic-debugging | Chrome DevTools, admin panel, Gemini CLI |
+| 2 | python-expert, pgvector skill | Bash, Docker exec, Alembic |
+| 3 | fastapi skill, python-expert | httpx, regex, Alembic, Celery |
+| 4 | technical-writer | Edit, git |
 
 ---
 
 ## Riesgos y mitigaciones
 
-| Riesgo | Probabilidad | Mitigación |
+| Riesgo | Prob | Mitigación |
 |---|---|---|
-| HF models no cargan (memoria/red) | Media | graceful degradation — skip campo específico, no bloquear batch |
-| Ollama Mac local se congela con 3,709 prompts | Media | Batch con retries + checkpoint cada 100 posts |
-| Prompt LLM produce JSON malformado | Alta | regex recovery + fallback neutral, log todos los fallos |
-| Charts lab Plotly CDN offline | Baja | fallback a versión local en node_modules |
-| Dashboard chart F.1 rompe existing page | Media | feature flag, deploy gradual |
+| Clasificación Claude sesgada | Media | Cross-audit Gemini sobre 10 muestra |
+| Oraculus cambia HTML structure | Baja | Regex con fallback, log si no matchea |
+| Demoscopía Flourish IDs cambian | Media | Scraper con fallback a scraping directo HTML |
+| Topics cache re-descarga falla red | Baja | Fallback: seguir sin topics |
+| Admin panel UX quiebra en uso real | Media | Iterar después de S1.1, no esperar S1.6 |
+
+---
+
+## Criterios de aceptación finales
+
+- ✅ Admin panel probado end-to-end con datos reales de 3 orgs
+- ✅ Dashboards clientes reflejan scores políticos
+- ✅ 3,709 posts con controversy/toxicity/topics completos
+- ✅ Scrapers encuestas corriendo diario
+- ✅ Badge de divergencia funcional
+- ✅ Commit pushable a `main` vía PR
 
 ---
 
 ## Cross-audit Gemini (aplicado 2026-04-13)
 
-Gemini identificó 4 mejoras válidas, todas integradas:
+Gemini validó el plan. Integrados 3 cambios:
+1. **S3.0 NUEVO** — validación manual de endpoints Oraculus/Demoscopía ANTES de codear (riesgo #1 identificado)
+2. **S1.9 NUEVO** — pruebas robustez admin panel con datos inesperados
+3. **Tiempo recalibrado: 8-10h (antes 5-6h)** — Gemini dijo optimista
 
-### G1: Schema de C y D debe estar finalizado ANTES de empezar E
-**Fix:** Agregar sub-tarea "C.0 DEFINIR SCHEMA" al inicio de C. El schema exacto se documenta en el PLAN antes de ejecutar migration, así E puede diseñar fetch con ese contrato.
+### Estimación realista post-Gemini
 
-### G2: Migration C debe ser robusta con rollback
-**Fix:** Alembic auto-genera rollback. Añadir test: correr upgrade → downgrade → upgrade en DB de prueba antes de producción.
+| Sprint | Antes | Realista |
+|---|---|---|
+| Sprint 1 | 1-1.5h | 1.5-2h (+robustez) |
+| Sprint 2 | 45min | 1h (re-download + verificación) |
+| Sprint 3 | 3-4h | 4-5h (+validación manual + debugging inesperado) |
+| Sprint 4 | 15min | 30min (doc + commit + PR) |
+| **TOTAL** | **5-6h** | **7-8.5h** |
 
-### G3: D necesita criterio de calidad medible (validación humana)
-**Fix:** Nuevo criterio en D: 20 posts piloto validados por CEO (acepta/rechaza tono y target). Umbral: ≥ 16/20 correctos para aprobar prompt y ejecutar batch full.
-
-### G4: Resiliencia Ollama batch 8h + consumo Mac
-**Fix:**
-- Script `llm_contextual_batch.py` con checkpoints cada 50 posts en DB
-- Resume desde último procesado al reiniciar
-- Correr con `nice -n 15` para baja prioridad CPU
-- Monitor cada 15 min: si Mac load_avg > 6.0, pausar batch
-
-### G5 (extra): E con mock data para desacoplar
-**Fix:** E.1-E.3 pueden arrancar con `/tools/charts-lab/mock-data.json` (generado de schema C/D). Validar gráficos independientemente, luego conectar a API real en E.4.
+Gemini dijo 8-10h; mi estimación intermedia 7-8.5h porque tengo ventaja de contexto acumulado.
 
 ---
 
-## Schema nuevo de columnas — social_posts (final, post-Gemini)
+## Pendiente FASE 4 (ejecución)
 
-```sql
--- FASE C
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS controversy_score FLOAT;
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS toxicity_score FLOAT;
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS topics JSONB;  -- [{label, score}, ...]
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS platform_adjusted_sentiment FLOAT;
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS nlp_model_version VARCHAR(50);
+**NO EJECUTAR HASTA APROBACIÓN CEO.**
 
--- FASE D
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS tono_discurso VARCHAR(20);
-  -- enum: 'critico', 'propositivo', 'celebratorio', 'informativo', 'solidario', 'ataque', 'personal'
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS target_politico VARCHAR(50);
-  -- enum: 'gobierno', 'oposicion', 'ciudadania', 'medios', 'autopromocion', 'tema_especifico', 'otro'
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS imagen_dirigente SMALLINT;
-  -- -2 a +2: proyección de imagen política
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS relevancia_politica SMALLINT;
-  -- 0 a 10
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS llm_razon TEXT;
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS llm_modelo VARCHAR(50);
-  -- 'gemma3:12b-v1', etc.
-ALTER TABLE social_posts ADD COLUMN IF NOT EXISTS llm_processed_at TIMESTAMP;
-```
-
+El CEO debe responder:
+1. ¿Apruebas el orden S1 → S2+S3 paralelo → S4?
+2. ¿Hacemos los 3 sprints en esta sesión o dejamos Sprint 3 (scrapers) para mañana?
+3. ¿Quieres cross-audit también con Perplexity antes de ejecutar?
