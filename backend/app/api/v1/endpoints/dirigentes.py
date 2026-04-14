@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user, hash_password
 from app.models.dirigente import Dirigente, DirigenteSyncStatus
-from app.models.social import Platform, SocialPost, SocialProfile
+from app.models.social import DataSource, Platform, SocialPost, SocialProfile, SocialProfileSnapshot
 from app.models.user import User
 from app.schemas.dirigente import (
     DiagnosticoResponse,
@@ -681,3 +681,166 @@ async def get_onboarding_progress(
         steps=steps,
         updated_at=dirigente.sync_updated_at,
     )
+
+
+# ─────────────────────────────────────────────────────────────
+# Cirugía dirigente — crecimiento por red con semáforo
+# ─────────────────────────────────────────────────────────────
+
+_FRESH_STALENESS_HOURS = 48
+
+
+def _growth_status(delta_pct: float | None) -> str:
+    if delta_pct is None:
+        return "desconocido"
+    if delta_pct > 1.0:
+        return "verde"
+    if delta_pct < -1.0:
+        return "rojo"
+    return "ambar"
+
+
+@router.get("/{dirigente_id}/crecimiento")
+async def get_crecimiento(
+    dirigente_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    """Crecimiento de followers por red — series 7d/30d/90d + semáforo 30d/30d.
+
+    Consume ``social_profile_snapshots`` (denormalizada por ``platform`` + ``org_id``
+    + ``dirigente_id``). Calcula deltas (followers_hoy − followers_hace_Nd) y
+    semáforo comparando últimos 30d vs 30d anteriores. Marca ``stale_manual=true``
+    si el perfil es ``data_source='manual_host_ingest'`` y ``last_manual_update``
+    supera las 48h — alerta de deuda de frescura.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    # Scope check — viewer solo ve su propio dirigente
+    if current_user.dirigente_id is not None and current_user.dirigente_id != dirigente_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes acceso a este dirigente",
+        )
+
+    result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
+    dirigente = result.scalar_one_or_none()
+    if dirigente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+
+    profiles_r = await db.execute(
+        select(SocialProfile).where(SocialProfile.dirigente_id == dirigente_id)
+    )
+    profiles = list(profiles_r.scalars().all())
+
+    now = datetime.now(UTC)
+    windows = {"7d": 7, "30d": 30, "90d": 90}
+
+    platforms_out: list[dict] = []
+
+    for profile in profiles:
+        deltas: dict[str, float | None] = {}
+        for label, days in windows.items():
+            past_cut = now - timedelta(days=days)
+            past_r = await db.execute(
+                select(SocialProfileSnapshot.followers_count)
+                .where(
+                    SocialProfileSnapshot.profile_id == profile.id,
+                    SocialProfileSnapshot.taken_at <= past_cut,
+                )
+                .order_by(SocialProfileSnapshot.taken_at.desc())
+                .limit(1)
+            )
+            past_followers = past_r.scalar_one_or_none()
+            if past_followers is None or past_followers == 0:
+                deltas[label] = None
+                continue
+            delta_pct = ((profile.followers_count - past_followers) / past_followers) * 100
+            deltas[label] = round(delta_pct, 2)
+
+        # Semáforo: 30d actual vs 30d anterior (medidos como avg en ventana)
+        cur_start = now - timedelta(days=30)
+        prev_start = now - timedelta(days=60)
+        cur_r = await db.execute(
+            select(func.avg(SocialProfileSnapshot.followers_count)).where(
+                SocialProfileSnapshot.profile_id == profile.id,
+                SocialProfileSnapshot.taken_at >= cur_start,
+            )
+        )
+        prev_r = await db.execute(
+            select(func.avg(SocialProfileSnapshot.followers_count)).where(
+                SocialProfileSnapshot.profile_id == profile.id,
+                SocialProfileSnapshot.taken_at >= prev_start,
+                SocialProfileSnapshot.taken_at < cur_start,
+            )
+        )
+        cur_avg = cur_r.scalar_one_or_none()
+        prev_avg = prev_r.scalar_one_or_none()
+        if cur_avg is not None and prev_avg is not None and float(prev_avg) > 0:
+            trend_30v30 = round(
+                ((float(cur_avg) - float(prev_avg)) / float(prev_avg)) * 100, 2
+            )
+        else:
+            trend_30v30 = None
+        semaforo = _growth_status(trend_30v30)
+
+        # Deuda de frescura
+        stale_manual = False
+        if profile.data_source == DataSource.MANUAL_HOST_INGEST:
+            if profile.last_manual_update is None:
+                stale_manual = True
+            else:
+                age = now - profile.last_manual_update
+                stale_manual = age > timedelta(hours=_FRESH_STALENESS_HOURS)
+
+        platforms_out.append(
+            {
+                "platform": profile.platform.value,
+                "handle": profile.handle,
+                "followers_now": profile.followers_count,
+                "delta_pct": deltas,
+                "trend_30v30_pct": trend_30v30,
+                "semaforo": semaforo,
+                "data_source": profile.data_source.value,
+                "last_manual_update": (
+                    profile.last_manual_update.isoformat()
+                    if profile.last_manual_update
+                    else None
+                ),
+                "stale_manual": stale_manual,
+            }
+        )
+
+    # Serie temporal para charts (union de todos los snapshots de todos los perfiles)
+    profile_ids = [p.id for p in profiles]
+    series_points: list[dict] = []
+    if profile_ids:
+        since = now - timedelta(days=90)
+        snapshots_r = await db.execute(
+            select(
+                SocialProfileSnapshot.taken_at,
+                SocialProfileSnapshot.platform,
+                SocialProfileSnapshot.followers_count,
+                SocialProfileSnapshot.posts_count,
+            )
+            .where(
+                SocialProfileSnapshot.profile_id.in_(profile_ids),
+                SocialProfileSnapshot.taken_at >= since,
+            )
+            .order_by(SocialProfileSnapshot.taken_at.asc())
+        )
+        for row in snapshots_r.all():
+            series_points.append(
+                {
+                    "taken_at": row[0].isoformat(),
+                    "platform": row[1].value,
+                    "followers": int(row[2]),
+                    "posts": int(row[3]),
+                }
+            )
+
+    return {
+        "dirigente_id": dirigente_id,
+        "platforms": platforms_out,
+        "series": series_points,
+    }

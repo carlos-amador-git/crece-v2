@@ -87,6 +87,20 @@ class PostType(enum.StrEnum):
     CAROUSEL = "CAROUSEL"
 
 
+class DataSource(enum.StrEnum):
+    """Origen de los datos del SocialProfile.
+
+    Existe porque algunas plataformas (YouTube confirmado, TikTok v7.3.3 confirmado,
+    posiblemente IG) bloquean la IP del container Docker. Los profiles afectados se
+    ingestan manualmente desde el host macOS y se marcan ``manual_host_ingest``; el
+    worker de scraping debe saltarlos para no pisarlos con respuestas vacías.
+    """
+
+    AUTOMATED_SCRAPER = "automated_scraper"
+    MANUAL_HOST_INGEST = "manual_host_ingest"
+    OFFICIAL_API = "official_api"
+
+
 class SocialProfile(Base):
     __tablename__ = "social_profiles"
 
@@ -106,10 +120,22 @@ class SocialProfile(Base):
     following_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     posts_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_scraped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    data_source: Mapped[DataSource] = mapped_column(
+        Enum(DataSource, name="data_source_enum", create_type=False),
+        nullable=False,
+        default=DataSource.AUTOMATED_SCRAPER,
+        server_default="automated_scraper",
+    )
+    last_manual_update: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Relationships
     dirigente = relationship("Dirigente", back_populates="social_profiles")
     posts: Mapped[list[SocialPost]] = relationship(
+        back_populates="profile", cascade="all, delete-orphan"
+    )
+    snapshots: Mapped[list[SocialProfileSnapshot]] = relationship(
         back_populates="profile", cascade="all, delete-orphan"
     )
 
@@ -184,3 +210,48 @@ class SentimentAnalysis(Base):
 
     # Relationships
     post: Mapped[SocialPost] = relationship(back_populates="sentiment_analyses")
+
+
+class SocialProfileSnapshot(Base):
+    """Foto diaria de contadores agregados por perfil social.
+
+    Denormaliza ``dirigente_id``, ``org_id`` y ``platform`` para RLS performante
+    y queries time-series por plataforma sin JOINs. FK por ``profile_id`` (no handle)
+    sobrevive cambios de username. Gaps por fallo del scraper se interpolan en
+    frontend con ``connectNulls:true``.
+    """
+
+    __tablename__ = "social_profile_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("social_profiles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    dirigente_id: Mapped[int] = mapped_column(
+        ForeignKey("dirigentes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizaciones.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    platform: Mapped[Platform] = mapped_column(
+        Enum(Platform, name="platform_enum", create_type=False),
+        nullable=False,
+        index=True,
+    )
+    followers_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    posts_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    taken_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+        index=True,
+    )
+
+    # Relationships
+    profile: Mapped[SocialProfile] = relationship(back_populates="snapshots")

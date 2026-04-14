@@ -211,10 +211,74 @@ def sync_electoral_data(estado: str | None = None) -> dict:
 
 @celery_app.task(name="app.workers.tasks.scrape_all_profiles")
 def scrape_all_profiles() -> dict:
-    """Periodic task: dispatch scrape tasks for all active profiles."""
-    logger.info("Dispatching scrape tasks for all profiles")
-    # In production, would query all active profiles and dispatch scrape_profile for each
-    return {"status": "dispatched"}
+    """Periodic task: scrape each active profile + persist a daily snapshot.
+
+    Skips profiles with ``data_source='manual_host_ingest'`` (YouTube + TikTok
+    bloqueados para IP del container Docker — se ingestan host-side).
+    Después de actualizar ``social_profiles.followers_count`` y ``posts_count``,
+    inserta una fila en ``social_profile_snapshots`` con los contadores recién
+    raspados. El snapshot garantiza que el dato refleja la misma medición.
+    """
+    from app.models.social import DataSource, SocialProfile, SocialProfileSnapshot
+    from app.scrapers.base import get_scraper
+
+    session = _get_sync_session()
+    scraped = 0
+    skipped = 0
+    snapshots = 0
+    failed = 0
+
+    try:
+        profiles = session.query(SocialProfile).all()
+        for profile in profiles:
+            if profile.data_source == DataSource.MANUAL_HOST_INGEST:
+                skipped += 1
+                continue
+
+            try:
+                scraper = get_scraper(profile.platform.value)
+                scraper.scrape(profile.id)
+                session.refresh(profile)
+                scraped += 1
+            except Exception as exc:  # pragma: no cover - logged for ops
+                logger.warning(
+                    "scrape_all_profiles: profile %d (%s) failed: %s",
+                    profile.id,
+                    profile.platform,
+                    exc,
+                )
+                failed += 1
+                # Continue — snapshot aún refleja el último dato conocido.
+
+            snapshot = SocialProfileSnapshot(
+                profile_id=profile.id,
+                dirigente_id=profile.dirigente_id,
+                org_id=profile.dirigente.org_id,
+                platform=profile.platform,
+                followers_count=profile.followers_count,
+                posts_count=profile.posts_count,
+            )
+            session.add(snapshot)
+            snapshots += 1
+
+        session.commit()
+    finally:
+        session.close()
+
+    logger.info(
+        "scrape_all_profiles complete: scraped=%d skipped_manual=%d snapshots=%d failed=%d",
+        scraped,
+        skipped,
+        snapshots,
+        failed,
+    )
+    return {
+        "status": "ok",
+        "scraped": scraped,
+        "skipped_manual": skipped,
+        "snapshots": snapshots,
+        "failed": failed,
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────
