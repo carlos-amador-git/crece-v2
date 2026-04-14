@@ -27,9 +27,16 @@ from app.core.config import settings
 from app.models.dirigente import Dirigente
 from app.models.social import DataSource, Platform, SocialProfile
 
-# Followers TikTok conocidos (dato manual del CEO). TODO: actualizar con dato real.
+# Followers TikTok conocidos (Carlos verificó vía Brightdata 2026-04-13).
+# Claves hacen ``handle.ilike('%key%')`` sobre social_profiles.handle.
 KNOWN_TIKTOK_FOLLOWERS: dict[str, int] = {
-    "pina": 0,  # reemplazar con dato real antes de correr
+    "pina": 0,  # verificado: no tiene followers count visible
+    "pineda": 0,  # verificar con script, probable 0
+    "cravioto": 0,  # verificar con script, probable 0
+    "jimenez": 15_000,  # plan batch datos verificados
+    "jiménez": 15_000,  # acento alternativo
+    "nolasco": 1_719,  # BD actual, validar en runtime
+    "solano": 0,
 }
 
 
