@@ -501,3 +501,34 @@ Ver `.context/DECISIONS.md` sección "Deudas técnicas encontradas durante cross
 ### Organización raíz (post PR #6 seed fix)
 - `id=3, slug=mc-cdmx, nombre='Movimiento Ciudadano CDMX', tipo=PARTIDO`
 - Todos los users del seed scopados a esta org automáticamente
+
+---
+
+## 2026-04-14 — Sprint IA-1 completado + cirugía dirigente (Joy)
+
+### Carlos (feat/sprint-c-hardening)
+
+Sprint IA-1 — Índice de Aceptación MVP:
+- Migration `h9c0d1e2f3g4_social_comments` aplicada
+- 200 comments reales TikTok ingestados (Brightdata dataset gd_lkf2st302ap89utw5k)
+- 200 comments clasificados con framework (comment-framework-v1)
+- Endpoint `/api/v1/social/posts/{id}/ia` — 3 scores + breakdown
+- Endpoint `/api/v1/social/dirigentes/{id}/ia-summary` — top aprobación/rechazo
+- LFPDPPP compliance: author_hash SHA256, cero PII crudo
+- Test real: post Piña 7357909824622890245 → 11.5% aprobación / 20% rechazo / 68.5% neutral
+
+YouTube ingesta (tangencial): 56 videos ingestados via host macOS (YT bloquea Docker).
+
+### Joy (feat/dirigente-surgery)
+- 5 commits: redirect viewer + migrations + radar B1 + widget Tendencia + docs
+- 2 migrations Alembic: ds01 (enum data_source) + ds02 (social_profile_snapshots)
+- Widget Tendencia con switcher Treemap/Stream/Sunburst
+- Semáforo de crecimiento + alerta 48h data_source='manual_host_ingest'
+- Pre-merge: rebase ds01/ds02 sobre h9c0d1e2f3g4
+
+### Pendiente
+- Cross-audit Gemini del resultado IA-1 + cirugía Joy
+- Merge coordinado de las 2 ramas
+- UI widget IA en `/dashboard/social/[post_id]` (Sprint IA-2)
+- Ingestar más comments: FB/IG/YouTube para posts restantes
+- Aviso Privacidad CRECE actualizado (LFPDPPP)

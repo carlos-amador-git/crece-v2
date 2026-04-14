@@ -40,6 +40,7 @@ import {
 const sections = [
   {
     label: "Principal",
+    clientOnly: true,
     items: [
       { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
       { href: "/dashboard/dirigentes", label: "Dirigentes", icon: Users },
@@ -48,6 +49,7 @@ const sections = [
   },
   {
     label: "Analisis",
+    clientOnly: true,
     items: [
       { href: "/dashboard/benchmark", label: "Benchmarks", icon: BarChart3 },
       { href: "/dashboard/planes", label: "Planes IA", icon: Brain },
@@ -56,6 +58,7 @@ const sections = [
   },
   {
     label: "Fase 2",
+    clientOnly: true,
     items: [
       { href: "/dashboard/ciudadanos", label: "Ciudadanos", icon: Users },
       { href: "/dashboard/scoring", label: "Scoring", icon: BarChart3 },
@@ -68,10 +71,9 @@ const sections = [
   },
   {
     label: "Sistema",
+    clientOnly: true,
     items: [
       { href: "/dashboard/settings/analisis-politico", label: "Analisis Politico", icon: Sliders, prefetch: false },
-      // prefetch disabled: evita 404 de RSC prefetch si el bundle de /settings
-      // no está aún en el deploy más reciente; la página carga en navegación real.
       { href: "/dashboard/settings", label: "Configuracion", icon: Settings, prefetch: false },
     ],
   },
@@ -79,6 +81,7 @@ const sections = [
     label: "Admin MD",
     adminOnly: true,
     items: [
+      { href: "/dashboard/admin/overview", label: "Operacion de flota", icon: LayoutDashboard, prefetch: false },
       { href: "/dashboard/admin/clasificacion", label: "Clasificacion Manual", icon: ClipboardList, prefetch: false },
     ],
   },
@@ -168,9 +171,10 @@ export function Sidebar() {
         <ScrollArea className="flex-1 py-4">
           <nav aria-label="Navegacion principal">
             {sections.filter((section) => {
-              if ((section as { adminOnly?: boolean }).adminOnly) {
-                return user?.role === "admin";
-              }
+              const s = section as { adminOnly?: boolean; clientOnly?: boolean };
+              const isAdmin = user?.role === "admin";
+              if (s.adminOnly) return isAdmin;
+              if (s.clientOnly && isAdmin) return false;
               return true;
             }).map((section) => (
               <div key={section.label} className="mb-4">

@@ -616,3 +616,30 @@ A (setup) → B (endpoints fix) → D.0 (framework schema) → C (analyze_full b
 **Granularidad:** Ancla en contexto — encuestas de aprobación del gobierno del ámbito (Sheinbaum federal, Brugada CDMX, Jara Oaxaca) — no encuestas de cada dirigente.
 **Tabla:** `encuestas_publicas` (fuente, fecha, ámbito, actor, metrica, valor_pct)
 **UI:** Badge en dashboard overview "Atención: score diverge ${pct}% vs tendencia encuestas"
+
+---
+
+## 2026-04-14 — Índice de Aceptación (IA) MVP
+
+**D-IA-01: Stack scraping para comments = Brightdata**
+- Descubrimiento: ya había BRIGHTDATA_API_KEY + CRAWLBASE + SCRAPERAPI en `.env.scraping-keys` (commit fc18c8a integró Brightdata FB).
+- Bot detection en TikTok/YouTube desde Docker ≠ problema con Brightdata (proxies residenciales suyos).
+- Datasets identificados: `gd_lkf2st302ap89utw5k` (TT), `gd_lkay758p1eanlolqw8` (FB), `gd_ltppn085pokosxh13` (IG), `gd_lk9q0ew71spt1mxywf` (YT).
+- Costo: free tier Brightdata cubre MVP.
+
+**D-IA-02: LFPDPPP compliance — author_hash SHA256**
+- social_comments guarda `author_hash = SHA256(platform:commenter_id:salt)` no PII crudo.
+- Permite tracking mismo autor entre posts sin almacenar identificadores personales.
+- Cumple minimización de datos. Pendiente: actualizar Aviso de Privacidad CRECE con finalidad "análisis estadístico político agregado".
+
+**D-IA-03: 3 capas IA viables free**
+- Aprobación: (pos_comments + celebratorio + solidario) / total — viable todas plataformas
+- Rechazo: (neg_comments + ataque + critico) / total — viable todas
+- Expansión: % authors nuevos vs históricos — viable con datos acumulados
+- Activación (followers vs engagers) y Fantasmas (seguidores dormidos) → no viable free, requiere tokens Business Meta o Twitter API Pro
+
+**D-IA-04: Framework comments = pysentimiento + reglas keyword + matriz política**
+- Costo $0 (todo local)
+- Script: `backend/scripts/nlp_comments_batch.py`
+- Keywords por tono (critico/ataque/propositivo/solidario/celebratorio/informativo/personal) + target (gobierno/oposicion/ciudadania/autopromocion/medios/tema_especifico)
+- Polaridad -1/0/+1 derivada de sentiment + tono

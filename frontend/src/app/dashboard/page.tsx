@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 // import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -115,7 +117,15 @@ function CurrentDateTime() {
 }
 
 export default function OverviewPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<"today" | "7d" | "30d" | "90d">("30d");
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      router.replace("/dashboard/admin/overview");
+    }
+  }, [user, router]);
 
   const { data: kpi, isLoading: kpiLoading } = useKpiOverview(activeFilter);
   const { data: topDirigentes, isLoading: topLoading } = useTopDirigentes(10);

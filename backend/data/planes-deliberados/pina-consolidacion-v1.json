@@ -1,0 +1,221 @@
+{
+  "plan_id": 1,
+  "dirigente_id": 1,
+  "dirigente_nombre": "Alejandro Piña Medina",
+  "cargo": "Coordinador Comisión Operativa Estatal MC CDMX",
+  "rol_politico": "oposicion",
+  "tipo_plan": "CONSOLIDACION",
+  "version": "v1-claude-opus-4.6",
+  "deliberado_con": ["claude-opus-4.6"],
+  "fuentes_rag": [
+    "docs/AUDITORIA-SENTIMENT-2026-04-13.md",
+    "docs/POLITICAL-FRAMEWORK-DEFAULTS.md",
+    "social_posts clasificados (35 posts, framework v1)"
+  ],
+  "contexto_base": {
+    "plataformas_activas": {
+      "twitter": { "posts_30d": 100, "engagement_avg": 0.0, "nota": "Alto volumen, engagement colapsado por cuenta oficial poco viral" },
+      "tiktok": { "posts_30d": 62, "engagement_avg": 4.47, "nota": "Canal ganador — mayor engagement del stack" },
+      "facebook": { "posts_30d": 59, "engagement_avg": 0.0, "nota": "Volumen medio, engagement plano" },
+      "instagram": { "posts_30d": 50, "engagement_avg": 0.0, "nota": "Volumen medio, engagement plano" }
+    },
+    "narrativas_actuales": [
+      "Deporte democratizado (Copa Naranja, fútbol)",
+      "Salud pública (39% sin acceso, Día Mundial Salud)",
+      "Movilidad / transporte CDMX",
+      "Territorio Venustiano Carranza",
+      "México cree en México (MC brand)"
+    ],
+    "balance_tonos": {
+      "propositivo": 12,
+      "personal": 10,
+      "critico": 6,
+      "celebratorio": 3,
+      "informativo": 2,
+      "solidario": 2
+    },
+    "brechas_detectadas": [
+      "Engagement de Twitter/FB/IG colapsado (0.0) — posible problema de fetch, validar scraper",
+      "Poca crítica dura al oficialismo federal (Sheinbaum/Morena) para rol oposición",
+      "Falta contenido electoral 2027 Jefatura de Gobierno CDMX (oportunidad clave)",
+      "TikTok gana engagement pero no se escala en volumen proporcional a Twitter"
+    ]
+  },
+  "tareas": [
+    {
+      "orden": 1,
+      "titulo": "Duplicar producción de contenido en TikTok (canal ganador)",
+      "descripcion": "TikTok genera engagement 4.47 (100x el resto). Subir a 120 videos/mes enfocados en micro-narrativas: deporte democratizado, transporte CDMX, recorridos Venustiano Carranza. Formato vertical 30-60s, primer segundo con gancho.",
+      "plataforma": "TIKTOK",
+      "formato": "video vertical corto",
+      "frecuencia": "4 videos/día",
+      "responsable": "equipo contenido Piña",
+      "deadline_dias": 60,
+      "metrica_objetivo": "videos publicados en 60 días",
+      "metrica_valor_objetivo": 240,
+      "prioridad": "alta",
+      "fundamento": "Engagement 4.47 vs 0.0 otras plataformas. Escalar donde funciona."
+    },
+    {
+      "orden": 2,
+      "titulo": "Auditar scraper Twitter/FB/IG — engagement en 0.0 es rojo",
+      "descripcion": "Engagement avg=0.0 en 3 plataformas es anómalo. Antes de ajustar contenido, validar que scraper captura likes/comentarios/shares. Si el dato es real, replantear estrategia; si es bug, corregir pipeline antes de medir cualquier otra meta.",
+      "plataforma": "TODAS",
+      "formato": "diagnóstico técnico",
+      "frecuencia": "una vez",
+      "responsable": "MD Consultoría TI",
+      "deadline_dias": 7,
+      "metrica_objetivo": "plataformas con engagement_rate > 0 en % de posts",
+      "metrica_valor_objetivo": 80,
+      "prioridad": "crítica",
+      "fundamento": "No se puede planear si la métrica base está rota"
+    },
+    {
+      "orden": 3,
+      "titulo": "Serie Twitter: crítica constructiva al gobierno federal (rol oposición efectiva)",
+      "descripcion": "Como oposición MC, Piña tiene espacio para fiscalización. Pero la crítica actual es baja (6 posts en 30 días). Publicar 2 tweets/semana conectando fallas gobierno federal (Sheinbaum) con propuestas MC concretas. Estructura: problema documentado + propuesta + hashtag de serie. Evitar descalificación personal.",
+      "plataforma": "TWITTER",
+      "formato": "hilo de 3-5 tweets",
+      "frecuencia": "2 hilos/semana",
+      "responsable": "Piña + comunicación",
+      "deadline_dias": 90,
+      "metrica_objetivo": "hilos críticos constructivos publicados",
+      "metrica_valor_objetivo": 24,
+      "prioridad": "alta",
+      "fundamento": "Matriz framework: rol oposición + tono crítico + target gobierno = +1. Refuerza marca MC fiscalizadora."
+    },
+    {
+      "orden": 4,
+      "titulo": "Calendario editorial dirigido a Jefatura de Gobierno CDMX 2027",
+      "descripcion": "CDMX elige Jefatura en 2027. Construir narrativa en 90 días: (a) recorridos territoriales documentados, (b) propuestas 10 ejes ciudad, (c) comparativos con administración actual. 1 pieza fuerte/semana cross-posteada en las 4 plataformas con formato adaptado.",
+      "plataforma": "TODAS",
+      "formato": "pieza larga + adaptaciones",
+      "frecuencia": "1 pieza/semana",
+      "responsable": "estrategia Piña + contenido",
+      "deadline_dias": 90,
+      "metrica_objetivo": "piezas construyendo narrativa 2027",
+      "metrica_valor_objetivo": 12,
+      "prioridad": "alta",
+      "fundamento": "Oportunidad electoral clave. Sin contenido estructurado, se pierde posicionamiento."
+    },
+    {
+      "orden": 5,
+      "titulo": "Reforzar hashtag #MéxicoCreeEnMéxico como línea MC",
+      "descripcion": "Es el tag aspiracional MC. Usarlo en 60% de posts narrativos (no personales). Evitar sobre-uso en posts triviales que diluyan la marca.",
+      "plataforma": "TODAS",
+      "formato": "hashtag disciplina",
+      "frecuencia": "continua",
+      "responsable": "equipo contenido",
+      "deadline_dias": 30,
+      "metrica_objetivo": "% posts narrativos con hashtag MC",
+      "metrica_valor_objetivo": 60,
+      "prioridad": "media",
+      "fundamento": "Construir marca partidista recurrente"
+    },
+    {
+      "orden": 6,
+      "titulo": "Responder a menciones/comentarios en 24 horas (engagement orgánico)",
+      "descripcion": "Engagement bajo puede venir de ausencia de conversación. Respuestas del dirigente (no del community manager) a comentarios seleccionados, 1 respuesta/día promedio, para construir sensación de diálogo.",
+      "plataforma": "TWITTER, INSTAGRAM, FACEBOOK",
+      "formato": "reply directo",
+      "frecuencia": "1/día",
+      "responsable": "Piña personalmente",
+      "deadline_dias": 90,
+      "metrica_objetivo": "respuestas personales al mes",
+      "metrica_valor_objetivo": 30,
+      "prioridad": "media",
+      "fundamento": "Diferenciación vs cuentas de políticos que solo publican"
+    },
+    {
+      "orden": 7,
+      "titulo": "Transcribir TikToks con texto clave para SEO interno",
+      "descripcion": "62 TikToks en 30d, muchos sin transcripción. Whisper pipeline MD. Permite búsqueda, indexación y reutilización en otros formatos. También alimenta NLP framework.",
+      "plataforma": "TIKTOK",
+      "formato": "pipeline técnico",
+      "frecuencia": "automática",
+      "responsable": "MD Consultoría TI",
+      "deadline_dias": 14,
+      "metrica_objetivo": "% TikToks con transcripción",
+      "metrica_valor_objetivo": 95,
+      "prioridad": "media",
+      "fundamento": "Ya existe whisper_tiktok_pipeline.py, solo falta ejecutarlo en cadencia"
+    },
+    {
+      "orden": 8,
+      "titulo": "Serie Instagram Reels: recorridos territoriales Venustiano Carranza",
+      "descripcion": "IG tiene audiencia pero engagement plano. Reels de 15-30s recorriendo mercados, bocas de metro, colonias. Mostrar escucha en territorio — diferenciación vs política de escritorio. Testimonios ciudadanos cuando sea posible.",
+      "plataforma": "INSTAGRAM",
+      "formato": "reel",
+      "frecuencia": "3 reels/semana",
+      "responsable": "Piña + equipo video",
+      "deadline_dias": 90,
+      "metrica_objetivo": "reels territoriales publicados",
+      "metrica_valor_objetivo": 36,
+      "prioridad": "media",
+      "fundamento": "Piña ya hace recorridos, falta capturar sistemáticamente"
+    },
+    {
+      "orden": 9,
+      "titulo": "Alinear tonos: reducir posts personales a <20% del mix",
+      "descripcion": "Personal (fútbol UNAM, tacos) es 10 de 35 (29%). Útil para humanizar pero demasiado diluye marca política. Bajar a 20% manteniendo humanización mediante personal+territorial (visitas, eventos locales) vs personal puro.",
+      "plataforma": "TODAS",
+      "formato": "disciplina editorial",
+      "frecuencia": "continua",
+      "responsable": "editor contenido",
+      "deadline_dias": 60,
+      "metrica_objetivo": "% posts tono=personal",
+      "metrica_valor_objetivo": 20,
+      "prioridad": "baja",
+      "fundamento": "Auditoría sentiment: personal domina el mix, compite con narrativa política"
+    },
+    {
+      "orden": 10,
+      "titulo": "Columna quincenal en medio nacional/local (Publimetro o similar)",
+      "descripcion": "Piña ya publicó columna Publimetro sobre deporte. Consolidar en pieza quincenal cross-posteada. Expande autoridad pública y feed de contenido.",
+      "plataforma": "MEDIOS_EXTERNOS",
+      "formato": "columna 600-800 palabras",
+      "frecuencia": "2/mes",
+      "responsable": "Piña + ghostwriter",
+      "deadline_dias": 90,
+      "metrica_objetivo": "columnas publicadas",
+      "metrica_valor_objetivo": 6,
+      "prioridad": "media",
+      "fundamento": "Ya demostró capacidad; consolidar como hábito"
+    },
+    {
+      "orden": 11,
+      "titulo": "Propuesta concreta: plan transporte CDMX con métricas",
+      "descripcion": "Piña ya critica el transporte. Convertir crítica en propuesta pública documentada: 5 ejes, cifras verificables, cronograma. Publicar como documento PDF + thread Twitter + reel explainer + segmentos en TikTok.",
+      "plataforma": "TODAS",
+      "formato": "documento + serie derivada",
+      "frecuencia": "una vez",
+      "responsable": "Piña + asesor movilidad",
+      "deadline_dias": 45,
+      "metrica_objetivo": "alcance total documento (suma impresiones cross-plataforma)",
+      "metrica_valor_objetivo": 100000,
+      "prioridad": "alta",
+      "fundamento": "Transformar tono crítico en tono propositivo sostenido — matriz framework premia propositivo oposición +1"
+    },
+    {
+      "orden": 12,
+      "titulo": "Métrica de divergencia: monitorear aprobación vs sentimiento social",
+      "descripcion": "Cuando el servicio divergencia_encuestas esté activo, recibir alerta si sentimiento propio < 30% debajo de aprobación pública del cargo. Actuar en 72h con serie de respuesta.",
+      "plataforma": "INTERNAL",
+      "formato": "trigger + playbook",
+      "frecuencia": "monitoreo continuo",
+      "responsable": "MD Consultoría",
+      "deadline_dias": 30,
+      "metrica_objetivo": "tiempo de respuesta a alerta (h)",
+      "metrica_valor_objetivo": 72,
+      "prioridad": "media",
+      "fundamento": "Cerrar el loop entre NLP propio y realidad externa"
+    }
+  ],
+  "metricas_meta_global": {
+    "engagement_rate_avg_90d_objetivo": 1.5,
+    "posts_con_framework_aplicado_objetivo": 300,
+    "divergencia_max_toleradaa_vs_encuestas": 25,
+    "seguidores_cross_plataforma_delta_90d_objetivo_pct": 10
+  },
+  "notas_para_dirigente": "Este plan debe ser validado y editado por ti y tu equipo antes de aprobarlo. Las metas numéricas son estimaciones iniciales basadas en tu historial de 30 días; ajústalas si tu equipo considera que son muy altas o bajas. La brecha entre objetivo y real será la métrica clave."
+}
