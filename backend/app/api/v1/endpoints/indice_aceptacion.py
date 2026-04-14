@@ -240,3 +240,103 @@ async def get_ia_summary_dirigente(
         top_aprobacion=top_apr,
         top_rechazo=top_rej,
     )
+
+
+class AceptacionOverviewRow(BaseModel):
+    dirigente_id: int
+    full_name: str
+    rol_politico: str | None
+    total_followers: int
+    unique_commenters: int
+    total_comments: int
+    pct_activados: float
+    pct_fantasma: float
+    pct_aprobacion: float
+    pct_rechazo: float
+    pct_neutral: float
+
+
+class AceptacionOverview(BaseModel):
+    dirigentes: list[AceptacionOverviewRow]
+    total_corpus_comments: int
+    metodologia: str
+
+
+@router.get("/aceptacion/overview", response_model=AceptacionOverview)
+async def get_aceptacion_overview(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> AceptacionOverview:
+    """Overview agregado por dirigente: activación, fantasmas y polaridad.
+
+    Admin ve todos; non-admin solo su org.
+    """
+    org_filter = ""
+    params: dict = {}
+    if current_user.role != "admin":
+        if not current_user.org_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin org asignada")
+        org_filter = "WHERE d.org_id = :org_id"
+        params["org_id"] = current_user.org_id
+
+    sql = text(f"""
+        WITH eng AS (
+            SELECT d.id, d.full_name, d.rol_politico,
+                   COUNT(DISTINCT sc.author_hash) AS unique_commenters,
+                   COUNT(sc.id) AS total_comments,
+                   100.0 * COUNT(sc.id) FILTER (WHERE sc.nlp_polaridad = 1) / NULLIF(COUNT(sc.id), 0) AS pct_aprobacion,
+                   100.0 * COUNT(sc.id) FILTER (WHERE sc.nlp_polaridad = -1) / NULLIF(COUNT(sc.id), 0) AS pct_rechazo,
+                   100.0 * COUNT(sc.id) FILTER (WHERE sc.nlp_polaridad = 0) / NULLIF(COUNT(sc.id), 0) AS pct_neutral
+            FROM dirigentes d
+            LEFT JOIN social_profiles p ON p.dirigente_id = d.id
+            LEFT JOIN social_posts sp ON sp.profile_id = p.id
+            LEFT JOIN social_comments sc ON sc.parent_post_id = sp.id
+                AND sc.nlp_model_version IS NOT NULL
+            {org_filter}
+            GROUP BY d.id, d.full_name, d.rol_politico
+        ),
+        fol AS (
+            SELECT dirigente_id, SUM(followers_count) AS total_followers
+            FROM social_profiles
+            GROUP BY dirigente_id
+        )
+        SELECT eng.id, eng.full_name, eng.rol_politico,
+               COALESCE(fol.total_followers, 0) AS total_followers,
+               eng.unique_commenters,
+               eng.total_comments,
+               CASE WHEN COALESCE(fol.total_followers, 0) > 0
+                    THEN ROUND(100.0 * eng.unique_commenters / fol.total_followers, 2)
+                    ELSE 0 END AS pct_activados,
+               CASE WHEN COALESCE(fol.total_followers, 0) > 0
+                    THEN ROUND(100.0 * (1 - eng.unique_commenters::decimal / fol.total_followers), 2)
+                    ELSE 0 END AS pct_fantasma,
+               ROUND(COALESCE(eng.pct_aprobacion, 0), 1),
+               ROUND(COALESCE(eng.pct_rechazo, 0), 1),
+               ROUND(COALESCE(eng.pct_neutral, 0), 1)
+        FROM eng
+        LEFT JOIN fol ON fol.dirigente_id = eng.id
+        ORDER BY eng.id
+    """)
+    rows = (await db.execute(sql, params)).fetchall()
+    dirigentes = [
+        AceptacionOverviewRow(
+            dirigente_id=r[0], full_name=r[1], rol_politico=r[2],
+            total_followers=int(r[3]), unique_commenters=int(r[4] or 0),
+            total_comments=int(r[5] or 0),
+            pct_activados=float(r[6] or 0), pct_fantasma=float(r[7] or 0),
+            pct_aprobacion=float(r[8] or 0), pct_rechazo=float(r[9] or 0),
+            pct_neutral=float(r[10] or 0),
+        )
+        for r in rows
+    ]
+    total_corpus = sum(d.total_comments for d in dirigentes)
+
+    return AceptacionOverview(
+        dirigentes=dirigentes,
+        total_corpus_comments=total_corpus,
+        metodologia=(
+            "Activación = unique_commenters / total_followers. Fantasma = 1 - activación. "
+            "Polaridad calculada con matriz v2 (53 reglas) sobre comments con nlp_model_version='comment-framework-v2'. "
+            "Baseline industria: 1-3% activación saludable. Limitación: solo comments como señal, no likes."
+        ),
+    )
