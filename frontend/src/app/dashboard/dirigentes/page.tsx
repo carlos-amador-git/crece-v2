@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +48,20 @@ const PARTIDOS = ["MORENA", "PAN", "PRI", "MC", "PVEM", "PT"];
 const ESTADOS = ["CDMX", "Jalisco", "Estado de Mexico", "Nuevo Leon", "Puebla", "Veracruz", "Guanajuato", "Oaxaca", "Sonora"];
 
 export default function DirigentesPage() {
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  const isViewerWithDirigente =
+    !isAuthLoading &&
+    user?.role === "viewer" &&
+    typeof user.dirigente_id === "number";
+
+  useEffect(() => {
+    if (isViewerWithDirigente) {
+      router.replace(`/dashboard/dirigentes/${user!.dirigente_id}`);
+    }
+  }, [isViewerWithDirigente, router, user]);
+
   const [filters, setFilters] = useState<DirigenteFilters>({
     page: 1,
     per_page: 20,
@@ -53,7 +69,18 @@ export default function DirigentesPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { data, isLoading, isError } = useDirigentes(filters);
+  const { data, isLoading, isError } = useDirigentes(filters, {
+    enabled: !isViewerWithDirigente,
+  });
+
+  if (isAuthLoading || isViewerWithDirigente) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   const dirigentes = data?.items ?? [];
   const total = data?.total ?? 0;

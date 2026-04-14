@@ -7,7 +7,10 @@ import type {
   PaginatedResponse,
 } from "../types";
 
-export function useDirigentes(filters: DirigenteFilters = {}) {
+export function useDirigentes(
+  filters: DirigenteFilters = {},
+  options: { enabled?: boolean } = {},
+) {
   const params = new URLSearchParams();
   if (filters.partido) params.set("partido", filters.partido);
   if (filters.estado) params.set("estado", filters.estado);
@@ -23,6 +26,7 @@ export function useDirigentes(filters: DirigenteFilters = {}) {
   return useQuery({
     queryKey: ["dirigentes", filters],
     queryFn: () => api.get<PaginatedResponse<Dirigente>>(endpoint),
+    enabled: options.enabled ?? true,
   });
 }
 
