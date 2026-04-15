@@ -134,18 +134,27 @@ export default function OverviewPage() {
 
   // Use first dirigente's ID for sentiment trend (backend requires dirigente_id)
   const firstDirigenteId = topDirigentes?.[0]?.id;
-  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(30, firstDirigenteId);
+  const filterDays: Record<typeof activeFilter, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
+  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(filterDays[activeFilter], firstDirigenteId);
 
   const kpiData = kpi ?? DEFAULT_KPI;
   const trendData = sentimentData ?? [];
   const posts = postsData?.items ?? [];
 
   // Aggregate followers by platform across all visible dirigentes
+  const PLATFORM_LABELS: Record<string, string> = {
+    twitter: "Twitter", x: "Twitter",
+    instagram: "Instagram",
+    facebook: "Facebook",
+    tiktok: "TikTok",
+    youtube: "YouTube",
+    bluesky: "Bluesky",
+  };
   const platformColors: Record<string, string> = {
     Twitter: "#1DA1F2",
     Instagram: "#E4405F",
     Facebook: "#1877F2",
-    TikTok: "#000000",
+    TikTok: "#010101",
     YouTube: "#FF0000",
     Bluesky: "#0085FF",
   };
@@ -154,7 +163,7 @@ export default function OverviewPage() {
     for (const d of topDirigentes ?? []) {
       for (const p of (d as any).social_profiles ?? []) {
         const raw = (p.platform ?? "").toLowerCase();
-        const label = raw.charAt(0).toUpperCase() + raw.slice(1);
+        const label = PLATFORM_LABELS[raw] ?? (raw.charAt(0).toUpperCase() + raw.slice(1));
         map[label] = (map[label] ?? 0) + (p.followers_count ?? p.followers ?? 0);
       }
     }
@@ -166,7 +175,7 @@ export default function OverviewPage() {
   const hasActiveAlerts = kpiData.active_alerts > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0">
       {/* ── Header ──────────────────────────────────────────── */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -184,7 +193,7 @@ export default function OverviewPage() {
           </a>
         </div>
 
-        <nav aria-label="Filtros de periodo" className="flex gap-2">
+        <nav aria-label="Filtros de periodo" className="flex flex-wrap gap-2">
           {TIME_FILTERS.map((filter) => (
             <button
               key={filter.value}
@@ -203,18 +212,15 @@ export default function OverviewPage() {
         </nav>
       </header>
 
-      {/* ── Crisis Alerts ──────────────────────────────────── */}
-      {hasActiveAlerts && <CrisisAlertList limit={3} />}
-
       {/* ── KPI Cards — BentoGrid ─────────────────────────────── */}
       <section
-        className="grid gap-4 grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 w-full min-w-0"
         aria-label="Indicadores clave"
       >
         {kpiLoading
           ? Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className={`card-elevated bento-enter ${i < 2 ? "col-span-2 xl:col-span-2" : "col-span-1"}`}>
-                <CardContent className={i < 2 ? "p-6" : "p-5"}>
+              <Card key={i} className="card-elevated bento-enter">
+                <CardContent className="p-6">
                   <Skeleton className="h-4 w-24 mb-3" />
                   <Skeleton className={i < 2 ? "h-10 w-20" : "h-8 w-16"} />
                 </CardContent>
@@ -233,12 +239,12 @@ export default function OverviewPage() {
               const temaText = kpiData.tema_urgente;
 
               return (
-                <FadeUp key={card.key} index={idx} className={isHero ? "col-span-2 xl:col-span-2" : "col-span-1"}>
+                <FadeUp key={card.key} index={idx}>
                 <Card
                   className={`card-elevated ${card.isAlerts ? "accent-bar-left" : ""}`}
                   data-active={card.isAlerts && hasActiveAlerts ? "true" : undefined}
                 >
-                  <CardContent className={isHero ? "p-6" : "p-5"}>
+                  <CardContent className={isHero ? "p-6" : "p-6"}>
                     <div className="flex items-center justify-between">
                       <div>
                         <p className={`font-medium text-muted-foreground ${isHero ? "text-sm" : "text-sm"}`}>
@@ -374,32 +380,22 @@ export default function OverviewPage() {
         </span>
       </div>
 
-      {/* ── Charts Row ──────────────────────────────────────── */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-        {/* Sentiment trend -- larger */}
-        <Card className="md:col-span-2 lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Tono Discursivo</CardTitle>
-            <CardDescription>
-              Clasificación del contenido publicado · últimos 30 días · sin RTs · &gt;20 chars
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {sentimentLoading ? (
-              <Skeleton className="h-[300px] w-full" aria-label="Cargando datos de sentimiento" />
-            ) : trendData.length === 0 ? (
-              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground" role="status">
-                Sin datos de sentimiento disponibles
-              </div>
-            ) : (
-              <SentimentLineChart data={trendData} />
-            )}
-          </CardContent>
-        </Card>
+      {/* ── Alerts + Seguidores por Plataforma ─────────────── */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 w-full min-w-0">
+        {/* Crisis Alerts — compact column */}
+        <div className="md:col-span-2 lg:col-span-3">
+          {hasActiveAlerts ? (
+            <CrisisAlertList limit={3} compact />
+          ) : (
+            <div className="flex h-full min-h-[80px] items-center justify-center rounded-lg border border-dashed border-border/50 text-sm text-muted-foreground">
+              Sin alertas activas
+            </div>
+          )}
+        </div>
 
         {/* Followers by platform */}
         <Card className="md:col-span-2 lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle>Seguidores por Plataforma</CardTitle>
             <CardDescription>Audiencia total por red social</CardDescription>
           </CardHeader>
@@ -448,15 +444,34 @@ export default function OverviewPage() {
         </Card>
       </div>
 
+      {/* ── Charts Row ──────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tono Discursivo</CardTitle>
+          <CardDescription>
+            Clasificación del contenido publicado · últimos 30 días · sin RTs · &gt;20 chars
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {sentimentLoading ? (
+            <Skeleton className="h-[300px] w-full" aria-label="Cargando datos de sentimiento" />
+          ) : trendData.length === 0 ? (
+            <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground" role="status">
+              Sin datos de sentimiento disponibles
+            </div>
+          ) : (
+            <SentimentLineChart data={trendData} />
+          )}
+        </CardContent>
+      </Card>
+
       {/* ── Competitor Snapshot ──────────────────────────────── */}
       <FadeUp index={0}>
         <CompetitorSnapshotCard />
       </FadeUp>
 
-      {/* ── Bottom Row: Posts + Map ─────────────────────────── */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-        {/* Recent posts */}
-        <section className="space-y-3 md:col-span-2 lg:col-span-3" aria-label="Publicaciones recientes">
+      {/* ── Bottom Row: Posts ───────────────────────────────── */}
+      <section className="space-y-3" aria-label="Publicaciones recientes">
           <h2 className="font-heading text-lg font-semibold">
             Publicaciones Recientes
           </h2>
@@ -476,10 +491,7 @@ export default function OverviewPage() {
           ) : (
             posts.map((post) => <PostCard key={post.id} post={post} />)
           )}
-        </section>
-
-        {/* Map preview — hidden until INE shapefiles loaded */}
-      </div>
+      </section>
 
       {/* ── Pulse dot animation (CSS-only, respects reduced-motion) ── */}
       <style jsx>{`

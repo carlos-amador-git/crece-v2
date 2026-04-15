@@ -14,9 +14,8 @@ function SyntheticDataBanner() {
   // Show watermark when viewing an org with synthetic data
   // The org config has has_synthetic_data flag set in seed
   const isAdmin = user?.role === "admin";
-  const orgSlug = activeOrg?.slug;
-  // GOB-OAXACA and CDMX-IND have synthetic data
-  const hasSynthetic = orgSlug === "gob-oaxaca" || orgSlug === "cdmx-ind";
+  // Usar el flag de BD en lugar de slugs hardcodeados
+  const hasSynthetic = activeOrg?.config?.has_synthetic_data === true;
 
   if (!hasSynthetic) return null;
 
@@ -77,8 +76,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         >
           <Topbar />
           <SyntheticDataBanner />
-          <main id="main-content" className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
+          <main id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-6 lg:px-6">
               {children}
             </div>
           </main>
