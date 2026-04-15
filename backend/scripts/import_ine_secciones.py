@@ -3,13 +3,16 @@
 Fase 2 del SEED-PLAN REV 3. Genérico para cualquier entidad federativa.
 
 Uso:
-    # CDMX (entidad 09)
-    docker exec -e INE_SHP_PATH=/app/data/raw/ine_cartografia/cdmx/SECCION.shp \\
+    # CDMX (entidad 09) — pasar el directorio que contiene SECCION.shp + MUNICIPIO.shp
+    docker exec -e INE_SHP_DIR=/app/data/raw/ine_cartografia/cdmx/09 \\
         crece-backend python -m scripts.import_ine_secciones cdmx
 
     # Oaxaca (entidad 20)
-    docker exec -e INE_SHP_PATH=/app/data/raw/ine_cartografia/oaxaca/SECCION.shp \\
+    docker exec -e INE_SHP_DIR=/app/data/raw/ine_cartografia/oaxaca/20 \\
         crece-backend python -m scripts.import_ine_secciones oaxaca
+
+El SECCION.shp trae ``municipio`` como código numérico; el nombre vive en
+MUNICIPIO.shp. El script carga ambos como staging y JOIN por (entidad, municipio).
 
 SHP se descarga manualmente desde https://cartografia.ine.mx/sige8/ — portal SPA
 sin URL directa pública.
@@ -94,13 +97,20 @@ ENTIDADES: dict[str, Entidad] = {
 
 
 FIELD_MAP = {
-    "seccion": ["SECCION", "seccion", "secc"],
-    "distrito_federal": ["DISTRITO_F", "DISTRITO_FEDERAL", "DTTO_FED", "distrito_f"],
-    "distrito_local": ["DISTRITO_L", "DISTRITO_LOCAL", "DTTO_LOC", "distrito_l"],
-    "municipio": ["NOMBRE_MUN", "MUNICIPIO", "NOMBRE_MPO", "NOMGEO", "NOM_MUN"],
+    "seccion": ["seccion", "SECCION", "secc"],
+    "distrito_federal": ["distrito_f", "DISTRITO_F", "DISTRITO_FEDERAL", "DTTO_FED"],
+    "distrito_local": ["distrito_l", "DISTRITO_L", "DISTRITO_LOCAL", "DTTO_LOC"],
+    "municipio_cod": ["municipio", "MUNICIPIO"],
+    "entidad_cod": ["entidad", "ENTIDAD"],
+}
+MUN_FIELDS = {
+    "municipio_cod": ["municipio", "MUNICIPIO"],
+    "entidad_cod": ["entidad", "ENTIDAD"],
+    "nombre": ["nombre", "NOMBRE", "NOMBRE_MUN", "NOM_MUN", "NOMGEO"],
 }
 
-STAGING_TABLE = "secciones_ine_staging"
+STAGING_SECCIONES = "secciones_ine_staging"
+STAGING_MUNICIPIOS = "municipios_ine_staging"
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -120,7 +130,7 @@ def detect_field(cur, table: str, candidates: list[str]) -> str | None:
     return None
 
 
-def run_ogr2ogr(shp_path: Path, pg_dsn: str) -> int:
+def run_ogr2ogr(shp_path: Path, pg_dsn: str, staging_table: str, with_geom: bool = True) -> int:
     cmd = [
         "ogr2ogr",
         "-f",
@@ -128,9 +138,9 @@ def run_ogr2ogr(shp_path: Path, pg_dsn: str) -> int:
         f"PG:{pg_dsn}",
         str(shp_path),
         "-nln",
-        STAGING_TABLE,
+        staging_table,
         "-nlt",
-        "PROMOTE_TO_MULTI",
+        "PROMOTE_TO_MULTI" if with_geom else "NONE",
         "-t_srs",
         "EPSG:4326",
         "-overwrite",
@@ -142,26 +152,25 @@ def run_ogr2ogr(shp_path: Path, pg_dsn: str) -> int:
         "PG_USE_COPY",
         "YES",
     ]
-    log.info("ogr2ogr → %s", STAGING_TABLE)
+    log.info("ogr2ogr %s → %s", shp_path.name, staging_table)
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     if result.returncode != 0:
         log.error("ogr2ogr falló (%d): %s", result.returncode, result.stderr[-2000:])
         return result.returncode
-    log.info("ogr2ogr OK")
+    log.info("  OK")
     return 0
 
 
-def build_case_municipio(canon_map: dict[str, str], municipio_col: str) -> str:
+def build_case_municipio(canon_map: dict[str, str], qualified_col: str) -> str:
+    """``qualified_col`` viene ya con alias, por ejemplo ``m.nombre`` o ``s.nombre``."""
     if not canon_map:
-        # INITCAP simple. INE entrega municipios en CAPS; INITCAP genera 'San Juan Bautista'.
-        return f"INITCAP(s.{municipio_col})"
+        return f"INITCAP({qualified_col})"
     case = "CASE "
     for raw, canon in canon_map.items():
-        # Escape comilla sencilla duplicando.
         raw_safe = raw.replace("'", "''")
         canon_safe = canon.replace("'", "''")
-        case += f"WHEN UPPER(TRIM(s.{municipio_col})) = '{raw_safe}' THEN '{canon_safe}' "
-    case += f"ELSE INITCAP(s.{municipio_col}) END"
+        case += f"WHEN UPPER(TRIM({qualified_col})) = '{raw_safe}' THEN '{canon_safe}' "
+    case += f"ELSE INITCAP({qualified_col}) END"
     return case
 
 
@@ -176,17 +185,25 @@ def main(entidad_key: str) -> int:
         return 1
     ent = ENTIDADES[entidad_key]
 
-    shp_path_str = os.environ.get("INE_SHP_PATH")
-    if not shp_path_str:
+    shp_dir_str = os.environ.get("INE_SHP_DIR") or os.environ.get("INE_SHP_PATH")
+    if not shp_dir_str:
         log.error(
-            "INE_SHP_PATH env requerido. Descargar SHP desde "
-            "https://cartografia.ine.mx/sige8/ entidad %s.",
+            "INE_SHP_DIR env requerido. Debe apuntar al directorio con SECCION.shp "
+            "y MUNICIPIO.shp (entidad %s).",
             ent.estado_nombre,
         )
         return 1
-    shp = Path(shp_path_str)
-    if not shp.exists() or shp.suffix.lower() != ".shp":
-        log.error("SHP no encontrado o invalido: %s", shp_path_str)
+    shp_dir = Path(shp_dir_str)
+    if shp_dir.is_file() and shp_dir.suffix.lower() == ".shp":
+        shp_dir = shp_dir.parent
+    seccion_shp = shp_dir / "SECCION.shp"
+    municipio_shp = shp_dir / "MUNICIPIO.shp"
+    if not seccion_shp.exists() or not municipio_shp.exists():
+        log.error(
+            "Falta SECCION.shp (%s) o MUNICIPIO.shp (%s)",
+            seccion_shp,
+            municipio_shp,
+        )
         return 1
 
     from sqlalchemy import create_engine  # noqa: WPS433
@@ -195,7 +212,10 @@ def main(entidad_key: str) -> int:
 
     pg_dsn = settings.DATABASE_URL_SYNC.replace("postgresql+psycopg2://", "postgresql://")
 
-    rc = run_ogr2ogr(shp, pg_dsn)
+    rc = run_ogr2ogr(seccion_shp, pg_dsn, STAGING_SECCIONES, with_geom=True)
+    if rc:
+        return rc
+    rc = run_ogr2ogr(municipio_shp, pg_dsn, STAGING_MUNICIPIOS, with_geom=False)
     if rc:
         return rc
 
@@ -204,35 +224,41 @@ def main(entidad_key: str) -> int:
         raw_conn = conn.connection
         cur = raw_conn.cursor()
 
-        detected: dict[str, str] = {}
+        det_sec: dict[str, str] = {}
         for target, candidates in FIELD_MAP.items():
-            col = detect_field(cur, STAGING_TABLE, candidates)
+            col = detect_field(cur, STAGING_SECCIONES, candidates)
             if col is None:
-                log.error("Campo '%s' no detectado. Probados: %s", target, candidates)
-                cur.execute(
-                    "SELECT column_name FROM information_schema.columns WHERE table_name = %s",
-                    (STAGING_TABLE,),
-                )
-                for row in cur.fetchall():
-                    log.info("  staging.%s", row[0])
+                log.error("Campo '%s' no detectado en SECCION. Probados: %s", target, candidates)
                 return 2
-            detected[target] = col
-        log.info("Campos detectados: %s", detected)
+            det_sec[target] = col
+        log.info("Secciones: %s", det_sec)
 
-        case_municipio = build_case_municipio(ent.canon_map, detected["municipio"])
+        det_mun: dict[str, str] = {}
+        for target, candidates in MUN_FIELDS.items():
+            col = detect_field(cur, STAGING_MUNICIPIOS, candidates)
+            if col is None:
+                log.error("Campo '%s' no detectado en MUNICIPIO. Probados: %s", target, candidates)
+                return 2
+            det_mun[target] = col
+        log.info("Municipios: %s", det_mun)
+
+        case_municipio = build_case_municipio(ent.canon_map, f"m.{det_mun['nombre']}")
         estado_safe = ent.estado_nombre.replace("'", "''")
 
         insert_sql = f"""
             INSERT INTO secciones_electorales
                 (seccion, estado, distrito_federal, distrito_local, municipio, geometry)
             SELECT
-                '{ent.codigo}' || '-' || LPAD(s.{detected["seccion"]}::text, 4, '0'),
+                '{ent.codigo}' || '-' || LPAD(s.{det_sec["seccion"]}::text, 4, '0'),
                 '{estado_safe}',
-                s.{detected["distrito_federal"]}::text,
-                s.{detected["distrito_local"]}::text,
+                s.{det_sec["distrito_federal"]}::text,
+                s.{det_sec["distrito_local"]}::text,
                 {case_municipio},
                 ST_Multi(ST_Transform(s.geometry, 4326))
-            FROM {STAGING_TABLE} s
+            FROM {STAGING_SECCIONES} s
+            JOIN {STAGING_MUNICIPIOS} m
+              ON m.{det_mun["entidad_cod"]} = s.{det_sec["entidad_cod"]}
+             AND m.{det_mun["municipio_cod"]} = s.{det_sec["municipio_cod"]}
             ON CONFLICT DO NOTHING
         """
         cur.execute(insert_sql)
@@ -256,20 +282,19 @@ def main(entidad_key: str) -> int:
             len(by_mun),
             ent.municipios_esperados,
         )
-        # Preview (primeros 20 municipios).
         for row in by_mun[:20]:
             log.info("  %-35s %5d", row[0], row[1])
         if len(by_mun) > 20:
             log.info("  ... +%d municipios más", len(by_mun) - 20)
 
         if not os.environ.get("KEEP_STAGING"):
-            cur.execute(f"DROP TABLE IF EXISTS {STAGING_TABLE}")
+            cur.execute(f"DROP TABLE IF EXISTS {STAGING_SECCIONES}")
+            cur.execute(f"DROP TABLE IF EXISTS {STAGING_MUNICIPIOS}")
             log.info("staging dropped")
 
     if len(by_mun) < ent.municipios_esperados * 0.9:
-        # Tolerancia 10% por si el corte INE tiene leves divergencias.
         log.warning(
-            "Municipios (%d) por debajo del esperado (%d) × 0.9. Revisar nombres o campos.",
+            "Municipios (%d) por debajo del esperado (%d) × 0.9.",
             len(by_mun),
             ent.municipios_esperados,
         )
