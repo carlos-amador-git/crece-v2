@@ -3,39 +3,54 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck } from "lucide-react";
-import { CrisisAlertBanner } from "./crisis-alert-banner";
-import {
-  useCrisisPostAlerts,
-  type CrisisPostAlert,
-} from "@/hooks/use-crisis-alerts";
-
-/* ────────────────────────────────────────────────────────────
- * CrisisAlertList
- *
- * Displays a sorted list of active crisis/warning alerts.
- * Three states: loading (skeleton), empty, and populated.
- * Alerts are ordered by severity (worst first).
- * ──────────────────────────────────────────────────────────── */
+import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { useBackendAlerts, type BackendAlert } from "@/hooks/use-crisis-alerts";
 
 interface CrisisAlertListProps {
-  /** Optional: filter alerts to a specific dirigente */
-  dirigenteId?: number;
-  /** Max number of alerts to display (default: 5) */
   limit?: number;
-  /** Called when "Ver detalle" is clicked on an alert */
-  onViewDetail?: (alert: CrisisPostAlert) => void;
 }
 
-export function CrisisAlertList({
-  dirigenteId,
-  limit = 5,
-  onViewDetail,
-}: CrisisAlertListProps) {
-  const { data: alerts, isLoading, isError } = useCrisisPostAlerts(dirigenteId);
+const SEVERITY_LABEL: Record<string, string> = {
+  critica: "Crisis",
+  alta: "Alta",
+  media: "Media",
+};
 
-  const visibleAlerts = (alerts ?? []).slice(0, limit);
-  const totalCount = alerts?.length ?? 0;
+const SEVERITY_CLASS: Record<string, string> = {
+  critica: "border-rose-500/30 bg-rose-500/5",
+  alta: "border-amber-500/30 bg-amber-500/5",
+  media: "border-yellow-500/30 bg-yellow-500/5",
+};
+
+const BADGE_CLASS: Record<string, string> = {
+  critica: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+  alta: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  media: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+};
+
+function AlertRow({ alert }: { alert: BackendAlert }) {
+  const sev = alert.severidad ?? "media";
+  return (
+    <div className={`flex items-start gap-3 rounded-lg border p-3 ${SEVERITY_CLASS[sev]}`}>
+      <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${sev === "critica" ? "text-rose-400" : sev === "alta" ? "text-amber-400" : "text-yellow-400"}`} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={`text-xs ${BADGE_CLASS[sev]}`}>
+            {SEVERITY_LABEL[sev] ?? sev}
+          </Badge>
+        </div>
+        <p className="mt-1 text-sm text-foreground/80">{alert.descripcion}</p>
+      </div>
+    </div>
+  );
+}
+
+export function CrisisAlertList({ limit = 5 }: CrisisAlertListProps) {
+  const { data: alerts, isLoading, isError } = useBackendAlerts();
+
+  const active = (alerts ?? []).filter((a) => a.estado === "abierta");
+  const visibleAlerts = active.slice(0, limit);
+  const totalCount = active.length;
 
   return (
     <section aria-label="Alertas de crisis activas">
@@ -49,61 +64,31 @@ export function CrisisAlertList({
           )}
         </CardHeader>
         <CardContent className="space-y-3 pt-0">
-          {/* Loading state */}
           {isLoading && <AlertListSkeleton />}
 
-          {/* Error state */}
           {isError && !isLoading && (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-sm text-destructive">
-                Error al cargar alertas. Se reintentara automaticamente.
-              </p>
-            </div>
+            <p className="py-6 text-center text-sm text-destructive">
+              Error al cargar alertas.
+            </p>
           )}
 
-          {/* Empty state */}
           {!isLoading && !isError && visibleAlerts.length === 0 && (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <ShieldCheck className="mb-3 h-10 w-10 text-emerald-500/50" />
-              <p className="text-sm font-medium text-muted-foreground">
-                Sin alertas activas
-              </p>
+              <p className="text-sm font-medium text-muted-foreground">Sin alertas activas</p>
               <p className="mt-1 text-xs text-muted-foreground/70">
-                El sentimiento de todos los dirigentes esta dentro de parametros normales.
+                El sentimiento esta dentro de parametros normales.
               </p>
             </div>
           )}
 
-          {/* Alert list */}
-          {!isLoading &&
-            !isError &&
-            visibleAlerts.map((alert) => (
-              <CrisisAlertBanner
-                key={alert.id}
-                dirigente_name={alert.dirigente_name}
-                sentiment_score={alert.sentiment_score}
-                platform={alert.platform}
-                post_content_preview={alert.post_content_preview}
-                severity={alert.severity}
-                post_url={alert.post_url}
-                onViewDetail={
-                  onViewDetail ? () => onViewDetail(alert) : undefined
-                }
-              />
-            ))}
+          {!isLoading && !isError && visibleAlerts.map((alert) => (
+            <AlertRow key={alert.id} alert={alert} />
+          ))}
 
-          {/* Overflow indicator */}
           {!isLoading && totalCount > limit && (
             <p className="pt-1 text-center text-xs text-muted-foreground">
-              Mostrando{" "}
-              <span className="tabular-nums font-medium" data-numeric="true">
-                {limit}
-              </span>{" "}
-              de{" "}
-              <span className="tabular-nums font-medium" data-numeric="true">
-                {totalCount}
-              </span>{" "}
-              alertas
+              Mostrando {limit} de {totalCount} alertas
             </p>
           )}
         </CardContent>

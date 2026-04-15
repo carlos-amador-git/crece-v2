@@ -81,9 +81,21 @@ export function useCrisisPostAlerts(dirigenteId?: number) {
 export function useBackendAlerts() {
   return useQuery({
     queryKey: ["backend-crisis-alerts"],
-    queryFn: () => api.get<Alert[]>("/alerts?severity=high"),
+    queryFn: () => api.get<BackendAlert[]>("/alerts"),
     refetchInterval: 30_000,
   });
+}
+
+export interface BackendAlert {
+  id: number;
+  org_id: number;
+  perfil_id: number | null;
+  tipo: string;
+  severidad: "critica" | "alta" | "media";
+  descripcion: string;
+  post_ids: number[] | null;
+  estado: string;
+  created_at: string;
 }
 
 /* ────────────────────────────────────────────────────────────
