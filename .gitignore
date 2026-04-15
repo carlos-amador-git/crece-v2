@@ -118,3 +118,10 @@ backend/.pki/
 backend/.wdm/
 backend/data/models/*.pkl
 backend/.env.scraping-keys
+
+backend/data/raw/ine_cartografia/**/*.shp
+backend/data/raw/ine_cartografia/**/*.dbf
+backend/data/raw/ine_cartografia/**/*.shx
+backend/data/raw/ine_cartografia/**/*.prj
+backend/data/raw/ine_cartografia/**/*.cpg
+backend/data/raw/ine_cartografia/**/*.zip
