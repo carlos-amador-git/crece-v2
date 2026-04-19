@@ -4,7 +4,7 @@
 
 **Sprint actual:** S1 · **Status:** ⏸ Pending · **Arranque requiere autorización CEO explícita** post-cierre S0
 **Sprint previo cerrado:** S0 · 2026-04-19 · archivo `.context/archive/sprint-s0-2026-04-19.md` · reporte `backend/research/2026-04-19/SPRINT-S0-REPORTE-EJECUTIVO.md`
-**Decisiones vinculantes pre-arranque:** D-19 (benchmarks provisionales) · D-20 (cierre S0) · D-21 (Coolify dual-mode) en MASTER §6
+**Decisiones vinculantes pre-arranque:** D-19 reescrita post-dictámenes (**reemplazo estructural** de Gemini DR · tabla IM commercial descartada · matriz 5×5 + temporalidad electoral + dataset Zenodo MX) · D-20 (cierre S0) · D-21 (Coolify dual-mode) en MASTER §6. Dictámenes convergentes en `.context/external-review/dictamen-01-*.md` y `dictamen-02-*.md`
 
 ---
 
@@ -31,7 +31,7 @@ Cada artefacto generado en S1 debe incluir:
 
 ---
 
-## Tareas (9)
+## Tareas (10)
 
 ### T1 — Migration `dirigentes` + `social_profile_snapshots` extendida
 - [ ] Alembic migration: añadir a `dirigentes` los campos `data_fidelity_tier` (JSON por plataforma), `estrato_politico` (enum Nano/Micro/Mid/Macro/Mega), `competidor_directo_ids` (array FK), `data_origin` (enum T1/T2/T3)
@@ -39,9 +39,10 @@ Cada artefacto generado en S1 debe incluir:
 - [ ] **Consumo directo:** T1 debe leer `backend/research/2026-04-19/settings_fidelity.json` como seed del campo `data_fidelity_tier` (40 celdas iniciales)
 
 ### T2 — Seed manual estratos + competidores
-- [ ] **Consumo directo de `backend/research/2026-04-19/settings_strata.json`** como semilla del campo `estrato_politico` para los 8 dirigentes (adoptado provisional por D-19, recalibración en T3)
+- [ ] **Consumo directo de `backend/research/2026-04-19/settings_strata.json`** como seed inicial del campo `estrato_politico` para los 8 dirigentes (seed mínimo — el estrato en sí sobrevive; la **tabla de rangos** por estrato queda descartada por D-19 reescrita y se sustituye por matriz 5×5 del MASTER §3.1 #01 pendiente de calibración vía dataset Zenodo en T10)
 - [ ] Seed manual de `competidor_directo_ids` por dirigente (pares políticos mismo rango + geografía): pendiente definir lista — **requiere 30 min de input CEO o research previo**
 - [ ] Commit `scripts/seed_strata_competidores.py` reproducible
+- [ ] **Importar matriz 5×5 provisional** del MASTER §3.1 #01 a `settings_strata_matrix.json` con celdas 🟡 TBD explícitas (todas las 25 por default hasta validación en T10)
 
 ### T3 — **[AJUSTE S0 #2]** Engagement metrics + cron followers diario
 - [ ] Alembic migration: añadir a `social_posts` los campos `likes_count`, `views_count`, `shares_count`, `comments_count` (todos integer nullable)
@@ -87,6 +88,15 @@ Cada artefacto generado en S1 debe incluir:
 - [ ] **Estado:** ❌ NO ACTIVAR — S0 T0.4 cerró con Kappa 0.810 (supera 0.65 holgadamente, D-20)
 - Si en producción la kappa observada cae <0.65 sobre >200 comments nuevos, reabrir T1.9 con criterio de cierre binario del MASTER §5 S1
 
+### T10 — **[NUEVA por D-19 reescrita]** Dataset Zenodo benchmarks ER políticos mexicanos
+- [ ] Pipeline de agregación: consumir snapshots de T3 (≥30d cuando disponibles) + likes/views/shares por post para los 8 dirigentes piloto
+- [ ] Calibración matriz 5×5 estrato × plataforma de MASTER §3.1 #01 con percentiles p25/p50/p75 por celda en ventana 90d fuera de pre-comicio (modificador temporal=1.0)
+- [ ] Marcar celdas 🟢 VALIDATED (n≥30 + IC95%) vs 🟡 TBD en `settings_strata_matrix.json`
+- [ ] Generar bundle reproducible en `backend/data/zenodo/v1/`: `benchmarks_er_politicos_mx_v1.csv` + `methodology.md` + `code.zip` + `LICENSE` (CC BY 4.0)
+- [ ] Publicar en Zenodo con DOI asignable (cuenta MD Consultoría) · etiquetas: `political-communication`, `mexico`, `engagement-rate`, `benchmark`, `CRECE-v2`
+- [ ] Actualizar MASTER §3.1 #01 + §8.7 reemplazando citas IM commercial (Hootsuite/Rival IQ/Emplifi/Sprout Social) por el propio DOI como fuente de referencia
+- [ ] **Tolerancia de scope:** si al cerrar S1 solo hay 10 de 25 celdas 🟢 VALIDATED, publicar como "v1 preliminar" con TBD explícitos; v2 en S2 al acumular más data
+
 ---
 
 ## Paralelización operativa recomendada
@@ -96,7 +106,8 @@ Agrupación sugerida para ejecución concurrente:
 - **Bloque A (infra data):** T1 + T2 + T3 + T4 — son migrations y seed, secuenciales entre sí pero independientes de T5-T8
 - **Bloque B (LLM + compliance):** T5 + T6 + T7 — cada uno aislado, paralelizables
 - **Bloque C (ops):** T8 — aislado
-- Clock estimado secuencial: 7-9h · paralelo con 3 agents: ~4-5h
+- **Bloque D (post-data):** T10 — depende de T3 acumulando snapshots; se arranca el pipeline en paralelo, la calibración final ocurre cuando haya ≥30d de data
+- Clock estimado secuencial: 9-12h · paralelo con 3 agents: ~5-7h (Zenodo v1 preliminar)
 
 ---
 
@@ -111,9 +122,10 @@ Sprint S1 se declara completo cuando:
 5. Tabla `recomendaciones_plan_ia` creada con test de transición de estados
 6. Endpoint purge-hash operativo con 1 test de purga completa
 7. Health-check Ollama dual-mode operativo con circuit breaker activo + pre-warm cron instalado
-8. D-19 recalibración: ejecutada si hay ≥30d de snapshots acumulados, diferida si no
+8. D-19 calibración: matriz 5×5 `settings_strata_matrix.json` existe con al menos ceildas TBD marcadas; si hay ≥30d de snapshots, al menos 10/25 celdas 🟢 VALIDATED
+9. Dataset Zenodo v1 preliminar preparado (bundle listo) — publicación con DOI opcional si hay data suficiente, diferible a S2 en caso contrario
 
-Con 7/8 dura (punto 8 puede quedar en watch) → arranque Sprint S2 autorizado.
+Con 8/9 dura (puntos 8+9 pueden quedar en watch con v1 preliminar) → arranque Sprint S2 autorizado.
 
 ---
 

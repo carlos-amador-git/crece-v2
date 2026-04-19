@@ -51,6 +51,11 @@ CRECE v2 no atiende a "el político" en singular. Sirve a cuatro perfiles distin
 - Dashboard default prioriza diferentes bloques del inventario según perfil (ej.: precampaña enfatiza Veda INE #17 + Crisis Spike #06; empresario en transición enfatiza Humanización Score #20 + Message Stickiness #29)
 - El Plan IA LLM prompt adapta tono: precampaña urgente/directivo, funcionario institucional/medido, empresario formativo/pedagógico
 - Onboarding Wizard del Sprint S5 detecta perfil y ajusta preguntas + expectativas de data fidelity desde el primer minuto
+- **Benchmarks ER (bloque #01) consumidos con modificador temporal según perfil (D-19):**
+  - Perfil `politico_activo`: modificador temporal **off** por default; admin/UI activable cuando distrito entre en precampaña (rampa automática a 90d vista)
+  - Perfil `funcionario_gobierno`: modificador temporal **off** permanente — no compite electoralmente mientras gobierna; usar matriz base 5×5 tal cual
+  - Perfil `figura_precampaña`: modificador temporal **on** por default — todas las comparaciones ER del dashboard aplican el multiplicador hasta 2.5× contra el calendario electoral del distrito
+  - Perfil `empresario_transicion`: modificador temporal **off** por default — el marco electoral no aplica; la comparación usa matriz base 5×5 tal cual
 
 **Decisión pendiente de validación CEO:** confirmar que estos 4 perfiles son los correctos antes de codificarlos como enum en BD (ver §6).
 
@@ -223,12 +228,68 @@ Cada bloque tiene: **nombre · pregunta · tier fidelity · inputs · ejemplo vi
 **Nota sobre fidelity "T1 funciona pleno":** en los bloques Tier 1, la expresión *"T1 funciona pleno"* significa que el bloque es plenamente funcional una vez completado el Sprint S1 Backend Foundations — que introduce migraciones pendientes como `estrato_politico`, `competidor_directo_ids`, `data_fidelity_tier` en la tabla `dirigentes` y el cron de snapshot diario de followers. Antes del cierre de S1, ningún bloque Tier 1 es ejecutable directamente. El orden del roadmap §5 lo garantiza (S0 → S1 → S2).
 
 
-#### #01 — ER normalizado por estrato político
-- **Pregunta:** ¿Mi ER está en rango para mi tamaño de cuenta?
-- **Fidelity:** T1 funciona pleno · T3 mejora con reach exacto
-- **Inputs:** posts.likes + posts.comments + profile.followers + dirigente.estrato_politico
-- **Ejemplo:** "ER: 4.2% 🟢 (15% arriba de la media para Senadores)"
-- **Fuente:** Gemini DR tabla estratos (Nano/Micro/Mid/Macro/Mega)
+#### #01 — ER normalizado por estrato político (matriz 5×5 + modificador temporal)
+- **Pregunta:** ¿Mi ER está en rango para mi tamaño de cuenta en esta plataforma y momento del ciclo electoral?
+- **Fidelity:** T1 funciona pleno con matriz base · T3 mejora con reach exacto
+- **Inputs:** posts.likes + posts.comments + posts.views + profile.followers + dirigente.estrato_politico + dirigente.plataforma + eventos_electorales.ventana_pre_comicio (bool, 90d)
+- **Ejemplo:** "ER: 4.2% 🟢 (12% arriba de la media para Micro en X · ventana electoral activa → expectativa 7.2%)"
+- **Fuente:** matriz 5×5 calibrada internamente · reemplaza tabla 1×5 Gemini DR (ver D-19 · origen IM commercial descartado)
+
+**Matriz 5×5 estrato × plataforma (referencia base — pre-modificador temporal):**
+
+| Estrato (followers) | X (Twitter) | Instagram | Facebook | TikTok | YouTube |
+|---|---|---|---|---|---|
+| **Nano** (<10K) | 3.5-6.0% 🟡 TBD | 5.0-9.0% 🟡 TBD | 4.0-7.0% 🟡 TBD | 6.0-12.0% 🟡 TBD | 8.0-15.0% 🟡 TBD |
+| **Micro** (10K-50K) | 2.5-4.5% 🟡 TBD | 3.5-6.5% 🟡 TBD | 2.5-5.0% 🟡 TBD | 4.5-9.0% 🟡 TBD | 5.0-10.0% 🟡 TBD |
+| **Mid** (50K-250K) | 1.8-3.2% 🟡 TBD | 2.5-4.5% 🟡 TBD | 1.8-3.5% 🟡 TBD | 3.0-6.0% 🟡 TBD | 3.0-6.5% 🟡 TBD |
+| **Macro** (250K-1M) | 1.2-2.2% 🟡 TBD | 1.8-3.2% 🟡 TBD | 1.2-2.5% 🟡 TBD | 2.0-4.5% 🟡 TBD | 2.0-4.5% 🟡 TBD |
+| **Mega** (>1M) | 0.8-1.5% 🟡 TBD | 1.2-2.2% 🟡 TBD | 0.8-1.8% 🟡 TBD | 1.5-3.0% 🟡 TBD | 1.2-3.0% 🟡 TBD |
+
+**Leyenda:**
+- Los valores son **estimaciones iniciales derivadas de triangulación** entre la tabla IM original (ajustada a la baja 10-20% por efecto polarización política que reduce engagement base) + research político académico (Latinobarómetro, LAPOP, arXiv political comms). 🟡 TBD marca que **todas las 25 celdas requieren validación** contra el dataset Zenodo MX político que se publica en Sprint S1 (D-19).
+- Valores absolutos NO deben mostrarse al cliente hasta que al menos 10 celdas estén 🟢 VALIDATED. Hasta entonces, el dashboard muestra posición relativa ("12% arriba del percentil 50 de tu estrato+plataforma") sin valor absoluto.
+- El proceso de calibración de Sprint S1 (tarea Zenodo) produce el JSON `settings_strata_matrix.json` que reemplaza `settings_strata.json` 1-dimensional.
+
+**Factor temporalidad electoral (modificador del bloque #01):**
+
+El engagement político se dispara durante la ventana pre-electoral por movilización de base, polarización afectiva (Bail 2018 PNAS §8.7) y activación de identidad social partidista (Tajfel). El modificador es:
+
+```
+ER_esperado_actual(dirigente, plataforma, fecha) =
+  matriz_base[dirigente.estrato][plataforma] ×
+  multiplicador_temporal(dirigente.distrito, fecha)
+
+multiplicador_temporal(distrito, fecha):
+  dias_a_comicio = calcular_dias_a_comicio(distrito, fecha)
+
+  if dias_a_comicio < 0 or dias_a_comicio > 180:
+    return 1.0                                    # ciclo normal
+
+  if 90 < dias_a_comicio <= 180:
+    return 1.0 + 0.5 * (1 - (dias_a_comicio - 90) / 90)  # rampa 1.0 → 1.5
+
+  if 30 < dias_a_comicio <= 90:
+    return 1.5 + 1.0 * (1 - (dias_a_comicio - 30) / 60)  # rampa 1.5 → 2.5
+
+  if 7 < dias_a_comicio <= 30:
+    return 2.5                                    # plateau máximo 2.5x
+
+  if 0 <= dias_a_comicio <= 7:
+    return 2.3                                    # veda INE reduce actividad 8%
+```
+
+**Consumibilidad por perfil (ver §1.5):**
+- `politico_activo`: modificador **off** por default, activable manualmente cuando distrito entre en precampaña
+- `funcionario_gobierno`: modificador **off** siempre (no compite electoralmente mientras gobierna)
+- `figura_precampaña`: modificador **on** por default (§1.5 matiz 2026-04-19)
+- `empresario_transicion`: modificador **off** por default, no aplica marco electoral
+
+**Validación empírica pendiente (bloqueador de VALIDATED en las 25 celdas):**
+1. Ingerir en Sprint S1 T3 los snapshots diarios de followers + likes/views/shares por post para los 8 dirigentes piloto
+2. Acumular ≥30 días de data con al menos 3 dirigentes en cada estrato (Nano · Micro) y al menos 1 en cada estrato restante (Mid · Macro · Mega)
+3. Computar ER real por celda estrato×plataforma en ventana 90d fuera de pre-comicio (modificador=1.0) → comparar contra rangos de la matriz base
+4. Publicar dataset Zenodo con DOI (ver §5 S1 tarea nueva) con metodología reproducible + ranges calibrados
+5. Marcar cada celda 🟢 VALIDATED con su `n_observaciones` + intervalo de confianza 95%. Las que no alcancen n≥30 por estrato quedan 🟡 TBD hasta acumular suficiente muestra
 
 #### #02 — Breakout Scale Brookings (Cat 1-6)
 - **Pregunta:** ¿Mi post cruzó fronteras algorítmicas hacia no-seguidores?
@@ -590,8 +651,17 @@ oauth_meta_expires_at TIMESTAMP NULL;
        - Si post-refinamiento Kappa queda **<0.65** → **reabrir decisión estratégica formal**: bloque #05 Plutchik es viable con stack actual (Gemma 3:12b) o requiere reemplazo por modelo superior (gemma3:27b, llama3.3:70b local, o Claude API premium en tier opcional). CEO decide con base en reporte de T1.9
        - Sin este criterio binario, T1.9 se vuelve ciclo iterativo sin fin — **NO aceptable**
      - Estimación: 2-3h si se activa. Si T0.4 pasó ≥0.65 directo, T1.9 NO se ejecuta
-- **Criterio acceptance:** los 8 dirigentes tienen `data_fidelity_tier='T1'` + estrato + competidores. Cron corre 1 vez manual y escribe snapshot. Muestra de 50 posts con topics asignados. Tabla `recomendaciones_plan_ia` creada. Endpoint purge-hash con al menos 1 test de purga completa. Failover Ollama con health-check activo. Si T1.9 se activó: criterio de cierre binario resuelto.
-- **Estimación:** 5-6h base (+2-3h si T1.9 se activa = 7-9h potencial)
+  10. **Dataset Zenodo benchmarks ER políticos mexicanos** *(nueva por D-19 · reemplazo estructural de Gemini DR)*:
+     - Pipeline de agregación: consumir 30+ días de snapshots followers diarios + likes/views/shares por post (habilitados en T3) para los 8 dirigentes piloto
+     - Calibración matriz 5×5 (estrato × plataforma) de §3.1 #01: computar percentiles p25/p50/p75 de ER por celda en ventana 90d fuera de pre-comicio (modificador temporal=1.0)
+     - Marcar cada celda 🟢 VALIDATED cuando `n_observaciones ≥ 30` con intervalo confianza 95%. Las que no alcancen se mantienen 🟡 TBD y se flaggean en el README del dataset
+     - Generar bundle reproducible: `benchmarks_er_politicos_mx_v1.csv` + `methodology.md` + `code.zip` (scripts de agregación) + `LICENSE` (CC BY 4.0)
+     - Publicar en Zenodo con DOI asignable (cuenta MD Consultoría) · etiquetas: `political-communication`, `mexico`, `engagement-rate`, `benchmark`, `CRECE-v2`
+     - Actualizar MASTER §3.1 #01 + §8.7 citando el propio DOI como fuente de referencia (reemplaza citas IM commercial — Hootsuite/Rival IQ/Emplifi/Sprout Social)
+     - `backend/data/zenodo/` con estructura `v1/` lista para upload
+     - Incluso si solo 10 de 25 celdas alcanzan 🟢 VALIDATED al cerrar S1, el dataset se publica en versión "v1 preliminar" con TBD explícitos y se actualiza en v2 cuando más datos acumulen
+- **Criterio acceptance:** los 8 dirigentes tienen `data_fidelity_tier='T1'` + estrato + competidores. Cron corre 1 vez manual y escribe snapshot. Muestra de 50 posts con topics asignados. Tabla `recomendaciones_plan_ia` creada. Endpoint purge-hash con al menos 1 test de purga completa. Failover Ollama con health-check activo. Dataset Zenodo v1 preparado (publicación pendiente al alcanzar 30d de data — puede diferirse a S2 si el sprint desborda).
+- **Estimación:** 6-8h base (+2-3h si T1.9 se activa = 8-11h potencial · Zenodo añade 2-3h de pipeline + bundle, publicación misma es 15 min)
 - **Dependencias:** Sprint S0 completo
 
 ### Sprint S2 — Diagnóstico Tier 1 (Core MVP)
@@ -688,7 +758,7 @@ oauth_meta_expires_at TIMESTAMP NULL;
 | D-16 | 2026-04-19 | Unificar provider LLM: Gemma 3:12b local baseline de desarrollo + Claude API exclusivamente como "Expert Auditor" de seguridad/compliance (NO para generación de producto) | Gemini audit Puerta 2 #02 detectó ambigüedad entre bloque #10 ("Claude/Gemma") y D-15 ("Gemma primario"). Deriva de costos imprevista si desarrollo cae en Claude API. Unificación elimina ambigüedad operativa — todo dev usa Gemma, Claude solo para auditoría estructurada | 🟢 APROBADA | §3.1 #10 · `.context/audits/gemini-master-v2.2-audit-2026-04-19.md` |
 | D-17 | 2026-04-19 | **Cierre de ciclo del Plan IA con seguimiento de recomendaciones activas.** Añadir bloques #10.5 (Seguimiento) y #10.7 (Memoria) al inventario + tabla `recomendaciones_plan_ia` BD + flujo completo 5 fases (generación → decisión → ejecución → seguimiento → cierre). 4 parámetros CEO fijados: (1) expansión MVP 3-4s → 4-5s aprobada; (2) numeración 10.5/10.7 sin renumerar inventario; (3) ventana 14 días default configurable; (4) veredicto automático con opción edición cliente | Diseño original S4 generaba recomendaciones sin rastrear ejecución/resultado real. Sin cierre: (a) imposible distinguir exitosas vs fallidas empíricamente; (b) sistema no aprende del histórico; (c) conversación comercial limitada a promesas cualitativas — bloqueaba métrica tracción 90d §7.4. Cierre de ciclo convierte producto de dashboard pasivo a workflow activo con hábito de uso semanal | 🟢 APROBADA con matices · MVP expandido · 4 parámetros fijados | §6.3 desarrollo extendido · §3.1 #10.5 #10.7 · §5 S1+S4 |
 | D-18 | 2026-04-19 | Endpoint ARCO selectivo `POST /api/v1/admin/compliance/purge-hash` obligatorio antes de producción — borrado recursivo de comments + embeddings + vectores asociados a hash SHA256 de autor | Gemini audit Puerta 2 #04: obligación legal bajo LFPDPPP no exenta por hash SHA256 actual. Retención 180d actual no cubre solicitud ARCO específica (acceso, cancelación, oposición) por titular individual. Riesgo multa INAI + daño reputacional. Endpoint + audit log por purga = satisfacción legal demostrable | 🟢 APROBADA · obligatorio Sprint S1 | `docs/AVISO-PRIVACIDAD-CRECE.md` · §5 S1 tarea 7 |
-| D-19 | 2026-04-19 | **Benchmarks ER por estrato de Gemini Deep Research (Nano 6-10% · Micro 3.5-6% · Mid-Tier 2-4% · Macro 1.5-2.5% · Mega 1-2%) adoptados como PROVISIONALES con recalibración programada para Sprint S1 T3.** Sprint S0 T0.2 no pudo validar numéricamente el criterio binario (delta <30%) por ausencia de métricas de engagement en el raw (likes/views/followers_count no capturados todavía). Se adopta la tabla como seed operativo del asignador de estratos + flag obligatorio de recalibración una vez que S1 T3 active snapshots de followers diarios y las migraciones `likes_count`/`views_count` en `social_posts` estén en producción. Si al cierre de S1 T3 el delta observado >30% en ≥3 dirigentes, se debe reabrir D-19 y recalibrar rangos en `settings_strata.json` | 🟠 CONDICIONADA · **recalibración obligatoria al cierre de S1 T3** — adopción provisional garantiza arranque S1 sin retrabajo; la condición se cumple automáticamente con instrumentación de engagement metrics | `backend/research/2026-04-19/settings_strata.json` · `benchmark_validation_er.md` · `SPRINT-S0-REPORTE-EJECUTIVO.md` |
+| D-19 | 2026-04-19 | **Reemplazo ESTRUCTURAL de la tabla ER por estrato de Gemini Deep Research.** La tabla 1×5 (Nano 6-10% · Micro 3.5-6% · Mid-Tier 2-4% · Macro 1.5-2.5% · Mega 1-2%) se **descarta como referencia política** tras convergencia de dos dictámenes externos que rastrean su genealogía hasta benchmarks de Influencer Marketing y branded social (Hootsuite 2026 · Rival IQ 2025 · Emplifi 2025 · Sprout Social 2025 — ver MASTER §8.7 líneas 916-919). Esas fuentes miden engagement de marcas comerciales y creadores de entretenimiento, NO de actores políticos mexicanos sujetos a mobilización electoral, polarización afectiva y veda INE. El error no es de cuantificación (no es provisional-hasta-validar) sino de ORIGEN (dominio equivocado). Reemplazo estructural: (a) matriz **5×5 estrato × plataforma** en §3.1 #01 con celdas calibradas contra evidencia política disponible y celdas `TBD` explícitas donde falte evidencia; (b) factor **temporalidad electoral** como modificador del bloque #01 con multiplicador hasta **2.5×** en ventana 90 días pre-comicio (efecto polarización electoral Bail 2018 + Tajfel social identity); (c) perfil "precampaña" (§1.5) consume benchmarks con modificador temporal activado por default; (d) Sprint S1 añade tarea adicional de publicar **dataset Zenodo de benchmarks políticos mexicanos reproducibles** (DOI asignable) como ground-truth propio que sustituya la tabla IM a 3-6 meses | 🟢 APROBADA como reemplazo estructural (supersede de la adopción provisional original) | `.context/external-review/dictamen-01-gemini-dr-im-origin.md` · `.context/external-review/dictamen-02-gemini-dr-im-origin.md` · `backend/research/2026-04-19/settings_strata.json` (marcado provisional hasta Zenodo) |
 | D-20 | 2026-04-19 | Sprint S0 cerrado autónomamente con 5 PASS + 1 AMBIGUO documentado (T0.2) + 0 FAIL. T1.9 refinamiento prompt Plutchik NO se activa (Kappa 0.810 supera 0.65 holgadamente). S0.5 validación humana real (3 anotadores MD × 100 comments) queda en backlog — no bloquea S1, condiciona release comercial Plutchik Tier 1 (§9.6 hard-arrange) | Autorización ejecutiva CEO 2026-04-19 + reporte ejecutivo consolida los 6 veredictos con trazabilidad hacia artefactos. 28 archivos producidos en `backend/research/2026-04-19/` + `backend/evaluations/2026-04-19/` | 🟢 APROBADA | `.context/archive/sprint-s0-2026-04-19.md` · `backend/research/2026-04-19/SPRINT-S0-REPORTE-EJECUTIVO.md` |
 | D-21 | 2026-04-19 | Coolify Ollama usará estrategia **dual-mode con pre-warm obligatorio** como requisito operativo S1 T7: Mac M4 primario + Coolify VPS failover · pre-warm cada 4h via cron · timeout dual 60s warm / 180s cold · circuit breaker 3-layer (ping 2s / inference warm 60s / inference cold 180s) · alerta si primario Y failover simultáneamente DEGRADED | T0.6 midió p50=10.7s · p95=24.4s · warmup 102s cold start. Failover directo sin pre-warm expone al usuario a 102s de latencia en primera llamada post-idle. Pre-warm cada 4h mantiene modelo caliente sin saturar VPS. Memoria histórica "~17 min CPU-only" corresponde a prompts largos (500-1000 tokens output), no a prompts cortos de clasificación | 🟢 APROBADA | `backend/research/2026-04-19/coolify_failover_smoke.md` · `backend/evaluations/2026-04-19/output/coolify_latencies.json` · §5 S1 T7 |
 
