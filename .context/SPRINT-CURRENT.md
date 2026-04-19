@@ -6,16 +6,21 @@
 
 ---
 
-## Sprint activo: Sprint S0 — Validación de Supuestos (pendiente arranque CEO)
+## Sprint activo: Sprint S0 — Validación de Supuestos (pendiente arranque CEO post-merge v2.3)
 
-**Status del proyecto:** arco estratégico cerrado ✅ con PR #16 merged en `main` (commit merge `d387b99`, commit contenido `0f74410`) el 2026-04-19. MASTER v2.2 aprobado por Claude.ai Opus 4.7 con distinción. 3 documentos canónicos vivos (NORTH-STAR · SPRINT-CURRENT · HANDOFF). Fase de ejecución oficialmente abierta.
+**Status del proyecto:** arco estratégico cerrado ✅ con dos iteraciones de cross-audit (PR #16 v2.2 mergeado 2026-04-19 + v2.3 post-Gemini Puerta 2 en PR separado pendiente de merge). MASTER v2.3 integra 3 decisiones nuevas (D-16/D-17/D-18) + 6 ajustes críticos Gemini + 3 mejoras diferidas documentadas + protocolo §9.8 dos puertas. 3 documentos canónicos vivos (NORTH-STAR · SPRINT-CURRENT · HANDOFF). Fase de ejecución oficialmente abierta.
 
-**Próximo trabajo inmediato:** **Sprint S0 — Validación de Supuestos** (ver plantilla abajo). Arranque pendiente de autorización CEO — CEO está discutiendo con Claude.ai Opus 4.7 un ajuste estructural al Plan IA (Sprint S4) que tiene implicaciones para S1 y S2. **NO arrancar S0 hasta recibir luz verde explícita.**
+**Próximo trabajo inmediato:** **Sprint S0 — Validación de Supuestos ampliado con T0.4** (ver plantilla abajo). Arranque pendiente de autorización CEO tras merge del MASTER v2.3.
 
-**Por qué esta pausa antes de arrancar S0:**
-- Si el ajuste al Plan IA cambia las dependencias upstream (S1 Backend Foundations · S2 Diagnóstico Tier 1), conviene absorber el cambio antes de validar supuestos sobre una arquitectura que va a mutar
-- La disciplina de SSOT empieza por no reabrir lo decidido, pero también por no codificar sobre una decisión inestable
-- El costo de esperar la recomendación consolidada de Claude.ai es marginal; el costo de retrabajar Sprint 0 con supuestos obsoletos es mayor
+**Cambios del MASTER v2.3 que afectan Sprint S0:**
+- **Nueva tarea T0.4 Validación ciega Plutchik Gemma vs humano** con criterio aceptance ≥75% coincidencia emoción dominante (Gemini audit #09)
+- Estimación total Sprint S0: expandida de 5-6h a **6-8h**
+- Sigue siendo prerequisito duro antes de Sprint S1
+
+**Cambios downstream (Sprint S1 y S4) que hay que conocer antes de arrancar S0:**
+- Sprint S1 expandido a 5-6h con: migración `recomendaciones_plan_ia` (D-17) + endpoint ARCO purge-hash (D-18) + Ollama failover health-check
+- Sprint S4 expandido a 6-8 días con: ciclo 5 fases Plan IA + admin panel review Human-in-the-loop + UI cliente decisión + servicios seguimiento/cierre + bloques #10.5 #10.7
+- Nuevo timeline MVP: **4-5 semanas** (aprobación CEO parámetro 1 D-17)
 
 ---
 
@@ -51,6 +56,14 @@
   - [ ] Correr infraestructura NLP actual sobre los 200 comments con detección de patrones ITESO básicos: clustering temporal (>50% comments primera hora), similaridad léxica (cosine embeddings), account age inferida
   - [ ] Output: `backend/research/2026-04-19/cib_pilot_test.md` con 200 rows marcados + tasa detección CIB + porcentaje falsos positivos estimado
   - [ ] Decisión: infraestructura actual suficiente para MVP Tier 2 #12? O requiere scaffolding adicional en Sprint 3?
+
+- [ ] **T0.4** Validación ciega Plutchik Gemma vs humano *(añadida por Gemini audit Puerta 2 #09)*
+  - [ ] Seleccionar 100 comments aleatorios del dataset de 3,709 posts NLP ya procesado
+  - [ ] Clasificar ciegamente a 6 emociones Plutchik (trust/anger/joy/fear/sadness/disgust) por Gemma 3:12b con prompt Plutchik dedicado
+  - [ ] Clasificar los mismos 100 por 2-3 anotadores humanos MD independientes
+  - [ ] Calcular Cohen's kappa Gemma vs majority vote humano + matriz de confusión
+  - [ ] Output: `backend/research/2026-04-19/plutchik_validation.md` con kappa + matriz + recomendación
+  - [ ] **Criterio aceptance ≥75% coincidencia en emoción dominante.** Si falla → bloque #05 requiere re-prompt o modelo superior antes de Sprint S2. Si pasa → #05 aprobado para construcción Sprint S2
 
 **Criterio de acceptance del Sprint:**
 - 3 documentos canónicos existen en `.context/` ✅

@@ -67,7 +67,7 @@ CRECE v2 no atiende a "el político" en singular. Sirve a cuatro perfiles distin
 | **Rama actual** | `feat/eval-benchmark-v1` |
 | **Último commit main** | `3921f10` (calibración XLS) · `a919c5f` (cierre 5 redes scrapers) |
 | **PR abierto** | #12 — Sprint B eval/benchmark + encuestas scrapers (no mergeado aún) |
-| **Fase del proyecto** | **Pre-PRD técnico**: MASTER v2.2 estratégico aprobado por revisión de terceros (Claude.ai Opus 4.7, 2026-04-19) + 3 observaciones menores aplicadas. Pendiente: redactar PRD técnico separado con esquemas SQL/endpoints/tests, luego Sprint S0 |
+| **Fase del proyecto** | **Pre-PRD técnico**: MASTER v2.3 estratégico aprobado por **dos puertas independientes** (Claude.ai Opus 4.7 Puerta 1 + Gemini CLI Puerta 2) con 3 decisiones nuevas D-16/D-17/D-18 + 6 ajustes críticos Gemini integrados. Pendiente: redactar PRD técnico separado con esquemas SQL/endpoints/tests, luego Sprint S0 |
 | **Último trabajo cerrado** | Triangulación NLP Layer 2 (3-way Claude+Gemini+Gemma sobre 60 comments) — Gemma3:12b validado para producción |
 | **Investigación estratégica cerrada** | 4 fuentes: `sc:research`, `gemini -p`, Perplexity, Gemini Deep Research (96 fuentes académicas). Síntesis en `backend/research/2026-04-19/SINTESIS-4-FUENTES.md` |
 | **Próximo paso documentado** | Ejecutar Sprint 0 (validación de supuestos), luego roadmap §5 |
@@ -289,9 +289,26 @@ Cada bloque tiene: **nombre · pregunta · tier fidelity · inputs · ejemplo vi
 #### #10 — Start/Stop/Continue con post modelo linkeado
 - **Pregunta:** ¿Qué hago esta semana? (con ejemplo concreto, no abstracciones)
 - **Fidelity:** T1 funciona pleno
-- **Inputs:** todo lo anterior + LLM prompt (Claude/Gemma) + retrieval de posts propio y competidor
-- **Ejemplo:** 3 cards (verde/rojo/azul) — cada acción linkeada a post modelo + métrica respaldo + ventana temporal + recursos necesarios
+- **Inputs:** todo lo anterior + LLM prompt (Gemma 3:12b local primario por D-16) + retrieval de posts propio y competidor
+- **Ejemplo:** 3 cards (verde/rojo/azul) — cada acción linkeada a post modelo + métrica respaldo + ventana temporal + recursos necesarios + principio conductual §2.6
 - **Fuente:** Framework OKR/Atlassian (Gemini DR §4.1) + práctica Alfaro/García consultoras
+- **Flujo ampliado por D-17:** toda recomendación se persiste en tabla `recomendaciones_plan_ia` (ver §6.3.3) y sigue ciclo de 5 fases (generación → decisión → ejecución → seguimiento → cierre) cubierto por bloques #10.5 y #10.7 abajo
+
+#### #10.5 — Seguimiento de Recomendaciones Activas *(añadido por D-17)*
+- **Pregunta:** ¿Cómo evoluciona el post que publiqué siguiendo la recomendación de la semana pasada?
+- **Fidelity:** T1 funciona con métricas públicas (likes, comments, shares, views). T3 enriquece con reach exacto, watch time y demographics de cohorte
+- **Inputs:** tabla `recomendaciones_plan_ia` + `social_posts.id` del post ejecutor + snapshot diario de métricas + ventana temporal declarada (default 14 días, configurable por recomendación — decisión CEO parámetro 3 D-17)
+- **Ejemplo:** sección permanente del dashboard con tarjetas de recomendaciones activas. Cada tarjeta muestra el texto de la recomendación original, el post ejecutor vinculado como preview embebido, gráfico temporal de métrica predicha vs observada durante la ventana, días restantes de evaluación, y semáforo de cumplimiento preliminar actualizado diariamente
+- **Fuente:** D-17 CEO 2026-04-19
+- **Componentes React:** adaptación `KanbanBoard` 🟢 agnóstico + nuevo `RecommendationFollowUpCard`
+
+#### #10.7 — Memoria del Plan IA *(añadido por D-17)*
+- **Pregunta:** ¿De las últimas recomendaciones ejecutadas, cuáles funcionaron y cuáles no? ¿Qué patrones emergen?
+- **Fidelity:** T1 funciona con data acumulada de seguimiento. Mejora cualitativa en T3 por precisión de métricas subyacentes
+- **Inputs:** histórico completo de tabla `recomendaciones_plan_ia` con veredicto final, categorizado por tipo de acción, tema, plataforma y principio conductual §2.6 que activó
+- **Ejemplo:** dashboard histórico agregado con tasa de éxito por categoría. *"Recomendaciones de video vertical sobre infraestructura: 8/10 exitosas. Réplica a crítico con fuente INEGI: 5/7 exitosas. Post humanizante: 2/6 exitosas."* Drill-down por recomendación individual con evolución histórica + edición manual de veredicto (preserva `veredicto_original`)
+- **Fuente:** D-17 CEO 2026-04-19
+- **Función comercial crítica:** alimenta la conversación de venta con evidencia documentada de desempeño acumulado — cumple métrica de tracción comercial 90d §7.4
 
 ### 3.2 TIER 2 — DIFERENCIADORES DEFENSIBLES (8 bloques)
 
@@ -419,6 +436,32 @@ Cada card/widget del dashboard debe renderizar un badge discreto que declare la 
 
 **Regla:** Sprint S2 Diagnóstico Tier 1 debe reutilizar estos 25 componentes antes de construir nuevos. Cualquier componente nuevo requiere justificación explícita en HANDOFF del sprint.
 
+**Componente nuevo aprobado por D-17:** `RecommendationFollowUpCard` específico para bloques #10.5 y #10.7 (construcción en Sprint S4 Plan IA LLM).
+
+### 3.6 Requisito transversal — Human-in-the-loop obligatorio en Plan IA
+
+**Este NO es un bloque, es una regla de gobernanza del Plan IA** (Sprint S4) que aplica a bloques #10, #10.5 y #10.7.
+
+**Riesgo mitigado** (Gemini audit Puerta 2, hallazgo #08, 2026-04-19): Gemma 3:12b puede generar recomendaciones que violen veda electoral INE, tono institucional apropiado al cargo, o compliance LFPDPPP, sin que el modelo tenga capacidad para autodetectar el error. En un producto para políticos profesionales mexicanos, una sola recomendación automatizada que cruce la línea legal destruye la reputación del cliente y de MD Consultoría simultáneamente.
+
+**Mitigación obligatoria:** ninguna recomendación generada por el Plan IA es visible al cliente final sin pasar previamente por review del equipo operativo de MD Consultoría. El flujo es:
+
+```
+Plan IA genera recomendación (estado='propuesta')
+  ↓
+Review MD Consultoría (human-in-the-loop obligatorio)
+  ↓
+Si aprobada: estado='aprobada' → visible al cliente
+Si rechazada: estado='rechazada' → feedback al prompt engineering
+Si requiere ajuste: estado='modificada' → vuelve a review
+```
+
+**Criterio de aceptance transversal:** el endpoint que expone recomendaciones al cliente final filtra obligatoriamente por `estado IN ('aprobada', 'modificada', 'ejecutada', 'completada')` y **nunca** entrega `estado='propuesta'`. Test E2E bloquea merge si el filtro no existe.
+
+**Implementación:** admin panel `/dashboard/admin/plan-ia-review` con cola de recomendaciones pendientes. Responsable de testing: Sprint S4. **Sin este filtro implementado, el Plan IA no puede ir a producción** — es condición dura de arranque.
+
+**Referencia:** D-17 (ciclo de recomendaciones) + Gemini audit hallazgo #08.
+
 ---
 
 ## §4 — ARQUITECTURA DUAL-MODE POR DIRIGENTE
@@ -456,38 +499,50 @@ oauth_meta_expires_at TIMESTAMP NULL;
 5. Backfill de históricos exactos (reach, watch time) via Graph API Insights
 6. Dashboard muestra badge `📊 Oficial` en lugar de `📊 Estimación`
 
+### 4.5 Reconciliación de series de tiempo post-upgrade (`data_origin_checkpoint`)
+
+**Riesgo identificado** (Gemini audit Puerta 2, hallazgo #05): cuando un dirigente pasa T1/T2 → T3, los valores absolutos de métricas (reach, views, CTR estimado) cambian de proxy scrapeado a oficial Graph API Insights. Las series de tiempo del dashboard mostrarían un quiebre visual que un cliente sofisticado interpretaría como métricas inventadas si no se marca el cambio de origen.
+
+**Mitigación obligatoria:** cada fila de la tabla de métricas de series de tiempo incluye campo `data_origin` (T1/T2/T3) + se genera evento `data_origin_checkpoint` en el timestamp exacto del upgrade. El frontend renderiza una línea vertical discontinua en los charts temporales con tooltip *"A partir de aquí: datos oficiales Graph API (previo: estimación de mercado)"*. Esta transparencia preserva credibilidad del producto.
+
+**Implementación:** migración Alembic añade columna `data_origin` a las tablas de snapshots/métricas históricas. Frontend `SentimentLineChart`, `EngagementBarChart`, cualquier chart temporal debe renderizar el checkpoint si existe. Sprint S1 Backend Foundations agrega la columna, Sprint S2 Diagnóstico Tier 1 implementa el renderizado.
+
 ---
 
 ## §5 — ROADMAP DE SPRINTS
 
-**6 sprints** secuenciales (+1 paralelo). Total 3-4 semanas para MVP Tier 1+2, con Sprint 0 de validación previa aprobado CEO 2026-04-19.
+**6 sprints** secuenciales (+1 paralelo). Total **4-5 semanas** para MVP Tier 1+2 (**expansión aprobada CEO 2026-04-19 parámetro 1 D-17** para incluir cierre de ciclo del Plan IA). Sprint 0 de validación previa aprobado CEO 2026-04-19.
 
-### Sprint S0 — Validación de Supuestos (5-6h)
+### Sprint S0 — Validación de Supuestos (6-8h, expandido por Gemini #09)
 - **Status:** ⏸ Pending · **próximo en ejecutar** tras aprobación PRD
-- **Razón de existir:** saltárselo es el error clásico de empezar a construir sobre fundamentos no validados. Si los benchmarks ER por estrato de Gemini Deep Research no corresponden a nuestra data real, todo el Sprint S2 arranca sobre falsa premisa
-- **Trade-off rigor vs velocidad:** 5-6h de investigación evitan días de retrabajo si hay sorpresa en los números. **Decisión CEO 2026-04-19: ejecutar sin reservas**
-- **Tareas (3):**
+- **Razón de existir:** saltárselo es el error clásico de empezar a construir sobre fundamentos no validados. Si los benchmarks ER por estrato de Gemini Deep Research no corresponden a nuestra data real, todo el Sprint S2 arranca sobre falsa premisa. Además, si Gemma 3:12b no clasifica las 6 emociones Plutchik con precisión aceptable, el bloque #05 requiere rediseño antes de Sprint S2
+- **Trade-off rigor vs velocidad:** 6-8h de investigación evitan días de retrabajo. **Decisión CEO 2026-04-19: ejecutar sin reservas**
+- **Tareas (4):**
   1. **Crear documentos canónicos faltantes** en `.context/`:
-     - `NORTH-STAR.md` — versión condensada 1-2 páginas del MASTER para carga rápida en inicio de sesión (no duplica función, es el briefing; MASTER es referencia detallada)
-     - `SPRINT-CURRENT.md` — template del sprint activo que se actualiza al inicio de cada sprint nuevo
-     - `HANDOFF.md` — protocolo nuevo de 5 preguntas (diferente del `HANDOFF-REM-2026-04-18.md` legacy que fue handoff específico)
+     - `NORTH-STAR.md` — ✅ creado 2026-04-19
+     - `SPRINT-CURRENT.md` — ✅ creado 2026-04-19
+     - `HANDOFF.md` — ✅ creado 2026-04-19
   2. **Validar benchmarks ER por estrato contra data real:** tomar los 8 dirigentes actualmente scrapeados (Piña, Solano, Pineda, Nolasco, Jiménez, Cravioto, Ballesteros, Máynez) y calcular sus ER reales últimos 90 días en cada plataforma, comparar contra tabla Gemini DR (Nano 6-10% · Micro 3.5-6% · Mid-Tier 2-4% · Macro 1.5-2.5% · Mega 1-2%). Si hay desviación >30%, recalibrar antes de Sprint S2
   3. **Correr pipeline CIB básico contra post Piña 7357909824622890245** (donde ya existen 200 comments clasificados) para medir si los patrones ITESO de Maestros de Ceremonias + Cuentas Coro son detectables con infraestructura NLP actual o requieren desarrollo adicional. Output: `backend/research/2026-04-19/cib_pilot_test.md` con 200 rows marcados + tasa detección + falsos positivos estimados
-- **Criterio acceptance:** 3 documentos canónicos creados · tabla calibrada de ER por estrato para los 8 dirigentes · reporte piloto CIB con porcentaje de detección y baseline de falsos positivos
+  4. **T0.4 Validación ciega Plutchik Gemma vs humano** *(añadida por Gemini audit #09)*: tomar 100 comments aleatorios del dataset de 3,709 posts con NLP ya procesado, hacer clasificación ciega a 6 emociones Plutchik por (a) Gemma 3:12b con prompt Plutchik + (b) 2-3 anotadores humanos MD. Calcular Cohen's kappa Gemma vs majority vote humano. **Criterio aceptance ≥75% coincidencia en emoción dominante.** Si falla, el bloque #05 requiere re-prompt o modelo superior antes de Sprint S2. Output: `backend/research/2026-04-19/plutchik_validation.md` con matriz de confusión + kappa + recomendación
+- **Criterio acceptance del sprint:** 3 documentos canónicos creados ✅ · tabla calibrada ER por estrato para 8 dirigentes · reporte piloto CIB con % detección y baseline de falsos positivos · reporte validación Plutchik Gemma vs humano con kappa ≥0.75
 - **Dependencias:** ninguna. Bloquea Sprint S1
 
-### Sprint S1 — Backend Foundations
-- **Status:** ⏸ Pending (arrancar tras aprobación del PRD)
+### Sprint S1 — Backend Foundations (5-6h, expandido por D-17 + D-18)
+- **Status:** ⏸ Pending (arrancar tras aprobación del PRD + Sprint S0 completo)
 - **Objetivo:** Preparar schema + gaps estructurales antes de construir los bloques
 - **Tareas:**
-  1. Migration: añadir `data_fidelity_tier`, `estrato_politico`, `competidor_directo_ids` a tabla `dirigentes`
+  1. Migration: añadir `data_fidelity_tier`, `estrato_politico`, `competidor_directo_ids`, `data_origin` a tabla `dirigentes` y snapshots
   2. Seed manual: asignar estrato (Nano/Micro/Mid/Macro/Mega) y competidores directos a los 8 dirigentes existentes
   3. Cron daily: snapshot `followers_count` por plataforma en tabla `social_profile_snapshots` (ya existe)
   4. Mapear campo `views` de output Apify a tabla `social_posts` (ya está en scraper, falta persistir)
-  5. Topic extraction básica: servicio LLM (Gemma/Claude) que extrae 1-3 topics por post (seed 8-12 topics fijos: seguridad, economía, salud, educación, movilidad, gobernanza, denuncia, autopromocion, personal)
-- **Criterio acceptance:** los 8 dirigentes tienen `data_fidelity_tier='T1'` + estrato + competidores. Cron corre 1 vez manual y escribe snapshot. Muestra de 50 posts con topics asignados.
-- **Estimación:** 4-5h
-- **Dependencias:** ninguna
+  5. Topic extraction básica: servicio LLM (**Gemma 3:12b local por D-16** — NO Claude API como default) que extrae 1-3 topics por post (seed 8-12 topics fijos: seguridad, economía, salud, educación, movilidad, gobernanza, denuncia, autopromocion, personal)
+  6. **Migration Alembic adicional** *(por D-17)*: crear tabla `recomendaciones_plan_ia` con schema completo descrito en §6.3.3 (18 columnas + 3 índices compuestos). Prepara el terreno para Sprint S4
+  7. **Endpoint ARCO LFPDPPP** *(por D-18, Gemini audit #04)*: `POST /api/v1/admin/compliance/purge-hash` que elimina recursivamente comments + embeddings + vectores asociados a un hash SHA256 de autor. Audit log obligatorio de cada purga. Satisface derechos ARCO selectivos (obligación legal pendiente)
+  8. **Ollama clúster failover** *(por Gemini audit #06)*: health-check desde backend hacia Ollama local Mac M4 cada 60s. Si falla >3 min, switch automático a Ollama Coolify (VPS, CPU-only, degradado) para mantener Plan IA disponible. Evita SPOF de hardware único
+- **Criterio acceptance:** los 8 dirigentes tienen `data_fidelity_tier='T1'` + estrato + competidores. Cron corre 1 vez manual y escribe snapshot. Muestra de 50 posts con topics asignados. Tabla `recomendaciones_plan_ia` creada. Endpoint purge-hash con al menos 1 test de purga completa. Failover Ollama con health-check activo.
+- **Estimación:** 5-6h (+1h D-17 + 1-2h D-18 + 30min failover)
+- **Dependencias:** Sprint S0 completo
 
 ### Sprint S2 — Diagnóstico Tier 1 (Core MVP)
 - **Status:** ⏸ Pending (arranca tras S1)
@@ -518,18 +573,25 @@ oauth_meta_expires_at TIMESTAMP NULL;
 - **Estimación:** 1 semana
 - **Dependencias:** S2 completo
 
-### Sprint S4 — Plan IA con LLM (Start/Stop/Continue)
+### Sprint S4 — Plan IA con LLM + Cierre de Ciclo (expandido 6-8 días por D-17)
 - **Status:** ⏸ Pending (arranca tras S3 o paralelo si hay capacidad)
-- **Objetivo:** El plan accionable semanal auto-generado
+- **Objetivo:** Plan accionable semanal auto-generado **con ciclo completo de 5 fases** (generación → decisión → ejecución → seguimiento → cierre)
 - **Tareas:**
-  1. Pipeline LLM que consume todos los bloques T1+T2
-  2. Prompt engineering: template Start/Stop/Continue con requisito de post modelo linkeado + métrica respaldo + ventana temporal + recursos
-  3. RAG sobre histórico propio + competidores
-  4. Reporte semanal en MD/PDF (1 página) + envío email configurable
-  5. Pre-Mortem simulator (bloque #28) opcional como bonus
-- **Criterio acceptance:** CEO recibe reporte semanal auto-generado para 1 dirigente, legible en 3 min, con recomendaciones específicas no-vagas.
-- **Estimación:** 3-4 días
-- **Dependencias:** S2 mínimo, S3 opcional
+  1. **Pipeline LLM Gemma 3:12b local** *(provider primario D-16, NO Claude API)* que consume todos los bloques T1+T2 + `behavioral_logic_library.json` diferido (Gemini audit #07, iteración posterior)
+  2. Prompt engineering: template Start/Stop/Continue con anatomía §2.6.7 obligatoria (acción específica + ventana temporal + criterio medible + principio conductual + evidencia post modelo)
+  3. RAG sobre histórico propio + competidores + memoria del Plan IA §3.1 #10.7
+  4. **Generación persistible en tabla `recomendaciones_plan_ia`** con estado inicial `propuesta` (schema §6.3.3)
+  5. **Admin panel `/dashboard/admin/plan-ia-review`** con cola de recomendaciones pendientes + flujo Human-in-the-loop obligatorio §3.6 (sin este admin panel el Plan IA no sale a producción)
+  6. **UI cliente `/dashboard/recomendaciones`** con flujo decisión: aprobar, rechazar o modificar cada recomendación
+  7. **Vinculación post ejecutor:** cuando cliente publica contenido tras recomendación aprobada, UI permite vincular `post_ejecutor_id` FK a social_posts
+  8. **Servicio seguimiento:** durante ventana temporal (default 14d, configurable D-17 parámetro 3), cron diario captura métricas observadas vs predichas y actualiza la UI del bloque #10.5
+  9. **Servicio cierre automático:** al vencer ventana, calcula veredicto (`exitosa`/`parcial`/`fallida`) por cumplimiento numérico del criterio + permite edición cliente preservando `veredicto_original` (D-17 parámetro 4)
+  10. **Bloque #10.7 Memoria del Plan IA:** dashboard agregado con tasa de éxito por categoría + drill-down histórico
+  11. Reporte semanal MD/PDF (1 página) + envío email configurable
+  12. Pre-Mortem simulator (bloque #28) opcional como bonus
+- **Criterio acceptance:** CEO recibe reporte semanal + flujo completo end-to-end: 1 recomendación generada → aprobada por MD review → aprobada por cliente → post publicado vinculado → seguimiento 14d con métricas diarias → veredicto automático + opción edición → aparece en memoria histórica.
+- **Estimación:** 6-8 días (expansión aprobada D-17 parámetro 1)
+- **Dependencias:** S2 mínimo, S3 opcional, tabla `recomendaciones_plan_ia` del S1
 
 ### Sprint S5 — Meta OAuth Activable (paralelizable con S3/S4)
 - **Status:** ⏸ Pending (no bloquea piloto — se activa post-venta)
@@ -573,6 +635,86 @@ oauth_meta_expires_at TIMESTAMP NULL;
 | D-13 | 2026-04-14 | Multi-tenant 3 orgs: MC-CDMX (real) · GOB-OAXACA (sintético INEGI) · CDMX-IND (sintético INEGI) | Aislamiento estricto + seed independiente por org + watermark DATOS SIMULACIÓN en sintéticos | 🟢 APROBADA | `.context/PLAN-current.md` (histórico) |
 | D-14 | 2026-04-14 | MD administra usuarios vía seed. Sin signup público. Sin UI admin CRUD | Cliente B2B político — usuarios gestionados por MD directamente | 🟢 APROBADA | `.context/PLAN-current.md` (histórico) |
 | D-15 | 2026-04-19 | Gemma 3:12b local vía Ollama como LLM provider primario del Plan IA (Sprint S4) — NO Claude API/Gemini como default | Razones: (a) costo $0 vs costo marginal Claude/Gemini API; (b) privacidad del cliente — datos sensibles nunca salen del Mac M4; (c) velocidad validada benchmark S2.6 a 4-6 min/iter; (d) output quality aceptable con prompt engineering (score 86.5/100 baseline). Claude API y Gemini quedan como fallback opcional cuando cliente firmado lo contrate específicamente como feature premium | 🟢 APROBADA (formaliza lo documentado en §2.5 como decisión explícita) | §2.5 · benchmark `backend/app/nlp/prompts/diagnostico_winner.md` |
+| D-16 | 2026-04-19 | Unificar provider LLM: Gemma 3:12b local baseline de desarrollo + Claude API exclusivamente como "Expert Auditor" de seguridad/compliance (NO para generación de producto) | Gemini audit Puerta 2 #02 detectó ambigüedad entre bloque #10 ("Claude/Gemma") y D-15 ("Gemma primario"). Deriva de costos imprevista si desarrollo cae en Claude API. Unificación elimina ambigüedad operativa — todo dev usa Gemma, Claude solo para auditoría estructurada | 🟢 APROBADA | §3.1 #10 · `.context/audits/gemini-master-v2.2-audit-2026-04-19.md` |
+| D-17 | 2026-04-19 | **Cierre de ciclo del Plan IA con seguimiento de recomendaciones activas.** Añadir bloques #10.5 (Seguimiento) y #10.7 (Memoria) al inventario + tabla `recomendaciones_plan_ia` BD + flujo completo 5 fases (generación → decisión → ejecución → seguimiento → cierre). 4 parámetros CEO fijados: (1) expansión MVP 3-4s → 4-5s aprobada; (2) numeración 10.5/10.7 sin renumerar inventario; (3) ventana 14 días default configurable; (4) veredicto automático con opción edición cliente | Diseño original S4 generaba recomendaciones sin rastrear ejecución/resultado real. Sin cierre: (a) imposible distinguir exitosas vs fallidas empíricamente; (b) sistema no aprende del histórico; (c) conversación comercial limitada a promesas cualitativas — bloqueaba métrica tracción 90d §7.4. Cierre de ciclo convierte producto de dashboard pasivo a workflow activo con hábito de uso semanal | 🟢 APROBADA con matices · MVP expandido · 4 parámetros fijados | §6.3 desarrollo extendido · §3.1 #10.5 #10.7 · §5 S1+S4 |
+| D-18 | 2026-04-19 | Endpoint ARCO selectivo `POST /api/v1/admin/compliance/purge-hash` obligatorio antes de producción — borrado recursivo de comments + embeddings + vectores asociados a hash SHA256 de autor | Gemini audit Puerta 2 #04: obligación legal bajo LFPDPPP no exenta por hash SHA256 actual. Retención 180d actual no cubre solicitud ARCO específica (acceso, cancelación, oposición) por titular individual. Riesgo multa INAI + daño reputacional. Endpoint + audit log por purga = satisfacción legal demostrable | 🟢 APROBADA · obligatorio Sprint S1 | `docs/AVISO-PRIVACIDAD-CRECE.md` · §5 S1 tarea 7 |
+
+### §6.3 Desarrollo extendido de D-17 (cierre de ciclo Plan IA)
+
+**Problema identificado por CEO (chat directo 2026-04-19 post-PR #16):**
+
+El diseño original del Plan IA en Sprint S4 generaba recomendaciones con anatomía completa §2.6.7, pero no cerraba el ciclo entre recomendación generada, acción ejecutada y medición de resultado real.
+
+**Ejemplo textual del CEO para anclar el diseño:** si el Plan IA recomienda publicar un video vertical de TikTok sobre fallas del Metro con estructura narrativa similar a un video de Instagram exitoso del pasado, el cliente espera ver durante los días posteriores cómo evoluciona ese post específico en seguidores ganados, penetración real y comentarios específicos, no solo recibir la recomendación y olvidarla.
+
+**Tres limitaciones graves del diseño sin cierre de ciclo (ya resueltas por D-17):**
+
+1. Imposibilidad de distinguir empíricamente recomendaciones exitosas de fallidas
+2. Sistema incapaz de aprender del histórico para calibrar recomendaciones futuras
+3. Conversación comercial limitada a promesas cualitativas sin evidencia cuantitativa de desempeño acumulado (bloqueaba la métrica de tracción comercial a 90 días §7.4)
+
+**Diseño aprobado del ciclo en cinco fases:**
+
+1. **Generación:** Plan IA produce recomendación con anatomía §2.6.7 y la persiste en tabla `recomendaciones_plan_ia` con estado `propuesta`
+2. **Decisión:** cliente acepta, rechaza o modifica desde UI dedicada. Estado → `aprobada`/`rechazada`/`modificada`
+3. **Ejecución:** cliente publica el contenido. Sistema vincula `post_ejecutor_id` FK al post publicado. Estado → `ejecutada`
+4. **Seguimiento:** durante la ventana temporal (default 14 días) el sistema rastrea métricas predichas vs observadas, mostrando evolución contra baseline en UI bloque #10.5
+5. **Cierre:** al vencer la ventana, el sistema calcula veredicto automático (`exitosa`/`parcial`/`fallida`) por cumplimiento numérico del criterio. Estado → `completada`. El cliente puede editar el veredicto si lo solicita (se preserva `veredicto_original`). Resultado alimenta memoria del Plan IA (bloque #10.7)
+
+### §6.3.1 Cuatro parámetros CEO fijados
+
+**Parámetro 1 — Expansión MVP:** 3-4 semanas → 4-5 semanas aprobada. Un Plan IA sin seguimiento tiene techo comercial bajo; cliente sofisticado detecta limitación en primera conversación de venta.
+
+**Parámetro 2 — Numeración bloques:** 10.5 y 10.7 sin renumerar inventario de 30. Preserva numeración referenciada en research y comunicación interna. Nueva suma: 32 bloques efectivos.
+
+**Parámetro 3 — Ventana seguimiento:** configurable por recomendación, default 14 días. Anchor cognitivo (Kahneman §2.6.1) apropiado para mayoría de recomendaciones consolidación digital. Suficientemente largo para capturar evolución orgánica, suficientemente corto para cadencia semanal. Configurabilidad preserva agencia cliente (ej. 7d posts virales, 30d narrativas estructurales).
+
+**Parámetro 4 — Mecánica veredicto:** automático por cumplimiento numérico + opción edición manual preservando `veredicto_original`. Elimina carga cognitiva Sistema 2 (Kahneman §2.6.1) sin sacrificar objetividad. Opción edición preserva autoridad profesional del cliente. Trazabilidad automático vs editado alimenta #10.7 para detectar patrones de discrepancia sistemática.
+
+### §6.3.2 Schema BD `recomendaciones_plan_ia`
+
+```sql
+CREATE TABLE recomendaciones_plan_ia (
+  id SERIAL PRIMARY KEY,
+  plan_ia_id INTEGER REFERENCES planes_ia(id),
+  dirigente_id INTEGER REFERENCES dirigentes(id),
+  org_id INTEGER REFERENCES organizaciones(id),
+  tipo VARCHAR(20) CHECK (tipo IN ('start', 'stop', 'continue')),
+  accion_texto TEXT NOT NULL,
+  ventana_inicio TIMESTAMP,
+  ventana_fin TIMESTAMP,
+  ventana_duracion_dias INTEGER DEFAULT 14,
+  criterio_exito JSONB,
+  principio_conductual VARCHAR(100),
+  evidencia_respaldo JSONB,
+  estado VARCHAR(20) DEFAULT 'propuesta' CHECK (estado IN (
+    'propuesta', 'aprobada', 'rechazada', 'modificada',
+    'ejecutada', 'completada', 'fallida'
+  )),
+  post_ejecutor_id INTEGER REFERENCES social_posts(id) NULL,
+  metricas_predichas JSONB,
+  metricas_observadas JSONB,
+  veredicto VARCHAR(20) NULL CHECK (veredicto IN ('exitosa', 'parcial', 'fallida') OR veredicto IS NULL),
+  veredicto_editado_por_cliente BOOLEAN DEFAULT FALSE,
+  veredicto_original VARCHAR(20) NULL,
+  notas_cliente TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_recom_dirigente_estado ON recomendaciones_plan_ia(dirigente_id, estado);
+CREATE INDEX idx_recom_ventana_activa ON recomendaciones_plan_ia(ventana_fin) WHERE estado = 'ejecutada';
+CREATE INDEX idx_recom_veredicto ON recomendaciones_plan_ia(dirigente_id, veredicto) WHERE estado = 'completada';
+```
+
+### §6.4 Mejoras diferidas (Gemini audit Puerta 2, iteración posterior)
+
+Hallazgos de Gemini audit marcados como **🟦 DIFERIDO** — NO se omiten, se documentan explícitamente para que próximas sesiones no los olviden.
+
+| # | Hallazgo | Dimensión | Razón de diferir | Fecha objetivo revisión |
+|---|---|---|---|---|
+| DIFERIDO-01 | Renombrar `IpdRadarChart` → `SecondaryContextRadar` + crear `Tier1CoreGrid` como componente principal | Cosmética de componentes React | No bloquea MVP. Sprint S2 puede usar componentes tal cual; rename como housekeeping post-MVP | Post-S4 cierre (semana 5 aprox) |
+| DIFERIDO-02 | Hito "Meta App Review Submission" en Sprint S5 para transición Dev Mode → Live antes del dirigente 26 | Escalabilidad comercial | Dev Mode soporta 25 admins sin App Review. Piloto opera 8 dirigentes — margen amplio. App Review toma 4-8 semanas post-submission; arrancar cuando lleguemos a 15-20 dirigentes contratados | Cuando clientes firmados lleguen a 15 |
+| DIFERIDO-03 | `behavioral_logic_library.json` como RAG injectable para forzar justificación conductual §2.6.7 sistemáticamente | Ingeniería de prompts Plan IA | Sprint S4 ya incluye prompt con §2.6.7 obligatoria. Library separada es optimización. Si auditorías del MD review encuentran recomendaciones sin principio claro >20%, promover a Sprint | Tras primeras 100 recomendaciones aprobadas por MD review |
 
 ### §6.1 Decisiones pendientes CEO (input explícito requerido)
 
@@ -597,6 +739,8 @@ oauth_meta_expires_at TIMESTAMP NULL;
 | **Gemma 3:12b local degrada calidad vs Claude/ChatGPT** | Cliente compara output con ChatGPT directo y percibe inferior | Benchmark S2.6 ya demostró viabilidad (86.5/100 baseline) · Fallback a Claude API como feature premium opcional · Prompt engineering iterativo documentado en `backend/app/nlp/prompts/diagnostico_winner.md` |
 | **Falla de memoria Claude Code genera deriva de sprint** | Sprints se alargan indefinidamente, MVP se pospone, ventana mercado se cierra | Disciplina documental §9 · NORTH-STAR.md obligatorio al inicio sesión · Gemini CLI como Puerta 2 pre-merge · Sesiones cortas 45-90 min con handoff forzado |
 | **Percepción de producto como herramienta manipulación tipo Cambridge Analytica** | Pérdida contratos institucionales, daño reputacional MD Consultoría | Posicionamiento "inteligencia defensiva y ofensiva transparente" · Badge de fidelity visible (§3.4) · Compliance LFPDPPP y INE auditables · Aviso privacidad público · NO hacer psychographic profiling sin consentimiento |
+| **SPOF hardware único — Mac M4 local corriendo Ollama Gemma 3:12b como producción** *(Gemini audit Puerta 2 #06)* | Fallo de disco, luz o red en el Mac M4 detiene el Plan IA de TODOS los clientes simultáneamente. Para un SaaS esto es inaceptable | **Ollama clúster Coolify como failover automático** (§8.6 Ollama Coolify VPS ya existe pero CPU-only lento). Backend hace health-check al Ollama local cada 60s; si falla >3 min, switch automático a Coolify (degradado pero funcional) con banner visible al usuario "modo degradado". Sprint S1 implementa la lógica. A 6 meses: evaluar migrar Gemma a GPU en Coolify (costo ~$200/mes EC2 con A10) |
+| **Plan IA genera recomendación que viola veda INE, LFPDPPP o tono institucional** *(Gemini audit Puerta 2 #08)* | Una sola recomendación automatizada mal clasificada que cruce línea legal destruye reputación cliente + MD simultáneamente. Riesgo especialmente alto en precampaña y veda electoral | **Human-in-the-loop obligatorio §3.6** — ninguna recomendación sale al cliente sin review MD Consultoría. Endpoint cliente filtra obligatoriamente `estado IN ('aprobada', 'modificada', ...)` y NUNCA entrega `estado='propuesta'`. Test E2E bloquea merge si filtro no existe |
 
 ### §7.2 Riesgos operacionales secundarios
 
@@ -627,11 +771,12 @@ Sin Meta OAuth no tenemos:
 
 Tres síes, o se declara sprint fallido y se replanifica antes de continuar.
 
-**MVP (3-4 semanas, cierre S0-S4) — 4 métricas:**
-1. Los **18 bloques Tier 1 + Tier 2** operando E2E en modo T1/T2 con los 8 dirigentes piloto + badge transparencia visible
+**MVP (4-5 semanas, cierre S0-S4, timeline expandido por D-17) — 5 métricas:**
+1. Los **20 bloques Tier 1 + Tier 2** operando E2E (10 Tier 1 originales + #10.5 + #10.7 + 8 Tier 2) en modo T1/T2 con los 8 dirigentes piloto + badge transparencia visible
 2. Un dirigente del piloto dispuesto a validar en sesión 45 min que las recomendaciones del Plan IA son accionables sin reinterpretación del equipo
 3. Un candidato a cliente externo (fuera de los 8 piloto) haciendo demo de venta sobre su propia cuenta con data T1/T2 + queda para conversación de upgrade
 4. Código OAuth activable implementado + testeado contra al menos 1 cuenta real de dirigente voluntario, aunque no desplegado en producción
+5. **Ciclo completo del Plan IA demostrable E2E** *(nueva por D-17):* 1 recomendación generada → aprobada por MD review → aprobada por cliente → post publicado vinculado → seguimiento 14d con métricas diarias → veredicto automático + opción edición → aparece en memoria histórica #10.7
 
 **Tracción comercial (90 días) — 3 métricas duras de validación de mercado:**
 1. **3 pilotos reales** con figuras públicas de perfiles distintos ejecutados durante 90 días completos (contratos con fecha cierre, no gratis indefinidos): 1 político activo + 1 funcionario en ejercicio + (1 empresario en transición O 1 político en precampaña)
@@ -854,11 +999,33 @@ Complementa §9.1-9.3 con disciplinas adicionales heredadas del Plan Maestro §8
 
 **Regla 3 — Límite de duración por sesión.** NO dejar que Claude Code trabaje en sesiones de 4h donde contexto se degrada progresivamente. **Sesiones de 45-90 min con HANDOFF escrito al final** + descanso deliberado entre sesiones. Productividad acumulada es mayor con sesiones cortas bien cerradas que con sesiones largas mal cerradas.
 
+### 9.8 Protocolo de dos puertas independientes para cambios estructurales al MASTER
+
+**Patrón validado empíricamente en la sesión 2026-04-19** (v2.0 → v2.1 → v2.2 → v2.3): todo cambio estructural al MASTER pasa por dos revisiones independientes de agentes con dominios de evaluación complementarios antes del commit final.
+
+**Puerta 1 — Claude.ai Opus 4.7** (rigor documental, coherencia narrativa, alineación estratégica):
+- Entrega: versión completa del MASTER candidato para revisión
+- Recibe: veredicto global + observaciones por sección + recomendación operativa
+
+**Puerta 2 — Gemini CLI** (rigor de ingeniería, operación y compliance):
+- Entrega: misma versión + Puerta 1 output
+- Recibe: veredicto binario + hallazgos con severidad crítico/mejora + sugerencias concretas
+- Archivado: cada auditoría Gemini queda en `.context/audits/gemini-master-vX.Y-audit-YYYY-MM-DD.md` para trazabilidad
+
+**Integración:** Joy incorpora ambas auditorías en una sola versión final. Los hallazgos críticos se aplican sin debate. Los hallazgos "mejora" se evalúan caso por caso: aplicar ahora, documentar como 🟦 DIFERIDO con fecha objetivo, o descartar con razón explícita.
+
+**Por qué funciona:** los dos agentes tienen dominios de evaluación naturalmente complementarios. Claude.ai detecta inconsistencias narrativas que Gemini no ve por no rastrear historial conversacional. Gemini detecta gaps de compliance / ingeniería / operación que Claude.ai no ve por operar en capa estratégica. La unión de las dos perspectivas aproxima una revisión completa; una sola puerta monopoliza sesgo cognitivo de un solo dominio.
+
+**Regla:** cualquier cambio estructural futuro al MASTER (nueva sección, cambio de arquitectura, decisión crítica D-XX) pasa por este protocolo antes del commit. Cambios menores (typo, broken link, reordenamiento cosmético) quedan exentos.
+
+**Ejemplo histórico validado:** v2.3 integró 4 hallazgos críticos Gemini (#04 ARCO, #05 reconciliación T1→T3, #06 SPOF Mac M4, #08 human-in-the-loop) que Puerta 1 no detectó. Sin Puerta 2, esos gaps habrían salido a producción.
+
 ---
 
 ## FIN DEL DOCUMENTO
 
 **Cambios históricos:**
+- **2026-04-19 v2.3** (Joy, post-audit Puerta 2 Gemini CLI + propuesta consolidada D-17 CEO) — **3 decisiones nuevas** (D-16 provider LLM unificado · D-17 cierre de ciclo Plan IA con 4 parámetros CEO fijados · D-18 endpoint ARCO purge-hash). **6 ajustes críticos Gemini** aplicados: §3.6 Human-in-the-loop obligatorio · §4.5 data_origin_checkpoint reconciliación T1→T3 · §7.1 riesgo SPOF Mac M4 + mitigación Ollama Coolify failover · Sprint S0 T0.4 validación Plutchik ciega · Sprint S1 expansión con tabla recomendaciones + ARCO endpoint · Sprint S4 expansión con ciclo 5 fases. **2 bloques nuevos** #10.5 Seguimiento + #10.7 Memoria (32 bloques efectivos ahora). **3 mejoras diferidas** explícitamente documentadas en §6.4 con fecha objetivo. **Nueva §9.8** protocolo dos puertas independientes Claude.ai + Gemini para futuros cambios estructurales. **MVP timeline expandido 3-4s → 4-5s** aprobado CEO parámetro 1 D-17.
 - **2026-04-19 v2.2** (Joy, post-revisión terceros Claude.ai Opus 4.7) — 3 observaciones menores aplicadas: (1) nota aclaratoria en §3.1 sobre "T1 funciona pleno" = post-Sprint S1 completado; (2) §9.6 clarifica distinción MASTER estratégico vs PRD técnico separado (aún no redactado); (3) D-15 nueva formaliza Gemma 3:12b local como provider primario Plan IA en lugar de Claude API default. MASTER aprobado con distinción para commit.
 - **2026-04-19 v2.1** (Joy) — inserción verbatim §2.6 economía del comportamiento (Claude.ai Opus 4.7, 7 subsecciones) + actualización §8.7 con 6 citas académicas específicas (Kahneman 1979/2011, Cialdini 2006, Haidt 2012, Bail PNAS 2018, Tajfel 1979) + cierre D-08 en §6 + checkbox §6.1 economía conductual marcado ✅.
 - **2026-04-19 v2.0** (Joy + Claude.ai Opus 4.7) — sincronización con Plan Maestro v1.0: añadidas §1.5 (4 perfiles cliente), §2.1-2.5 (estado granular), §2.6 placeholder economía conductual, §3.4 (requisito transversal badge fidelity), §3.5 (25 componentes React con marcado IPD-legacy/agnóstico), §5 Sprint S0 (validación supuestos), §6 reestructurada con leyenda status + 14 decisiones + matiz IPD degrada-no-muere, §7 riesgos estratégicos con mitigación CIB 200 casos calibración, §7.4 métricas éxito sprint/MVP/tracción 90d, §8.7 fundamentación académica, §9.6 criterio de arranque duro, §9.7 reglas de contención.
