@@ -1,0 +1,16 @@
+ping_1=0.152026s
+ping_2=0.145280s
+ping_3=0.150358s
+ping_4=0.145274s
+ping_5=0.144611s
+inference_1=.152515000s  resp="err"
+inference_2=.155337000s  resp="err"
+inference_3=.166703000s  resp="err"
+inference_4=.161191000s  resp="err"
+inference_5=.157374000s  resp="err"
+inference_6=.155962000s  resp="err"
+inference_7=.159519000s  resp="err"
+inference_8=.160110000s  resp="err"
+inference_9=.160064000s  resp="err"
+inference_10=.160645000s  resp="err"
+n=      10  min=.152515000  reps  p50=.159519000  reps  p95=.166703000  reps  max=.166703000  reps

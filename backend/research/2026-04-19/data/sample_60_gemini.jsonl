@@ -1,0 +1,60 @@
+{"id": "IG_3642138545329726026_17861718855410453", "source_model": "gemini-cli", "emocion": "joy", "topics": ["economia"], "_err": null, "classified_at": "2026-04-19T16:30:55.318349+00:00"}
+{"id": "IG_3863926554967780493_18322032121266928", "source_model": "gemini-cli", "emocion": "trust", "topics": ["politica_electoral", "otro"], "_err": null, "classified_at": "2026-04-19T16:32:08.865841+00:00"}
+{"id": "IG_3841492975864320148_17950533843086325", "source_model": "gemini-cli", "emocion": "joy", "topics": ["politica_electoral", "otro"], "_err": null, "classified_at": "2026-04-19T16:33:58.389875+00:00"}
+{"id": "IG_3877660082045578213_17974280177862861", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:34:30.582141+00:00"}
+{"id": "IG_3877048436684554888_18128155336603764", "source_model": "gemini-cli", "emocion": "trust", "topics": ["medioambiente", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:34:57.860158+00:00"}
+{"id": "IG_3875337371268404209_17962438611072790", "source_model": "gemini-cli", "emocion": "disgust", "topics": ["politica_electoral", "institucional"], "_err": null, "classified_at": "2026-04-19T16:35:37.710285+00:00"}
+{"id": "IG_3875377511752760072_18585140782027114", "source_model": "gemini-cli", "emocion": "trust", "topics": ["gobierno", "institucional"], "_err": null, "classified_at": "2026-04-19T16:36:05.029871+00:00"}
+{"id": "IG_3875377511752760072_18006235937898539", "source_model": "gemini-cli", "emocion": "sadness", "topics": ["medioambiente", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:37:23.705901+00:00"}
+{"id": "IG_3875377511752760072_17914701093163547", "source_model": "gemini-cli", "emocion": "anger", "topics": ["medioambiente", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:37:43.373398+00:00"}
+{"id": "IG_3875557808506959914_17995936025945636", "source_model": "gemini-cli", "emocion": "joy", "topics": ["gobierno"], "_err": null, "classified_at": "2026-04-19T16:38:04.075076+00:00"}
+{"id": "IG_3873233736389169609_17932375587208751", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:38:20.180601+00:00"}
+{"id": "IG_3871374971297988703_17989272206981689", "source_model": "gemini-cli", "emocion": "joy", "topics": ["politica_electoral"], "_err": null, "classified_at": "2026-04-19T16:38:38.543418+00:00"}
+{"id": "IG_3875196649438253554_17985616574971120", "source_model": "gemini-cli", "emocion": "anger", "topics": ["gobierno", "salud", "medioambiente"], "_err": null, "classified_at": "2026-04-19T16:39:06.632603+00:00"}
+{"id": "IG_3877696995544793819_18114464236741856", "source_model": "gemini-cli", "emocion": "joy", "topics": ["gobierno", "movilidad", "institucional"], "_err": null, "classified_at": "2026-04-19T16:39:29.915067+00:00"}
+{"id": "IG_3876097037079381259_18046106357744007", "source_model": "gemini-cli", "emocion": "joy", "topics": ["institucional", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:39:49.286893+00:00"}
+{"id": "IG_3871007292896786808_18094670465111136", "source_model": "gemini-cli", "emocion": "anger", "topics": ["politica_electoral", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:40:10.034140+00:00"}
+{"id": "IG_3871693069830048543_17902572180245788", "source_model": "gemini-cli", "emocion": "trust", "topics": ["politica_electoral", "institucional"], "_err": null, "classified_at": "2026-04-19T16:40:42.067677+00:00"}
+{"id": "IG_3859474251099511440_17864677434657041", "source_model": "gemini-cli", "emocion": "anger", "topics": ["corrupcion", "institucional", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:41:08.671458+00:00"}
+{"id": "IG_3859474251099511440_17885517891466451", "source_model": "gemini-cli", "emocion": "anger", "topics": ["gobierno", "medioambiente", "seguridad"], "_err": null, "classified_at": "2026-04-19T16:42:02.985056+00:00"}
+{"id": "IG_3859474251099511440_17986748999974992", "source_model": "gemini-cli", "emocion": "trust", "topics": ["gobierno"], "_err": null, "classified_at": "2026-04-19T16:42:18.498649+00:00"}
+{"id": "IG_3870375015863198197_17936992953035294", "source_model": "gemini-cli", "emocion": "joy", "topics": ["politica_electoral", "economia"], "_err": null, "classified_at": "2026-04-19T16:42:37.711335+00:00"}
+{"id": "IG_3870375015863198197_18117587644645412", "source_model": "gemini-cli", "emocion": "disgust", "topics": ["economia", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:42:54.368285+00:00"}
+{"id": "IG_3870375015863198197_18074849840646868", "source_model": "gemini-cli", "emocion": "anger", "topics": ["politica_electoral", "institucional"], "_err": null, "classified_at": "2026-04-19T16:43:06.784591+00:00"}
+{"id": "IG_3803860272113545357_17976357209809424", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:43:17.562718+00:00"}
+{"id": "IG_3828405263968328250_18056458157398724", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:43:32.880409+00:00"}
+{"id": "IG_3866786064979863718_18098100671286102", "source_model": "gemini-cli", "emocion": "joy", "topics": ["movilidad", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:44:00.805628+00:00"}
+{"id": "IG_3866786064979863718_18106237537878841", "source_model": "gemini-cli", "emocion": "disgust", "topics": ["medioambiente", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:44:17.901399+00:00"}
+{"id": "IG_3866786064979863718_17866479906609089", "source_model": "gemini-cli", "emocion": "disgust", "topics": ["medioambiente", "salud", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:44:32.089181+00:00"}
+{"id": "IG_3871778779794111050_18370125967163597", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:44:47.215898+00:00"}
+{"id": "IG_3873734442501615268_17974821515862414", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:45:02.565399+00:00"}
+{"id": "IG_3877675364646853798_17876797089568474", "source_model": "gemini-cli", "emocion": "joy", "topics": ["movilidad"], "_err": null, "classified_at": "2026-04-19T16:45:14.833080+00:00"}
+{"id": "IG_3870859354006435634_18090340646270018", "source_model": "gemini-cli", "emocion": "anger", "topics": ["politica_electoral", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:45:27.811033+00:00"}
+{"id": "IG_3869730475807385651_17995161773761144", "source_model": "gemini-cli", "emocion": "joy", "topics": ["movilidad", "gobierno", "institucional"], "_err": null, "classified_at": "2026-04-19T16:46:29.101435+00:00"}
+{"id": "IG_3875330953551935282_18115564627659846", "source_model": "gemini-cli", "emocion": "joy", "topics": ["movilidad", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:46:48.485428+00:00"}
+{"id": "X_1966059837382402186", "source_model": "gemini-cli", "emocion": "sadness", "topics": ["movilidad", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:47:17.638767+00:00"}
+{"id": "X_1954624696839987468", "source_model": "gemini-cli", "emocion": "trust", "topics": ["politica_electoral"], "_err": null, "classified_at": "2026-04-19T16:47:29.575813+00:00"}
+{"id": "X_2037414821939876036", "source_model": "gemini-cli", "emocion": "anger", "topics": ["politica_electoral", "gobierno", "corrupcion"], "_err": null, "classified_at": "2026-04-19T16:47:43.607143+00:00"}
+{"id": "X_2033259969596756189", "source_model": "gemini-cli", "emocion": "disgust", "topics": ["gobierno", "institucional"], "_err": null, "classified_at": "2026-04-19T16:47:58.908814+00:00"}
+{"id": "X_2034112279931723935", "source_model": "gemini-cli", "emocion": "anger", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:48:13.668403+00:00"}
+{"id": "X_2045014650883117181", "source_model": "gemini-cli", "emocion": "joy", "topics": ["politica_electoral"], "_err": null, "classified_at": "2026-04-19T16:48:27.209363+00:00"}
+{"id": "X_2045407691820896548", "source_model": "gemini-cli", "emocion": "anger", "topics": ["gobierno", "institucional"], "_err": null, "classified_at": "2026-04-19T16:48:45.130513+00:00"}
+{"id": "X_2045246696750207415", "source_model": "gemini-cli", "emocion": "disgust", "topics": ["politica_electoral"], "_err": null, "classified_at": "2026-04-19T16:49:02.474315+00:00"}
+{"id": "X_2042827763850072159", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:49:15.820909+00:00"}
+{"id": "X_2043860531543437825", "source_model": "gemini-cli", "emocion": "trust", "topics": ["movilidad", "gobierno", "institucional"], "_err": null, "classified_at": "2026-04-19T16:49:31.122747+00:00"}
+{"id": "X_2038717965479158244", "source_model": "gemini-cli", "emocion": "anger", "topics": ["movilidad", "seguridad", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:50:38.786685+00:00"}
+{"id": "X_2043101705630265690", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:50:51.478654+00:00"}
+{"id": "X_2043431834365653363", "source_model": "gemini-cli", "emocion": "disgust", "topics": ["gobierno", "corrupcion"], "_err": null, "classified_at": "2026-04-19T16:51:07.599795+00:00"}
+{"id": "X_2044099679147737492", "source_model": "gemini-cli", "emocion": "anger", "topics": ["corrupcion"], "_err": null, "classified_at": "2026-04-19T16:51:19.925742+00:00"}
+{"id": "X_2037892363402477974", "source_model": "gemini-cli", "emocion": "joy", "topics": ["seguridad", "otro"], "_err": null, "classified_at": "2026-04-19T16:51:34.142292+00:00"}
+{"id": "X_2037379763161940382", "source_model": "gemini-cli", "emocion": "trust", "topics": ["gobierno", "economia", "institucional"], "_err": null, "classified_at": "2026-04-19T16:51:53.046269+00:00"}
+{"id": "X_2037031927908057178", "source_model": "gemini-cli", "emocion": "anger", "topics": ["corrupcion", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:52:08.603453+00:00"}
+{"id": "IG_3852632659449958414_18183987799371610", "source_model": "gemini-cli", "emocion": "trust", "topics": ["seguridad", "economia"], "_err": null, "classified_at": "2026-04-19T16:52:19.718426+00:00"}
+{"id": "IG_3869699613314075094_18113102713702495", "source_model": "gemini-cli", "emocion": "disgust", "topics": ["politica_electoral", "gobierno", "corrupcion"], "_err": null, "classified_at": "2026-04-19T16:52:38.062707+00:00"}
+{"id": "IG_3735502669264799350_18045325463381143", "source_model": "gemini-cli", "emocion": "trust", "topics": ["gobierno"], "_err": null, "classified_at": "2026-04-19T16:52:51.021979+00:00"}
+{"id": "IG_3876198384399536647_18067652891456154", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:53:05.146271+00:00"}
+{"id": "IG_3877426051727712632_18102131701767141", "source_model": "gemini-cli", "emocion": "anger", "topics": ["economia", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:53:20.949882+00:00"}
+{"id": "IG_3876947740538675615_17993461901941769", "source_model": "gemini-cli", "emocion": "joy", "topics": ["otro"], "_err": null, "classified_at": "2026-04-19T16:54:03.984298+00:00"}
+{"id": "IG_3875377511752760072_18064529543358280", "source_model": "gemini-cli", "emocion": "trust", "topics": ["gobierno", "institucional"], "_err": null, "classified_at": "2026-04-19T16:54:17.379184+00:00"}
+{"id": "IG_3875377511752760072_18076932485179334", "source_model": "gemini-cli", "emocion": "anger", "topics": ["economia", "corrupcion", "gobierno"], "_err": null, "classified_at": "2026-04-19T16:54:29.124127+00:00"}
+{"id": "IG_3875557808506959914_18324627997270426", "source_model": "gemini-cli", "emocion": "joy", "topics": ["gobierno", "otro"], "_err": null, "classified_at": "2026-04-19T16:54:46.100931+00:00"}
