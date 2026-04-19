@@ -1,8 +1,9 @@
-# SPRINT-CURRENT — Sprint S1 Backend Foundations (calibrado post-S0)
+# SPRINT-CURRENT — Sprint S1 Backend Foundations (calibrado post-S0) ✅ CERRADO 2026-04-19
 
 **Función:** documento vivo del sprint actualmente en ejecución. Cualquier sesión Claude Code lee PRIMERO este documento después de NORTH-STAR.
 
-**Sprint actual:** S1 · **Status:** ⏸ Pending · **Arranque requiere autorización CEO explícita** post-cierre S0
+**Sprint actual:** S1 · **Status:** ✅ COMPLETADO 2026-04-19 14:06 CDT · **Arranque S2 disponible** pendiente autorización CEO
+**Reporte ejecutivo:** `backend/research/2026-04-19/SPRINT-S1-REPORTE-EJECUTIVO.md`
 **Sprint previo cerrado:** S0 · 2026-04-19 · archivo `.context/archive/sprint-s0-2026-04-19.md` · reporte `backend/research/2026-04-19/SPRINT-S0-REPORTE-EJECUTIVO.md`
 **Decisiones vinculantes pre-arranque:** D-19 reescrita post-dictámenes (**reemplazo estructural** de Gemini DR · tabla IM commercial descartada · matriz 5×5 + temporalidad electoral + dataset Zenodo MX) · D-20 (cierre S0) · D-21 (Coolify dual-mode) en MASTER §6. Dictámenes convergentes en `.context/external-review/dictamen-01-*.md` y `dictamen-02-*.md`
 

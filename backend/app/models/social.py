@@ -174,6 +174,8 @@ class SocialPost(Base):
     emotions: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     is_political: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     raw_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Sprint S1 T5 — Topic extractor Gemma 3:12b (1-3 topics del seed 12)
+    topics_extracted: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     scraped_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
@@ -256,6 +258,12 @@ class SocialProfileSnapshot(Base):
         default=lambda: datetime.now(UTC),
         nullable=False,
         index=True,
+    )
+    # Sprint S1 T1 — marca transición T3 (scraping) → T1 (OAuth oficial) por plataforma
+    # Nullable hasta el primer evento de conexión OAuth (§4.5 MASTER D-17)
+    data_origin_checkpoint: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     # Relationships

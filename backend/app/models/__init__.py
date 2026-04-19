@@ -8,6 +8,7 @@ from app.models.campaign_integration import Campaign
 from app.models.campana import Campana, CampanaMensaje, CampanaSegmento
 from app.models.canvassing import PuntoRuta, RutaCanvassing
 from app.models.ciudadano import Ciudadano
+from app.models.compliance_purge_audit import CompliancePurgeAudit
 from app.models.contenido import ContenidoGenerado
 from app.models.contenido_pieza import ContenidoPieza
 from app.models.crm_interaccion import CrmInteraccion
@@ -18,10 +19,12 @@ from app.models.evento import Evento, EventoAsistente
 from app.models.gasto_electoral import AlertaCompliance, GastoElectoral
 from app.models.ia_content_registry import IaContentRegistry
 from app.models.legacy import CiudadanoLegacy, PromotorLegacy
+from app.models.llm_health_log import LLMHealthLog
 from app.models.metrica_social import MetricaSocial
 from app.models.organizacion import Organizacion
 from app.models.plan_ia import PlanIA
 from app.models.programa_social import ProgramaBeneficiario, ProgramaSocial
+from app.models.recomendacion_plan_ia import RecomendacionPlanIA
 from app.models.social import SentimentAnalysis, SocialPost, SocialProfile
 from app.models.solicitud import SeguimientoSolicitud, SolicitudCiudadana
 from app.models.topic_trend import TopicTrend
@@ -43,6 +46,7 @@ __all__ = [
     "CiudadanoLegacy",
     "Competidor",
     "CompetidorSocialProfile",
+    "CompliancePurgeAudit",
     "ContenidoGenerado",
     "ContenidoPieza",
     "CrmInteraccion",
@@ -53,6 +57,7 @@ __all__ = [
     "GastoElectoral",
     "IaContentRegistry",
     "IntencionVoto",
+    "LLMHealthLog",
     "MetricaSocial",
     "Organizacion",
     "PlanIA",
@@ -61,6 +66,7 @@ __all__ = [
     "PromotorLegacy",
     "PuntoRuta",
     "RutaCanvassing",
+    "RecomendacionPlanIA",
     "SeccionElectoral",
     "SeguimientoSolicitud",
     "SentimentAnalysis",
