@@ -6,9 +6,16 @@
 
 ---
 
-## Sprint activo: [ESTADO INICIAL — aún no arranca ningún sprint]
+## Sprint activo: Sprint S0 — Validación de Supuestos (pendiente arranque CEO)
 
-**Status del proyecto:** fase Pre-Sprint. MASTER v2 terminado 2026-04-19. NORTH-STAR creado. PRD pendiente de escribir. Sprint 0 pendiente de arranque.
+**Status del proyecto:** arco estratégico cerrado ✅ con PR #16 merged en `main` (commit merge `d387b99`, commit contenido `0f74410`) el 2026-04-19. MASTER v2.2 aprobado por Claude.ai Opus 4.7 con distinción. 3 documentos canónicos vivos (NORTH-STAR · SPRINT-CURRENT · HANDOFF). Fase de ejecución oficialmente abierta.
+
+**Próximo trabajo inmediato:** **Sprint S0 — Validación de Supuestos** (ver plantilla abajo). Arranque pendiente de autorización CEO — CEO está discutiendo con Claude.ai Opus 4.7 un ajuste estructural al Plan IA (Sprint S4) que tiene implicaciones para S1 y S2. **NO arrancar S0 hasta recibir luz verde explícita.**
+
+**Por qué esta pausa antes de arrancar S0:**
+- Si el ajuste al Plan IA cambia las dependencias upstream (S1 Backend Foundations · S2 Diagnóstico Tier 1), conviene absorber el cambio antes de validar supuestos sobre una arquitectura que va a mutar
+- La disciplina de SSOT empieza por no reabrir lo decidido, pero también por no codificar sobre una decisión inestable
+- El costo de esperar la recomendación consolidada de Claude.ai es marginal; el costo de retrabajar Sprint 0 con supuestos obsoletos es mayor
 
 ---
 
