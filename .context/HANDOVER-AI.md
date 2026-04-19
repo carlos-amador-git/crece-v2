@@ -1,91 +1,71 @@
 # HANDOVER-AI — Decisiones extraídas por Sonnet
-## Sesión: 52523 | Compactación: 2026-04-13_20:25:21
+## Sesión: 47089 | Compactación: 2026-04-19_09:22:02
 
-## Session Transcript Extraction
+## Session Transcript Extraction — CRECE v2 Arco Estratégico 2026-04-19
+
+---
 
 ### 1. ARCHITECTURAL DECISIONS
 
-**Pipeline de clasificación NLP: MANUAL en lugar de automatizado con LLMs**
-- Descartado: Gemma 12B batch (5+ min/post, 3,709 posts = inviable)
-- Descartado: Upload .md por cliente (fricción alta + riesgo privacidad datos políticos)
-- Descartado: APIs Claude Haiku + Gemini + Perplexity ($40-60/mes)
-- **Adoptado**: Pipeline MANUAL donde MD Consultoría genera prompt → Claude/Gemini clasifica → admin sube JSON batch. Costo $0 infraestructura.
-
-**Framework político 3 capas como motor de scores**
-- Los dirigentes NO interactúan con LLMs directamente
-- Framework traduce clasificación manual → scores, auditables y reproducibles
-
-**Badge "3 IAs deliberaron" como diferenciador comercial**
-- Transparencia: cliente ve que 3 IAs analizaron, sin exponer el proceso interno
-
-**Cadencia de clasificación: semanal (o bajo demanda)**
-- No por post en tiempo real — arranca ad-hoc, se formaliza con feedback de uso real
-
-**Admin dashboard: separado del dashboard de cliente**
-- Dashboard actual del admin = dashboard cliente con tenant switcher (MAL)
-- Necesita `/dashboard/admin/overview` con vista operativa de flota (pendiente implementar)
+- **D-15**: Gemma 3:12b local es el provider primario del Plan IA. Claude API actúa solo como Expert Auditor (no como default).
+- **D-16**: Provider LLM unificado — Gemma 3:12b baseline, Claude solo para auditoría experta.
+- **D-17**: Cierre de ciclo Plan IA con 4 parámetros + tabla BD + schema definido.
+- **D-18**: (Documentada en §6; detalle en MASTER v2.3).
+- **§3.6 añadido**: Human-in-the-loop obligatorio en Plan IA (no automatizar sin revisión humana).
+- **Sprint S0 redefinido**: 6 tareas con criterios binarios de aceptación (umbrales Kappa >0.75, F1 >0.72, tópicos 1-3 por comment). T0.3: pass si detecta >60% de 200 comments manuales con <15% falsos positivos (baseline ITESO).
+- **Puerta 1 + Puerta 2** formalizadas como requisito de doble aprobación (Gemini + CEO) antes de avanzar sprints.
+- **ARCO endpoint** (`POST /admin/compliance/purge-hash`) requerido en Sprint S1 para cumplimiento LFPDPPP.
+- **Commit scope B**: docs estratégicos en rama separada (`docs/master-v2-20260419`), independiente del PR #12.
 
 ---
 
 ### 2. REJECTED ALTERNATIVES
 
-| Alternativa | Razón de rechazo |
-|---|---|
-| Gemma 12B batch automático 3,709 posts | 5+ min/post = horas de cómputo inviable |
-| Cliente sube archivo .md con estrategia | Fricción 6-7 pasos, privacidad: estrategia política pasa por logs OpenAI/Google |
-| APIs externas de LLM (Haiku, Gemini, Perplexity) | Decisión CEO: costo cero en infraestructura |
-| Manipulación del .md por el cliente | Riesgo de inyección / datos inválidos |
-| Fine-tuning propio de LLM para clasificación | Deuda técnica, costo, mantenimiento |
+- **Commit en `feat/eval-benchmark-v1`** (donde estaba PR #12 abierto) — rechazado porque expandiría scope del PR y ataría docs estratégicos hasta cierre del PR.
+- **Auto-ejecutar Sprint S0 sin autorización CEO** — descartado; sesión confirmó que requiere ventana de acompañamiento de 8-10h.
+- **Claude API como provider primario Plan IA** — reemplazado por Gemma 3:12b (Gemini audit #02 y CEO lo formalizaron como D-15/D-16).
 
 ---
 
-### 3. ASSUMPTIONS MADE (to verify)
+### 3. ASSUMPTIONS MADE (a verificar)
 
-- Los 95 posts clasificados manualmente son representativos del corpus total (3,709 posts) — **no verificado estadísticamente**
-- El re-download del topics model xlm-roberta (~2GB) se completó sin error durante el batch background — **ETA estimado 26 min, no confirmado completado**
-- El batch de 3,449 posts NLP corrió hasta completarse en background — **estado desconocido post-sesión**
-- `analyze_full()` puede procesar 3,449 posts sin OOM o timeout — **asumido, no probado a escala completa**
-- Cobertura 2-7% (30-35 posts por org) es suficiente para scores útiles — **asunción metodológica no validada con cliente**
-- Scores políticos (oficialismo +0.47 a +1.00, oposición -0.09 a +0.38) son coherentes y no artifacts del framework — **requiere validación humana**
+- **"T1 funciona pleno"** = post-Sprint S1, no estado actual. Nota aclaratoria añadida en §3.1, pero debe validarse en ejecución.
+- **Gemma 3:12b** apto para producción — triangulación 60 comments lo validó, pero escala no probada contra volumen real.
+- **200 comments CIB** como baseline para T0.3 — asumidos correctamente marcados. Si hay ruido en el dataset manual, el umbral 60%/<15% puede dar falsos negativos.
+- **Sprint S0 duración 8-10h** — estimación no validada contra velocidad real de cómputo con Gemma local.
+- **Mac M4 sin SPOF mitigación** — riesgo documentado en §7.1 pero sin plan de contingencia concreto todavía.
 
 ---
 
 ### 4. BLOCKERS / OPEN QUESTIONS
 
-| # | Blocker | Estado |
-|---|---|---|
-| B-01 | NLP batch Sprint 2 — ¿completó las 3,449 posts? | Abierto — corrió en background, no confirmado |
-| B-02 | Sprint 3 Scrapers encuestas (Oraculus + Demoscopía) | Pendiente siguiente sesión |
-| B-04 | Admin dashboard operativo (`/admin/overview`) | Identificado al final, NO implementado |
-| B-05 | Cobertura clasificación baja (2-7%) — ¿suficiente? | Decisión metodológica pendiente |
-
-**Pregunta abierta:** ¿El admin panel debe mostrar alertas de cobertura baja automáticamente o solo métricas pasivas?
+- **Sprint S0 arranque bloqueado**: requiere autorización explícita CEO + ventana de acompañamiento (estimado mañana en la mañana).
+- **PRD técnico separado**: §9.6 aclara que MASTER es estratégico; el PRD técnico detallado aún no está redactado (diferido).
+- **Reconciliación series de tiempo T1/T2 → T3** (Gemini #05): añadida nota en §4.4, pero implementación concreta pendiente de Sprint S1.
+- **3 mejoras diferidas Gemini** documentadas en §6.4: no bloqueantes para S0 pero requieren decisión antes de S2.
+- **T0.4 extender a tópicos** (Gemini crítico): T0.4 debe validar extracción 1-3 tópicos además de Plutchik — criterio añadido pero no implementado aún.
 
 ---
 
 ### 5. KEY PEER MESSAGES
 
-**De peer md-research (08rystzm):**
-- Oraculus embebe dataset completo como **JSON inline** en HTML de `/aprobacion-presidencial/` — scraper trivial ~30 líneas. Fuentes incluidas: Mitofsky, Parametría, Enkoll, Reforma, Financiero, Buendía, De las Heras, GEA-ISA con modelo Bayesiano MCMC.
-- Demoscopía Digital confirmada para CDMX (`/aprobacionEstado/ciudad-de-mexico/`) y Oaxaca (`/aprobacionEstado/oaxaca/`)
-- **Plan total Sprint 3**: Federal (Oraculus) 1-2h + CDMX + Oaxaca (Demoscopía) 2h cada uno = 5-6h estimadas
-
-**De peer Perplexity (crítica al plan original):**
-- 5 problemas críticos identificados: fricción alta → adopción baja, privacidad/leyes MX, manipulación del .md, dependencia de LLMs externos, costo mensual
-- Estos puntos fueron aceptados y llevaron al pivot hacia pipeline manual $0
+- **Gemini Puerta 2 (auditoría MASTER v2.2)**: 9 hallazgos. Críticos: #02 ambigüedad provider LLM, #04 falta endpoint ARCO LFPDPPP, #05 falta reconciliación series de tiempo, #08 falta human-in-the-loop, #09 T0.4 sin criterio de aceptación. Veredicto: **Aprobado con ajustes**.
+- **Gemini Puerta 2 Sprint S0**: 4 críticos + 6 mejoras. Críticos resueltos: umbral T0.3 con Kappa >0.75, T0.4 extender a tópicos, T0.5 Fidelity score. Veredicto: **Aprobar S0 con ajustes específicos**.
+- **Claude.ai (cross-audit MASTER v2.1→v2.2)**: 3 observaciones menores — nota aclaratoria §3.1, distinción MASTER vs PRD en §9.6, formalización D-15 Gemma. Todas aplicadas en v2.2.
 
 ---
 
-### 6. NEXT STEPS (planned, not executed)
+### 6. NEXT STEPS (planned, not yet executed)
 
-| # | Tarea | Sprint | Estimado |
-|---|---|---|---|
-| 1 | **Admin dashboard operativo** `/dashboard/admin/overview` — vista flota: orgs, cobertura, alertas, acciones rápidas | New | 2-3h |
-| 2 | **Sprint 3: Scrapers encuestas** — Oraculus (JSON inline) + Demoscopía CDMX + Demoscopía Oaxaca | 3 | 5-6h |
-| 3 | **Verificar completitud NLP batch** — confirmar que los 3,449 posts se procesaron, revisar errores | 2 | 30 min |
-| 4 | **Clasificar más posts** — llegar de 95 a ~180 posts (60 por org) para cobertura mínima viable | 1 (ext) | 1-2h |
-| 5 | **Scrapers encuestas integrados al dashboard** — mostrar aprobación Sheinbaum/Brugada/Jara en contexto benchmark | 4 | 2-3h |
-
-**Commits de sesión para contexto:**
-- `385aad5` — Sprint 1 completo: 95 posts clasificados + Sprint 2 NLP iniciado
-- `118ce13` — Framework político 3 capas + admin panel + charts-lab
+1. **Merge PR #18** ✅ ejecutado — main HEAD `42378ec`.
+2. **Autorización CEO + ventana** para arrancar Sprint S0 (estimado mañana AM).
+3. **Ejecución Sprint S0** (6 tareas):
+   - T0.1: Setup entorno Gemma + dataset 200 comments
+   - T0.2: Pipeline NLP Layer 2 baseline
+   - T0.3: Validación Kappa >0.75 vs marcado manual
+   - T0.4: Extracción tópicos 1-3 + validación
+   - T0.5: Fidelity score Plan IA
+   - T0.6: Dashboard admin operativo básico
+4. **Sprint S1** — post-S0: migración recomendaciones, endpoint ARCO LFPDPPP, T1.9 con criterio de cierre explícito.
+5. **PRD técnico separado** — aún no redactado; diferido post-S0.
+6. **Plan de contingencia SPOF Mac M4** — documentar antes de S1.

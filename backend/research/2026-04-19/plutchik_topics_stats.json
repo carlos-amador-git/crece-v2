@@ -1,0 +1,293 @@
+{
+  "n_items": 60,
+  "have_claude": false,
+  "kappa_emocion_gemma_vs_majority": 0.8096006454215411,
+  "kappa_emocion_gemma_vs_gemini": 0.8096006454215411,
+  "topic_principal_precision_gemma_vs_majority": 0.75,
+  "topic_principal_n_compared": 60,
+  "topic_principal_hits": 45,
+  "confusion_emocion_gemma_rows_vs_majority_cols": {
+    "categories": [
+      "trust",
+      "anger",
+      "joy",
+      "fear",
+      "sadness",
+      "disgust"
+    ],
+    "matrix": [
+      [
+        8,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        14,
+        0,
+        0,
+        0,
+        3
+      ],
+      [
+        1,
+        0,
+        23,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        1,
+        1,
+        0,
+        0,
+        0,
+        5
+      ]
+    ]
+  },
+  "confusion_topic_gemma_rows_vs_majority_cols": {
+    "categories": [
+      "economia",
+      "seguridad",
+      "educacion",
+      "salud",
+      "corrupcion",
+      "movilidad",
+      "genero",
+      "medioambiente",
+      "gobierno",
+      "politica_electoral",
+      "institucional",
+      "otro"
+    ],
+    "matrix": [
+      [
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        1,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        10,
+        2,
+        0,
+        2
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10,
+        1,
+        2
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        7
+      ]
+    ]
+  },
+  "dist_emocion_gemma": {
+    "joy": 24,
+    "trust": 9,
+    "anger": 18,
+    "disgust": 7,
+    "sadness": 1
+  },
+  "dist_emocion_majority": {
+    "joy": 24,
+    "trust": 11,
+    "anger": 15,
+    "disgust": 8,
+    "sadness": 2
+  },
+  "dist_topic_gemma": {
+    "economia": 5,
+    "gobierno": 15,
+    "otro": 9,
+    "politica_electoral": 14,
+    "seguridad": 1,
+    "corrupcion": 4,
+    "medioambiente": 6,
+    "movilidad": 6
+  },
+  "dist_topic_majority": {
+    "economia": 4,
+    "gobierno": 13,
+    "otro": 11,
+    "politica_electoral": 14,
+    "seguridad": 2,
+    "corrupcion": 3,
+    "medioambiente": 5,
+    "movilidad": 7,
+    "institucional": 1
+  },
+  "missing_gemma": 1,
+  "missing_gemini": 0,
+  "missing_claude": null
+}

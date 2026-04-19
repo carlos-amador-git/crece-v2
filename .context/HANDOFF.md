@@ -1,90 +1,56 @@
-# HANDOFF — Protocolo de cierre de sesión
+# HANDOFF — Sesión Joy (Sprint S0 /sprint-implement) · 2026-04-19 11:05 MX
 
-**Función:** plantilla obligatoria que toda sesión de Claude Code rellena al cerrar. Reemplaza los `HANDOFF-*.md` históricos que eran ad-hoc. Este documento responde 5 preguntas exactas en menos de 40 líneas, diseñado para que la siguiente sesión arranque con contexto en <2 minutos.
-
-**Regla dura:** si el hook PreCompact de Claude Code dispara antes del cierre manual, que genere este handoff automáticamente con el último estado limpio del contexto. NO esperar a que el humano se acuerde al final de una sesión de 4 horas.
-
----
-
-## Template (copiar y rellenar al cerrar cada sesión)
-
-```markdown
-# HANDOFF — Sesión [nombre-sesion] · [YYYY-MM-DD HH:MM MX]
-
-**Sprint activo:** [S0/S1/S2...] · **Rama:** [feat/X] · **Última hora de trabajo:** [HH:MM MX]
+**Sprint activo:** S0 ✅ cerrado hoy · **Rama:** `feat/sprint-s0-validation` · **Última hora de trabajo:** 11:05 MX
 
 ## 1. ¿Qué se logró hoy? (con evidencia)
 
-- [Logro concreto 1] — evidencia: [commit hash · test verde · screenshot path · archivo creado]
-- [Logro concreto 2] — evidencia: [...]
-- [Logro concreto 3] — evidencia: [...]
+- Sprint S0 completo en una sesión autónoma — 5 PASS + 1 AMBIGUO documentado + 0 FAIL · evidencia: `backend/research/2026-04-19/SPRINT-S0-REPORTE-EJECUTIVO.md`
+- T0.2 estratos 8 dirigentes + gap data documentado · evidencia: `backend/research/2026-04-19/settings_strata.json` + `benchmark_validation_er.md`
+- T0.3 CIB pipeline 128 comments Piña · 88.2% det, 1.0% FP · evidencia: `cib_pilot_test.md`, `cib_pilot_detections.csv`, `cib_pilot_run.py`
+- T0.4 Plutchik+Topics · Kappa 0.810 / Topics 75% silver-grade · evidencia: `plutchik_topics_validation.md` + `plutchik_topics_stats.json` + `data/sample_60_{gemma,gemini}.jsonl`
+- T0.5 FIDELITY_LOGIC 40/40 celdas + algoritmo · evidencia: `FIDELITY_LOGIC.md` + `settings_fidelity.json`
+- T0.6 Coolify p50=10.7s/p95=24.4s + SLA dual con pre-warm · evidencia: `coolify_failover_smoke.md` + `evaluations/2026-04-19/output/coolify_latencies.json`
+- SPRINT-CURRENT.md actualizado + reporte ejecutivo consolidado
 
 ## 2. ¿Qué quedó a medias? (dónde exactamente)
 
-- [Tarea inconclusa] — archivo `path/to/file.py` líneas X-Y · falta: [acción específica]
-- [Test fallando] — `path/to/test.py::test_name` · último error: [mensaje resumido]
-- [Feature parcial] — funciona Y% del caso · falta: [Z] · razón: [bloqueador]
+- **S0.5 validación humana real** (100 comments × 3 anotadores MD) — en backlog; no bloquea S1 pero condiciona release comercial Plutchik Tier 1 (§9.6 hard-arrange)
+- **12 celdas FIDELITY T3-inferido** (FB/TT/YT 6 dirigentes) — requieren pasada scraping en S1 para confirmar; asignador las lee y re-calcula sobre raw nuevo
+- **S1 T3 engagement metrics migration** — T0.2 flaggea necesidad de `likes_count`+`views_count` en `social_posts` + scraper `followers_count` diario antes de poder validar ER numérico
+- Claude CLI no se ejecutó en T0.4 (solo Gemma + Gemini, n=2 en vez de 3) — script reutilizable en `backend/research/2026-04-19/scripts/` para S0.4.1 si se decide ampliar
 
 ## 3. ¿Qué decisiones se tomaron que deben migrar a MASTER §6?
 
-- [Decisión] — justificación breve · status (🟢 aprobada CEO / 🟡 propuesta / 🟠 condicionada) · pendiente de documentar en MASTER §6 con formato D-YYYY-MM-DD-NN
+- **D-2026-04-19-19** Sprint S0 cerrado — 5 PASS + 1 AMBIGUO documentado · status 🟢 aprobada vía ejecución autorizada · pendiente registrar en MASTER §6
+- **D-2026-04-19-20** T1.9 NO se activa (Kappa 0.810 supera 0.65 holgadamente) · status 🟢 · pendiente MASTER §6
+- **D-2026-04-19-21** S1 debe añadir engagement metrics migration + scraper followers diario (antes inexistente en §5 S1) · status 🟡 propuesta · requiere validación CEO al arrancar S1
+- **D-2026-04-19-22** Coolify failover usará pre-warm cada 4h + timeout dual 60s warm/180s cold (no failover directo) · status 🟢 · pendiente MASTER §6
 
 ## 4. ¿Qué se intentó y NO funcionó? (para no repetir)
 
-- [Intento fallido] — enfoque: [X] · razón del fallo: [Y] · alternativa sugerida: [Z]
-- [Enfoque descartado] — [...]
+- **T0.6 con bash+curl+JSON inline:** escaping JSON rompió silenciosamente, todos los runs devolvieron "err" en 0.15s · alternativa: Python con `urllib.request` + `json.dumps` — funciona inmediato
+- **Coolify para T0.4 Gemma classification:** 137s/row sobre VPS excedía budget 20min para 60 comments · alternativa: localhost M4 con mismo modelo gemma3:12b Q4_K_M · documentado en caveats T0.4
+- **200 comments literales en T0.3:** Piña solo tiene 128 en raw 2026-04-19 · ejecutado sobre 128, documentado que no llega a 200
 
 ## 5. ¿Cuál es el siguiente paso más pequeño posible? (< 1 hora)
 
-- [Acción concreta] — [una frase de descripción] · archivos involucrados: [paths]
-- **Por qué este primero:** [razón para que arranque sea trivial]
+- **Revisar `backend/research/2026-04-19/SPRINT-S0-REPORTE-EJECUTIVO.md`** — 1 archivo consolidado, 2-3 min lectura · decisión CEO: ¿arranca Sprint S1 con los 3 ajustes?
+- **Por qué este primero:** todo lo demás ya está persistido y auditable. El reporte ejecutivo sintetiza 6 tareas + recomendación S1 en una página — basta esa decisión para desbloquear sprint siguiente. Ningún código de producción modificado, solo `.context/*` + `backend/research/2026-04-19/*` + `backend/evaluations/2026-04-19/*`.
 
 ---
 
-## Checklist auto-verificable al cerrar
+## Comando sugerido al CEO (no auto-commitear)
 
-- [ ] ¿Las 5 preguntas están respondidas con concreción, no vaguedades?
-- [ ] ¿`MASTER §2.1 Snapshot operativo` está actualizado con los cambios del día?
-- [ ] ¿`SPRINT-CURRENT.md` refleja las tareas cerradas vs abiertas?
-- [ ] ¿Decisiones nuevas están registradas en `MASTER §6`?
-- [ ] ¿Si hay deuda técnica nueva detectada, está en `MASTER §7.5`?
-- [ ] ¿Archivo `HANDOFF.md` quedó escrito (si esta es sesión productiva, no consulta)?
-- [ ] ¿Se recomendó al CEO commit con mensaje sugerido? (recomendar, no auto-commitear)
+```bash
+# Commit + PR Sprint S0
+git add .context/ backend/research/2026-04-19/ backend/evaluations/2026-04-19/ backend/research/2026-04-19/scripts/ backend/research/2026-04-19/data/
+git commit -m "feat(sprint-s0): 6 tareas validación cerradas autónomamente
 
-## Reglas de formato
+T0.1 docs · T0.2 estratos (ambiguo documentado) · T0.3 CIB 88.2%/1% FP
+T0.4 Plutchik Kappa 0.810 + Topics 75% silver · T0.5 FIDELITY 40/40
+T0.6 Coolify p50=10.7s SLA dual + pre-warm
 
-- **Máximo 40 líneas** del cuerpo del HANDOFF (sin contar este template).
-- **Bullets concretos**, no párrafos. Si necesitas explicar, usa MASTER.
-- **Archivos con path completo** o relativo al repo — evitar "el archivo del dashboard".
-- **Líneas de código con número** cuando aplique (ej. `services/breakout.py:142-156`).
-- **No auto-commitear** — recomendar comando al CEO, él decide.
+Reporte ejecutivo: backend/research/2026-04-19/SPRINT-S0-REPORTE-EJECUTIVO.md
+Recomendación: Sprint S1 arranca con 3 ajustes no bloqueantes"
+gh pr create --title "Sprint S0 validación supuestos — 6/6 tareas" --body "<reporte ejecutivo link>"
 ```
-
----
-
-## Histórico de HANDOFFs
-
-Cuando se rellene este documento al cerrar una sesión, el contenido del template anterior **NO** se sobreescribe. Se **mueve a**:
-
-`.context/archive/handoffs/handoff-YYYY-MM-DD-[sesion].md`
-
-Y este archivo (`HANDOFF.md`) se resetea con la plantilla limpia para la siguiente sesión.
-
-Así acumulamos histórico auditable sin perder el template original.
-
----
-
-## HANDOFFs legacy (pre-protocolo nuevo)
-
-Los siguientes archivos son handoffs ad-hoc anteriores a este protocolo. **No usarlos como referencia operativa** — son contexto histórico únicamente:
-
-- `.context/HANDOFF` — handoff genérico 2026-04-17
-- `.context/HANDOFF-REM-2026-04-18.md` — handoff específico sesión Rem
-- `.context/HANDOVER-AI.md` — decisiones extraídas por Sonnet post-compactación
-- `.context/handoff-sprint-e-multitenant.md` — handoff sprint E
-
-Cuando se ejecute la primera sesión con el protocolo nuevo, mover los 4 anteriores a `.context/archive/handoffs-legacy/`.
-
----
-
-**Regla:** ningún HANDOFF se considera completo sin responder las 5 preguntas. Un HANDOFF incompleto es equivalente a no cerrar la sesión — la siguiente sesión arranca sin contexto.

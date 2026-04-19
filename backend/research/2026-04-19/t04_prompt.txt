@@ -1,0 +1,23 @@
+Clasifica este comentario politico mexicano en DOS dimensiones simultaneas.
+
+CONTEXTO:
+- Post original (del politico): {post_text}
+- Plataforma: {plataforma}
+
+COMENTARIO:
+"{comment_text}"
+
+INSTRUCCIONES:
+(a) Identifica la EMOCION dominante (UNA sola) del conjunto Plutchik-6:
+    trust, anger, joy, fear, sadness, disgust
+(b) Identifica 1 a 3 TOPICS del seed fijo de 12 (en orden de relevancia):
+    economia, seguridad, educacion, salud, corrupcion, movilidad,
+    genero, medioambiente, gobierno, politica_electoral, institucional, otro
+
+RESPONDE EXCLUSIVAMENTE un objeto JSON valido sin texto adicional, sin markdown,
+sin bloques de codigo. Usa exactamente estas llaves:
+
+{{"emocion": "<una de las 6>", "topics": ["<topic1>", "<topic2?>", "<topic3?>"]}}
+
+Si el comentario es ambiguo, elige la emocion predominante y el topic principal.
+Si no hay topic politico claro, usa "otro".

@@ -1,0 +1,46 @@
+{
+  "version": "2026-04-19",
+  "sprint": "S0",
+  "tarea": "T0.5",
+  "generado_por": "Joy (Claude Code sesión CRECE v2)",
+  "descripcion": "Semilla inicial data_fidelity_tier por dirigente × plataforma. Consumido directamente por Sprint S1 T1 asignador.",
+  "fuentes": {
+    "raw_comments": "backend/benchmarks/scraping/results/2026-04-19/nlp_layer2_gemma_out.jsonl",
+    "benchmark_5redes_previo": "memoria project_5redes_veredicto 2026-04-18",
+    "doc_maestro": "backend/research/2026-04-19/FIDELITY_LOGIC.md"
+  },
+  "tiers_definicion": {
+    "T1": "OAuth oficial (post-venta)",
+    "T2": "Burner cookies logueado",
+    "T3": "Public scraping (Apify/Scrapling/Brightdata)",
+    "N-A": "Sin cuenta o sin datos"
+  },
+  "asignaciones_pre_venta": {
+    "pinha":       {"X": "T3", "Instagram": "T3", "Facebook": "T3",           "TikTok": "N-A",          "YouTube": "N-A"},
+    "solano":      {"X": "T3", "Instagram": "N-A", "Facebook": "N-A",         "TikTok": "N-A",          "YouTube": "N-A"},
+    "pineda":      {"X": "T3", "Instagram": "T3", "Facebook": "T3-inferido", "TikTok": "T3-inferido", "YouTube": "N-A"},
+    "nolasco":     {"X": "T3", "Instagram": "T3", "Facebook": "T3-inferido", "TikTok": "N-A",          "YouTube": "N-A"},
+    "jimenez":     {"X": "T3", "Instagram": "T3", "Facebook": "T3-inferido", "TikTok": "T3-inferido", "YouTube": "T3-inferido"},
+    "cravioto":    {"X": "T3", "Instagram": "T3", "Facebook": "T3-inferido", "TikTok": "N-A",          "YouTube": "N-A"},
+    "ballesteros": {"X": "T3", "Instagram": "T3", "Facebook": "T3-inferido", "TikTok": "T3-inferido", "YouTube": "T3-inferido"},
+    "maynez":      {"X": "T3", "Instagram": "T3-inferido", "Facebook": "T3-inferido", "TikTok": "T3-inferido", "YouTube": "T3-inferido"}
+  },
+  "asignaciones_post_venta_target": {
+    "comentario": "Upgrade automático T3→T1 al completarse OAuth en plataformas con soporte Meta Graph / TikTok Business / YouTube Data API. X permanece T3 salvo decisión comercial de pagar X API Basic $100/mes.",
+    "regla": "plataforma in {Instagram, Facebook, TikTok, YouTube} AND dirigente.oauth_token_valido => T1, else => max(T2, T3 disponible)"
+  },
+  "conteo_celdas": {
+    "total": 40,
+    "T3_observado": 17,
+    "T3_inferido": 12,
+    "N_A_pre_venta": 11,
+    "T1_post_venta_target": 27,
+    "T2_post_venta_fallback": 5
+  },
+  "caveats": [
+    "Raw 2026-04-19 solo tiene IG + X (645 + 507). FB/TT/YT inferidos de benchmark 5redes 2026-04-18.",
+    "Meta Dev Mode soporta ≤25 dirigentes sin App Review (§4.2 MASTER) — válido hasta cliente 25.",
+    "X API Basic fuera de scope MVP — X se mantiene T3 permanentemente en el plan actual.",
+    "12 celdas T3-inferido requieren pasada de scraping a 2026-04-19 para confirmar (gap documentado)."
+  ]
+}
