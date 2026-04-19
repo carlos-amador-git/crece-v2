@@ -1,0 +1,372 @@
+PLAN MAESTRO
+CRECE v2
+Inteligencia Política Digital para Figuras Públicas Mexicanas
+Documento ancla de producto, arquitectura y ejecución
+Versión 1.0 · 19 de abril de 2026
+MD Consultoría SC
+Cliente ancla: Movimiento Ciudadano CDMX
+Autor estratégico: Marx Chávez (CEO) · Síntesis: Claude Opus 4.7
+
+Cómo usar este documento
+Este Plan Maestro cumple tres funciones simultáneas y debe respetarse en las tres para que el proyecto CRECE v2 mantenga coherencia estratégica entre sesiones de trabajo y entre agentes de IA. Primero, funciona como ancla de producto: define qué es CRECE v2, para quién, y cuál es el criterio de éxito del MVP. Segundo, funciona como lectura obligatoria al inicio de cada sesión de Claude Code, para que cada sprint arranque con el contexto completo recargado en lugar de partir de una interpretación parcial del agente. Tercero, funciona como material de pitch ejecutivo para conversaciones con clientes, inversionistas o aliados estratégicos.
+El documento se complementa con los cinco documentos canónicos del directorio .context del repositorio: STATUS.md para el estado operativo día a día, PLAN-current.md para el sprint activo, DECISIONS.md para el log inmutable de decisiones arquitecturales, HANDOFF para el traspaso entre sesiones, y este Plan Maestro para la visión estratégica consolidada. Las decisiones que este documento consagra no se revisan en cada sesión; las decisiones operativas del día sí.
+Regla crítica de lectura
+Antes de escribir código, implementar features, o aceptar recomendaciones de cualquier agente de IA sobre CRECE v2, verificar que lo propuesto esté alineado con las secciones 2 (propuesta de valor), 4 (arquitectura dual-mode) y 7 (inventario de 30 bloques) de este documento. Si existe contradicción, este Plan Maestro prevalece hasta que una decisión formal documentada en DECISIONS.md lo modifique.
+
+1. Contexto y por qué existe CRECE v2
+CRECE v2 nace como la evolución estratégica del sistema CRECE original, construido en Oracle APEX para Movimiento Ciudadano CDMX durante la relación de cuatro años entre MD Consultoría y el partido. La versión anterior cumplía su función como base de datos operativa con 9,723 ciudadanos legacy y 45 promotores distribuidos en tres alcaldías piloto, pero carecía de inteligencia digital, analítica predictiva, y capacidad de consolidar presencia en redes sociales. El mercado cambió: las elecciones mexicanas de 2024 mostraron que la conversación digital ya no acompaña a la campaña política tradicional sino que la antecede y la condiciona. Sheinbaum consolidó el 60 por ciento con un manejo digital disciplinado; Máynez irrumpió en TikTok sin estructura partidaria tradicional; Gálvez perdió pese a invertir 75.2 millones de pesos en digital porque confundió el ruido coordinado con apoyo genuino.
+El producto existente en el mercado mexicano falla en tres dimensiones que CRECE v2 resuelve simultáneamente. Primero, las plataformas internacionales como Brandwatch, Meltwater y Sprinklr ofrecen escucha sofisticada pero no conocen el contexto político mexicano: ignoran la veda electoral del INE, no distinguen entre oficialismo y oposición con las implicaciones conductuales que eso tiene, y sus benchmarks de engagement están calibrados contra industrias de consumo masivo, no contra el estrato político específico al que pertenece un diputado federal o un gobernador. Segundo, las consultoras electorales mexicanas tradicionales entregan reportes semanales escritos por humanos con métricas vanidosas como likes absolutos y seguidores totales, métricas que no correlacionan con votos y que obligan al político a pagar por la interpretación en lugar de recibir recomendaciones accionables. Tercero, ningún producto comercial integra detección de comportamiento inauténtico coordinado calibrada al ecosistema mexicano, donde ITESO Signa_Lab ha documentado una arquitectura sociotécnica estratificada de Maestros de Ceremonias y Cuentas Coro que los algoritmos genéricos de Meta no detectan adecuadamente.
+La oportunidad de mercado se enmarca en una ventana temporal clara. El período 2026-2027 concentra renovaciones legislativas federales, elecciones concurrentes en nueve entidades, y precampañas presidenciales que movilizarán presupuestos digitales sin precedente. En paralelo, la regulación INE ha endurecido los criterios de fiscalización de gasto digital y etiquetado de contenido generado con IA, creando demanda específica de herramientas de compliance que los productos internacionales no pueden ofrecer. MD Consultoría posee tres activos que ningún competidor combina: la relación de cuatro años con MC CDMX como cliente ancla, el conocimiento operativo del ecosistema político mexicano acumulado en el sistema original, y la capacidad de desarrollo de software con stack moderno probado en proyectos adyacentes como CFDI-Motor, HIDROS y MediVista Pro.
+2. Propuesta de valor y perfiles de cliente
+CRECE v2 es la plataforma que convierte datos ruidosos de redes sociales en tres decisiones accionables por semana para figuras públicas mexicanas. La frase es deliberada en tres palabras clave. Convierte, porque el producto no es un dashboard descriptivo sino una capa de interpretación. Accionables, porque cada recomendación tiene acción específica, ventana temporal y criterio de éxito medible. Figuras públicas, en plural y amplio, porque el producto sirve a cuatro perfiles distintos con arquitectura común y UI adaptable.
+2.1 Los cuatro perfiles de cliente
+El primer perfil es el político activo en ejercicio de cargo de representación, típicamente un diputado federal o local, un senador, o un coordinador parlamentario. Su horizonte temporal es de tres a seis años de construcción de capital político para la reelección o el siguiente salto de posición. Su necesidad central es consolidar presencia digital entre el electorado que ya tiene y expandir hacia segmentos adyacentes sin sacrificar la base. Su comprador operativo suele ser el jefe de prensa o el coordinador de comunicación digital, no el político directamente.
+El segundo perfil es el funcionario en ejercicio de gobierno, alcalde, secretario de estado o gobernador. Su horizonte es el período constitucional del cargo y su preocupación central es la gestión de la narrativa de gestión: demostrar resultados, anticipar crisis, y construir reputación institucional sin caer en la trampa de la hiperactividad digital que genera desgaste. Este perfil tiene equipos más estructurados y demanda reportes formales para reuniones de gabinete, no solo dashboards operativos.
+El tercer perfil es la figura en precampaña, a seis o dieciocho meses de una elección. Aquí el horizonte se acorta, la tolerancia al error se reduce drásticamente, y el compliance INE de veda electoral y etiquetado de contenido con IA pasa de ser útil a ser crítico. Este perfil demanda velocidad de respuesta: alertas en minutos, recomendaciones de réplica en menos de una hora cuando hay ataque coordinado, y trazabilidad legal de toda publicación programada.
+El cuarto perfil es el empresario o figura independiente en transición a vida pública. Su punto de partida es una cuenta personal construida como profesional o empresario, sin el ruido político inmediato pero también sin la estructura partidaria que amortigüe errores. Este perfil necesita formación paulatina: entender qué métricas importan, cómo interpretarlas, y qué tipo de contenido funciona para construir autoridad pública desde cero sin importar capital político en negativo.
+2.2 Las tres promesas verificables
+CRECE v2 no promete ganar elecciones ni viralizar contenido. Las promesas son más modestas y por eso defendibles. Primera promesa, diagnóstico contextualizado al estrato político del cliente, con benchmarks segmentados por tamaño de cuenta en lugar de rangos genéricos de industria, y con detección integrada de comportamiento inauténtico coordinado siguiendo el framework ITESO. Segunda promesa, plan semanal de consolidación con formato Start Stop Continue, cada recomendación con ejemplo específico, ventana temporal de ejecución y criterio de éxito medible, sin vaguedades tipo mejora tu narrativa. Tercera promesa, arquitectura dual-mode que funciona desde el día uno con datos públicos mediante scraping, y mejora de fidelidad cuando el cliente firma OAuth oficial con Meta, sin bloquear la operación a la espera de credenciales externas.
+3. Estado actual del proyecto (abril 2026)
+Esta sección documenta el estado real del repositorio CRECE v2 al 19 de abril de 2026, extraído directamente del filesystem y no de memoria. Comprender qué ya existe es prerequisito para planificar lo que falta sin duplicar esfuerzo ni desperdiciar sprints.
+3.1 Lo que ya funciona
+La infraestructura base está operativa y probada. El backend FastAPI con SQLAlchemy 2.0 async y PostgreSQL 16 con PostGIS 3.4 corre en el contenedor Docker crece-backend en el puerto 8002 local, con base de datos en el puerto 5438 y Redis en el 6383. El frontend Next.js 14 con App Router y Tailwind está desplegado en producción en Vercel en la URL frontend-zeta-sepia-46.vercel.app y se conecta al backend vía túnel Cloudflare efímero. El stack de workers Celery con Redis está funcionando para scrapers y pipeline NLP.
+La arquitectura multi-tenant de tres organizaciones está implementada y verificada. MC-CDMX con identificador 1, GOB-OAXACA con identificador 2 y CDMX-IND con identificador 3 operan con aislamiento por org_id tanto a nivel de aplicación como con políticas RLS listas en PostgreSQL, aunque la enforcement activa es por filtrado application-level según decisión D-MT-01 documentada. El tenant switcher para el rol admin funciona con header X-Org-Id y localStorage. Los nueve usuarios distribuidos en las tres organizaciones cubren los roles admin, analista, operador de campo y dirigente.
+La capa de datos políticos reales es sustancial. Existen 3,833 posts sociales ingestados con pipeline NLP completo en 3,709 de ellos, con 11 columnas nuevas en social_posts que incluyen tono político, target, sentimiento ajustado, controversy score, toxicity score, topics y versión del modelo. El framework político de tres capas está implementado: NLP técnico con pysentimiento, LLM contextual con Claude Opus 4.6, y matriz rule-based configurable con 32 reglas default distribuidas en cinco contextos políticos (federal, CDMX, Oaxaca, NL, Jalisco). Los 387 posts clasificados manualmente por admin panel con cadencia semanal operada por MD Consultoría funcionan como dataset de validación.
+Los dos módulos de diagnóstico más avanzados son el Índice de Aceptación por publicación y el radar IPD por dirigente. El primero entrega scores de aprobación, rechazo y neutralidad sobre 200 comments reales de TikTok ingestados vía Brightdata del post 7357909824622890245 de Piña, con test end-to-end validado en 11.5 por ciento de aprobación contra 20 por ciento de rechazo. El segundo presenta el radar de cinco ejes con switcher Treemap Stream Sunburst que consume charts-lab, semáforo de crecimiento por plataforma, y alerta automática a las 48 horas cuando una cuenta con data_source manual_host_ingest no recibe actualización.
+La capa de planes IA grounded en diagnósticos FODA alcanzó nivel v3 con seis planes CONSOLIDACION generados para los seis dirigentes piloto (Piña, Solano, Pineda, Nolasco, Jiménez, Cravioto) a partir del framework FODA derivado de los 3,709 posts analizados, con 29 tareas nuevas cada una con campo fundamento_foda en el historial de cambios. La migración suave preserva los planes v2 marcados como superseded sin romper el histórico. El benchmark de prompts contra Gemma 3:12b local iteró tres versiones y convergió en el baseline v1 con score total de 86.5 sobre 100.
+Compliance LFPDPPP está implementado al nivel MVP. El aviso de privacidad completo está publicado en docs, el endpoint de metadata pública responde en legal/privacidad, los derechos ARCO operan con hash SHA256 para acceso, cancelación y oposición, y la tarea Celery beat retention_tasks ejecuta cada 86400 segundos el cleanup de comments con política de 180 días.
+3.2 Lo que está a medio camino
+El scraper masivo de comments para los seis dirigentes en cuatro plataformas quedó parcialmente ejecutado. Los 200 comments de TikTok de Piña son el único dataset completo; el script batch disparado para los otros combinados de Brightdata y Crawlbase tiene snapshots en curso pero sin output visible después de diez minutos. La estrategia de rotación entre Brightdata, Crawlbase, ScraperAPI, Apify y PhantomBuster funciona como plan pero requiere orquestación operativa real. Los widgets de Índice de Aceptación existen como componentes React con hooks React Query pero falta el wiring de copy-paste en las páginas de perfil de dirigente y detalle de post.
+El módulo de Trends Motor completó nueve de once tareas del sprint S4. La tabla topic_trends con vector de 384 dimensiones y HNSW cosine está migrada, las políticas RLS están auditadas con tres tests verdes, los 136 cuentas semilla YAML están poblados aunque el target era 150, location_inference con DB backing está implementado con diez tests, y el endpoint /trends/geo está live. Quedan pendientes la instalación de spaCy es_core_news_md, la persistencia de RSS feeds que requiere migración para agregar NEWS al platform_enum, y el backfill de embeddings sobre los 381 posts existentes.
+El wizard de onboarding del sprint S5 tiene seis de seis componentes core completados pero el auto-login real quedó como deuda menor. Los E2E de Playwright del kanban de planes están escritos en cuatro tests con mocks stateful pero no ejecutados contra frontend dev server levantado.
+3.3 Lo que no existe todavía
+La arquitectura dual-mode con flag data_fidelity_tier a nivel dirigente no está implementada. Los scrapers actuales operan sobre cuentas burner autenticadas (la cuenta @RafaRamos72 entre otras) como capa T2, mientras que el OAuth oficial Meta como capa T3 está documentado en META-OAUTH-SETUP.md con el procedimiento de seis pasos desde Business Manager hasta validación de Instagram Business Account, pero el código del flujo OAuth está pendiente de implementación. La decisión estratégica discutida recientemente de posicionar OAuth como feature de upgrade comercial por dirigente y no como prerequisito global aún no está codificada.
+La detección de comportamiento inauténtico coordinado nivel ITESO con arquitectura de Maestros de Ceremonias y Cuentas Coro no existe. La infraestructura NLP actual tiene clasificación de sentimiento político y controversy score pero no tiene scoring de autenticidad por cuenta comentadora ni probabilidad de amplificación artificial por spike de engagement. Esta capa es requisito central del bloque 12 del inventario y del Filtro de Realidad que es killer feature.
+La tabla de benchmarks por estrato político mexicano Nano Micro Mid-Tier Macro Mega no está sembrada en base de datos. El framework político defaults está poblado pero los rangos de engagement rate esperado por estrato que vienen de Gemini Deep Research son externos al sistema actualmente. El campo estrato_politico en la tabla dirigentes es gap documentado en la Síntesis de 4 Fuentes.
+El Breakout Scale de Brookings adaptado a política mexicana con las seis categorías no está implementado. El concepto de unconnected_reach como proxy direccional usando views y engagement rate spike de diez veces baseline está discutido pero no codificado. El campo competidor_directo_ids en dirigentes tampoco existe aún.
+3.4 Lo que va a morir o pivotar
+El IPD 0-10 como métrica estrella debe morir según convergencia de las cuatro fuentes de investigación. Su reemplazo no es un mejor IPD sino un dashboard de diez KPIs Tier 1 con interpretación contextual segmentada por estrato político. La migración debe ser suave para no romper las vistas existentes: el número IPD puede permanecer visible durante un período de transición pero deja de ser el foco del dashboard principal.
+El wizard de pasos del sprint S5 debe revisarse a la luz de la arquitectura dual-mode. El onboarding actual asume un modelo unitario; la nueva arquitectura requiere que el wizard detecte si el dirigente va a operar en modo T1 T2 scraping o T3 OAuth y adapte las preguntas y las expectativas de data fidelity desde el primer momento.
+El Claude API como provider del Plan IA tiene configuración placeholder según el diagnóstico unificado del 5 de abril. La arquitectura debe consolidar el uso de Gemma 3:12b local en Ollama como provider primario para planes IA por razones de costo y privacidad, con Claude API o Gemini como fallback opcional cuando el cliente lo contrate. El benchmark S2.6 demostró que Gemma 3:12b local es viable en el Mac M4 a 4-6 minutos por iteración.
+
+4. Arquitectura dual-mode de fidelidad de datos
+La arquitectura dual-mode es la decisión estratégica más importante documentada en este Plan Maestro y resuelve simultáneamente tres problemas que bloqueaban el proyecto: la dependencia de OAuth oficial de Meta como prerequisito de demo, la incapacidad de vender sin haber firmado, y la ausencia de un camino de upgrade comercial claro para clientes que ya están probando el producto.
+4.1 Los tres tiers de fidelidad
+El tier uno es scraping público sin autenticación, operando sobre APIs abiertas, endpoints públicos de Graph API sin token, y datos que cualquier usuario anónimo podría obtener. Cubre mentions públicas, posts abiertos, conteo público de likes y comments, engagement visible sin autenticación, y metadata de perfil. Este tier es el baseline universal: opera para los ocho dirigentes del piloto desde el día uno sin ninguna negociación comercial ni firma del cliente.
+El tier dos es scraping autenticado con cuentas burner personales, operando con la infraestructura actual que incluye la cuenta @RafaRamos72 entre otras cuentas personales de respaldo. Permite acceder a listas de followers en Twitter con rate limit severo, scraping profundo de comments en Instagram, y acceso a TikTok con el Playwright-based TikTok-Api v7.3.2. Esta capa es más frágil legalmente y más vulnerable operativamente porque los términos de servicio de X e Instagram prohíben explícitamente el scraping con cuentas automatizadas y Meta tiene detección cada vez más sofisticada.
+El tier tres es OAuth oficial del dirigente con Graph API de Meta, desplegado cuando el cliente firma contrato comercial y entrega los permisos formales. Desbloquea datos que no existen en ningún otro tier: reach exacto por post, watch time real en videos, audience demographics oficial, y en el caso de cuentas con Facebook Ads activo, cost per acquisition real con integración Facebook Ads API. Es el único camino legal y sostenible para cinco KPIs críticos del inventario.
+Tabla comparativa de tiers
+Tier
+Fuente de datos
+Cuándo aplica
+Bloques que desbloquea
+T1
+Scraping público
+Baseline universal desde día uno
+Los 30 bloques con proxies documentados
+T2
+Scraping autenticado con cuentas burner
+Infraestructura actual. Datos más granulares para análisis interno
+Mejora granularidad de bloques 12, 13, 14 y 27
+T3
+OAuth oficial Meta del dirigente
+Post-venta cuando cliente firma y entrega permisos
+Reach exacto, watch time, demographics, CPA real. Bloque 30 único T3
+
+4.2 Implementación del dual-mode
+La clave arquitectural es que el dashboard pinta el mismo producto en cualquiera de los tres tiers, con un badge discreto de transparencia que indica el origen del dato sin ocultar la incertidumbre. El texto del badge es Datos oficiales cuando la cuenta opera en T3 y Estimación de mercado cuando opera en T1 o T2. Este diseño resuelve el problema ético y comercial simultáneamente: el cliente ve desde el principio qué data fidelity tiene, entiende qué gana al firmar OAuth, y el producto nunca miente sobre la naturaleza de sus números.
+El upgrade es por dirigente y no global. Cuando un cliente específico firma OAuth, su dashboard individual mejora a T3 mientras los demás siguen operando en su tier original. Esto permite modelos de venta diferenciados: un partido puede contratar el producto para ocho dirigentes y decidir firmar OAuth solo para los tres prioritarios, manteniendo los otros cinco en modo de escucha passiva. La arquitectura captura valor comercial incluso cuando el cliente no completa el upgrade.
+Técnicamente, la implementación requiere un flag oauth_enabled booleano en la tabla dirigentes, una lógica de routing en el servicio de métricas que decide de qué fuente leer según el tier activo, y una capa de presentación que aplica el badge visualmente. El sprint OAuth activable queda codificado y listo pero no se dispara en el código productivo hasta que existe cliente firmado. Cero riesgo operativo durante la fase piloto.
+Implicación comercial central
+El piloto con proxies T1 T2 deja de ser un simulacro previo a la venta y se convierte en argumento de venta. La demostración sustituye a la promesa: el prospecto ve exactamente qué le entrega CRECE v2 con datos públicos, y la conversación de upgrade a T3 se centra en cinco KPIs precisos que mejoran al firmar OAuth, no en la promesa vaga de un mejor producto futuro.
+
+5. Stack técnico y componentes heredados
+CRECE v2 no se construye desde cero. El stack actual integra tecnologías probadas, una base de datos con 3,833 posts y 9,723 ciudadanos legacy, y un conjunto de 23 componentes React reusables ya construidos y verificados en producción. Esta sección documenta el stack canónico para que ninguna sesión de Claude Code proponga tecnologías alternativas sin justificación formal en DECISIONS.md.
+5.1 Stack técnico canónico
+Backend. FastAPI con Python 3.12 o superior, SQLAlchemy 2.0 async, PostgreSQL 16 con PostGIS 3.4 para operaciones geoespaciales. Migraciones con Alembic. Pipeline de scraping con twscrape para Twitter autenticado, instaloader versión 4.15 para Instagram, facebook_page_scraper para Facebook, TikTok-Api versión 7.3.2 con Playwright para TikTok, scrapetube versión 2.6 para YouTube. Pipeline NLP con pysentimiento para análisis de sentimiento, spaCy para procesamiento lingüístico, y XLM-RoBERTa para topic modeling. LLM provider primario Gemma 3:12b vía Ollama local en el Mac M4 del CEO. Workers Celery con Redis para colas asíncronas. Storage MinIO compatible S3.
+Frontend. Next.js 14 o superior con App Router, TypeScript estricto, Tailwind CSS con tokens del md-design-system, componentes de shadcn/ui, MapLibre GL JS para visualizaciones geoespaciales, Recharts para charts primarios con Plotly como secundario en charts-lab. Design tokens del md-design-system integran Instrument Sans como fuente display, DM Sans como body, y JetBrains Mono para código. Colores electorales estandarizados: emerald para favorable, amber para indeciso, red para oposición.
+Deploy. Docker Compose para desarrollo local y Coolify sobre VPS Hetzner para producción. Túnel Cloudflare efímero para exponer backend local durante demos. Frontend desplegado en Vercel en production. Base de datos productiva PostgreSQL gestionada por Coolify.
+Mobile. Aplicación React Native con Expo en directorio mobile del monorepo. Stack naciente, no es ruta crítica para el MVP Tier 1 y Tier 2 del plan, pero existe como opción futura cuando el producto web esté consolidado.
+5.2 Componentes reutilizables ya construidos
+El inventario actual incluye 23 componentes React verificados en producción contra datos reales. No deben construirse versiones paralelas de estos componentes. Cualquier nuevo requisito debe extenderlos o reusarlos.
+Categoría
+Componente
+Función
+Charts
+IpdRadarChart
+Radar 0-10 presencia digital por plataforma
+Charts
+SentimentLineChart
+Líneas positivo, neutral, negativo en el tiempo
+Charts
+SentimentPieChart
+Donut de distribución de sentimiento
+Charts
+EngagementBarChart
+Barras de engagement por plataforma
+Dashboard
+KpiCard
+Card de métrica con icono y delta
+Dashboard
+BentoGrid BentoCard
+Layout modular dashboard
+Dashboard
+FilterSelect
+Select genérico con opción Todos
+Social
+PostCard
+Card de publicación social multi-plataforma
+Social
+IndiceAceptacionCard
+Stacked bar aprobación neutral rechazo más tono breakdown
+Social
+IASummaryCard
+Top aprobación y rechazo por dirigente
+Alerts
+CrisisAlertList AlertFeed
+Lista y stream de alertas activas
+Geo
+CanvassingGeoMap
+MapLibre con clustering 9,631 ciudadanos reales
+Planes
+KanbanBoard
+Tres columnas edit inline captura métrica historial
+
+Adicionalmente, el dashboard cuenta con el switcher Treemap Stream Sunburst construido sobre charts-lab usando recharts primitives sin dependencias nuevas (decisión D-DS-11). El TrendingAlcaldiaCard montado en dashboard social visualiza los topic_trends del sprint S4. El CompetitorSnapshotCard existe en estado demo con datos MC-CDMX vs Batres y Taboada.
+
+6. Inventario de 30 bloques priorizados
+El inventario consolidado de 30 bloques proviene de la síntesis de las cuatro fuentes de investigación documentadas en SINTESIS-4-FUENTES.md: el deep research agent de Claude con 20 bloques, el Gemini CLI local con 15, el Perplexity con takeaways dispersos, y el Gemini Deep Research externo con 28 bloques. La deduplicación y priorización se hizo por tres criterios: valor decisional para el político, viabilidad con la data actualmente disponible, y singularidad frente a competidores internacionales como Brandwatch y Meltwater.
+6.1 Tier 1. Core del diagnóstico MVP obligatorio
+Los diez bloques del Tier 1 constituyen el MVP mínimo del producto. Sin los diez funcionando end-to-end, no hay demo válido ni propuesta comercial creíble. Cada bloque está diseñado para funcionar en modo T1 T2 con proxies documentados y mejorar marginalmente en T3.
+#
+Bloque
+Pregunta que responde
+Tier backend
+01
+ER normalizado por estrato político
+¿Mi engagement está en rango para mi tamaño de cuenta?
+T1. Mejora en T3 con reach exacto
+02
+Breakout Scale Brookings Cat 1-6
+¿Mi post cruzó fronteras algorítmicas hacia no seguidores?
+T1 direccional. T3 categoría precisa
+03
+Matriz 2x2 Insignia Crisis Vanidad Muerta
+¿Qué tema amplifico y cuál descarto esta semana?
+T1. Mejora en T3 con reach por post
+04
+Benchmark vs tres a cinco competidores directos
+¿Cómo me comparo con mis rivales reales del mismo distrito?
+T1 idéntico. Rival también en T1
+05
+Sentiment composition Plutchik seis emociones
+¿La ira crece? ¿Qué ratio trust fear tengo?
+T1 idéntico
+06
+Crisis Spike Alert con anomaly detection
+¿Hay crisis emergiendo ahora mismo?
+T1. Mejora en T3 con reach de mentions
+07
+Growth Attribution Time-Decay
+¿Qué post trajo seguidores atribuibles?
+T1 con snapshot diario. Más granular en T3
+08
+Share of Voice por tema
+¿Domino mis temas o el rival me los roba?
+T1 idéntico
+09
+Share-to-Like Ratio movilización profunda
+¿Mi audiencia moverá el culo o solo da like?
+T1 parcial. T3 completo con saves IG
+10
+Start Stop Continue con post modelo
+¿Qué hago esta semana concretamente?
+T1. LLM más preciso con data T3
+6.2 Tier 2. Diferenciadores defensibles
+Los ocho bloques del Tier 2 son el filo competitivo frente a Brandwatch y Meltwater. Ningún producto internacional los ofrece calibrados al contexto mexicano. Cada uno por sí solo puede ser argumento de venta central en una conversación comercial.
+#
+Bloque
+Pregunta que responde
+Tier
+11
+Cross-Partisan Validation Score
+¿La oposición me está validando en cruces ideológicos?
+T1 T2
+12
+CIB Detector multinivel ITESO
+¿Me atacan con granja coordinada? MCs más Chorus
+T1 T2
+13
+Filtro de Realidad toggle Orgánico Raw
+¿Cuál es mi aprobación real apagando los trolls?
+T1 T2
+14
+Topic Drift Detector TF-IDF
+Publiqué sobre X pero hablan de Y. ¿Se descarriló?
+T1 T2
+15
+Rage Click Flag
+¿Alto engagement es apoyo real o indignación amplificada?
+T1 T2
+16
+Rastreador de Promesas de Campaña
+¿Qué promesa usan sistemáticamente como arma contra mí?
+T1 T2
+17
+Veda INE compliance preventivo
+¿Publicación programada viola veda electoral?
+T1 T2
+18
+Escaneo Violencia Política amenazas género
+¿Los ataques cruzan línea penal? Reporte automatizado
+T1 T2
+6.3 Tier 3. Capas avanzadas y nice to have
+Los doce bloques del Tier 3 son capas avanzadas que no bloquean el MVP pero que agregan valor progresivo cuando el producto alcanza madurez. Se priorizan post-MVP según señal de cliente y facilidad de implementación residual.
+Los bloques 19 al 30 incluyen Termómetro Territorial Digital con heatmap geo, Humanización Score con IA Vision, Alerta de Oportunidad por trending gap, Gap de Respuesta reply rate y time, Eficiencia Táctica por Formato, Recomendador de Horarios de Fricción Óptima, Análisis de Fatiga y Saturación algorítmica, Churn Rate Político con deserción orgánica, Influencers Proxy de Alto Impacto, Simulador Algorítmico de Crisis Pre-Mortem, Message Stickiness, y ROI CPA Político con Feedback Loop IA. Este último es el único bloque Tier 3-only porque requiere integración con Facebook Ads API que solo opera en modo OAuth firmado.
+
+7. Roadmap de sprints con disciplina documental
+El roadmap traduce el inventario de 30 bloques en una secuencia ejecutable de seis sprints con tiempos realistas, criterios de aceptación explícitos y disciplina documental en cada transición. El total estimado es tres a cuatro semanas de trabajo activo para completar Tier 1 más Tier 2 con compliance INE y OAuth codificado pero no disparado.
+7.1 Sprint Cero. Validación de supuestos (cinco a seis horas)
+Este sprint no genera código de producto nuevo pero es el que mayor retorno entrega. Saltárselo es el error clásico de empezar a construir sobre fundamentos no validados. Consta de tres tareas concretas. Primera tarea, crear los cinco documentos canónicos del directorio .context si alguno falta según el estado del repo. El NORTH-STAR.md tiene que crearse nuevo como adaptación resumida de este Plan Maestro para que Claude Code lo cargue al inicio de cada sesión sin leer el documento completo. Segunda tarea, validar los benchmarks de ER por estrato político de Gemini Deep Research contra la muestra real del piloto, tomando los ocho dirigentes actualmente scrapeados (Piña, Solano, Pineda, Nolasco, Jiménez, Cravioto más Laura Ballesteros y Jorge Álvarez Máynez listados en META-OAUTH-SETUP.md) y calculando sus ER reales de los últimos 90 días en cada plataforma, para contrastar contra la tabla propuesta Nano 6-10%, Micro 3.5-6%, Mid-Tier 2-4%, Macro 1.5-2.5%, Mega 1-2%. Tercera tarea, correr un pipeline CIB básico contra el post de Piña 7357909824622890245 donde ya se cuenta con 200 comments clasificados, para medir si los patrones ITESO de Maestros de Ceremonias y Cuentas Coro son detectables con la infraestructura NLP actual o requieren desarrollo adicional.
+7.2 Sprint Backend Foundations (cuatro a cinco horas en dos pasos)
+Primer paso, migraciones de base de datos y flags. Agregar el campo oauth_enabled booleano y el campo estrato_politico enum (Nano Micro Mid-Tier Macro Mega) a la tabla dirigentes con seed inicial basado en los conteos reales de followers. Agregar el campo competidor_directo_ids como array JSONB a la tabla dirigentes con seed manual de tres a cinco competidores por dirigente. Agregar el campo data_fidelity_tier enum (T1 T2 T3) a nivel dirigente que consolida la lógica de routing. Pausa para validación contra un dirigente de prueba para confirmar que las migraciones no afectan los scrapers existentes.
+Segundo paso, infraestructura de nuevos datos. Implementar snapshot diario de follower_count público con cron Celery que persiste en social_profile_snapshots. Mapear el campo views de los posts que Apify ya devuelve en el output al esquema de social_posts con migración. Implementar topic extraction básica con NER más TF-IDF sobre comments, usando la infraestructura NLP ya desplegada.
+7.3 Sprint Diagnóstico Tier 1 (una a dos semanas)
+Ejecutar los diez bloques del Tier 1 en modo estricto bloque por bloque. La tentación natural es construir los diez en paralelo por eficiencia técnica pero genera el problema terminal de que al final del sprint los diez están al 80 por ciento y ninguno sirve para demo. La disciplina correcta es bloque uno completo, demo al CEO o a un prospecto de prueba, si acepta pasa al dos. Cada bloque tiene que exponer su tier de fidelity visualmente desde el día uno con el badge, no como feature agregado al final.
+El orden recomendado del Tier 1 sigue la secuencia que maximiza reutilización: empezar por bloque 01 (ER por estrato) porque usa la migración del sprint anterior y valida la arquitectura dual-mode en un caso simple; continuar con 05 (Sentiment Plutchik) que aprovecha la infraestructura NLP existente; después 06 (Crisis Spike) que construye sobre 05; luego 03 (Matriz 2x2) que integra 01 y 05; después 04 (Benchmark competidores) que amplifica 01 y 03; continuar con 07 (Growth Attribution) que requiere snapshots diarios ya activos; luego 02 (Breakout Scale) con proxy direccional; después 08 (Share of Voice por tema) y 09 (Share-to-Like Ratio); y finalizar con 10 (Start Stop Continue con post modelo) que es la capa LLM que consume todos los anteriores.
+7.4 Sprint Diferenciadores Tier 2 (una semana)
+Los ocho bloques del Tier 2 se priorizan por impacto comercial ante la orden en lugar de dependencia técnica. El Filtro de Realidad y el CIB Detector son los más riesgosos algorítmicamente por lo que demandan un día explícito de calibración con revisión humana de falsos positivos, no solo implementación. Un CIB Detector que marca como troll a un crítico legítimo es el tipo de error que destruye el producto con una sola nota periodística viral. El Veda INE preventivo debe subir a priorización alta dentro de este sprint porque tiene mayor pricing power comercial: evita multas reales y crisis mediáticas que cualquier candidato formal entiende.
+7.5 Sprint Plan IA LLM (tres a cuatro días)
+Este sprint consolida el Start Stop Continue versión 2 sobre la base de los 16 bloques Tier 1 más Tier 2 ya operativos. Usa RAG sobre el histórico de los 3,709 posts con NLP completo para fundamentar cada recomendación con ejemplos concretos del propio dirigente. Incorpora el Pre-Mortem simulador como feature avanzada. El provider LLM primario es Gemma 3:12b vía Ollama local en el Mac M4 por razones de costo cero, privacidad del cliente y velocidad aceptable de 4-6 minutos por plan completo. Claude API y Gemini quedan como fallback opcional cuando el cliente pagado lo contrate específicamente.
+7.6 Sprint Meta OAuth activable (uno a dos días, paralelizable)
+El sprint Meta OAuth implementa el flujo completo documentado en docs/META-OAUTH-SETUP.md y lo deja listo en código pero sin disparar en producción. El flujo cubre los seis pasos desde la verificación de Meta Business Manager con el RFC de MD Consultoría, la creación de la app Business tipo CRECE v2 con App ID y App Secret en backend/.env, la configuración de Facebook Login for Business con Instagram con permisos pages_show_list, pages_read_engagement, instagram_basic, instagram_manage_insights y business_management, la adición de los ocho dirigentes como Administrators (palabra explícita, nunca Tester según especificación), el email previo a cada dirigente explicando el flujo, y la validación previa de que cada cuenta Instagram es Business o Creator vinculada a Facebook Page. El sprint se puede paralelizar con los sprints 7.3 y 7.4 porque opera sobre capa de integración externa sin tocar el dashboard principal.
+7.7 Timeline visual consolidado
+Sprint
+Semana 1
+Semana 2
+Semana 3
+Semana 4
+0. Validación supuestos
+████
+
+
+
+1. Backend foundations
+████
+
+
+
+2. Diagnóstico Tier 1
+████
+████████
+
+
+3. Diferenciadores Tier 2
+
+
+████████
+
+4. Plan IA LLM
+
+
+
+████
+5. Meta OAuth paralelo
+
+
+████
+████
+
+Timeline con paralelización realista: tres a cuatro semanas para MVP Tier 1 más Tier 2 completo con compliance INE implementado y OAuth codificado listo para activar cuando haya cliente firmado. Cero bloqueadores externos.
+
+8. Disciplina de sesiones con Claude Code
+La arquitectura documental y la secuencia de sprints no sobreviven al caos operativo sin un protocolo de sesiones. El problema recurrente reportado por el CEO es la falla de contexto de memoria en Claude Code: sesiones que empiezan desde cero y reintroducen patrones ya descartados, o que avanzan por laterales que generan deuda técnica sin terminar el sprint activo. Esta sección formaliza el protocolo que convierte la falla de memoria de problema a feature: cada sesión arranca limpia sin sesgos acumulados pero con todo el contexto necesario cargado desde documentos versionados.
+8.1 Ritual de apertura de cada sesión
+Toda sesión de Claude Code empieza con tres pasos en este orden exacto, sin excepciones. Primero, el agente lee NORTH-STAR.md con la propuesta de valor condensada y SPRINT-CURRENT.md con el sprint activo para recargar contexto estratégico y operativo. Segundo, revisa el último HANDOFF.md dejado por la sesión anterior para saber exactamente dónde quedó y qué no funcionó. Tercero, declara explícitamente qué bloque del inventario va a trabajar en esta sesión y cuál es el criterio de terminación específico antes de escribir una sola línea de código. Sin estos tres pasos, el agente pide al humano los documentos faltantes y pospone el trabajo.
+8.2 Ritual de cierre de cada sesión
+Al terminar cada sesión, Claude Code escribe un HANDOFF.md de menos de 40 líneas que responde cinco preguntas exactas en orden. Primera pregunta, qué se logró hoy con evidencia específica (commits, tests verdes, screenshots). Segunda, qué quedó a medias y dónde exactamente con path de archivo y número de línea cuando aplica. Tercera, qué decisiones se tomaron que deben migrar a DECISIONS.md con formato estándar D-fecha-tema. Cuarta, qué se intentó y no funcionó para que la siguiente sesión no repita el error. Quinta, cuál es el siguiente paso más pequeño posible para la próxima sesión, formulado como una acción de menos de una hora para que el arranque sea trivial.
+Dado el setup de tmux md-monitor y los PreCompact hooks ya operativos en el stack del CEO, el HANDOFF debe generarse automáticamente antes del hook de compactación, no al final de la sesión cuando el humano se acuerda. Si el hook ya dispara, que dispare también la generación del handoff usando el último estado limpio del contexto.
+8.3 Reglas de contención contra la deriva
+Primera regla, worktrees separados para exploración versus implementación. Cuando el CEO pida a Claude Code que explore una idea nueva, que lo haga en un worktree dedicado que nunca toca el branch principal. Si la exploración produce algo útil, se migra por replicación manual, no por merge. Esto evita que experimentos a medias contaminen el código de sprint. La práctica ya está establecida en el proyecto con las ramas feat/sprint-c-hardening, feat/dirigente-surgery y otras, y hay que mantenerla.
+Segunda regla, uso explícito de Gemini CLI como Puerta 2 antes de merges críticos. La configuración ya existe pero conviene declarar explícitamente que todo merge a main pasa por auditoría de Gemini con un prompt específico: revisa este diff contra ARCHITECTURE.md y SPRINT-CURRENT.md y señala contradicciones o deriva de alcance. Ese cross-check atrapa el 80 por ciento de los problemas antes de que se vuelvan deuda técnica. Este proyecto ya tiene evidencia de la utilidad de Gemini como cross-audit en las decisiones D-DS-09 (YouTube NO se oculta del radar, defensa metodológica de Gemini) y D-NLP-02-03 (defaults suaves recomendación Gemini).
+Tercera regla, límite de tokens por sesión declarado arriba. No dejar que Claude Code trabaje en sesiones de cuatro horas donde el contexto se degrada progresivamente. Sesiones de 45 a 90 minutos con handoff escrito al final, y descanso deliberado entre sesiones para que la siguiente arranque limpia. La productividad acumulada es mayor con sesiones cortas bien cerradas que con sesiones largas mal cerradas.
+8.4 Documentos canónicos del directorio .context
+Documento
+Función
+Cadencia de actualización
+NORTH-STAR.md
+Propuesta de valor condensada, cuatro perfiles, tres killer features, criterio MVP
+Cada dos o tres semanas
+ARCHITECTURE.md
+Arquitectura dual-mode, matriz 30 bloques, stack canónico, decisiones irreversibles
+Cuando hay cambio estructural
+SPRINT-CURRENT.md
+Sprint activo, bloques específicos, criterios aceptación, scope explícito fuera
+Al inicio de cada sprint
+DECISIONS.md
+Log append-only con fecha, opciones consideradas, razón del descarte, estatus decidido
+Cada decisión arquitectural
+HANDOFF.md
+Cinco preguntas exactas de cierre de sesión en menos de cuarenta líneas
+Al final de cada sesión
+STATUS.md
+Estado operativo día a día, sesiones recientes, infraestructura activa
+Al final de cada sesión productiva
+
+El proyecto CRECE v2 ya tiene implementada la mayoría de esta disciplina: STATUS.md está al día al 13 de abril de 2026, DECISIONS.md acumula 711 líneas de decisiones documentadas, PLAN-current.md existe con la versión REV 3 del seed plan, y HANDOFF-REM-2026-04-18.md documenta el handoff más reciente. El gap es la formalización del NORTH-STAR.md como resumen condensado de este Plan Maestro y la actualización del ARCHITECTURE.md para consagrar la decisión dual-mode.
+
+9. Killer features y diferenciación comercial
+CRECE v2 no gana mercado con tecnología superior a Brandwatch o Meltwater. Gana mercado con composición integrada mexicana que ningún producto internacional combina. Esta sección documenta las tres features que constituyen el diferencial defensible y el argumento de venta central.
+9.1 Breakout Scale Brookings aplicado a política mexicana
+El Breakout Scale es un framework académico publicado por Brookings Institution originalmente diseñado para medir operaciones de influencia y desinformación, con seis categorías que escalan desde in-community hasta disrupción de agenda pública nacional. CRECE v2 lo adapta como métrica de éxito de contenido político legítimo y lo rebautiza Escala de Alcance CRECE para evitar la asociación con threat intelligence que podría incomodar a clientes sofisticados. En modo T1 T2 funciona con proxy direccional combinando views de Apify y spike de engagement rate diez veces superior al baseline del estrato. En modo T3 entrega la categoría exacta con unconnected_reach oficial de Graph API Meta. Ningún producto comercial lo implementa.
+9.2 Filtro de Realidad con CIB ITESO multinivel
+El Filtro de Realidad resuelve una pregunta que ningún dashboard comercial responde: cuánto de lo que veo es apoyo genuino y cuánto es ruido coordinado. La implementación combina el framework ITESO Signa_Lab de Maestros de Ceremonias y Cuentas Coro con umbrales cuantitativos calibrados al mercado mexicano: clustering temporal anómalo, similitud lingüística con cosine similarity sobre embeddings, densidad de red de retweets matemáticamente improbable, y fechas de creación de cuenta concentradas. El toggle Orgánico Raw permite al político ver dos versiones de su IPD: la versión con todo el ruido y la versión depurada. Este feature captura directamente el caso Gálvez 2024 donde la candidata confundió CIB con apoyo genuino y perdió pese a invertir 75.2 millones de pesos. El riesgo operativo es serio: el Filtro debe documentar explícitamente el algoritmo de clasificación, ofrecer review manual por el equipo del cliente, e incluir disclaimer visible de que es estimación probabilística. Sin esta gobernanza, un periodista cuyos comentarios críticos fueran mal clasificados como CIB destruye el producto con una sola nota viral.
+9.3 Arquitectura dual-mode con upgrade comercial por dirigente
+La tercera killer feature no es técnica sino comercial: la arquitectura dual-mode convierte el piloto con scraping en demostración de venta y el upgrade OAuth en camino de expansión comercial. El competidor internacional vende dashboard y promete. CRECE v2 vende dashboard funcional desde el primer minuto y demuestra el upgrade con los cinco KPIs específicos que mejoran al firmar. El modelo de pricing puede diferenciar T1 T2 como tier base con precio menor y T3 como tier premium con precio sustancialmente mayor. El upgrade por dirigente y no global permite capturar valor de partidos que solo firman OAuth para sus tres candidatos prioritarios mientras los otros cinco siguen generando datos para calibración interna de benchmarks.
+10. Métricas de éxito del MVP y beyond
+El éxito del MVP no se mide en clicks al dashboard ni en bloques implementados sino en movimiento real de aguja para un cliente real. Sin resultado verificable en un caso concreto, no hay producto vendible. Las métricas de éxito se organizan en tres horizontes temporales.
+10.1 Métricas de sprint (cada dos a cuatro días)
+Al cierre de cada sprint, tres métricas binarias. Primera, el sprint cumplió los bloques declarados en SPRINT-CURRENT.md con demo end-to-end funcional, sí o no. Segunda, los tests de regresión sobre los bloques previos siguen verdes, sí o no. Tercera, el HANDOFF.md quedó escrito con las cinco preguntas respondidas antes del cierre, sí o no. Tres síes o se declara el sprint fallido y se replanifica antes de continuar.
+10.2 Métricas de MVP (tres a cuatro semanas)
+Al terminar los sprints 0 al 4, cuatro métricas. Primera, los 18 bloques Tier 1 más Tier 2 operando end-to-end en modo T1 T2 con los ocho dirigentes del piloto y badge de transparencia visible. Segunda, un dirigente del piloto dispuesto a validar en sesión de 45 minutos que las recomendaciones del Plan IA son accionables y ejecutables sin que el equipo tenga que reinterpretar. Tercera, un candidato a cliente externo (no los ocho del piloto actual) haciendo demo de venta sobre su propia cuenta con datos T1 T2 y quedándose para conversación de upgrade. Cuarta, el código OAuth activable implementado y testeado contra al menos una cuenta real de dirigente voluntario aunque no esté desplegado en producción.
+10.3 Métricas de tracción comercial (noventa días)
+A noventa días desde inicio del MVP, tres métricas duras de validación de mercado. Primera, tres pilotos reales con figuras públicas de perfiles distintos ejecutados durante 90 días completos: un político activo, un funcionario en ejercicio, y un empresario en transición o un político en precampaña. No pilotos gratuitos indefinidos sino contratos con fecha de cierre y criterio de renovación. Segunda, al menos un caso documentado de recomendación de Plan IA efectivamente ejecutada por el cliente con resultado medible: movimiento de métrica específica (share of voice, breakout de post, reducción de rage click en tema controversial). Tercera, al menos una conversión de T1 T2 a T3 con OAuth firmado como validación de que el camino de upgrade comercial funciona en la práctica y no solo en el diseño.
+Criterio definitivo de éxito
+Si en 90 días se logra mover una aguja real en un caso real, hay producto vendible y caso de estudio que se vende solo en un mercado donde todos venden promesas. Si no, el producto está construido sobre supuestos que necesitan recalibración antes de invertir más en features nuevas.
+11. Riesgos estratégicos y mitigaciones
+Esta sección documenta los riesgos que pueden hundir el proyecto y las mitigaciones específicas para cada uno. No se incluyen riesgos genéricos de cualquier SaaS; se priorizan los riesgos particulares del dominio político mexicano y de la arquitectura propuesta.
+Riesgo
+Impacto si se materializa
+Mitigación
+CIB Detector marca como troll a crítico legítimo
+Nota periodística viral destruye reputación del producto y del cliente ancla
+Documentación algorítmica visible, review manual del cliente, disclaimer probabilístico, calibración mínima de 200 casos manualmente etiquetados antes de activar en producción
+Scraping T2 con cuentas burner colapsa por cambios de TOS o detección de Meta
+60 por ciento de los bloques dependen de T2. Pérdida de servicio por días o semanas
+Plan de continuidad: rotación entre Brightdata, Crawlbase, ScraperAPI, Apify y PhantomBuster. T1 scraping público como fallback garantizado aunque degradado. Aceleración de OAuth T3 para clientes afectados
+Veda electoral INE cambia de criterio y obsoleta el módulo de compliance preventivo
+Clientes candidatos formales dejan de percibir valor central del producto
+Monitoreo activo de acuerdos INE trimestral. Base de reglas como datos configurables no hardcoded. Contrato con especialista legal para calibración anual
+Gemma 3:12b local degrada calidad de planes IA frente a Claude API
+Cliente compara output con ChatGPT o Claude directo y percibe inferior
+Benchmark S2.6 ya demostró viabilidad. Fallback a Claude API como feature premium opcional. Prompt engineering iterativo documentado
+Falla de memoria Claude Code genera deriva de sprint
+Sprints se alargan indefinidamente, MVP se pospone, ventana de mercado se cierra
+Disciplina documental sección 8. NORTH-STAR.md obligatorio. Gemini CLI como Puerta 2 pre-merge. Sesiones cortas 45-90 min con handoff forzado
+Percepción de producto como herramienta de manipulación tipo Cambridge Analytica
+Pérdida de contratos institucionales, daño reputacional a MD Consultoría
+Posicionamiento de inteligencia defensiva y ofensiva transparente. Badge de fidelity visible. Compliance LFPDPPP y INE auditables. Aviso de privacidad público
+
+12. Próximos pasos inmediatos
+Este Plan Maestro es documento ancla pero no es acción por sí solo. Los siguientes cuatro pasos son la transición al PRD formal y el arranque del sprint cero.
+Primer paso, consolidar NORTH-STAR.md como documento de lectura obligatoria al inicio de toda sesión de Claude Code. El documento es un resumen de una página de las secciones 2, 4 y 9 de este Plan Maestro: propuesta de valor, arquitectura dual-mode y killer features. Se coloca en la raíz del directorio .context del repositorio y se referencia explícitamente en CLAUDE.md como lectura prerequisito.
+Segundo paso, solicitar a Claude Code la redacción del PRD formal de CRECE v2 usando este Plan Maestro como input base. El prompt explícito sugerido es: Usando el Plan Maestro CRECE v2 como fuente de verdad única, redacta el PRD técnico que baja la arquitectura dual-mode a especificación de implementación por cada uno de los 18 bloques Tier 1 más Tier 2. Para cada bloque, especifica esquema de base de datos, endpoints FastAPI nuevos o extendidos, componentes React necesarios (identifica reusables del inventario sección 5.2), criterios de aceptación testables, y gaps del backend actual. Respeta las decisiones arquitecturales de DECISIONS.md y las reglas de calidad de CLAUDE.md sobre librerías obligatorias y prohibición de mocks.
+Tercer paso, una vez que Claude Code entregue el PRD, el CEO lo sube al chat con Claude Opus 4.7 para revisión cruzada contra este Plan Maestro. El criterio de revisión es detección de tres cosas: contradicciones con decisiones ya tomadas, deriva de alcance donde el PRD incluye features fuera de Tier 1 más Tier 2, y sub-especificación de bloques críticos especialmente los killer features como Filtro de Realidad y Breakout Scale. La revisión genera un documento PRD-REVIEW.md que o aprueba el PRD para arranque o devuelve al Claude Code con ajustes específicos.
+Cuarto paso, ejecutar Sprint Cero. Las tres tareas del Sprint Cero (creación de documentos canónicos faltantes, validación de benchmarks ER por estrato contra data real, y pipeline CIB básico contra post Piña con 200 comments) son responsabilidad del CEO operando con Claude Code. El criterio de terminación del Sprint Cero es evidencia documentada de los tres resultados antes de iniciar Sprint Backend Foundations.
+Criterio de arranque del desarrollo
+El desarrollo activo de CRECE v2 v2 (Tier 1) no arranca hasta que exista: (a) NORTH-STAR.md consolidado, (b) PRD aprobado tras revisión cruzada, y (c) Sprint Cero completado con las tres validaciones ejecutadas. Saltarse cualquiera de los tres genera riesgo de construir sobre fundamentos no validados.
+
+El proyecto tiene todas las piezas necesarias para ser el primer producto de inteligencia política con composición mexicana integrada en el mercado. La ventana de oportunidad es real (elecciones 2027, endurecimiento INE sobre IA y fiscalización digital, madurez de mercado LatAm post-Milei y post-Sheinbaum). Los activos de MD Consultoría (relación MC CDMX, stack probado en proyectos adyacentes, capacidad de orquestación CEO-dirige-agentes) son diferenciales reales. Lo que falta es la disciplina de ejecución que este Plan Maestro formaliza.
+— Fin del Plan Maestro CRECE v2 versión 1.0 —
+Documento vivo. Actualizable mediante decisión formal en DECISIONS.md.
+MD Consultoría SC · Abril 2026
