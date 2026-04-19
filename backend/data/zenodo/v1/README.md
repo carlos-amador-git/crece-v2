@@ -17,8 +17,9 @@ description: >
   Marketing (Hootsuite, Rival IQ, Influencer Marketing Hub, Emplifi, Sprout
   Social) que no reflejan el comportamiento del universo político-gubernamental
   mexicano. Ver methodology.md para metodología completa y limitaciones.
-license: CC-BY-4.0
-access_right: open
+license: other-open
+access_right: restricted
+access_conditions: "Modelo híbrido — Track A (metodología + código) Apache 2.0 · Track B (valores calibrados CSV + _calibration_log.json) propietario MD Consultoría SC · Track C (teaser_citable_cells.md) CC BY 4.0. Ver LICENSE.md"
 keywords:
   - political-communication
   - mexico
@@ -43,7 +44,7 @@ language: spa
 
 **Estado:** v1 preliminar · calibración abierta
 **Fecha de corte:** 2026-04-19
-**Licencia:** [CC BY 4.0](./LICENSE.md) (permite uso comercial derivado con atribución)
+**Licencia:** [modelo híbrido 3 tracks](./LICENSE.md) · Track A metodología Apache 2.0 · Track B valores calibrados PROPIETARIO · Track C teaser 2-3 celdas CC BY 4.0
 **DOI:** TBD (asignable en publicación)
 
 ---
@@ -55,7 +56,8 @@ language: spa
 | `README.md` | Este archivo · frontmatter Zenodo + resumen ejecutivo |
 | `methodology.md` | Metodología completa (9 secciones · 6-10 páginas) |
 | `benchmarks_er_politicos_mx_v1.csv` | Matriz 5×5 estrato × plataforma con percentiles p25/p50/p75 e IC 95% |
-| `LICENSE.md` | Texto completo de CC BY 4.0 |
+| `LICENSE.md` | Modelo híbrido 3 tracks (Apache 2.0 · propietario · CC BY 4.0 teaser) |
+| `teaser_citable_cells.md` | 3 celdas representativas para citación académica CC BY 4.0 |
 | `_calibration_log.json` | Metadata de la ejecución del script generador (timestamp · n_dirigentes · n_observaciones · celdas_validated) |
 | `code.zip` | **NO se incluye físicamente** · se genera automáticamente via `scripts/generate_zenodo_bundle.py` del repo fuente (ver §Reproducibilidad) |
 
@@ -140,7 +142,7 @@ El script consume `social_posts` + `social_profile_snapshots` + `dirigentes.estr
 
 - **Maintainer:** MD Consultoría SC (`info@mdconsultoria-ti.org`)
 - **Issues / contribuciones:** https://github.com/MarxCha/crece-v2/issues
-- **Licencia:** [CC BY 4.0](./LICENSE.md) — cite este dataset como se indica arriba y está permitido cualquier uso derivado incluyendo comercial.
+- **Licencia:** [modelo híbrido](./LICENSE.md) — metodología abierta Apache 2.0; valores calibrados propietarios MD Consultoría SC (acceso vía producto CRECE v2); 3 celdas teaser citables bajo CC BY 4.0 (ver `teaser_citable_cells.md`).
 
 ---
 

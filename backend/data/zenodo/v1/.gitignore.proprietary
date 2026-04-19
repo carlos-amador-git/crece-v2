@@ -1,0 +1,6 @@
+# Track B — proprietary calibrated values (LICENSE.md)
+# Keep in git for now during development, but exclude from Zenodo public publication.
+# When publishing to Zenodo, the publication bundle must exclude these paths:
+#   benchmarks_er_politicos_mx_v1.csv
+#   _calibration_log.json
+# This file is a reminder; no actual git exclusion (we version-control for internal audit).
