@@ -1,91 +1,101 @@
-# SPRINT-CURRENT — [nombre del sprint activo]
+# SPRINT-CURRENT — Sprint S0 Validación de Supuestos (calibrado v2.4)
 
-**Función:** documento vivo del sprint actualmente en ejecución. Se actualiza al **inicio** de cada sprint con el scope específico de ese sprint. Se actualiza **diariamente** durante el sprint con progreso. Al cierre del sprint, su contenido se archiva en `.context/archive/sprint-sN-YYYY-MM-DD.md` y este documento se reescribe para el siguiente sprint.
+**Función:** documento vivo del sprint actualmente en ejecución. Cualquier sesión Claude Code que trabaje en desarrollo lee PRIMERO este documento después de NORTH-STAR.
 
-**Regla:** cualquier sesión de Claude Code que trabaje en desarrollo activo lee PRIMERO este documento después de NORTH-STAR. Si lo que propone hacer NO está en este documento, lo consulta con CEO antes de ejecutar (evita deriva de sprint).
-
----
-
-## Sprint activo: Sprint S0 — Validación de Supuestos (pendiente arranque CEO post-merge v2.3)
-
-**Status del proyecto:** arco estratégico cerrado ✅ con dos iteraciones de cross-audit (PR #16 v2.2 mergeado 2026-04-19 + v2.3 post-Gemini Puerta 2 en PR separado pendiente de merge). MASTER v2.3 integra 3 decisiones nuevas (D-16/D-17/D-18) + 6 ajustes críticos Gemini + 3 mejoras diferidas documentadas + protocolo §9.8 dos puertas. 3 documentos canónicos vivos (NORTH-STAR · SPRINT-CURRENT · HANDOFF). Fase de ejecución oficialmente abierta.
-
-**Próximo trabajo inmediato:** **Sprint S0 — Validación de Supuestos ampliado con T0.4** (ver plantilla abajo). Arranque pendiente de autorización CEO tras merge del MASTER v2.3.
-
-**Cambios del MASTER v2.3 que afectan Sprint S0:**
-- **Nueva tarea T0.4 Validación ciega Plutchik Gemma vs humano** con criterio aceptance ≥75% coincidencia emoción dominante (Gemini audit #09)
-- Estimación total Sprint S0: expandida de 5-6h a **6-8h**
-- Sigue siendo prerequisito duro antes de Sprint S1
-
-**Cambios downstream (Sprint S1 y S4) que hay que conocer antes de arrancar S0:**
-- Sprint S1 expandido a 5-6h con: migración `recomendaciones_plan_ia` (D-17) + endpoint ARCO purge-hash (D-18) + Ollama failover health-check
-- Sprint S4 expandido a 6-8 días con: ciclo 5 fases Plan IA + admin panel review Human-in-the-loop + UI cliente decisión + servicios seguimiento/cierre + bloques #10.5 #10.7
-- Nuevo timeline MVP: **4-5 semanas** (aprobación CEO parámetro 1 D-17)
+**Sprint actual:** S0 · **Status:** ⏸ Pending · **Arranque requiere autorización CEO explícita** post-merge MASTER v2.4
 
 ---
 
-## Template para cuando arranque Sprint 0 (copiar y rellenar)
+## Contexto pre-arranque
 
-### Sprint S0 — Validación de Supuestos
+MASTER v2.4 calibró Sprint S0 tras **audit operativo Gemini 2026-04-19** + **matices CEO**. Expansión de 4 tareas/6-8h → **6 tareas/8-10h** (paralelización óptima ~7h). Todos los criterios de acceptance son cuantitativos binarios — veredicto pass/fail sin ambigüedad interpretativa.
 
-**Duración estimada:** 5-6h
-**Fecha inicio:** [YYYY-MM-DD]
-**Fecha cierre objetivo:** [YYYY-MM-DD]
-**Owner:** [sesión Joy o equivalente]
+## Requisito transversal de reproducibilidad
 
-**Objetivo en una frase:** validar que los benchmarks y supuestos de la investigación aplican a la data real antes de codificarlos.
+Cada reporte generado en S0 debe incluir:
+- `system_prompt` exacto utilizado
+- `temperature=0.0` (recomendado para validación determinista)
+- Modelo + versión específicos (ej. `gemma3:12b-q4_K_M`)
+- Paths absolutos de inputs/outputs
+- Seeds donde aplique
 
-**Bloques del inventario tocados:** ninguno directamente — es preparación para Sprint 1.
-
-**Tareas (3):**
-
-- [ ] **T0.1** Crear 3 documentos canónicos en `.context/`:
-  - [ ] `NORTH-STAR.md` — ✅ ya creado 2026-04-19
-  - [ ] `SPRINT-CURRENT.md` — este documento ✅ ya creado 2026-04-19
-  - [ ] `HANDOFF.md` protocolo 5 preguntas — ✅ ya creado 2026-04-19
-  - [ ] Verificar que los 3 están en repo y son legibles por cualquier sesión nueva
-
-- [ ] **T0.2** Validar benchmarks ER por estrato político contra data real
-  - [ ] Identificar estrato de cada uno de los 8 dirigentes piloto (Piña, Solano, Pineda, Nolasco, Jiménez, Cravioto, Ballesteros, Máynez)
-  - [ ] Script que calcula ER real últimos 90 días por dirigente × plataforma (X, IG, FB, TikTok, YT)
-  - [ ] Comparar output vs tabla Gemini DR (Nano 6-10% · Micro 3.5-6% · Mid 2-4% · Macro 1.5-2.5% · Mega 1-2%)
-  - [ ] Output: `backend/research/2026-04-19/benchmark_validation_er_strata.md` con tabla actual vs esperado + delta
-  - [ ] Decisión: si delta >30% → recalibrar benchmarks antes de Sprint 2. Si <30% → adoptar tabla con pequeños ajustes
-
-- [ ] **T0.3** Pipeline CIB básico contra post Piña 7357909824622890245 (200 comments)
-  - [ ] Correr infraestructura NLP actual sobre los 200 comments con detección de patrones ITESO básicos: clustering temporal (>50% comments primera hora), similaridad léxica (cosine embeddings), account age inferida
-  - [ ] Output: `backend/research/2026-04-19/cib_pilot_test.md` con 200 rows marcados + tasa detección CIB + porcentaje falsos positivos estimado
-  - [ ] Decisión: infraestructura actual suficiente para MVP Tier 2 #12? O requiere scaffolding adicional en Sprint 3?
-
-- [ ] **T0.4** Validación ciega Plutchik Gemma vs humano *(añadida por Gemini audit Puerta 2 #09)*
-  - [ ] Seleccionar 100 comments aleatorios del dataset de 3,709 posts NLP ya procesado
-  - [ ] Clasificar ciegamente a 6 emociones Plutchik (trust/anger/joy/fear/sadness/disgust) por Gemma 3:12b con prompt Plutchik dedicado
-  - [ ] Clasificar los mismos 100 por 2-3 anotadores humanos MD independientes
-  - [ ] Calcular Cohen's kappa Gemma vs majority vote humano + matriz de confusión
-  - [ ] Output: `backend/research/2026-04-19/plutchik_validation.md` con kappa + matriz + recomendación
-  - [ ] **Criterio aceptance ≥75% coincidencia en emoción dominante.** Si falla → bloque #05 requiere re-prompt o modelo superior antes de Sprint S2. Si pasa → #05 aprobado para construcción Sprint S2
-
-**Criterio de acceptance del Sprint:**
-- 3 documentos canónicos existen en `.context/` ✅
-- Tabla validada ER por estrato con 8 dirigentes publicada
-- Reporte CIB piloto publicado con % detección + % falsos positivos + recomendación para Sprint 3
-
-**Riesgos / bloqueadores:**
-- Si el API de Apify rate-limitea el recalculo ER, extender a 2 días con rotación
-- Si los 200 comments Piña no se pueden re-cargar, usar subset desde BD actual
-
-**HANDOFF al cierre:** responder las 5 preguntas en `HANDOFF.md` formato.
+Sin estos metadatos, los reportes quedan huérfanos en 3 meses e inauditables.
 
 ---
 
-## Protocolo de actualización de este documento
+## Tareas (6)
 
-1. **Al inicio de cada sprint:** copiar plantilla, rellenar objetivo/tareas/criterios, fijar fechas
-2. **Durante el sprint:** marcar `- [x]` las tareas completadas, añadir notas bajo cada tarea si hay hallazgos
-3. **Al cerrar el sprint:**
-   - Verificar que todas las tareas están completas (o documentar excepciones)
-   - Mover contenido a `.context/archive/sprint-sN-YYYY-MM-DD.md`
-   - Resetear este documento con la plantilla del siguiente sprint (S1, S2, etc.)
-   - Actualizar `MASTER §2.1 Snapshot operativo` con "último sprint cerrado" y "próximo paso"
+### T0.1 — Documentos canónicos ✅ COMPLETADA 2026-04-19
+- [x] `.context/NORTH-STAR.md` creado
+- [x] `.context/SPRINT-CURRENT.md` creado
+- [x] `.context/HANDOFF.md` creado
 
-**Nunca hay 2 sprints activos simultáneos en este documento.** Un sprint a la vez, disciplina.
+### T0.2 — Validar benchmarks ER por estrato contra data real
+- [ ] Calcular ER real últimos 90 días para los 8 dirigentes × 5 plataformas (Piña, Solano, Pineda, Nolasco, Jiménez, Cravioto, Ballesteros, Máynez)
+- [ ] Comparar vs tabla Gemini DR (Nano 6-10% · Micro 3.5-6% · Mid 2-4% · Macro 1.5-2.5% · Mega 1-2%)
+- [ ] **Output obligatorio:** `backend/research/2026-04-19/settings_strata.json` con `{dirigente_id: estrato}` (Sprint S1 T2 lo consume DIRECTO)
+- [ ] **Output complementario:** `backend/research/2026-04-19/benchmark_validation_er.md` con tabla actual vs esperada + delta
+- [ ] **Criterio:** si delta >30% en ≥3 dirigentes → recalibrar rangos en JSON. Si <30% → adoptar tabla Gemini DR
+
+### T0.3 — Pipeline CIB contra post Piña 200 comments
+- [ ] Etiquetar manualmente los 200 comments como CIB/no-CIB (baseline humano)
+- [ ] Correr infraestructura NLP + patrones ITESO: clustering temporal (>50% 1ra hora), similaridad léxica cosine, account age
+- [ ] **Criterio binario pass/fail:** detectar **>60%** de los comments marcados CIB con **<15% falsos positivos**
+- [ ] Output: `backend/research/2026-04-19/cib_pilot_test.md` con 200 rows + tasa detección + % FP + decisión (¿infraestructura actual suficiente para bloque #12 MVP o requiere scaffolding S3?)
+
+### T0.4 — Validación ciega DUAL Plutchik + Topics (Gemma vs 3 anotadores humanos)
+- [ ] Seleccionar 100 comments aleatorios del dataset 3,709 posts NLP procesado
+- [ ] Clasificar con Gemma 3:12b (temperature=0.0, prompt dedicado) en dos dimensiones: **(a)** 6 emociones Plutchik + **(b)** 1-3 topics del seed de 12
+- [ ] Clasificar los mismos 100 por **3 anotadores humanos estrictos** (MD Consultoría) con majority vote 2/3 para desempate
+- [ ] Calcular Cohen's kappa Plutchik Gemma vs majority + precisión Topics Gemma vs majority + matrices de confusión
+- [ ] **Criterios binarios:**
+  - Plutchik emoción dominante: **Kappa ≥0.65** (Acuerdo Sustancial)
+  - Topic principal: precisión **≥70%** vs majority vote
+- [ ] **Fallback si Kappa 0.5-0.65:** NO bloquear S1. Se activa **T1.9** en Sprint S1 con criterio de cierre binario (ver §5 Sprint S1 en MASTER)
+- [ ] Output: `backend/research/2026-04-19/plutchik_topics_validation.md` con matrices × 2 dimensiones + kappa + precisión + decisión go/no-go
+
+### T0.5 — Validación lógica `data_fidelity_tier` (NUEVA por Gemini + matiz CEO)
+- [ ] Construir matriz 8 dirigentes × 5 plataformas (X, IG, FB, TikTok, YouTube) = **40 celdas** con tier por celda
+- [ ] Especificar algoritmo de decisión: qué condiciones de data disponible disparan cada tier **por plataforma** (no por perfil global)
+- [ ] Documentar casos edge (dirigente sin presencia scrapeable = N/A, dirigente firmado = T3 directo, cuenta pública vs business/creator)
+- [ ] **Output:** `backend/research/2026-04-19/FIDELITY_LOGIC.md` con matriz explícita + algoritmo formalizado + tabla de combinaciones observadas + casos edge
+- [ ] **Criterio acceptance:** los 8 dirigentes tienen tier explícito en las 5 plataformas (40/40 celdas) + algoritmo sin ambigüedad + **aprobación CEO del documento antes de codificar en S1 T1**
+
+### T0.6 — Smoke test failover Ollama Coolify (NUEVA por Gemini)
+- [ ] `curl` al endpoint Ollama Coolify VPS (§8.6 MASTER): confirmar latencia + disponibilidad + modelo cargado
+- [ ] Medir latencia gemma3:12b en Coolify CPU-only (histórico ~17 min — validar vigente)
+- [ ] Output: `backend/research/2026-04-19/coolify_failover_smoke.md` con medición p50/p95 + disponibilidad + recomendación: ¿failover directo vs pre-warm + SLA timeout para health-check S1?
+
+---
+
+## Paralelización operativa (recomendada NO obligatoria)
+
+Matiz CEO sobre disponibilidad real de anotadores:
+- T0.4 anotación humana (~3h hombre × 3 = ~1h clock paralelizable) puede correr en paralelo con T0.2 script ER + T0.6 smoke test
+- Si los 3 anotadores tienen disponibilidad coincidente → sprint cabe en **~7h clock**
+- Si ejecución serial → **~9-10h clock**
+- Decisión logística del ejecutor según el día
+
+---
+
+## Criterio acceptance del Sprint S0
+
+Sprint S0 se declara completo cuando:
+1. ✅ T0.1 completada (ya hecho)
+2. T0.2: `settings_strata.json` publicado + delta <30% o recalibración aplicada
+3. T0.3: >60% detección CIB con <15% FP (o decisión escalada documentada)
+4. T0.4: Kappa Plutchik ≥0.65 + precisión Topics ≥70% (o fallback T1.9 documentado)
+5. T0.5: `FIDELITY_LOGIC.md` aprobado por CEO
+6. T0.6: medición Coolify documentada con recomendación SLA
+
+Con 6/6 → arranque Sprint S1 autorizado.
+
+---
+
+## Protocolo de actualización
+
+1. **Al inicio de cada tarea:** marcar `- [ ]` → `- [x]` en curso, añadir notas debajo
+2. **Al completar tarea:** `- [x]` + link al output generado
+3. **Al cerrar sprint:** rellenar `HANDOFF.md` con 5 preguntas + archivar este SPRINT-CURRENT a `.context/archive/sprint-s0-YYYY-MM-DD.md` + resetear para Sprint S1
+
+**Nunca hay 2 sprints activos en este documento.**

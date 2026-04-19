@@ -67,7 +67,7 @@ CRECE v2 no atiende a "el político" en singular. Sirve a cuatro perfiles distin
 | **Rama actual** | `feat/eval-benchmark-v1` |
 | **Último commit main** | `3921f10` (calibración XLS) · `a919c5f` (cierre 5 redes scrapers) |
 | **PR abierto** | #12 — Sprint B eval/benchmark + encuestas scrapers (no mergeado aún) |
-| **Fase del proyecto** | **Pre-PRD técnico**: MASTER v2.3 estratégico aprobado por **dos puertas independientes** (Claude.ai Opus 4.7 Puerta 1 + Gemini CLI Puerta 2) con 3 decisiones nuevas D-16/D-17/D-18 + 6 ajustes críticos Gemini integrados. Pendiente: redactar PRD técnico separado con esquemas SQL/endpoints/tests, luego Sprint S0 |
+| **Fase del proyecto** | **Pre-PRD técnico**: MASTER v2.4 — Sprint S0 calibrado post-audit Gemini operativo (6 tareas, 8-10h, umbrales cuantitativos binarios, FIDELITY_LOGIC plataforma-por-plataforma, fallback T1.9 con criterio de cierre). §9.8.1 formaliza 2 dominios empíricos Puerta 2. Listo para arranque S0 con autorización CEO explícita |
 | **Último trabajo cerrado** | Triangulación NLP Layer 2 (3-way Claude+Gemini+Gemma sobre 60 comments) — Gemma3:12b validado para producción |
 | **Investigación estratégica cerrada** | 4 fuentes: `sc:research`, `gemini -p`, Perplexity, Gemini Deep Research (96 fuentes académicas). Síntesis en `backend/research/2026-04-19/SINTESIS-4-FUENTES.md` |
 | **Próximo paso documentado** | Ejecutar Sprint 0 (validación de supuestos), luego roadmap §5 |
@@ -513,19 +513,61 @@ oauth_meta_expires_at TIMESTAMP NULL;
 
 **6 sprints** secuenciales (+1 paralelo). Total **4-5 semanas** para MVP Tier 1+2 (**expansión aprobada CEO 2026-04-19 parámetro 1 D-17** para incluir cierre de ciclo del Plan IA). Sprint 0 de validación previa aprobado CEO 2026-04-19.
 
-### Sprint S0 — Validación de Supuestos (6-8h, expandido por Gemini #09)
-- **Status:** ⏸ Pending · **próximo en ejecutar** tras aprobación PRD
-- **Razón de existir:** saltárselo es el error clásico de empezar a construir sobre fundamentos no validados. Si los benchmarks ER por estrato de Gemini Deep Research no corresponden a nuestra data real, todo el Sprint S2 arranca sobre falsa premisa. Además, si Gemma 3:12b no clasifica las 6 emociones Plutchik con precisión aceptable, el bloque #05 requiere rediseño antes de Sprint S2
-- **Trade-off rigor vs velocidad:** 6-8h de investigación evitan días de retrabajo. **Decisión CEO 2026-04-19: ejecutar sin reservas**
-- **Tareas (4):**
-  1. **Crear documentos canónicos faltantes** en `.context/`:
-     - `NORTH-STAR.md` — ✅ creado 2026-04-19
-     - `SPRINT-CURRENT.md` — ✅ creado 2026-04-19
-     - `HANDOFF.md` — ✅ creado 2026-04-19
-  2. **Validar benchmarks ER por estrato contra data real:** tomar los 8 dirigentes actualmente scrapeados (Piña, Solano, Pineda, Nolasco, Jiménez, Cravioto, Ballesteros, Máynez) y calcular sus ER reales últimos 90 días en cada plataforma, comparar contra tabla Gemini DR (Nano 6-10% · Micro 3.5-6% · Mid-Tier 2-4% · Macro 1.5-2.5% · Mega 1-2%). Si hay desviación >30%, recalibrar antes de Sprint S2
-  3. **Correr pipeline CIB básico contra post Piña 7357909824622890245** (donde ya existen 200 comments clasificados) para medir si los patrones ITESO de Maestros de Ceremonias + Cuentas Coro son detectables con infraestructura NLP actual o requieren desarrollo adicional. Output: `backend/research/2026-04-19/cib_pilot_test.md` con 200 rows marcados + tasa detección + falsos positivos estimados
-  4. **T0.4 Validación ciega Plutchik Gemma vs humano** *(añadida por Gemini audit #09)*: tomar 100 comments aleatorios del dataset de 3,709 posts con NLP ya procesado, hacer clasificación ciega a 6 emociones Plutchik por (a) Gemma 3:12b con prompt Plutchik + (b) 2-3 anotadores humanos MD. Calcular Cohen's kappa Gemma vs majority vote humano. **Criterio aceptance ≥75% coincidencia en emoción dominante.** Si falla, el bloque #05 requiere re-prompt o modelo superior antes de Sprint S2. Output: `backend/research/2026-04-19/plutchik_validation.md` con matriz de confusión + kappa + recomendación
-- **Criterio acceptance del sprint:** 3 documentos canónicos creados ✅ · tabla calibrada ER por estrato para 8 dirigentes · reporte piloto CIB con % detección y baseline de falsos positivos · reporte validación Plutchik Gemma vs humano con kappa ≥0.75
+### Sprint S0 — Validación de Supuestos (8-10h, calibrado por Gemini audit operativo 2026-04-19)
+- **Status:** ⏸ Pending · **próximo en ejecutar** tras aprobación PRD + autorización CEO explícita
+- **Razón de existir:** saltárselo es el error clásico de empezar a construir sobre fundamentos no validados. Si los benchmarks ER no corresponden a data real, si Gemma no clasifica Plutchik con precisión aceptable, si la lógica `data_fidelity_tier` no está validada por plataforma, todo S1-S2 arranca sobre falsa premisa
+- **Trade-off rigor vs velocidad:** 8-10h de investigación evitan semanas de retrabajo. **Decisión CEO 2026-04-19 original + calibración CEO 2026-04-19 post Gemini audit: ejecutar las 6 tareas sin reservas**
+- **Requisito transversal de reproducibilidad:** cada reporte de S0 debe incluir el `system_prompt` exacto utilizado, `temperature=0.0` (recomendado para validación determinista), modelo+versión exactos, paths absolutos, seeds. Reportes huérfanos en 3 meses son inauditables
+- **Tareas (6):**
+
+  **T0.1 — Documentos canónicos** ✅ completados 2026-04-19:
+  - `NORTH-STAR.md`, `SPRINT-CURRENT.md`, `HANDOFF.md` creados y vivos en repo
+
+  **T0.2 — Validar benchmarks ER por estrato contra data real**
+  - Tomar los 8 dirigentes (Piña, Solano, Pineda, Nolasco, Jiménez, Cravioto, Ballesteros, Máynez) y calcular ER reales últimos 90 días en cada plataforma
+  - Comparar contra tabla Gemini DR (Nano 6-10% · Micro 3.5-6% · Mid 2-4% · Macro 1.5-2.5% · Mega 1-2%)
+  - **Output estructurado obligatorio** *(Gemini audit #5)*: `backend/research/2026-04-19/settings_strata.json` con mapeo explícito `{dirigente_id: estrato_politico}` que Sprint S1 T2 consume DIRECTAMENTE (elimina ingreso manual erróneo)
+  - **Output complementario:** `backend/research/2026-04-19/benchmark_validation_er.md` con tabla actual vs esperada + delta
+  - **Criterio acceptance:** si delta >30% en ≥3 dirigentes → recalibrar rangos en el JSON antes de cerrar S0. Si <30% → adoptar tabla Gemini DR
+
+  **T0.3 — Pipeline CIB contra post Piña 7357909824622890245 (200 comments)**
+  - Correr infraestructura NLP actual + detección patrones ITESO: clustering temporal (>50% comments 1ra hora), similaridad léxica (cosine embeddings), account age inferida
+  - Etiquetado manual previo del baseline CIB sobre los 200 comments (humano marca cuáles considera CIB)
+  - **Criterio acceptance cuantitativo** *(Gemini audit #2, crítico)*: **Pass si detecta >60% de los comments marcados manualmente como CIB con <15% falsos positivos**. Sin umbral binario, la tarea se declara "completa" sin veredicto
+  - Output: `backend/research/2026-04-19/cib_pilot_test.md` con los 200 rows + tasa detección + % falsos positivos + decisión: ¿infraestructura actual suficiente para bloque #12 MVP, o requiere scaffolding adicional en S3?
+
+  **T0.4 — Validación ciega dual Plutchik + Topics (Gemma vs 3 anotadores humanos)**
+  - **Scope dual ampliado** *(Gemini audit #4, crítico)*: cada uno de los 100 comments aleatorios (del dataset 3,709 posts NLP procesado) se clasifica por Gemma 3:12b Y humanos en DOS dimensiones simultáneas: (a) 6 emociones Plutchik; (b) 1-3 topics del seed de 12 (seguridad, economía, salud, educación, movilidad, gobernanza, denuncia, autopromocion, personal, cultura, medio_ambiente, otros)
+  - **Razón del dual:** S1 T5 requiere Gemma para topic extraction. Validar ambos en la misma ronda evita repetir validación en S1
+  - **Anotadores: 3 estrictamente** (Gemini audit #5, crítico) con majority vote 2/3 para desempate. NO "2-3" — queda fijo en 3
+  - **Umbrales recalibrados por Gemini audit #5 para 6 categorías + comments políticos MX cortos + ambigüedad sarcasmo/enojo:**
+    - Plutchik emoción dominante: **Kappa ≥0.65 (Acuerdo Sustancial Landis & Koch)** — NO 0.75 original. 0.75 es idealista, genera falsos negativos
+    - Topic principal: precisión ≥70% contra majority vote humano
+  - **Fallback banda 0.5-0.65 Plutchik** *(Gemini audit #6 + matiz operativo CEO):* NO bloquear S1. Añadir **T1.9 Refinamiento de prompt Plutchik** al Sprint S1 con **criterio de cierre explícito**:
+    - Si post-refinamiento Kappa sube a ≥0.65 → procede Sprint S2 con #05
+    - Si post-refinamiento Kappa queda <0.65 → **reabre decisión estratégica**: ¿bloque #05 Plutchik viable con stack actual (Gemma 3:12b) o requiere reemplazo (gemma3:27b, llama3.3:70b, Claude API premium)? CEO decide
+    - Sin este criterio de cierre, T1.9 se vuelve ciclo iterativo sin fin. **OBLIGATORIO**
+  - Output: `backend/research/2026-04-19/plutchik_topics_validation.md` con matriz confusión × 2 dimensiones + kappa Plutchik + precisión Topics + majority vote + decisión go/no-go
+
+  **T0.5 NUEVA — Validación lógica `data_fidelity_tier`** *(Gemini audit #7, crítico + matiz operativo CEO #2)*
+  - Validar algoritmo de asignación T1/T2/T3 contra los 8 dirigentes
+  - **Granularidad obligatoria plataforma-por-plataforma:** el tier efectivo puede variar por plataforma dentro del mismo dirigente. Ej: Piña podría ser T2 en X (burner cookie permite comments profundos) pero T1 en TikTok (solo público) y T3 en Instagram (si firmó OAuth). La lógica NO es "tiene comments = T1, no tiene = T2" en el perfil global
+  - **Output: `backend/research/2026-04-19/FIDELITY_LOGIC.md`** con:
+    - Matriz explícita 8 dirigentes × 5 plataformas (X, IG, FB, TikTok, YouTube) con tier por celda
+    - Algoritmo de decisión: qué condiciones de data disponible disparan cada tier por plataforma
+    - Tabla de combinaciones observadas en el piloto actual + tier efectivo resultante
+    - Casos edge documentados (dirigente sin presencia scrapeable = N/A, dirigente firmado = T3 directo)
+  - **Criterio acceptance:** los 8 dirigentes tienen tier explícito por las 5 plataformas (40 celdas) + algoritmo formalizado sin ambigüedad + aprobación CEO del documento antes de codificar en S1 T1
+
+  **T0.6 NUEVA — Smoke test failover Ollama Coolify** *(Gemini audit #8, mejora)*
+  - `curl` al endpoint Ollama Coolify VPS (§8.6): confirmar latencia + disponibilidad + modelo cargado
+  - Medir latencia actual gemma3:12b en Coolify CPU-only (documentado ~17 min en benchmark histórico — validar vigente)
+  - Output: `backend/research/2026-04-19/coolify_failover_smoke.md` con medición p50/p95 + disponibilidad + decisión: ¿failover directo vs necesidad de pre-warm + recomendación timeout SLA para el health-check de S1
+
+- **Paralelización operativa sugerida** *(Gemini audit #9, mejora — recomendada NO obligatoria, matiz CEO sobre disponibilidad real de anotadores):* T0.4 anotación humana (~3h hombre × 3 = paralelizable en ~1h clock) puede correr en paralelo con T0.2 script ER + T0.6 smoke test. Si los 3 anotadores tienen disponibilidad coincidente, el sprint cabe en ~7h clock. Si no, ejecución serial = ~9-10h clock. Decisión logística del ejecutor según el día
+
+- **Criterio acceptance del sprint:** 6 tareas completas · outputs estructurados publicados · T0.2 settings_strata.json consumible · T0.3 umbral >60%/<15% cumplido o decisión escalada · T0.4 Kappa ≥0.65 Plutchik + precisión ≥70% Topics (o fallback T1.9 documentado con criterio de cierre) · T0.5 FIDELITY_LOGIC.md aprobado por CEO · T0.6 medición Coolify documentada
+- **Estimación:** 8-10h clock (paralelización óptima ~7h)
 - **Dependencias:** ninguna. Bloquea Sprint S1
 
 ### Sprint S1 — Backend Foundations (5-6h, expandido por D-17 + D-18)
@@ -539,9 +581,17 @@ oauth_meta_expires_at TIMESTAMP NULL;
   5. Topic extraction básica: servicio LLM (**Gemma 3:12b local por D-16** — NO Claude API como default) que extrae 1-3 topics por post (seed 8-12 topics fijos: seguridad, economía, salud, educación, movilidad, gobernanza, denuncia, autopromocion, personal)
   6. **Migration Alembic adicional** *(por D-17)*: crear tabla `recomendaciones_plan_ia` con schema completo descrito en §6.3.3 (18 columnas + 3 índices compuestos). Prepara el terreno para Sprint S4
   7. **Endpoint ARCO LFPDPPP** *(por D-18, Gemini audit #04)*: `POST /api/v1/admin/compliance/purge-hash` que elimina recursivamente comments + embeddings + vectores asociados a un hash SHA256 de autor. Audit log obligatorio de cada purga. Satisface derechos ARCO selectivos (obligación legal pendiente)
-  8. **Ollama clúster failover** *(por Gemini audit #06)*: health-check desde backend hacia Ollama local Mac M4 cada 60s. Si falla >3 min, switch automático a Ollama Coolify (VPS, CPU-only, degradado) para mantener Plan IA disponible. Evita SPOF de hardware único
-- **Criterio acceptance:** los 8 dirigentes tienen `data_fidelity_tier='T1'` + estrato + competidores. Cron corre 1 vez manual y escribe snapshot. Muestra de 50 posts con topics asignados. Tabla `recomendaciones_plan_ia` creada. Endpoint purge-hash con al menos 1 test de purga completa. Failover Ollama con health-check activo.
-- **Estimación:** 5-6h (+1h D-17 + 1-2h D-18 + 30min failover)
+  8. **Ollama clúster failover** *(por Gemini audit #06)*: health-check desde backend hacia Ollama local Mac M4 cada 60s. Si falla >3 min, switch automático a Ollama Coolify (VPS, CPU-only, degradado) para mantener Plan IA disponible. Evita SPOF de hardware único. Timeout SLA calibrado por T0.6 smoke test
+  9. **T1.9 CONDICIONAL — Refinamiento de prompt Plutchik** *(se activa SOLO si T0.4 Kappa quedó entre 0.5 y 0.65)*:
+     - Iterar el prompt Plutchik de Gemma 3:12b: mejores ejemplos few-shot, instrucción explícita sobre ambigüedad sarcasmo/enojo MX, formato de respuesta más constrained
+     - Re-correr validación ciega contra los mismos 100 comments del T0.4 + misma metodología 3 anotadores
+     - **Criterio de cierre binario y obligatorio** *(matiz operativo CEO 2026-04-19)*:
+       - Si post-refinamiento Kappa sube a **≥0.65** → cerrar T1.9 y procede Sprint S2 con bloque #05 usando el nuevo prompt
+       - Si post-refinamiento Kappa queda **<0.65** → **reabrir decisión estratégica formal**: bloque #05 Plutchik es viable con stack actual (Gemma 3:12b) o requiere reemplazo por modelo superior (gemma3:27b, llama3.3:70b local, o Claude API premium en tier opcional). CEO decide con base en reporte de T1.9
+       - Sin este criterio binario, T1.9 se vuelve ciclo iterativo sin fin — **NO aceptable**
+     - Estimación: 2-3h si se activa. Si T0.4 pasó ≥0.65 directo, T1.9 NO se ejecuta
+- **Criterio acceptance:** los 8 dirigentes tienen `data_fidelity_tier='T1'` + estrato + competidores. Cron corre 1 vez manual y escribe snapshot. Muestra de 50 posts con topics asignados. Tabla `recomendaciones_plan_ia` creada. Endpoint purge-hash con al menos 1 test de purga completa. Failover Ollama con health-check activo. Si T1.9 se activó: criterio de cierre binario resuelto.
+- **Estimación:** 5-6h base (+2-3h si T1.9 se activa = 7-9h potencial)
 - **Dependencias:** Sprint S0 completo
 
 ### Sprint S2 — Diagnóstico Tier 1 (Core MVP)
@@ -1018,13 +1068,32 @@ Complementa §9.1-9.3 con disciplinas adicionales heredadas del Plan Maestro §8
 
 **Regla:** cualquier cambio estructural futuro al MASTER (nueva sección, cambio de arquitectura, decisión crítica D-XX) pasa por este protocolo antes del commit. Cambios menores (typo, broken link, reordenamiento cosmético) quedan exentos.
 
-**Ejemplo histórico validado:** v2.3 integró 4 hallazgos críticos Gemini (#04 ARCO, #05 reconciliación T1→T3, #06 SPOF Mac M4, #08 human-in-the-loop) que Puerta 1 no detectó. Sin Puerta 2, esos gaps habrían salido a producción.
+### 9.8.1 Dominios empíricos observados de Puerta 2 Gemini (2 iteraciones validadas)
+
+Observación CEO 2026-04-19 post-audit Sprint S0: Gemini como Puerta 2 captura sistemáticamente al menos **dos dominios distintos de gaps** que Puerta 1 no detecta:
+
+| Dominio | Iteración | Ejemplos concretos |
+|---|---|---|
+| **Rigor de ingeniería, operación y compliance** | v2.3 (audit MASTER completo) | #04 endpoint ARCO LFPDPPP · #05 reconciliación series tiempo T1→T3 · #06 SPOF Mac M4 único · #08 Human-in-the-loop obligatorio |
+| **Rigor de criterios medibles sin ambigüedad** | v2.4 (audit Sprint S0 operativo) | T0.3 umbral CIB cuantitativo (>60%/<15% FP) · T0.4 Kappa 0.75 idealista → 0.65 realista · T0.4 validación dual Plutchik+Topics · T0.5 FIDELITY_LOGIC por plataforma · T0.4 fallback T1.9 con criterio de cierre binario |
+
+**Patrón:** Puerta 1 valida "el documento es coherente y argumenta bien"; Puerta 2 valida "el documento es ejecutable sin generar discusión interpretativa". Son dominios complementarios, no jerárquicos.
+
+**Implicación para futuras iteraciones:** al preparar el prompt de Puerta 2, pedir explícitamente que audite tanto (a) rigor de ingeniería/compliance como (b) criterios medibles binarios. Estos dominios pueden crecer a 3-4 con más iteraciones — documentar aquí cuando aparezcan.
+
+**Regla actualizada:** cualquier cambio estructural futuro al MASTER pasa por este protocolo antes del commit. Cambios menores (typo, broken link, reordenamiento cosmético) quedan exentos.
+
+**Ejemplos históricos validados:**
+- v2.3 integró 4 hallazgos críticos Gemini de **dominio (a)** que Puerta 1 no detectó
+- v2.4 integró 4 hallazgos críticos Gemini de **dominio (b)** que Puerta 1 no detectó en calibración operativa Sprint S0
+- Sin Puerta 2, ambos paquetes de gaps habrían salido a producción
 
 ---
 
 ## FIN DEL DOCUMENTO
 
 **Cambios históricos:**
+- **2026-04-19 v2.4** (Joy, post Gemini audit Sprint S0 operativo + matices CEO) — Calibración operativa del Sprint S0 antes de arranque: **4 hallazgos críticos Gemini aplicados** (T0.3 umbral CIB binario >60%/<15% FP · T0.4 ampliación a validación dual Plutchik+Topics · T0.4 Kappa 0.75 → 0.65 + 3 anotadores estrictos · T0.5 NUEVA FIDELITY_LOGIC plataforma-por-plataforma). **2 tareas nuevas** T0.5 (validación data_fidelity_tier) + T0.6 (smoke test failover Coolify). **4 mejoras Gemini** (output settings_strata.json · fallback T1.9 · smoke test Coolify · reproducibilidad system_prompt+temperature). **Matiz CEO 1:** T1.9 refinamiento prompt Plutchik con **criterio de cierre binario obligatorio** (≥0.65 sigue · <0.65 reabre decisión estratégica de reemplazo de modelo). **Matiz CEO 2:** FIDELITY_LOGIC.md debe ser granular plataforma-por-plataforma (8 dirigentes × 5 plataformas = 40 celdas + algoritmo formalizado). **Sprint S0 expandido 4→6 tareas · 6-8h → 8-10h** (paralelización óptima ~7h). **Nueva §9.8.1:** formalización de 2 dominios empíricos de Puerta 2 (ingeniería/compliance en v2.3 · criterios medibles en v2.4).
 - **2026-04-19 v2.3** (Joy, post-audit Puerta 2 Gemini CLI + propuesta consolidada D-17 CEO) — **3 decisiones nuevas** (D-16 provider LLM unificado · D-17 cierre de ciclo Plan IA con 4 parámetros CEO fijados · D-18 endpoint ARCO purge-hash). **6 ajustes críticos Gemini** aplicados: §3.6 Human-in-the-loop obligatorio · §4.5 data_origin_checkpoint reconciliación T1→T3 · §7.1 riesgo SPOF Mac M4 + mitigación Ollama Coolify failover · Sprint S0 T0.4 validación Plutchik ciega · Sprint S1 expansión con tabla recomendaciones + ARCO endpoint · Sprint S4 expansión con ciclo 5 fases. **2 bloques nuevos** #10.5 Seguimiento + #10.7 Memoria (32 bloques efectivos ahora). **3 mejoras diferidas** explícitamente documentadas en §6.4 con fecha objetivo. **Nueva §9.8** protocolo dos puertas independientes Claude.ai + Gemini para futuros cambios estructurales. **MVP timeline expandido 3-4s → 4-5s** aprobado CEO parámetro 1 D-17.
 - **2026-04-19 v2.2** (Joy, post-revisión terceros Claude.ai Opus 4.7) — 3 observaciones menores aplicadas: (1) nota aclaratoria en §3.1 sobre "T1 funciona pleno" = post-Sprint S1 completado; (2) §9.6 clarifica distinción MASTER estratégico vs PRD técnico separado (aún no redactado); (3) D-15 nueva formaliza Gemma 3:12b local como provider primario Plan IA en lugar de Claude API default. MASTER aprobado con distinción para commit.
 - **2026-04-19 v2.1** (Joy) — inserción verbatim §2.6 economía del comportamiento (Claude.ai Opus 4.7, 7 subsecciones) + actualización §8.7 con 6 citas académicas específicas (Kahneman 1979/2011, Cialdini 2006, Haidt 2012, Bail PNAS 2018, Tajfel 1979) + cierre D-08 en §6 + checkbox §6.1 economía conductual marcado ✅.
