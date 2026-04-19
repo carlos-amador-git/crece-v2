@@ -1,42 +1,38 @@
-# Dictamen 01 — Origen IM commercial de la tabla ER Gemini DR
+# Dictamen 01 — Benchmarks de engagement político MX: investigación empírica
 
-**Estado:** 🟡 **PENDIENTE de pegar contenido completo**
 **Fecha:** 2026-04-19
-**Autor:** *pendiente de especificar* (uno de los dos dictámenes convergentes recibidos por el CEO)
-**Dispara:** D-19 reescrita en MASTER §6 (reemplazo estructural de Gemini DR)
+**Autor de la investigación:** agente externo (3.5 horas, 58 tool uses, 18 fuentes con N declarado)
+**Archivo original de salida:** `analysis/2026-04-19-benchmarks-engagement-politicos-mx.md`
+**Motivo de archivo:** input para la decisión D-19 en CRECE_PRODUCT_MASTER.md §6
+**Conclusión estructural:** la tabla 1×5 de Gemini Deep Research es estructuralmente inadecuada para el dominio político mexicano
 
 ---
 
-## Hallazgo convergente (resumen CEO 2026-04-19)
+## Hallazgo crítico principal
 
-> La tabla 1×5 de estratos ER (Nano 6-10% · Micro 3.5-6% · Mid-Tier 2-4% · Macro 1.5-2.5% · Mega 1-2%) atribuida a Gemini Deep Research §2.2 se rastrea genealógicamente hasta benchmarks de **Influencer Marketing y branded social**:
->
-> - Hootsuite 2026 — blog.hootsuite.com/calculate-engagement-rate
-> - Rival IQ 2025 — Social Media Industry Benchmark Report
-> - Emplifi 2025 — Social Media Benchmarks (tabla por industria y tamaño)
-> - Sprout Social 2025 — Social media benchmarks by industry
->
-> Estos benchmarks miden engagement de **marcas comerciales y creadores de entretenimiento**, NO actores políticos. El error no es de cuantificación sino de ORIGEN (dominio equivocado).
+La tabla 1×5 del Gemini Deep Research es estructuralmente inadecuada. Asume ER único por estrato sin desagregar plataforma, pero la evidencia empírica muestra que TikTok > IG ≈ FB-gov > X por factor 3–10x. Una tabla 1×5 induce falsos positivos en TikTok y falsos negativos en X/FB.
 
----
+## Evidencia por estrato
 
-## Contenido pendiente
+| Estrato | Rango original Gemini DR | Evidencia recuperada |
+|---|---|---|
+| Nano (1K–10K) | 6–10% | 🔴 Sin datos MX políticos directos |
+| Micro (10K–50K) | 3.5–6% | 🔴 Sin datos MX políticos directos |
+| Mid-Tier (50K–100K) | 2–4% | 🟡 Parcial — mantener |
+| Macro (100K–500K) | 1.5–2.5% | 🟢 Gálvez FB 2024 ~2.2% por post |
+| Mega (500K+) | 1–2% | 🟢 AMLO/RAC/JAMK 2018 X ~0.45–0.66%; Sheinbaum IG 2024 ~1.65% |
 
-El CEO debe pegar aquí el texto completo del dictamen recibido el 2026-04-19, incluyendo al menos:
+## Recomendación priorizada
 
-1. **Metodología** con la que se rastreó la genealogía de la tabla hasta los 4 sources IM
-2. **Evidencia citada** de que los rangos de Gemini DR §2.2 coinciden numéricamente con Hootsuite/Rival IQ/Emplifi/Sprout Social
-3. **Razones por las que los benchmarks políticos difieren** del engagement comercial (movilización electoral, polarización afectiva Bail 2018, veda INE, identidad social Tajfel)
-4. **Recomendaciones operativas** del dictamen (si se listan)
-5. **Fuentes académicas alternativas** para calibrar benchmarks políticos reales (si se citan: Latinobarómetro, LAPOP, arXiv political comms, ResearchGate political bots, etc.)
+1. **Reemplazar por matriz 5×5** (estrato × plataforma) — propuesta en Sección 3 del archivo original
+2. **Si se mantiene 1×5** — ajustes: Nano 6–10% → 3–7%; Micro 3.5–6% → 2–4.5%; Macro 1.5–2.5% → 1–2.5%; Mega 1–2% → 0.5–1.8%
+3. **Follow-up alto valor / bajo esfuerzo:** descargar dataset Zenodo 10.5281/zenodo.7877001 (15M tweets MX 2021) y recalcular ER por tier — primer benchmark MX reproducible
 
----
+## Gaps explícitos (no fabricados)
 
-## Referencia en MASTER
+- Nano y Micro políticos MX: cero evidencia pública directa
+- 6 pendientes documentados con costo/valor en sección final del archivo original
 
-- `§6` — decisión D-19 (reescrita) cita este archivo en columna `Ref`
-- `§3.1 #01` — matriz 5×5 + modificador temporal derivan del hallazgo
-- `§1.5` — matices de activación del modificador temporal por perfil derivan del hallazgo
-- `§5 S1` — tarea T10 Zenodo se programa como consecuencia del hallazgo
+## Estado del dictamen
 
-Hasta que el contenido completo esté archivado, este dictamen queda marcado como 🟡 PENDIENTE en `README.md` de esta carpeta.
+Investigación completada. Archivo consumido por D-19 del MASTER como evidencia para reemplazo estructural de la tabla Gemini DR.
