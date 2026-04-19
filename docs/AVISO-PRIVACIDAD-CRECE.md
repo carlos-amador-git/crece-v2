@@ -1,6 +1,6 @@
 # Aviso de Privacidad — CRECE v2
 
-**Última actualización:** 14 de abril de 2026
+**Última actualización:** 19 de abril de 2026
 **Responsable del tratamiento:** MD Consultoría SC — Ciudad de México, México
 
 ---
@@ -77,6 +77,60 @@ Todo titular de datos personales puede ejercer derechos de Acceso, Rectificació
 Dado que usamos pseudonimización por hash, podemos **cancelar** (borrar) todos los comentarios asociados a un hash específico si el titular demuestra:
 1. Que el user_id público coincide con el hash en nuestra base (podemos recalcular el hash a partir del user_id que el titular provee)
 2. Titularidad del perfil público correspondiente
+
+### 7.2 Procedimiento operativo interno — purga recursiva por hash (D-18)
+
+Para garantizar que la cancelación sea **íntegra y auditable** conforme al art. 32 LFPDPPP, MD Consultoría aplica el siguiente flujo operativo:
+
+1. **Recepción de solicitud.** El titular envía solicitud ARCO a `privacidad@mdconsultoria-ti.org` adjuntando identificación oficial (INE o pasaporte) y el user_id público del perfil desde el cual comentó (ej. `@usuario` en la plataforma).
+2. **Validación legal (5 días hábiles).** El equipo legal de MD Consultoría verifica:
+    - Vigencia de la identificación oficial.
+    - Titularidad del perfil público (prueba con captura autenticada o verificación cruzada via plataforma).
+    - Ausencia de base legal superviniente para retener datos (ej. proceso judicial abierto).
+3. **Cálculo de hash.** Un operador autorizado calcula el hash SHA-256 usando el salt de producción (`COMMENT_AUTHOR_SALT`) con la fórmula `sha256(f"{platform}:{commenter_public_id}:{salt}")`. El hash resultante es de 64 caracteres hexadecimales en minúsculas.
+4. **Ejecución de purga.** Un usuario con `role=admin` invoca el endpoint interno:
+
+    ```
+    POST /api/v1/admin/compliance/purge-hash
+    Authorization: Bearer <JWT-admin>
+    Content-Type: application/json
+
+    {
+      "author_hash": "<hash hex 64 chars>",
+      "justificacion": "Folio ARCO-2026-NNNN · <tipo> validado por equipo legal"
+    }
+    ```
+
+    Respuesta (200 OK):
+
+    ```json
+    {
+      "purged": {
+        "social_comments": 12,
+        "social_posts": 0,
+        "vectors": 0
+      },
+      "audit_id": 42,
+      "author_hash": "<hash>",
+      "timestamp": "2026-04-19T17:00:00+00:00"
+    }
+    ```
+
+5. **Auditoría inmutable.** Cada invocación persiste una fila en la tabla `compliance_purge_audit` (operador + hash + contadores + justificación + timestamp). Esta tabla **no se purga bajo ninguna solicitud ARCO posterior** — es el propio registro de cumplimiento legal y debe sobrevivir a las purgas que documenta.
+6. **Respuesta al titular.** MD Consultoría confirma por correo electrónico la ejecución con el folio ARCO, el número de registros eliminados y la fecha. **Plazo legal total: 20 días hábiles** (art. 32 LFPDPPP) desde la recepción completa de la solicitud.
+
+#### Alcance de la purga
+
+La purga es **recursiva y transaccional** sobre todas las tablas que referencian el `author_hash`:
+- `social_comments` — texto del comentario, likes, replies asociados
+- `social_posts` — (hoy 0; los posts pertenecen al dirigente, no al comentarista)
+- embeddings / vectores — (hoy 0; cuando CRECE v2 integre embeddings por comentario en fases posteriores, la purga cubrirá esta tabla automáticamente sin cambio de contrato)
+
+Las métricas agregadas (IA scores por post, tendencias temáticas, resúmenes estadísticos) persisten sin asociación individual, conforme al art. 11 LFPDPPP (principio de proporcionalidad).
+
+#### Idempotencia
+
+Si no se encuentran registros asociados al hash (por ejemplo, ya fue purgado previamente o el hash nunca generó data), el endpoint devuelve contadores en cero **y aun así registra la solicitud en el audit log** — garantiza trazabilidad completa de cada solicitud recibida.
 
 ## 8. Retención de datos
 

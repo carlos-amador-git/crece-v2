@@ -764,3 +764,46 @@ def dispatch_scheduled_campaigns() -> dict:
         return {"status": "ok", "dispatched": len(dispatched), "ids": dispatched}
     finally:
         session.close()
+
+
+# ──────────────────────────────────────────────────────────────────
+# Sprint S1 T8 — LLM health check (D-21 Coolify dual-mode)
+# ──────────────────────────────────────────────────────────────────
+
+
+@celery_app.task(name="app.workers.tasks.ollama_health_smoke")
+def ollama_health_smoke() -> dict:
+    """Layer 1 + Layer 2 smoke against both providers. Runs every 5 min.
+
+    Persists 4 rows in llm_health_log per invocation (2 providers × 2 layers).
+    Optionally adds cold check row if last ok >4h ago.
+    """
+    import asyncio
+
+    from app.ops.llm_health import health_smoke_both
+
+    results = asyncio.run(health_smoke_both())
+    summary: dict[str, dict[str, str]] = {}
+    for provider, rows in results.items():
+        summary[provider] = {r.layer: r.status for r in rows}
+    logger.info("ollama_health_smoke completed: %s", summary)
+    return {"status": "ok", "results": summary}
+
+
+@celery_app.task(name="app.workers.tasks.ollama_prewarm")
+def ollama_prewarm() -> dict:
+    """Prewarm both providers with a 10-token call. Runs every 4h.
+
+    Evita cold start de 102s en Coolify VPS (D-21 / coolify_failover_smoke.md).
+    """
+    import asyncio
+
+    from app.ops.llm_health import prewarm_both
+
+    results = asyncio.run(prewarm_both())
+    summary = {
+        provider: {"status": r.status, "latency_ms": r.latency_ms}
+        for provider, r in results.items()
+    }
+    logger.info("ollama_prewarm completed: %s", summary)
+    return {"status": "ok", "results": summary}

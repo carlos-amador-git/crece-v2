@@ -60,6 +60,16 @@ celery_app.conf.update(
             "task": "app.workers.retention_tasks.cleanup_old_comments",
             "schedule": 86400.0,
         },
+        # S1 T8 D-21 — Ollama health smoke every 5 min (Layer 1 + Layer 2 both providers)
+        "ollama-health-smoke-5min": {
+            "task": "app.workers.tasks.ollama_health_smoke",
+            "schedule": 300.0,
+        },
+        # S1 T8 D-21 — Ollama prewarm every 4h (00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC)
+        "ollama-prewarm-4h": {
+            "task": "app.workers.tasks.ollama_prewarm",
+            "schedule": 14400.0,
+        },
     },
 )
 

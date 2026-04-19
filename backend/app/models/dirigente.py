@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -46,6 +48,22 @@ class Dirigente(Base):
     sync_task_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     sync_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     sync_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Sprint S1 — data fidelity + estrato + competidores (MASTER §5 S1 T1/T2)
+    data_fidelity_tier: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    estrato_politico: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    competidor_directo_ids: Mapped[list[int]] = mapped_column(
+        ARRAY(Integer),
+        nullable=False,
+        server_default="{}",
+        default=list,
+    )
+    data_origin: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False,
+        server_default="T3",
+        default="T3",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
