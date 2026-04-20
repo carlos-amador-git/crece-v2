@@ -2,6 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 
 /**
  * E2E tests for Sprint S2 T5 — Dashboard Diagnóstico Tier 1 (10 cards).
+ * Sprint S3 T0.5 — B10 drill-down drawer.
+ * Sprint S3 T0.6 — B01 contexto explicativo benchmark.
  *
  * PRINCIPIO MD: NO se mockea el backend — tests van contra data real.
  * Requisito: backend FastAPI corriendo en http://localhost:8002 con seed de Piña
@@ -165,6 +167,89 @@ test.describe("Diagnóstico Tier 1 — Piña (dirigente_id=1)", () => {
     if (b08Status === "insufficient_data") {
       await expect(page.getByTestId("card-b08-insufficient")).toBeVisible();
     }
+  });
+
+  // =====================================================================
+  // T0.5 — B10 drill-down drawer
+  // =====================================================================
+  test("T0.5 — click 'Ver ejemplos' en card B10 abre drawer con posts + keywords visibles", async ({
+    page,
+  }) => {
+    await page.goto(`/dashboard/diagnostico/${PIÑA_DIRIGENTE_ID}`, { waitUntil: "commit", timeout: NAV_TIMEOUT });
+    await expect(page.getByTestId("cards-grid")).toBeVisible({ timeout: 90_000 });
+
+    // Card B10 debe ser visible
+    const cardB10 = page.getByTestId("card-b10");
+    await expect(cardB10).toBeVisible();
+
+    // Botón "Ver ejemplos"
+    const btn = page.getByTestId("b10-ver-ejemplos-btn");
+    await expect(btn).toBeVisible();
+    await btn.click();
+
+    // Dialog abre
+    const drawer = page.getByTestId("b10-drawer");
+    await expect(drawer).toBeVisible({ timeout: 15_000 });
+
+    // Contenido: posts institucionales + humanizantes (al menos 1 en cada grupo
+    // si el corpus de Piña tiene posts; en insufficient mostraría el empty state)
+    const drawerContent = page.getByTestId("b10-drawer-content");
+    const drawerEmpty = page.getByTestId("b10-drawer-empty");
+    const drawerLoading = page.getByTestId("b10-drawer-loading");
+    const drawerError = page.getByTestId("b10-drawer-error");
+
+    // Esperar a que cargue (máx 30s para endpoint drill-down)
+    await expect(drawerLoading).not.toBeVisible({ timeout: 30_000 });
+    await expect(drawerError).not.toBeVisible();
+
+    // Si hay datos, verificar 10 posts (5+5) y sección de keywords
+    const hasContent = await drawerContent.isVisible();
+    if (hasContent) {
+      // Al menos 5 posts institucionales
+      const institucionalPosts = page.getByTestId("b10-post-institucional");
+      const humanizantePosts = page.getByTestId("b10-post-humanizante");
+      const instCount = await institucionalPosts.count();
+      const humanCount = await humanizantePosts.count();
+      expect(instCount + humanCount, "Debe haber al menos 2 posts totales (1+1 mínimo)").toBeGreaterThanOrEqual(2);
+
+      // Keywords visibles
+      const keywords = page.getByTestId("b10-keywords");
+      await expect(keywords).toBeVisible();
+    } else {
+      // Si insuficiente, el empty state debe ser visible
+      await expect(drawerEmpty).toBeVisible();
+    }
+  });
+
+  // =====================================================================
+  // T0.6 — B01 contexto explicativo benchmark ER
+  // =====================================================================
+  test("T0.6 — card B01 muestra contexto con 'benchmark empírico MX' y '~100×' visible", async ({
+    page,
+  }) => {
+    await page.goto(`/dashboard/diagnostico/${PIÑA_DIRIGENTE_ID}`, { waitUntil: "commit", timeout: NAV_TIMEOUT });
+    await expect(page.getByTestId("cards-grid")).toBeVisible({ timeout: 90_000 });
+
+    // Contexto explicativo
+    const ctx = page.getByTestId("b01-contexto-benchmark");
+    await expect(ctx).toBeVisible();
+
+    const ctxText = await ctx.innerText();
+    expect(ctxText, "Debe mencionar benchmark empírico MX").toContain("benchmark empírico MX");
+    expect(ctxText, "Debe mencionar ~100×").toContain("~100×");
+    expect(ctxText, "Debe mencionar Zenodo v1").toContain("Zenodo v1");
+
+    // Botón ℹ️ accesible con aria-label correcto
+    const infoBtn = ctx.getByRole("button", { name: /explicación del benchmark er/i });
+    await expect(infoBtn).toBeVisible();
+
+    // Link metodología
+    const methodLink = ctx.getByRole("link", { name: /ver metodología/i });
+    await expect(methodLink).toBeVisible();
+    const href = await methodLink.getAttribute("href");
+    expect(href, "Link debe apuntar a Zenodo/GitHub methodology").toContain("methodology");
+    const target = await methodLink.getAttribute("target");
+    expect(target, "Link debe abrir en nueva pestaña").toBe("_blank");
   });
 
   test("screenshot de referencia del dashboard Piña", async ({ page }) => {

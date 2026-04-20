@@ -24,6 +24,7 @@ from app.models.metrica_social import MetricaSocial
 from app.models.organizacion import Organizacion
 from app.models.plan_ia import PlanIA
 from app.models.programa_social import ProgramaBeneficiario, ProgramaSocial
+from app.models.promesa_dirigente import PromesaDirigente, PromesaEstado
 from app.models.recomendacion_plan_ia import RecomendacionPlanIA
 from app.models.social import SentimentAnalysis, SocialPost, SocialProfile
 from app.models.solicitud import SeguimientoSolicitud, SolicitudCiudadana
@@ -63,6 +64,8 @@ __all__ = [
     "PlanIA",
     "ProgramaBeneficiario",
     "ProgramaSocial",
+    "PromesaDirigente",
+    "PromesaEstado",
     "PromotorLegacy",
     "PuntoRuta",
     "RutaCanvassing",

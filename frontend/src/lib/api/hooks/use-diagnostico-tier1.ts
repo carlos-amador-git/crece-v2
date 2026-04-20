@@ -166,6 +166,30 @@ export interface B10Data {
   pesos_formula: Record<string, number>;
 }
 
+// B10 Humanización drill-down (T0.5)
+export interface HumanizacionPostExample {
+  post_id: number;
+  content_preview: string;
+  score: number;
+  factores: string[];
+  published_at: string | null;
+  platform: string | null;
+}
+
+export interface HumanizacionExamplesResponse {
+  status: "ok" | "insufficient_data" | "dirigente_not_found";
+  top_institucional: HumanizacionPostExample[];
+  top_humanizante: HumanizacionPostExample[];
+  keywords_usadas: {
+    primera_persona: string[];
+    emojis_humanos: string[];
+    institucional: string[];
+  };
+  n_posts_analizados: number;
+  ventana_dias: number;
+  missing?: string[];
+}
+
 export interface DiagnosticoResponse {
   dirigente_id: number;
   bloques: {
@@ -191,5 +215,20 @@ export function useDiagnosticoTier1(dirigenteId: number | string | undefined) {
       api.get<DiagnosticoResponse>(`/diagnostico/${dirigenteId}`),
     enabled: dirigenteId !== undefined && dirigenteId !== null && dirigenteId !== "",
     staleTime: 60_000, // 1 min — el cómputo no cambia en segundos
+  });
+}
+
+export function useHumanizacionExamples(
+  dirigenteId: number | string | undefined,
+  limit = 5,
+) {
+  return useQuery({
+    queryKey: ["humanizacion-examples", dirigenteId, limit],
+    queryFn: () =>
+      api.get<HumanizacionExamplesResponse>(
+        `/diagnostico/${dirigenteId}/humanizacion/examples?limit=${limit}`,
+      ),
+    enabled: dirigenteId !== undefined && dirigenteId !== null && dirigenteId !== "",
+    staleTime: 120_000, // 2 min — drill-down no necesita refresh frecuente
   });
 }

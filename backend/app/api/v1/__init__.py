@@ -22,6 +22,7 @@ from app.api.v1.endpoints import (
     crm_integration,
     dashboard,
     diagnostico as diagnostico_tier1,
+    diagnostico_tier2,
     dirigentes,
     electoral,
     encuestas,
@@ -96,4 +97,9 @@ api_router.include_router(privacy_arco.router, prefix="", tags=["privacy-arco"])
 api_router.include_router(ops.router, prefix="/ops", tags=["ops"])
 api_router.include_router(
     diagnostico_tier1.router, prefix="/diagnostico", tags=["diagnostico-tier1"]
+)
+api_router.include_router(
+    diagnostico_tier2.router,
+    prefix="/diagnostico_tier2",
+    tags=["diagnostico-tier2"],
 )

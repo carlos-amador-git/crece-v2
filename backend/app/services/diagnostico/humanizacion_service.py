@@ -78,6 +78,9 @@ KEYWORDS_INSTITUCIONALES = [
     "reglament", "normativ",
 ]
 
+# Human-coded emoji examples (representative set used in heuristic)
+EMOJIS_HUMANOS_EJEMPLOS = ["❤️", "😊", "🙏", "😁", "👨‍👩‍👧", "🤗", "💪", "👏", "🥰", "🌟"]
+
 
 def _count_matches(text: str, keywords: list[str]) -> int:
     text_lower = text.lower()
@@ -90,6 +93,40 @@ def _interpretar(score: float) -> str:
     if score >= 35:
         return "Equilibrado"
     return "Institucional"
+
+
+def _score_post(content: str) -> tuple[float, list[str]]:
+    """Compute humanizacion score and factor labels for a single post.
+
+    Returns:
+        (score_0_100, factores_labels)
+    """
+    has_primera = 1 if PRIMERA_PERSONA_RX.search(content) else 0
+    has_emoji = 1 if EMOJI_RX.search(content) else 0
+    has_personal = 1 if _count_matches(content, KEYWORDS_PERSONALES) > 0 else 0
+    has_institucional = 1 if _count_matches(content, KEYWORDS_INSTITUCIONALES) > 0 else 0
+
+    raw = 100.0 * (0.30 * has_primera + 0.20 * has_emoji + 0.30 * has_personal - 0.20 * has_institucional)
+    score = max(0.0, min(raw, 100.0))
+
+    factores: list[str] = []
+    if has_primera:
+        matches = PRIMERA_PERSONA_RX.findall(content)
+        factores.append(f"{len(matches)} palabra(s) 1ra persona")
+    if has_emoji:
+        emoji_matches = EMOJI_RX.findall(content)
+        factores.append(f"{len(emoji_matches)} emoji(s) humano(s)")
+    if has_personal:
+        kw_found = [k for k in KEYWORDS_PERSONALES if k in content.lower()]
+        factores.append(f"keyword personal: {kw_found[0]!r}")
+    if has_institucional:
+        kw_found = [k for k in KEYWORDS_INSTITUCIONALES if k in content.lower()]
+        factores.append(f"keyword institucional: {kw_found[0]!r} (penaliza)")
+
+    if not factores:
+        factores = ["sin señales detectadas"]
+
+    return score, factores
 
 
 async def compute(
@@ -153,3 +190,86 @@ async def compute(
             "pesos_formula": {"p1": 0.30, "p2": 0.20, "p3": 0.30, "p4_negativo": -0.20},
         },
     )
+
+
+async def get_examples(
+    db: AsyncSession,
+    dirigente_id: int,
+    org_id: int | None = None,
+    limit: int = 5,
+) -> dict:
+    """Devuelve los top N posts más institucionales y top N más humanizantes.
+
+    Return shape:
+    {
+      "status": "ok" | "insufficient_data",
+      "top_institucional": [{post_id, content_preview, score, factores}],
+      "top_humanizante": [{post_id, content_preview, score, factores}],
+      "keywords_usadas": {
+        "primera_persona": [...],
+        "emojis_humanos": [...],
+        "institucional": [...]
+      }
+    }
+    """
+    dirigente = await load_dirigente_scoped(db, dirigente_id, org_id)
+    if dirigente is None:
+        return {"status": "dirigente_not_found", "detail": f"dirigente_id={dirigente_id} not found or access denied"}
+
+    profiles_result = await db.execute(
+        select(SocialProfile).where(SocialProfile.dirigente_id == dirigente_id)
+    )
+    profiles = list(profiles_result.scalars().all())
+    if not profiles:
+        return {"status": "insufficient_data", "missing": ["social_profiles=0"]}
+
+    since = datetime.now(UTC) - timedelta(days=VENTANA_DIAS)
+    posts_result = await db.execute(
+        select(SocialPost).where(
+            SocialPost.profile_id.in_([p.id for p in profiles]),
+            SocialPost.published_at >= since,
+            SocialPost.content.is_not(None),
+        )
+    )
+    posts = list(posts_result.scalars().all())
+    posts = [p for p in posts if p.content and p.content.strip()]
+    if not posts:
+        return {"status": "insufficient_data", "missing": ["0 posts con content en 90d"]}
+
+    # Score every post individually
+    scored: list[dict] = []
+    for p in posts:
+        content = p.content or ""
+        post_score, factores_labels = _score_post(content)
+        scored.append({
+            "post_id": p.id,
+            "content_preview": content[:150],
+            "score": round(post_score, 1),
+            "factores": factores_labels,
+            "published_at": p.published_at.isoformat() if p.published_at else None,
+            "platform": str(p.profile.platform.value) if hasattr(p, "profile") and p.profile else None,
+        })
+
+    # Sort ascending for institucional (low score = most institutional)
+    sorted_asc = sorted(scored, key=lambda x: x["score"])
+    # Sort descending for humanizante (high score = most human)
+    sorted_desc = sorted(scored, key=lambda x: x["score"], reverse=True)
+
+    top_institucional = sorted_asc[:limit]
+    top_humanizante = sorted_desc[:limit]
+
+    return {
+        "status": "ok",
+        "top_institucional": top_institucional,
+        "top_humanizante": top_humanizante,
+        "keywords_usadas": {
+            "primera_persona": [
+                "yo", "mi", "mía", "mío", "conmigo", "nosotros",
+                "nosotras", "nuestros", "nuestras", "nuestra",
+            ],
+            "emojis_humanos": EMOJIS_HUMANOS_EJEMPLOS,
+            "institucional": KEYWORDS_INSTITUCIONALES,
+        },
+        "n_posts_analizados": len(posts),
+        "ventana_dias": VENTANA_DIAS,
+    }
