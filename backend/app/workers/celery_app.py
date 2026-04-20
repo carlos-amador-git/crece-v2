@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from celery import Celery
+from celery.schedules import crontab
 
 from app.core.config import settings
 
@@ -34,6 +35,10 @@ celery_app.conf.update(
         "app.workers.tasks.ingest_rss_feeds": {"queue": "data"},
         # S5.3b onboarding chain → cola scraping (usa scrape_profile + nlp)
         "app.workers.tasks.onboard_dirigente_chain": {"queue": "scraping"},
+        # S4 T8/T9/T11 · Plan IA cierre de ciclo → cola ai
+        "app.workers.tasks.plan_ia_seguimiento_diario": {"queue": "ai"},
+        "app.workers.tasks.plan_ia_cierre_diario": {"queue": "ai"},
+        "app.workers.tasks.plan_ia_reporte_semanal": {"queue": "ai"},
     },
     beat_schedule={
         "scrape-all-profiles-daily": {
@@ -69,6 +74,21 @@ celery_app.conf.update(
         "ollama-prewarm-4h": {
             "task": "app.workers.tasks.ollama_prewarm",
             "schedule": 14400.0,
+        },
+        # S4 T8 · Plan IA seguimiento diario — 03:00 UTC
+        "plan-ia-seguimiento-diario": {
+            "task": "app.workers.tasks.plan_ia_seguimiento_diario",
+            "schedule": crontab(hour=3, minute=0),
+        },
+        # S4 T9 · Plan IA cierre automático diario — 04:00 UTC
+        "plan-ia-cierre-diario": {
+            "task": "app.workers.tasks.plan_ia_cierre_diario",
+            "schedule": crontab(hour=4, minute=0),
+        },
+        # S4 T11 · Plan IA reporte semanal — lunes 09:00 UTC
+        "plan-ia-reporte-semanal": {
+            "task": "app.workers.tasks.plan_ia_reporte_semanal",
+            "schedule": crontab(hour=9, minute=0, day_of_week=1),
         },
     },
 )

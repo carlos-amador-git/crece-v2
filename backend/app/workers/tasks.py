@@ -790,6 +790,90 @@ def ollama_health_smoke() -> dict:
     return {"status": "ok", "results": summary}
 
 
+# ──────────────────────────────────────────────────────────────────────
+# Sprint S4 · T8/T9/T10/T11 — Plan IA ciclo de cierre post-ejecución
+# ──────────────────────────────────────────────────────────────────────
+
+
+@celery_app.task(
+    name="app.workers.tasks.plan_ia_seguimiento_diario",
+    bind=True,
+    max_retries=2,
+)
+def plan_ia_seguimiento_diario(self) -> dict:  # type: ignore[no-untyped-def]
+    """S4 · T8 — Seguimiento diario de recomendaciones en ventana 14d activa.
+
+    Query `estado='ejecutada'` + `ventana_fin > NOW()` + `post_ejecutor_id NOT NULL`.
+    Actualiza `metricas_observadas` JSONB con snapshot de métricas del post ejecutor y
+    marca `alerta_desviacion` cuando se supera el umbral de `criterio_exito`.
+
+    Corre diariamente a las 03:00 UTC (beat schedule).
+    """
+    from app.services.plan_ia.seguimiento_service import actualizar_seguimiento
+
+    session = _get_sync_session()
+    try:
+        result = actualizar_seguimiento(session)
+        logger.info("plan_ia_seguimiento_diario: %s", result)
+        return {"status": "ok", **result}
+    except Exception as exc:
+        logger.exception("plan_ia_seguimiento_diario failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300) from None
+    finally:
+        session.close()
+
+
+@celery_app.task(
+    name="app.workers.tasks.plan_ia_cierre_diario",
+    bind=True,
+    max_retries=2,
+)
+def plan_ia_cierre_diario(self) -> dict:  # type: ignore[no-untyped-def]
+    """S4 · T9 — Cierre automático de recomendaciones con ventana vencida.
+
+    Query `estado='ejecutada'` + `ventana_fin <= NOW()`. Calcula veredicto automático
+    (exitosa ≥80%, parcial 40-79%, fallida <40%) y setea `veredicto`, `veredicto_original`,
+    `estado`. Corre diariamente a las 04:00 UTC (después de seguimiento).
+    """
+    from app.services.plan_ia.cierre_service import cerrar_ventanas_vencidas
+
+    session = _get_sync_session()
+    try:
+        result = cerrar_ventanas_vencidas(session)
+        logger.info("plan_ia_cierre_diario: %s", result)
+        return {"status": "ok", **result}
+    except Exception as exc:
+        logger.exception("plan_ia_cierre_diario failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300) from None
+    finally:
+        session.close()
+
+
+@celery_app.task(
+    name="app.workers.tasks.plan_ia_reporte_semanal",
+    bind=True,
+    max_retries=1,
+)
+def plan_ia_reporte_semanal(self, output_dir: str = "/app/data/reportes_plan_ia") -> dict:  # type: ignore[no-untyped-def]
+    """S4 · T11 — Reporte semanal PDF por dirigente (lunes 09:00 UTC).
+
+    Itera todos los dirigentes con recomendaciones registradas y genera un PDF
+    de 1 página en `output_dir`. Retorna el resumen.
+    """
+    from app.services.plan_ia.reporte_semanal import generar_reportes_todos_dirigentes
+
+    session = _get_sync_session()
+    try:
+        result = generar_reportes_todos_dirigentes(session, output_dir=output_dir)
+        logger.info("plan_ia_reporte_semanal: %s", {k: v for k, v in result.items() if k != "detalles"})
+        return {"status": "ok", **result}
+    except Exception as exc:
+        logger.exception("plan_ia_reporte_semanal failed: %s", exc)
+        raise self.retry(exc=exc, countdown=1800) from None
+    finally:
+        session.close()
+
+
 @celery_app.task(name="app.workers.tasks.ollama_prewarm")
 def ollama_prewarm() -> dict:
     """Prewarm both providers with a 10-token call. Runs every 4h.
