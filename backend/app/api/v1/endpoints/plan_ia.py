@@ -245,7 +245,10 @@ async def list_recomendaciones(
     current_user: Annotated[User, Depends(get_current_user)],
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    estado: str | None = Query(None, description="propuesta|aprobada|rechazada|modificada|ejecutada|completada|fallida"),
+    estado: list[str] | None = Query(
+        None,
+        description="propuesta|aprobada|rechazada|modificada|ejecutada|completada|fallida · acepta múltiples ?estado=a&estado=b",
+    ),
     dirigente_id: int | None = Query(None),
     tipo: str | None = Query(None, description="start|stop|continue"),
     limit: int = Query(50, ge=1, le=200),
@@ -259,25 +262,30 @@ async def list_recomendaciones(
     org_id = _resolve_org_id(current_user, request)
     stmt = select(RecomendacionPlanIA)
 
+    estados_filter = [e for e in (estado or []) if e]
+
     # Org scoping · viewer solo ve su org
     if current_user.role != "admin":
         if org_id is None:
             return []
         stmt = stmt.where(RecomendacionPlanIA.org_id == org_id)
         # Viewer NO ve estado=propuesta ni rechazada (solo pass MD review)
-        visible_estados = ("aprobada", "modificada", "ejecutada", "completada")
-        if estado is None:
+        visible_estados = {"aprobada", "modificada", "ejecutada", "completada"}
+        if not estados_filter:
             stmt = stmt.where(RecomendacionPlanIA.estado.in_(visible_estados))
-        elif estado not in visible_estados:
-            return []
+        else:
+            allowed = [e for e in estados_filter if e in visible_estados]
+            if not allowed:
+                return []
+            estados_filter = allowed
     else:
         if org_id is not None:
             stmt = stmt.where(RecomendacionPlanIA.org_id == org_id)
 
     if dirigente_id is not None:
         stmt = stmt.where(RecomendacionPlanIA.dirigente_id == dirigente_id)
-    if estado:
-        stmt = stmt.where(RecomendacionPlanIA.estado == estado)
+    if estados_filter:
+        stmt = stmt.where(RecomendacionPlanIA.estado.in_(estados_filter))
     if tipo:
         stmt = stmt.where(RecomendacionPlanIA.tipo == tipo)
 
