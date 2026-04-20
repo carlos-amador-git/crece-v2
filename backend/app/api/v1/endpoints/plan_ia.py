@@ -240,6 +240,199 @@ async def generate_plan_ia(
     }
 
 
+@router.get("/recomendaciones")
+async def list_recomendaciones(
+    current_user: Annotated[User, Depends(get_current_user)],
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    estado: str | None = Query(None, description="propuesta|aprobada|rechazada|modificada|ejecutada|completada|fallida"),
+    dirigente_id: int | None = Query(None),
+    tipo: str | None = Query(None, description="start|stop|continue"),
+    limit: int = Query(50, ge=1, le=200),
+) -> list[dict[str, Any]]:
+    """Lista recomendaciones con filtros opcionales.
+
+    - Admin: ve todas (con override X-Org-Id) o con filtro dirigente_id.
+    - Viewer: solo ve las de su propia org + solo estados visibles al cliente
+      (aprobada/modificada/ejecutada/completada).
+    """
+    org_id = _resolve_org_id(current_user, request)
+    stmt = select(RecomendacionPlanIA)
+
+    # Org scoping · viewer solo ve su org
+    if current_user.role != "admin":
+        if org_id is None:
+            return []
+        stmt = stmt.where(RecomendacionPlanIA.org_id == org_id)
+        # Viewer NO ve estado=propuesta ni rechazada (solo pass MD review)
+        visible_estados = ("aprobada", "modificada", "ejecutada", "completada")
+        if estado is None:
+            stmt = stmt.where(RecomendacionPlanIA.estado.in_(visible_estados))
+        elif estado not in visible_estados:
+            return []
+    else:
+        if org_id is not None:
+            stmt = stmt.where(RecomendacionPlanIA.org_id == org_id)
+
+    if dirigente_id is not None:
+        stmt = stmt.where(RecomendacionPlanIA.dirigente_id == dirigente_id)
+    if estado:
+        stmt = stmt.where(RecomendacionPlanIA.estado == estado)
+    if tipo:
+        stmt = stmt.where(RecomendacionPlanIA.tipo == tipo)
+
+    stmt = stmt.order_by(RecomendacionPlanIA.created_at.desc()).limit(limit)
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+
+    return [
+        {
+            "id": r.id,
+            "plan_ia_id": r.plan_ia_id,
+            "dirigente_id": r.dirigente_id,
+            "org_id": r.org_id,
+            "tipo": r.tipo,
+            "accion_texto": r.accion_texto,
+            "ventana_inicio": r.ventana_inicio.isoformat() if r.ventana_inicio else None,
+            "ventana_fin": r.ventana_fin.isoformat() if r.ventana_fin else None,
+            "ventana_duracion_dias": r.ventana_duracion_dias,
+            "criterio_exito": r.criterio_exito,
+            "principio_conductual": r.principio_conductual,
+            "evidencia_respaldo": r.evidencia_respaldo,
+            "estado": r.estado,
+            "post_ejecutor_id": r.post_ejecutor_id,
+            "metricas_predichas": r.metricas_predichas,
+            "metricas_observadas": r.metricas_observadas,
+            "veredicto": r.veredicto,
+            "veredicto_editado_por_cliente": r.veredicto_editado_por_cliente,
+            "veredicto_original": r.veredicto_original,
+            "notas_cliente": r.notas_cliente,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+        }
+        for r in rows
+    ]
+
+
+_ALLOWED_TRANSITIONS = {
+    "propuesta": {"aprobada", "rechazada", "modificada"},
+    "aprobada": {"ejecutada", "rechazada", "modificada"},
+    "modificada": {"aprobada", "ejecutada", "rechazada"},
+    "ejecutada": {"completada", "fallida"},
+    # rechazada · completada · fallida son terminales
+}
+
+
+@router.put("/{recomendacion_id}/estado")
+async def transicionar_estado(
+    recomendacion_id: int,
+    payload: dict[str, Any],
+    current_user: Annotated[User, Depends(get_current_user)],
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
+    """Transición de estado · payload {estado, motivo?, notas?, accion_texto?, ...}.
+
+    Admin: puede transicionar propuesta→aprobada/rechazada/modificada (MD review).
+    Viewer: puede transicionar aprobada→ejecutada (aceptar y publicar) o rechazada.
+    """
+    nuevo_estado = payload.get("estado")
+    if not nuevo_estado:
+        raise HTTPException(status_code=422, detail="campo 'estado' requerido")
+
+    r = await db.get(RecomendacionPlanIA, recomendacion_id)
+    if not r:
+        raise HTTPException(status_code=404, detail=f"recomendacion {recomendacion_id} no existe")
+
+    # Org scoping
+    if current_user.role != "admin":
+        user_org = getattr(current_user, "org_id", None)
+        if user_org is None or r.org_id != user_org:
+            raise HTTPException(status_code=403, detail="fuera de tu organización")
+
+    estado_actual = r.estado
+    permitidas = _ALLOWED_TRANSITIONS.get(estado_actual, set())
+    if nuevo_estado not in permitidas:
+        raise HTTPException(
+            status_code=409,
+            detail=f"transición {estado_actual} → {nuevo_estado} no permitida. Válidas: {sorted(permitidas)}",
+        )
+
+    # Role-based restrictions
+    if current_user.role != "admin":
+        # Viewer solo puede aceptar (aprobada→ejecutada) o rechazar recs aprobadas
+        if estado_actual != "aprobada":
+            raise HTTPException(status_code=403, detail="viewer solo puede transicionar desde estado=aprobada")
+        if nuevo_estado not in {"ejecutada", "rechazada"}:
+            raise HTTPException(status_code=403, detail="viewer no puede aprobar/modificar")
+
+    # Aplicar cambios
+    r.estado = nuevo_estado
+    if "accion_texto" in payload and payload["accion_texto"]:
+        r.accion_texto = payload["accion_texto"]
+    if "criterio_exito" in payload and payload["criterio_exito"]:
+        r.criterio_exito = payload["criterio_exito"]
+    if "ventana_duracion_dias" in payload:
+        r.ventana_duracion_dias = int(payload["ventana_duracion_dias"])
+    if "notas_cliente" in payload:
+        r.notas_cliente = str(payload["notas_cliente"])[:1000]
+    r.updated_at = datetime.now(UTC)
+    await db.commit()
+    await db.refresh(r)
+
+    return {"id": r.id, "estado": r.estado, "updated_at": r.updated_at.isoformat()}
+
+
+@router.put("/{recomendacion_id}/post-ejecutor")
+async def vincular_post_ejecutor(
+    recomendacion_id: int,
+    payload: dict[str, Any],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
+    """Cliente vincula post publicado tras aceptar recomendación (T7 S4).
+
+    payload: {post_id: int}
+    Transición automática: estado → 'ejecutada' + ventana_inicio=NOW +
+    ventana_fin=NOW+ventana_duracion_dias.
+    """
+    post_id = payload.get("post_id")
+    if not post_id:
+        raise HTTPException(status_code=422, detail="campo 'post_id' requerido")
+
+    r = await db.get(RecomendacionPlanIA, recomendacion_id)
+    if not r:
+        raise HTTPException(status_code=404, detail=f"recomendacion {recomendacion_id} no existe")
+
+    # Org scoping
+    if current_user.role != "admin":
+        user_org = getattr(current_user, "org_id", None)
+        if user_org is None or r.org_id != user_org:
+            raise HTTPException(status_code=403, detail="fuera de tu organización")
+
+    if r.estado not in {"aprobada", "modificada"}:
+        raise HTTPException(
+            status_code=409,
+            detail=f"vinculación solo desde estado aprobada/modificada (actual: {r.estado})",
+        )
+
+    now = datetime.now(UTC)
+    r.post_ejecutor_id = int(post_id)
+    r.ventana_inicio = now
+    r.ventana_fin = now + timedelta(days=r.ventana_duracion_dias or 14)
+    r.estado = "ejecutada"
+    r.updated_at = now
+    await db.commit()
+
+    return {
+        "id": r.id,
+        "post_ejecutor_id": r.post_ejecutor_id,
+        "estado": r.estado,
+        "ventana_inicio": r.ventana_inicio.isoformat(),
+        "ventana_fin": r.ventana_fin.isoformat(),
+    }
+
+
 @router.get("/generate/status/{task_id}")
 async def generate_plan_ia_status(
     task_id: str,
