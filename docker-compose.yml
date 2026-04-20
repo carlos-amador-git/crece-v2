@@ -55,6 +55,10 @@ services:
     networks:
       - crece-net
     restart: unless-stopped
+    # Sprint S3 T0 — memory hardening (CEO elevó DIFERIDO-05 tras WAL recovery 3× en S2 batch Plutchik)
+    mem_limit: 4g
+    mem_reservation: 1g
+    shm_size: 512m
 
   # ── Redis ───────────────────────────────────────────────────
   redis:
@@ -121,6 +125,9 @@ services:
       OLLAMA_MODEL: "gemma3:12b"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Sprint S3 T0 — memory hardening (CEO elevó DIFERIDO-05 tras WAL recovery S2)
+    mem_limit: 2g
+    mem_reservation: 512m
     volumes:
       - ./backend:/app
     depends_on:

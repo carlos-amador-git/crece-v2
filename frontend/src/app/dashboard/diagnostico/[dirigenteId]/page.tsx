@@ -16,7 +16,7 @@ import {
   CardB07,
   CardB08,
   CardB09,
-  CardB10,
+  CardB10WithDrilldown,
   CardSkeleton,
 } from "@/components/diagnostico/cards";
 
@@ -121,7 +121,10 @@ export default function DiagnosticoPage({ params }: Props) {
           <CardB07 bloque={data.bloques.B07_growth_attribution} />
           <CardB08 bloque={data.bloques.B08_sov} />
           <CardB09 bloque={data.bloques.B09_share_like_ratio} />
-          <CardB10 bloque={data.bloques.B10_humanizacion} />
+          <CardB10WithDrilldown
+            bloque={data.bloques.B10_humanizacion}
+            dirigenteId={numericId}
+          />
         </div>
       )}
 

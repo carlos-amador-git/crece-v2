@@ -165,6 +165,33 @@ async def get_humanizacion(
     return await humanizacion_service.compute(db, dirigente_id, org_id)
 
 
+@router.get("/{dirigente_id}/humanizacion/examples")
+async def get_humanizacion_examples(
+    dirigente_id: int,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    limit: int = Query(5, ge=1, le=20, description="Posts por categoría (institucional/humanizante)"),
+) -> dict:
+    """B10 drill-down — top N posts más institucionales y más humanizantes.
+
+    Devuelve los extremos del ranking de humanización para que el Plan IA S4
+    pueda traducir el score en recomendaciones específicas accionables.
+
+    Response:
+        {
+          "status": "ok",
+          "top_institucional": [{post_id, content_preview, score, factores}],
+          "top_humanizante": [{post_id, content_preview, score, factores}],
+          "keywords_usadas": {primera_persona, emojis_humanos, institucional},
+          "n_posts_analizados": int,
+          "ventana_dias": int
+        }
+    """
+    org_id = _resolve_org_id(current_user, request)
+    return await humanizacion_service.get_examples(db, dirigente_id, org_id, limit=limit)
+
+
 @router.get("/{dirigente_id}")
 async def get_diagnostico_completo(
     dirigente_id: int,

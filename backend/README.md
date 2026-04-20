@@ -46,6 +46,19 @@ pytest -x                   # al menos 1 test pasa (sanity)
 | `ModuleNotFoundError: pgvector` | venv local sin sincronizar con pyproject.toml | `pip install -e .` desde `backend/` |
 | Backend container `unhealthy` | healthcheck falla por bug en Settings u otro init — NO implica que el app no sirva | `docker logs crece-backend` para diagnóstico |
 
+## Recursos Docker recomendados (dev/prod)
+
+Sprint S3 T0 endureció los límites de memoria en `docker-compose.yml` tras 3 eventos de WAL recovery en Postgres durante el batch Plutchik del Sprint S2 (sin pérdida de datos pero señal temprana de contención):
+
+| Servicio | `mem_limit` | `mem_reservation` | Extras |
+|---|---|---|---|
+| `crece-db` | 4g | 1g | `shm_size: 512m` (mejora estabilidad WAL) |
+| `crece-backend` | 2g | 512m | — |
+
+Las otras dependencias (redis, minio, celery) tienen huella baja (<200MB cada una) y no requieren límites explícitos. En Docker Desktop macOS asignar al menos 8GB al daemon para que los containers + Gemma 3:12b local (8GB host) + Chrome/Slack/otros no presionen el swap de la VM.
+
+Verificación: `docker stats --no-stream | grep crece` debe mostrar MEM USAGE / LIMIT consistente con la tabla.
+
 ## Variables de entorno
 
 Ver `backend/.env.example`. Las env vars de integración externa (Meta/Twitter/Apify/Brightdata) son opcionales; el backend arranca con defaults para dev local.

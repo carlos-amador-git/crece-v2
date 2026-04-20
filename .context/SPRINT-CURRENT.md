@@ -1,107 +1,148 @@
-# SPRINT-CURRENT — Sprint S2 Diagnóstico Tier 1 (Core MVP)
+# SPRINT-CURRENT — Sprint S3 Diferenciadores Tier 2 (Killer Features)
 
-**Sprint actual:** S2 · **Status:** 🟢 EN EJECUCIÓN · autorizado CEO 2026-04-19 post-merge PR #24 + PR #25 (D-23 clarificada)
-**Sprint previo cerrado:** S1 · 2026-04-19 · archivo `.context/archive/sprint-s1-2026-04-19.md` · reporte `backend/research/2026-04-19/SPRINT-S1-REPORTE-EJECUTIVO.md`
-**Reporte ejecutivo S2:** `backend/research/2026-04-19/SPRINT-S2-REPORTE-EJECUTIVO.md` (al cierre)
-**Decisiones vinculantes:** D-19 reescrita (matriz 5×5 · modificador temporal) · D-22 (competidores client-owned · usar proxies de desarrollo en S2) · D-23 (confirmación humana obligatoria · SERP opcional)
+**Sprint actual:** S3 · **Status:** 🟢 EN EJECUCIÓN · autorizado CEO 2026-04-19 post-merge PR #26
+**Sprint previo cerrado:** S2 · 2026-04-19 · archivo `.context/archive/sprint-s2-2026-04-19.md` · reporte `backend/research/2026-04-19/SPRINT-S2-REPORTE-EJECUTIVO.md`
+**Decisiones vinculantes:** D-19 (matriz 5×5 · modificador temporal) · D-22 (competidores client-owned · proxies S2 reciclables) · D-23 (confirmación humana obligatoria) · revisión §9.8 S2 (aprobada con 2 observaciones menores post-merge)
 
 ---
 
 ## Objetivo
 
-Implementar los **10 bloques Tier 1 Core MVP** del diagnóstico digital. Cada bloque = backend service + endpoint REST + frontend card + test E2E contra data real de los 8 dirigentes piloto.
+Implementar los **8 bloques Tier 2 Diferenciadores Defensibles** del diagnóstico. Son las killer features que separan CRECE v2 de Brandwatch/Meltwater/Sprout Social. Cada bloque = backend service + endpoint REST + frontend card + test E2E.
 
-**Criterio acceptance:** `/dashboard/diagnostico/{dirigente_id}` muestra 10 cards vivas para Piña (id=1) con data real de scrapers. CEO navega y ve números coherentes.
+**Criterio acceptance:** los 8 bloques Tier 2 operativos con muestra de casos reales del piloto · Filtro de Realidad (B13) cambia IPD visible (demo del valor) · dashboard `/dashboard/diagnostico-tier2/[id]` navegable.
 
 ---
 
-## 10 bloques Tier 1 (MASTER §3.1)
+## Observaciones CEO §9.8 integradas como requisitos S3
 
-| # | Bloque | Pregunta | Inputs críticos | Fuente |
+### Observación 1 — Contexto explicativo del B01 ER (UI)
+
+El headline B01 de Piña (1.2% vs piso 4.6% Nano X) es consistente con D-19 pero puede leerse como fracaso propio del cliente cuando es realidad estructural del dominio político. **Requisito S3:** la card B01 debe mostrar contexto explicativo dual:
+- "Tu ER está por debajo del benchmark mexicano empírico (v1 preliminar 4.6% Nano X, n=316)"
+- "El benchmark histórico de la industria comercial (Gemini DR · IM commercial) sobre-estimaba este rango ~100× — ver D-19"
+- Tooltip o link "¿por qué mi benchmark es más bajo que los rangos de Sprout Social?"
+
+Este ajuste se aplica como part of Sprint S3 frontend pass (no re-abre Sprint S2).
+
+### Observación 2 — Drill-down B10 Humanización
+
+El B10 score 15.14 "Institucional" requiere drill-down habilitado ANTES del Sprint S4 Plan IA:
+- Endpoint `GET /api/v1/diagnostico/{dirigente_id}/humanizacion/examples` que devuelve `{top_5_institucional, top_5_humanizante, keywords_analizadas}`
+- Frontend: la card B10 incluye botón "Ver ejemplos" que abre drawer con los 10 posts (5+5)
+- Sin este drill-down el Plan IA S4 no podrá traducir el score en recomendaciones específicas
+
+Aplicado como S3 T0.5 (pre-arranque bloques Tier 2).
+
+---
+
+## T0 · Memory limit Docker (elevado por CEO de DIFERIDO-05)
+
+**Rationale:** en Sprint S2 Postgres entró en WAL recovery 3× durante batch Plutchik (sin pérdida de datos). Sprint S3 procesa 8 clasificadores NLP adicionales (mayor presión memoria). WAL recovery puede escalar y convertirse en pérdida de datos. **Debe resolverse ANTES de arrancar los 8 bloques Tier 2.**
+
+- [ ] **T0.1** Subir `memory_limit` en `docker-compose.yml` para `crece-db` (recomendación: 4GB) y `crece-backend` (recomendación: 2GB)
+- [ ] **T0.2** Reducir `pool_size` del backend async session factory si el container tiene <2GB disponibles
+- [ ] **T0.3** Smoke test: correr `run_plutchik_batch.py --limit 100` después del cambio y verificar que Postgres NO entra en recovery mode (tail de logs `docker logs crece-db`)
+- [ ] **T0.4** Documentar cambios en `backend/README.md` sección "Recursos Docker recomendados dev/prod"
+
+**Criterio acceptance T0:** batch NLP de 100+ posts completa sin WAL recovery event.
+
+## T0.5 · Drill-down B10 Humanización (observación CEO §9.8)
+
+- [ ] Extender `backend/app/services/diagnostico/humanizacion_service.py` con método `get_examples(dirigente_id, org_id) -> {top_5_institucional, top_5_humanizante}`
+- [ ] Endpoint `GET /api/v1/diagnostico/{dirigente_id}/humanizacion/examples`
+- [ ] Frontend: botón "Ver ejemplos" en card B10 (extends `cards.tsx`) que abre Drawer/Dialog con los 10 posts + keywords resaltadas
+- [ ] E2E test: click en "Ver ejemplos" → 10 posts visibles
+
+## T0.6 · Contexto explicativo B01 ER (observación CEO §9.8)
+
+- [ ] Frontend: extender card B01 en `cards.tsx` con tooltip/link explicativo sobre el benchmark empírico D-19 vs la tabla comercial IM descartada
+- [ ] Texto base: "Tu ER {er_actual}% · Benchmark empírico MX {piso}% · El benchmark comercial histórico (Sprout/Rival IQ) sobre-estimaba este rango hasta 100× — ver D-19"
+- [ ] Link al `methodology.md` del bundle Zenodo v1 (Track A Apache 2.0 público)
+
+---
+
+## 8 bloques Tier 2 (MASTER §3.2)
+
+| # | Bloque | Pregunta | Input crítico | Fuente |
 |---|---|---|---|---|
-| B01 | ER normalizado por estrato | ¿Mi ER está en rango? | posts.likes/comments/views + profile.followers + estrato + matriz 5×5 + modificador temporal D-19 | §3.1 #01 |
-| B02 | Breakout Scale Brookings (Cat 1-6) | ¿Crucé fronteras algorítmicas? | posts.views + engagement_rate + baseline_er | §3.1 #02 |
-| B03 | Matriz 2×2 contenido (4 cuadrantes) | ¿Qué posts amplificar/matar? | engagement_rate + sentiment + topic | §3.1 #03 |
-| B04 | Benchmark competidores (proxies D-22) | ¿Cómo me comparo con rivales? | competidor_directo_ids (proxies S2) + últimas 4 semanas | §3.1 #04 |
-| B05 | Sentiment Plutchik 6 emociones | ¿Qué siente mi audiencia? | sentiment_analysis + Gemma classifier extendido | §3.1 #05 |
-| B06 | Crisis Spike detector | ¿Hay picos de crisis? | velocity de toxicity/anger en ventana 2h | §3.1 #06 |
-| B07 | Growth attribution Time-Decay | ¿Qué contenido genera followers? | follower snapshots diarios + posts + sklearn regresión | §3.1 #07 |
-| B08 | Share of Voice (SoV) | ¿Qué % del espacio ocupo? | menciones vs competidores proxies en topics | §3.1 #08 |
-| B09 | Share/Like Ratio | ¿Mi contenido se propaga más que solo gusta? | shares / likes por post | §3.1 #09 |
-| B10 | Humanización Score | ¿Mi perfil se percibe humano o corporativo? | % posts en 1ra persona + emojis + keywords personales | §3.1 #10 |
+| B11 | Cross-Partisan Validation Score | ¿Mi mensaje cruza líneas partidistas? | authors comments + afiliación inferida | §3.2 #11 |
+| B12 | CIB Detector multinivel | ¿Hay comportamiento coordinado inauténtico? | TF-IDF + clustering + account age + framework ITESO | §3.2 #12 |
+| B13 | Filtro de Realidad | ¿Cuál es mi ER orgánico sin CIB? | toggle UI que recalcula métricas excluyendo CIB | §3.2 #13 |
+| B14 | Topic Drift Detector | ¿Mi caption habla de lo que los comments discuten? | TF-IDF caption vs comments | §3.2 #14 |
+| B15 | Rage Click Flag | ¿Mi engagement es indignación o conversión? | sentiment × velocity heurística | §3.2 #15 |
+| B16 | Rastreador Promesas de Campaña | ¿Cumplí lo que prometí? | tabla `promesas_dirigente` + NLP co-ocurrencia | §3.2 #16 |
+| B17 | Veda INE Compliance | ¿Puedo publicar esto en ventana veda? | filtro heurístico sobre queue publicación | §3.2 #17 |
+| B18 | Escaneo Violencia Política | ¿Hay amenazas o violencia política de género? | diccionarios hate speech MX + detector | §3.2 #18 |
 
 ---
 
 ## Tareas (estructura)
 
-### T1 — Backend services (10 services Python)
-- [ ] `backend/app/services/diagnostico/` con 10 archivos: `er_service.py`, `breakout_service.py`, `matrix_2x2_service.py`, `benchmark_service.py`, `sentiment_plutchik_service.py`, `crisis_spike_service.py`, `growth_attribution_service.py`, `sov_service.py`, `share_like_ratio_service.py`, `humanizacion_service.py`
+### T1 — Backend services (8 services Python)
+- [ ] `backend/app/services/diagnostico_tier2/` con 8 archivos: `cross_partisan_service.py`, `cib_detector_service.py`, `filtro_realidad_service.py`, `topic_drift_service.py`, `rage_click_service.py`, `promesas_service.py`, `veda_compliance_service.py`, `violencia_politica_service.py`
 - [ ] Cada service con método async `compute(dirigente_id, org_id) -> dict`
-- [ ] Tests unitarios por service en `backend/tests/diagnostico/`
+- [ ] Tests unitarios por service en `backend/tests/diagnostico_tier2/`
 
 ### T2 — Endpoints REST
-- [ ] `backend/app/api/v1/endpoints/diagnostico.py` con 10 endpoints: `GET /diagnostico/{dirigente_id}/{bloque}` (er_normalizado, breakout_scale, matriz_2x2, benchmark, sentiment_plutchik, crisis_spike, growth_attribution, sov, share_like_ratio, humanizacion)
-- [ ] Endpoint agregado `GET /diagnostico/{dirigente_id}` devuelve todos los 10 bloques en 1 call
-- [ ] Auth obligatoria por JWT · org_id scoping
+- [ ] `backend/app/api/v1/endpoints/diagnostico_tier2.py` con 8 endpoints individuales + 1 agregado
+- [ ] Filtro de Realidad (B13) necesita query parameter `?filtro_cib=true` que recompute los bloques Tier 1 excluyendo cuentas CIB detectadas en B12
+- [ ] Auth JWT + org_id scoping
 
-### T3 — NLP Plutchik extensión (para B05)
-- [ ] Extender `backend/app/services/sentiment_service.py` con método `classify_plutchik_6(text) -> dict[emocion, score]` usando Gemma 3:12b + prompt S0 T0.4 (kappa 0.810 validado)
-- [ ] Batch process: procesar 200+ posts existentes y poblar `sentiment_analyses.emotions` con 6 emociones Plutchik
+### T3 — NLP clasificadores adicionales
+- [ ] Clasificador de afiliación partidista (B11) — diccionarios MC/MORENA/PAN/PRI + heurística sobre content
+- [ ] Clasificador hate speech MX (B18) — diccionario seed + extensibilidad a Perspective API si el presupuesto lo permite
+- [ ] Detector de sarcasmo/outrage (B15) — heurística sentiment spike + keywords negativos + velocity
 
-### T4 — Frontend 10 cards
-- [ ] `frontend/src/app/dashboard/diagnostico/[dirigenteId]/page.tsx` con grid de 10 cards
-- [ ] Cada card con: título del bloque + pregunta · métrica headline · gráfico representativo · badge `data_fidelity_tier` por plataforma relevante
-- [ ] Responsive mobile-first · loading skeletons · empty states · error states
+### T4 — Frontend 8 cards Tier 2 + drill-downs
+- [ ] `frontend/src/app/dashboard/diagnostico-tier2/[dirigenteId]/page.tsx`
+- [ ] 8 cards con visualizaciones específicas (red graph CIB, heatmap topic drift, timeline veda, etc.)
+- [ ] Toggle "Filtro de Realidad" en el header global del dashboard que replica hacia Tier 1 (demo del valor)
 
-### T5 — Integración + tests E2E
-- [ ] Playwright E2E: navegar a `/dashboard/diagnostico/1` (Piña) → verificar 10 cards renderizan con datos · 0 errores consola
-- [ ] 1 test por bloque que valida el número del card coincide con el endpoint
-- [ ] CI hook: los 10 endpoints tienen success_rate ≥90% contra data real piloto
-
----
-
-## Paralelización operativa
-
-- **Bloque A (backend compute-heavy):** B01 + B02 + B07 + B10 (servicios con cálculos numéricos/estadísticos)
-- **Bloque B (backend NLP-dependiente):** B03 + B05 + B06 + B08 (dependen de sentiment/topics)
-- **Bloque C (benchmark + ratios):** B04 + B09
-- **Bloque D (NLP Plutchik extensión T3):** paralelo a Bloques A-C
-- **Bloque E (frontend T4):** arranca cuando haya ≥5 endpoints funcionales (backend A completado)
-- **Bloque F (E2E T5):** cierre final
-
-Clock estimado: **6-10h con 4-5 agents concurrentes** (vs 1-2 semanas serial del MASTER §5 S2).
+### T5 — Integración + E2E
+- [ ] 8 tests E2E Playwright (1 por bloque)
+- [ ] Toggle Filtro Realidad cambia IPD visible y números Tier 1 (demostración del valor)
 
 ---
 
-## Proxies de desarrollo D-22 (para bloque #04)
+## Gaps pendientes de S2 (requisitos de reactivación documentados)
 
-Los 8 dirigentes del piloto NO tienen competidor_directo_ids reales (el cliente los declara en Onboarding S5). Para que bloque #04 funcione en S2, usamos los otros dirigentes del piloto como proxies:
+Per observación CEO §9.8, los dos bloques insufficient_data del Sprint S2 quedan con criterio explícito de reactivación (no son pendientes fantasma):
 
-```
-Piña (id=1) → proxies: [2, 5, 6]  # Solano, Jiménez, Cravioto
-Solano (id=2) → proxies: [1, 5, 8]
-Pineda (id=3) → proxies: [4]       # Nolasco (otra secretaria Oaxaca)
-...
-```
+- **B07 Growth Attribution Time-Decay** — retomar cuando `scrape-all-profiles-daily` haya acumulado **≥14 días de snapshots de followers**. Hasta entonces la card muestra `insufficient_data` con contador "faltan X días". Verificar cada día con `SELECT count(DISTINCT date(created_at)) FROM social_profile_snapshots;`
+- **B08 Share of Voice** — retomar cuando `run_topic_extraction.py` haya procesado **≥500 posts con `topics_extracted` poblado**. Hasta entonces la card muestra `insufficient_data` con contador "faltan X posts por clasificar". Verificar con `SELECT count(*) FROM social_posts WHERE topics_extracted IS NOT NULL;`
 
-Documentado como fixture explícito en `backend/scripts/seed_proxies_desarrollo_s2.py`. Esta lógica NO sale a producción — es solo para que el bloque #04 tenga datos con qué computar durante el desarrollo S2.
+Estos criterios NO son tareas de S3 — son watchers. El servicio detecta automáticamente cuando el umbral se cumple y pasa de `insufficient_data` a `ok` sin código nuevo. Solo se monitorean.
 
 ---
 
-## Criterio acceptance del Sprint S2
+## Paralelización operativa sugerida
 
-Sprint S2 se declara completo cuando:
+- **Bloque A (compute + NLP):** B11 + B12 + B14 + B15 (NLP-heavy)
+- **Bloque B (meta):** B13 Filtro Realidad + B17 Veda Compliance (transversales sobre Tier 1)
+- **Bloque C (registro + texto):** B16 Promesas + B18 Violencia Política
+- **Bloque D (frontend + drill-down B10/B01):** T4 + T0.5 + T0.6
 
-1. 10 services Python operativos con tests unitarios pasando
-2. 10 endpoints REST devolviendo data coherente para los 7 dirigentes con data (Piña mínimo)
-3. 10 cards frontend renderizando con datos reales en `/dashboard/diagnostico/1`
-4. 1 test E2E por bloque cerrando con data de Piña
-5. Plutchik 6 emociones poblado en ≥200 posts del corpus
-
-Con 4/5 dura + dashboard Piña navegable → arranque Sprint S3 autorizado.
+Clock estimado: **6-10h con 4-5 agents concurrentes** post-T0 cierre.
 
 ---
 
-## Protocolo de actualización
+## Criterio acceptance del Sprint S3
 
-Al cierre de cada bloque: `- [x]` + link al output. Al cerrar sprint: archivar a `.context/archive/sprint-s2-YYYY-MM-DD.md` + reset para Sprint S3.
+Sprint S3 se declara completo cuando:
+
+1. **T0** memory_limit Docker aplicado + smoke test NLP sin WAL recovery
+2. **T0.5** drill-down B10 operativo con endpoint + UI drawer
+3. **T0.6** contexto explicativo B01 agregado en UI
+4. 8 services Tier 2 + 8 endpoints con tests unitarios pasando
+5. 8 cards frontend renderizando con datos reales
+6. Toggle Filtro Realidad (B13) demuestra cambio visible en IPD
+7. 8 tests E2E Playwright verdes
+
+Con 6/7 dura + demo Filtro Realidad funcional → arranque Sprint S4 autorizado.
+
+---
+
+## Protocolo actualización
+
+Al cierre de cada T: `- [x]` + link output. Al cerrar sprint: archivar a `.context/archive/sprint-s3-YYYY-MM-DD.md` + reset para Sprint S4.

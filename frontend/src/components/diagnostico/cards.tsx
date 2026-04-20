@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -20,9 +21,24 @@ import {
   Pie,
   PieChart,
 } from "recharts";
-import { CheckCircle2, AlertCircle, Flame, Minus, TrendingUp, Users2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Flame, Minus, TrendingUp, Users2, Info, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CardShell, EmptyMetric } from "./card-shell";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { useHumanizacionExamples } from "@/lib/api/hooks/use-diagnostico-tier1";
 import type {
   B01Data,
   B02Data,
@@ -52,6 +68,12 @@ const tooltipStyle = {
   color: "hsl(var(--popover-foreground))",
   fontSize: 11,
 };
+
+// Benchmark empírico MX D-19 (Nano × plataformas, n=316)
+const BENCHMARK_MX_NANO_PISO = 4.6;
+const BENCHMARK_MX_N_OBS = 316;
+const ZENODO_METHODOLOGY_URL =
+  "https://github.com/MarxCha/crece-v2/blob/main/backend/data/zenodo/v1/methodology.md";
 
 // ========================================================================
 // B01 — ER Normalizado por Estrato
@@ -99,6 +121,62 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
         Estrato <span className="font-medium text-foreground">{d?.estrato ?? "—"}</span>
         {d?.n_posts_total != null && <> · {d.n_posts_total} posts / {d.ventana_dias_analizada}d</>}
       </p>
+
+      {/* Contexto explicativo D-19 — T0.6 */}
+      <div
+        className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-[11px] space-y-1"
+        data-testid="b01-contexto-benchmark"
+      >
+        <p className="text-muted-foreground leading-snug">
+          Tu ER <span className="font-medium text-foreground">{avgActual != null ? fmtPct(avgActual) : "—"}</span>
+          {" · "}Benchmark empírico MX{" "}
+          <span className="font-medium text-foreground">{BENCHMARK_MX_NANO_PISO}%</span>
+          {" "}(Zenodo v1, n={BENCHMARK_MX_N_OBS})
+        </p>
+        <p className="text-muted-foreground leading-snug">
+          El benchmark comercial histórico (Sprout Social · Rival IQ · IM commercial)
+          sobre-estimaba este rango hasta{" "}
+          <span className="font-medium text-foreground">~100×</span>{" "}
+          para contenido político.
+        </p>
+        <div className="flex items-center gap-2 pt-0.5">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Explicación del benchmark ER"
+                  className="flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" aria-hidden="true" />
+                  <span className="text-muted-foreground hover:text-foreground transition-colors">¿Por qué es más bajo que Sprout Social?</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                className="max-w-xs text-[11px] leading-snug"
+              >
+                <p>
+                  Dictamen externo 2026-04-19 (D-19 CRECE v2) demostró que las tablas
+                  comerciales de Influencer Marketing sobre-estiman el ER político mexicano
+                  por factor 3-100×. Ver metodología reproducible en bundle Zenodo v1.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <a
+            href={ZENODO_METHODOLOGY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            aria-label="Ver metodología en GitHub (abre en nueva pestaña)"
+          >
+            <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            <span>Ver metodología</span>
+          </a>
+        </div>
+      </div>
+
       <div className="h-32 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -635,12 +713,225 @@ export function CardB09({ bloque }: { bloque: BloqueBase & { data?: B09Data } })
 }
 
 // ========================================================================
-// B10 — Humanización Score
+// B10 — Humanización Score — con drill-down drawer (T0.5)
 // ========================================================================
+
+interface HumanizacionDrawerProps {
+  dirigenteId: number | string;
+}
+
+function HumanizacionDrawer({ dirigenteId }: HumanizacionDrawerProps) {
+  const { data, isLoading, isError } = useHumanizacionExamples(dirigenteId, 5);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3" data-testid="b10-drawer-loading">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-16 w-full animate-pulse rounded-md bg-muted" />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div
+        className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-destructive text-[12px]"
+        role="alert"
+        data-testid="b10-drawer-error"
+      >
+        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+        <span>No se pudieron cargar los ejemplos. Intenta de nuevo más tarde.</span>
+      </div>
+    );
+  }
+
+  if (data.status === "insufficient_data") {
+    return (
+      <p className="text-[12px] text-muted-foreground py-4 text-center" data-testid="b10-drawer-empty">
+        Datos insuficientes para mostrar ejemplos.
+        {data.missing && data.missing.length > 0 && (
+          <span className="block text-[11px] mt-1 font-mono">{data.missing.join(" · ")}</span>
+        )}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-5" data-testid="b10-drawer-content">
+      {/* Two columns: institucional | humanizante */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Institucional */}
+        <div className="space-y-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Mas institucional (penaliza)
+          </h3>
+          {data.top_institucional.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground">Sin posts institucionales detectados</p>
+          ) : (
+            data.top_institucional.map((post) => (
+              <div
+                key={post.post_id}
+                className="rounded-md border border-border/60 bg-card p-2.5 space-y-1.5"
+                data-testid="b10-post-institucional"
+              >
+                <p className="text-[11px] leading-snug text-foreground line-clamp-3">
+                  {post.content_preview}
+                </p>
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="font-heading text-[11px] font-bold text-muted-foreground tabular-nums">
+                    Score: {post.score}
+                  </span>
+                  {post.factores.map((f, i) => (
+                    <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-4">
+                      {f}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Humanizante */}
+        <div className="space-y-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Mas humanizante (potenciar)
+          </h3>
+          {data.top_humanizante.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground">Sin posts humanizantes detectados</p>
+          ) : (
+            data.top_humanizante.map((post) => (
+              <div
+                key={post.post_id}
+                className="rounded-md border border-[hsl(var(--chart-positive))]/30 bg-[hsl(var(--chart-positive))]/5 p-2.5 space-y-1.5"
+                data-testid="b10-post-humanizante"
+              >
+                <p className="text-[11px] leading-snug text-foreground line-clamp-3">
+                  {post.content_preview}
+                </p>
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="font-heading text-[11px] font-bold text-[hsl(var(--chart-positive))] tabular-nums">
+                    Score: {post.score}
+                  </span>
+                  {post.factores.map((f, i) => (
+                    <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-4 border-[hsl(var(--chart-positive))]/40 text-[hsl(var(--chart-positive))]">
+                      {f}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Keywords usadas por el heurístico */}
+      {data.keywords_usadas && (
+        <div
+          className="rounded-md border border-border/40 bg-muted/20 p-3 space-y-2"
+          data-testid="b10-keywords"
+        >
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Keywords del heurístico (transparencia metodológica)
+          </h3>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-[11px]">
+            <div>
+              <p className="font-medium text-foreground mb-1">1ra persona (+)</p>
+              <p className="text-muted-foreground font-mono leading-relaxed">
+                {data.keywords_usadas.primera_persona.join(", ")}
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground mb-1">Emojis humanos (+)</p>
+              <p className="text-muted-foreground leading-relaxed">
+                {data.keywords_usadas.emojis_humanos.join(" ")}
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground mb-1">Institucional (−)</p>
+              <p className="text-muted-foreground font-mono leading-relaxed">
+                {data.keywords_usadas.institucional.slice(0, 8).join(", ")}...
+              </p>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            {data.n_posts_analizados} posts analizados · ventana {data.ventana_dias}d
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CardB10({ bloque }: { bloque: BloqueBase & { data?: B10Data } }) {
   const d = bloque.data;
   const score = d?.score_0_100;
   const interp = d?.interpretacion ?? "—";
+
+  const tone =
+    interp === "Humano"
+      ? "text-[hsl(var(--chart-positive))]"
+      : interp === "Institucional"
+        ? "text-muted-foreground"
+        : "text-[hsl(var(--chart-accent))]";
+
+  // Derive a numeric dirigente_id from bloque if possible — we pass it via the card prop
+  // The drawer needs it; we use a data attribute set on the card shell.
+  // Since BloqueBase does not include dirigente_id, CardB10 receives it separately.
+  // We expose a separate export that accepts dirigenteId for the drill-down.
+  // This base component is kept for backward compat without drill-down.
+
+  return (
+    <CardShell
+      code="B10"
+      title="Humanización Score"
+      pregunta="¿Mi perfil se percibe humano o corporativo/institucional?"
+      fidelity="T1"
+      status={bloque.status}
+      missing={bloque.missing}
+      testId="card-b10"
+    >
+      <div className="flex items-baseline gap-3" data-testid="b10-headline">
+        <span className={cn("font-heading text-5xl font-bold tabular-nums leading-none", tone)}>
+          {score != null ? score.toFixed(0) : <EmptyMetric />}
+        </span>
+        <div className="flex flex-col">
+          <span className="text-xs text-muted-foreground">/100</span>
+          <span className={cn("text-xs font-medium", tone)}>{interp}</span>
+        </div>
+      </div>
+      {d?.factores && (
+        <div className="space-y-1 text-[11px]">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">1ra persona</span>
+            <span className="font-medium tabular-nums">{fmtPct(d.factores.primera_persona_pct ?? 0, 0)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Emojis</span>
+            <span className="font-medium tabular-nums">{fmtPct(d.factores.emojis_pct ?? 0, 0)}</span>
+          </div>
+        </div>
+      )}
+    </CardShell>
+  );
+}
+
+/**
+ * CardB10WithDrilldown — versión con botón "Ver ejemplos" y Dialog.
+ * Usar esta en la página de diagnóstico cuando se disponga del dirigenteId.
+ */
+export function CardB10WithDrilldown({
+  bloque,
+  dirigenteId,
+}: {
+  bloque: BloqueBase & { data?: B10Data };
+  dirigenteId: number | string;
+}) {
+  const d = bloque.data;
+  const score = d?.score_0_100;
+  const interp = d?.interpretacion ?? "—";
+  const [open, setOpen] = useState(false);
 
   const tone =
     interp === "Humano"
@@ -680,6 +971,35 @@ export function CardB10({ bloque }: { bloque: BloqueBase & { data?: B10Data } })
           </div>
         </div>
       )}
+
+      {/* Drill-down trigger */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className="mt-1 w-full rounded-md border border-border/60 bg-muted/30 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-testid="b10-ver-ejemplos-btn"
+          >
+            Ver ejemplos
+          </button>
+        </DialogTrigger>
+        <DialogContent
+          className="max-w-2xl max-h-[85vh] overflow-y-auto"
+          data-testid="b10-drawer"
+        >
+          <DialogHeader>
+            <DialogTitle className="font-heading text-base">
+              B10 Humanización — ejemplos de posts
+              {score != null && (
+                <span className={cn("ml-2 text-sm font-normal", tone)}>
+                  Score global: {score.toFixed(0)} · {interp}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <HumanizacionDrawer dirigenteId={dirigenteId} />
+        </DialogContent>
+      </Dialog>
     </CardShell>
   );
 }
