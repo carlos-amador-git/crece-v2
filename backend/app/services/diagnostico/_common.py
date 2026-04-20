@@ -24,44 +24,66 @@ from app.models.dirigente import Dirigente
 from app.models.social import Platform
 
 # ── Matriz 5×5 estrato × plataforma (MASTER §3.1 #01 — D-19) ──────────────
-# Rangos (min%, max%) pre-modificador temporal. Unidades: porcentaje puntos.
-# TODAS las celdas son 🟡 TBD hasta validación Zenodo (Sprint S1).
+# Rangos (p25, p75) pre-modificador temporal. Unidades: porcentaje puntos.
+# Fuente: bundle Zenodo v1 (backend/data/zenodo/v1/benchmarks_er_politicos_mx_v1.csv).
+# Cells 🟢 VALIDATED = n≥30 posts, IC95 calculable, ≥2 dirigentes distintos.
+# Cells 🟡 TBD = no hay data empírica todavía — valores extrapolados conservadoramente
+# desde Nano/Micro con factor 0.5× por estrato (ver methodology.md §7).
 MATRIZ_ER_5x5: dict[str, dict[Platform, tuple[float, float]]] = {
     "Nano": {
-        Platform.TWITTER:   (3.5, 6.0),
-        Platform.INSTAGRAM: (5.0, 9.0),
-        Platform.FACEBOOK:  (4.0, 7.0),
-        Platform.TIKTOK:    (6.0, 12.0),
-        Platform.YOUTUBE:   (8.0, 15.0),
+        # 🟢 VALIDATED (Zenodo v1 · p25-p75)
+        Platform.TWITTER:   (0.013, 0.213),
+        Platform.INSTAGRAM: (0.296, 1.134),
+        Platform.FACEBOOK:  (0.094, 0.611),
+        Platform.TIKTOK:    (0.318, 1.070),
+        # 🟡 TBD (Zenodo n=0) · extrapolado desde TikTok Nano × 1.3
+        Platform.YOUTUBE:   (0.400, 1.400),
     },
     "Micro": {
-        Platform.TWITTER:   (2.5, 4.5),
-        Platform.INSTAGRAM: (3.5, 6.5),
-        Platform.FACEBOOK:  (2.5, 5.0),
-        Platform.TIKTOK:    (4.5, 9.0),
-        Platform.YOUTUBE:   (5.0, 10.0),
+        # 🟢 VALIDATED (Zenodo v1 · p25-p75)
+        Platform.TWITTER:   (0.051, 0.158),
+        Platform.INSTAGRAM: (0.178, 0.501),
+        Platform.FACEBOOK:  (0.023, 0.174),
+        Platform.TIKTOK:    (0.593, 1.896),
+        # 🟡 TBD (Zenodo n=10, todos ceros) · extrapolado
+        Platform.YOUTUBE:   (0.600, 2.000),
     },
+    # 🟡 TBD · extrapolado conservadoramente (sin data Zenodo v1)
+    # Factor ~0.5× Micro por estrato (patrón decay audiencia↑ → ER↓)
     "Mid": {
-        Platform.TWITTER:   (1.8, 3.2),
-        Platform.INSTAGRAM: (2.5, 4.5),
-        Platform.FACEBOOK:  (1.8, 3.5),
-        Platform.TIKTOK:    (3.0, 6.0),
-        Platform.YOUTUBE:   (3.0, 6.5),
+        Platform.TWITTER:   (0.025, 0.080),
+        Platform.INSTAGRAM: (0.090, 0.250),
+        Platform.FACEBOOK:  (0.012, 0.087),
+        Platform.TIKTOK:    (0.300, 0.950),
+        Platform.YOUTUBE:   (0.300, 1.000),
     },
     "Macro": {
-        Platform.TWITTER:   (1.2, 2.2),
-        Platform.INSTAGRAM: (1.8, 3.2),
-        Platform.FACEBOOK:  (1.2, 2.5),
-        Platform.TIKTOK:    (2.0, 4.5),
-        Platform.YOUTUBE:   (2.0, 4.5),
+        Platform.TWITTER:   (0.013, 0.040),
+        Platform.INSTAGRAM: (0.045, 0.125),
+        Platform.FACEBOOK:  (0.006, 0.044),
+        Platform.TIKTOK:    (0.150, 0.475),
+        Platform.YOUTUBE:   (0.150, 0.500),
     },
     "Mega": {
-        Platform.TWITTER:   (0.8, 1.5),
-        Platform.INSTAGRAM: (1.2, 2.2),
-        Platform.FACEBOOK:  (0.8, 1.8),
-        Platform.TIKTOK:    (1.5, 3.0),
-        Platform.YOUTUBE:   (1.2, 3.0),
+        Platform.TWITTER:   (0.007, 0.020),
+        Platform.INSTAGRAM: (0.023, 0.063),
+        Platform.FACEBOOK:  (0.003, 0.022),
+        Platform.TIKTOK:    (0.075, 0.238),
+        Platform.YOUTUBE:   (0.075, 0.250),
     },
+}
+
+# Celdas con data empírica Zenodo v1 validada (n≥30, IC95, ≥2 dirigentes).
+# El resto son TBD · extrapolación conservadora hasta bundle v2+.
+ZENODO_VALIDATED_CELLS: set[tuple[str, Platform]] = {
+    ("Nano", Platform.TWITTER),
+    ("Nano", Platform.INSTAGRAM),
+    ("Nano", Platform.FACEBOOK),
+    ("Nano", Platform.TIKTOK),
+    ("Micro", Platform.TWITTER),
+    ("Micro", Platform.INSTAGRAM),
+    ("Micro", Platform.FACEBOOK),
+    ("Micro", Platform.TIKTOK),
 }
 
 ESTRATO_UMBRALES_FOLLOWERS: list[tuple[str, int]] = [

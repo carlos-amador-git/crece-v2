@@ -48,6 +48,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.social import SocialPost, SocialProfile
 from app.services.diagnostico._common import (
     MATRIZ_ER_5x5,
+    ZENODO_VALIDATED_CELLS,
     build_dirigente_not_found,
     build_insufficient,
     build_ok,
@@ -148,6 +149,7 @@ async def compute(
             "dentro_rango": dentro_rango,
             "n_posts": len(posts),
             "followers": profile.followers_count,
+            "zenodo_validated": (estrato, profile.platform) in ZENODO_VALIDATED_CELLS,
         }
         n_posts_total += len(posts)
 
@@ -171,6 +173,6 @@ async def compute(
             "dias_a_comicio": dias_a_comicio,
             "ventana_dias_analizada": VENTANA_DIAS,
             "n_posts_total": n_posts_total,
-            "matriz_version": "5x5-tbd-2026-04-19",
+            "matriz_version": "5x5-zenodo-v1-2026-04-19",
         },
     )

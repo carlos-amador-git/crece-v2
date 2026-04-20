@@ -24,6 +24,7 @@ export interface B01PlatformData {
   dentro_rango: boolean;
   n_posts: number;
   followers: number;
+  zenodo_validated?: boolean;
 }
 export interface B01Data {
   er_por_plataforma: Record<string, B01PlatformData>;

@@ -69,8 +69,10 @@ const tooltipStyle = {
   fontSize: 11,
 };
 
-// Benchmark empírico MX D-19 (Nano × plataformas, n=316)
-const BENCHMARK_MX_NANO_PISO = 4.6;
+// Benchmark empírico MX D-19 · Zenodo v1 (p25-p75 política mexicana)
+// Nano X: 0.013-0.213% · Nano IG: 0.296-1.134% · Nano FB: 0.094-0.611% · Nano TT: 0.318-1.070%
+// n=316 (Nano X, celda con mayor muestra). Otras celdas: n=150-200.
+const BENCHMARK_MX_RANGE_LABEL = "0.01%–1.1%";
 const BENCHMARK_MX_N_OBS = 316;
 const ZENODO_METHODOLOGY_URL =
   "https://github.com/MarxCha/crece-v2/blob/main/backend/data/zenodo/v1/methodology.md";
@@ -96,6 +98,8 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
     ? platforms.reduce((acc, [, p]) => acc + (p.er_esperado_rango_pct?.[0] ?? 0), 0) /
       platforms.length
     : null;
+  const anyUnvalidated = platforms.some(([, p]) => p.zenodo_validated === false);
+  const allUnvalidated = platforms.length > 0 && platforms.every(([, p]) => p.zenodo_validated === false);
 
   return (
     <CardShell
@@ -129,16 +133,24 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
       >
         <p className="text-muted-foreground leading-snug">
           Tu ER <span className="font-medium text-foreground">{avgActual != null ? fmtPct(avgActual) : "—"}</span>
-          {" · "}Benchmark empírico MX{" "}
-          <span className="font-medium text-foreground">{BENCHMARK_MX_NANO_PISO}%</span>
-          {" "}(Zenodo v1, n={BENCHMARK_MX_N_OBS})
+          {" · "}Rango empírico MX política{" "}
+          <span className="font-medium text-foreground">{BENCHMARK_MX_RANGE_LABEL}</span>
+          {" "}(Zenodo v1 · n={BENCHMARK_MX_N_OBS} Nano X)
         </p>
         <p className="text-muted-foreground leading-snug">
-          El benchmark comercial histórico (Sprout Social · Rival IQ · IM commercial)
-          sobre-estimaba este rango hasta{" "}
-          <span className="font-medium text-foreground">~100×</span>{" "}
-          para contenido político.
+          El benchmark comercial (Sprout Social · Rival IQ · IM commercial) mostraba
+          rangos <span className="font-medium text-foreground">3–7%</span> que
+          sobre-estimaban el ER político mexicano hasta{" "}
+          <span className="font-medium text-foreground">~100×</span>.
         </p>
+        {anyUnvalidated && (
+          <p
+            className="text-[10px] text-amber-700 dark:text-amber-500 leading-snug pt-0.5"
+            data-testid="b01-tbd-warning"
+          >
+            {allUnvalidated ? "⚠️" : "ℹ️"} {allUnvalidated ? "Estrato sin data empírica Zenodo v1 — rangos extrapolados (calibración en curso)" : "Algunas plataformas sin data empírica aún — rangos extrapolados"}
+          </p>
+        )}
         <div className="flex items-center gap-2 pt-0.5">
           <TooltipProvider>
             <Tooltip>
@@ -351,6 +363,10 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
   const d = bloque.data;
   const self = d?.self;
   const rivales = d?.rivales ?? [];
+  // Demo mode: proxies S2 OR rivales configurados que no resuelven (no_encontrado / sin_profiles / todos sin data)
+  const isProxiesDemo = d?.origen_competidores === "proxies_s2";
+  const rivalesSinData = rivales.length > 0 && rivales.every((r) => r.status !== "ok");
+  const isDemo = isProxiesDemo || rivalesSinData;
   const rows = self
     ? [
         { name: "Tú", er: self.er_avg_pct ?? 0, isSelf: true },
@@ -362,6 +378,24 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
       ]
     : [];
 
+  const demoBanner = isDemo ? (
+    <div
+      className="rounded-md border border-amber-300/60 dark:border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/30 px-3 py-1.5 text-[11px] leading-snug"
+      data-testid="b04-demo-banner"
+    >
+      <p className="text-amber-800 dark:text-amber-300">
+        <span className="font-medium">Competidores de demostración.</span>{" "}
+        Configura tus rivales reales en{" "}
+        <a
+          href="/dashboard/onboarding?step=competidores"
+          className="underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+        >
+          Onboarding · paso Competidores
+        </a>.
+      </p>
+    </div>
+  ) : null;
+
   return (
     <CardShell
       code="B04"
@@ -371,6 +405,7 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b04"
+      persistentBanner={demoBanner}
     >
       <div className="flex items-baseline gap-3" data-testid="b04-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">

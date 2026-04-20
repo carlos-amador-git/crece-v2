@@ -22,6 +22,7 @@ interface CardShellProps {
   testId: string;
   children: React.ReactNode;
   className?: string;
+  persistentBanner?: React.ReactNode;
 }
 
 export function CardShell({
@@ -35,6 +36,7 @@ export function CardShell({
   testId,
   children,
   className,
+  persistentBanner,
 }: CardShellProps) {
   const insufficient = status === "insufficient_data";
 
@@ -89,6 +91,7 @@ export function CardShell({
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col gap-3 pt-0">
+        {persistentBanner}
         {insufficient ? (
           <div
             className="flex flex-1 flex-col items-start justify-center gap-2 rounded-md border border-dashed border-border bg-muted/30 p-4"

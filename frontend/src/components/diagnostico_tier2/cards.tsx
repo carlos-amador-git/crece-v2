@@ -335,6 +335,30 @@ export function CardB13({
           )}
         </p>
       )}
+
+      {pct != null && (
+        <p
+          className={cn(
+            "text-[12px] leading-snug rounded-md px-3 py-2 border",
+            impact === "alto"
+              ? "border-red-300/60 bg-red-50/60 text-red-900 dark:border-red-500/40 dark:bg-red-950/30 dark:text-red-200"
+              : impact === "medio"
+              ? "border-amber-300/60 bg-amber-50/60 text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-200"
+              : "border-border/50 bg-muted/30 text-muted-foreground",
+          )}
+          data-testid="b13-narrative"
+        >
+          <span className="font-medium">
+            {pct.toFixed(1)}%
+          </span>{" "}
+          de tu engagement en comments es inauténtico
+          {impact === "alto"
+            ? " — nivel alto, revisa fuentes de amplificación."
+            : impact === "medio"
+            ? " — nivel medio, monitorea tendencia."
+            : " — dentro del ruido orgánico esperado."}
+        </p>
+      )}
     </CardShell>
   );
 }
@@ -380,6 +404,19 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
         {d?.n_posts_analizados ?? 0} posts analizados · {altos} con drift alto (&gt;
         {d?.umbral_drift_alto ?? 0.75})
       </p>
+
+      <div
+        className="rounded-md border border-amber-300/60 dark:border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/30 px-3 py-2 text-[11px] leading-snug"
+        data-testid="b14-calibration-warning"
+      >
+        <p className="text-amber-800 dark:text-amber-300">
+          <span className="font-medium">⚠️ Detector en calibración.</span>{" "}
+          Jaccard sobre captions cortos tiende a saturar cerca de{" "}
+          <span className="font-mono">1.0</span> — los scores individuales todavía no
+          son interpretables de manera confiable. Úsalo como señal relativa entre
+          posts, no como medida absoluta.
+        </p>
+      </div>
 
       {heatmap.length > 0 && (
         <div className="space-y-1.5" data-testid="b14-heatmap">

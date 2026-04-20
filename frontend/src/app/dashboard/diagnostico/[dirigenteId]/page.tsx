@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Info } from "lucide-react";
 import Link from "next/link";
 import { useDiagnosticoTier1 } from "@/lib/api/hooks/use-diagnostico-tier1";
 import { useDirigente } from "@/lib/api/hooks/use-dirigentes";
@@ -76,6 +76,40 @@ export default function DiagnosticoPage({ params }: Props) {
           </div>
         )}
       </header>
+
+      {/* Contexto D-19 · elevado al overview (F-05) */}
+      {data && !isLoading && (
+        <div
+          className="flex items-start gap-2.5 rounded-md border border-border/60 bg-muted/25 px-3.5 py-2.5 text-[12px] leading-snug"
+          data-testid="tier1-contexto-d19"
+        >
+          <Info className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden="true" />
+          <div className="space-y-0.5 text-muted-foreground">
+            <p>
+              Los rangos ER que ves aquí usan el{" "}
+              <span className="font-medium text-foreground">benchmark empírico MX política</span>
+              {" "}(Zenodo v1 · n=316 Nano X). Política mexicana tiene engagement
+              sustantivamente menor al benchmark comercial de Influencer Marketing
+              (<span className="font-mono">3-7%</span>) — la diferencia puede llegar a
+              factor ~100× en algunas celdas.
+            </p>
+            <p className="text-[11px]">
+              Si un bloque marca{" "}
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 align-middle" aria-hidden="true" />{" "}
+              rojo no significa que estés "mal" según el estándar global — significa que
+              estás bajo el piso del estrato político mexicano.{" "}
+              <a
+                href="https://github.com/MarxCha/crece-v2/blob/main/backend/data/zenodo/v1/methodology.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+              >
+                Metodología completa →
+              </a>
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Error state */}
       {isError && (
