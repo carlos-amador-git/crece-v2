@@ -32,6 +32,7 @@ from app.api.v1.endpoints import (
     health,
     indice_aceptacion,
     metricas_sociales,
+    onboarding,
     ops,
     organizaciones,
     privacy_arco,
@@ -101,6 +102,8 @@ api_router.include_router(admin_promesas.router, prefix="/admin/promesas", tags=
 api_router.include_router(indice_aceptacion.router, prefix="/social", tags=["indice-aceptacion"])
 api_router.include_router(privacy_arco.router, prefix="", tags=["privacy-arco"])
 api_router.include_router(ops.router, prefix="/ops", tags=["ops"])
+api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
+api_router.include_router(onboarding.oauth_router, prefix="/oauth", tags=["oauth"])
 api_router.include_router(
     diagnostico_tier1.router, prefix="/diagnostico", tags=["diagnostico-tier1"]
 )
