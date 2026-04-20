@@ -40,6 +40,7 @@ import {
   Ghost,
   Activity,
   UserSquare2,
+  Stethoscope,
 } from "lucide-react";
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -92,6 +93,7 @@ const sections: Section[] = [
     items: [
       leaf("/dashboard", "Overview", LayoutDashboard),
       leaf("/dashboard/dirigentes", "Dirigentes", Users),
+      leaf("/dashboard/diagnostico/1", "Diagnostico", Stethoscope),
       group("social", "Social", MessageSquare, [
         leaf("/dashboard/social", "Monitoreo", Activity),
         leaf("/dashboard/social/comentarios", "Comentarios", MessageSquare),
@@ -191,6 +193,10 @@ export function Sidebar() {
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
+    // Diagnóstico: highlight para cualquier dirigente id, no solo /1
+    if (href.startsWith("/dashboard/diagnostico/")) {
+      return pathname.startsWith("/dashboard/diagnostico/");
+    }
     return pathname.startsWith(href);
   };
 

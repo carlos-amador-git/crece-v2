@@ -52,6 +52,11 @@ class Dirigente(Base):
     # Sprint S1 — data fidelity + estrato + competidores (MASTER §5 S1 T1/T2)
     data_fidelity_tier: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     estrato_politico: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Lista de IDs de competidores directos declarados por el cliente.
+    # Durante Sprint S2 se pobla vía fixture de desarrollo D-22:
+    #   backend/scripts/seed_proxies_desarrollo_s2.py
+    # En Sprint S5 este campo será declarado por el cliente en el Onboarding
+    # Wizard (pantalla "¿Contra quién compites?"). El fixture S2 es DESCARTABLE.
     competidor_directo_ids: Mapped[list[int]] = mapped_column(
         ARRAY(Integer),
         nullable=False,
