@@ -50,6 +50,7 @@ nlp = [
 ml = [
     "scikit-learn>=1.5.0",
     "joblib>=1.4.0",
+    "reportlab>=4.4.0",
 ]
 dev = [
     "pytest>=8.3.0",

@@ -1,148 +1,129 @@
-# SPRINT-CURRENT — Sprint S3 Diferenciadores Tier 2 (Killer Features)
+# SPRINT-CURRENT — Sprint S4 Plan IA con LLM + Cierre de Ciclo
 
-**Sprint actual:** S3 · **Status:** 🟢 EN EJECUCIÓN · autorizado CEO 2026-04-19 post-merge PR #26
-**Sprint previo cerrado:** S2 · 2026-04-19 · archivo `.context/archive/sprint-s2-2026-04-19.md` · reporte `backend/research/2026-04-19/SPRINT-S2-REPORTE-EJECUTIVO.md`
-**Decisiones vinculantes:** D-19 (matriz 5×5 · modificador temporal) · D-22 (competidores client-owned · proxies S2 reciclables) · D-23 (confirmación humana obligatoria) · revisión §9.8 S2 (aprobada con 2 observaciones menores post-merge)
+**Sprint actual:** S4 · **Status:** 🟢 EN EJECUCIÓN autónoma · autorizado CEO 2026-04-19 post-merge PR #28 con 4 integraciones
+**Sprint previo:** S3 · `.context/archive/sprint-s3-2026-04-19.md` · reporte `backend/research/2026-04-19/SPRINT-S3-REPORTE-EJECUTIVO.md`
+**Decisiones vinculantes:** D-17 (cierre ciclo Plan IA 5 fases) · D-19 (matriz 5×5) · D-22 (competidores client-owned) · D-23 (HITL onboarding) · **D-24 (estructura prompt 8-bloques + changelog versionable)**
+
+**Documento pre-requisitos aprobado:** `backend/research/2026-04-19/SPRINT-S4-PRE-REQUISITOS.md` · §3.6.1 MASTER
 
 ---
 
 ## Objetivo
 
-Implementar los **8 bloques Tier 2 Diferenciadores Defensibles** del diagnóstico. Son las killer features que separan CRECE v2 de Brandwatch/Meltwater/Sprout Social. Cada bloque = backend service + endpoint REST + frontend card + test E2E.
+Implementar **Plan IA con ciclo completo 5 fases** (D-17): generación → decisión → ejecución → seguimiento → cierre. Consumo de los 18 bloques del diagnóstico + RAG histórico + anatomía §2.6.7 obligatoria. Pipeline LLM Gemma 3:12b local + admin panel MD review HITL + UI cliente decisión + servicio seguimiento 14d + cierre automático + memoria #10.7.
 
-**Criterio acceptance:** los 8 bloques Tier 2 operativos con muestra de casos reales del piloto · Filtro de Realidad (B13) cambia IPD visible (demo del valor) · dashboard `/dashboard/diagnostico-tier2/[id]` navegable.
-
----
-
-## Observaciones CEO §9.8 integradas como requisitos S3
-
-### Observación 1 — Contexto explicativo del B01 ER (UI)
-
-El headline B01 de Piña (1.2% vs piso 4.6% Nano X) es consistente con D-19 pero puede leerse como fracaso propio del cliente cuando es realidad estructural del dominio político. **Requisito S3:** la card B01 debe mostrar contexto explicativo dual:
-- "Tu ER está por debajo del benchmark mexicano empírico (v1 preliminar 4.6% Nano X, n=316)"
-- "El benchmark histórico de la industria comercial (Gemini DR · IM commercial) sobre-estimaba este rango ~100× — ver D-19"
-- Tooltip o link "¿por qué mi benchmark es más bajo que los rangos de Sprout Social?"
-
-Este ajuste se aplica como part of Sprint S3 frontend pass (no re-abre Sprint S2).
-
-### Observación 2 — Drill-down B10 Humanización
-
-El B10 score 15.14 "Institucional" requiere drill-down habilitado ANTES del Sprint S4 Plan IA:
-- Endpoint `GET /api/v1/diagnostico/{dirigente_id}/humanizacion/examples` que devuelve `{top_5_institucional, top_5_humanizante, keywords_analizadas}`
-- Frontend: la card B10 incluye botón "Ver ejemplos" que abre drawer con los 10 posts (5+5)
-- Sin este drill-down el Plan IA S4 no podrá traducir el score en recomendaciones específicas
-
-Aplicado como S3 T0.5 (pre-arranque bloques Tier 2).
+**Criterio acceptance:** CEO recibe reporte semanal + flujo E2E: 1 recomendación generada → aprobada MD review → aprobada cliente → post publicado vinculado → seguimiento 14d → veredicto automático + edición cliente → aparece en memoria histórica.
 
 ---
 
-## T0 · Memory limit Docker (elevado por CEO de DIFERIDO-05)
+## T-1 · Pre-requisitos aprobados CEO §9.8 previa (4 componentes)
 
-**Rationale:** en Sprint S2 Postgres entró en WAL recovery 3× durante batch Plutchik (sin pérdida de datos). Sprint S3 procesa 8 clasificadores NLP adicionales (mayor presión memoria). WAL recovery puede escalar y convertirse en pérdida de datos. **Debe resolverse ANTES de arrancar los 8 bloques Tier 2.**
+### T-1.1 Seed 10 promesas Piña (MD arranque mínimo, resto Onboarding S5)
+- [ ] Script `backend/scripts/seed_promesas_pina_s4.py` idempotente con 10 promesas realistas
+- [ ] Endpoint admin `POST /api/v1/admin/promesas` minimal
+- [ ] Verificar B16 Piña pasa de `insufficient_data` a `ok`
 
-- [ ] **T0.1** Subir `memory_limit` en `docker-compose.yml` para `crece-db` (recomendación: 4GB) y `crece-backend` (recomendación: 2GB)
-- [ ] **T0.2** Reducir `pool_size` del backend async session factory si el container tiene <2GB disponibles
-- [ ] **T0.3** Smoke test: correr `run_plutchik_batch.py --limit 100` después del cambio y verificar que Postgres NO entra en recovery mode (tail de logs `docker logs crece-db`)
-- [ ] **T0.4** Documentar cambios en `backend/README.md` sección "Recursos Docker recomendados dev/prod"
+### T-1.2 Umbrales operativos documentados
+- [ ] `backend/research/2026-04-19/UMBRALES-OPERATIVOS-S4.md`
+  - Topic Drift delta ±15% vs baseline · calibración 30d (flag rate 15-40%)
+  - CIB confidence ≥0.70 para recomendación Plan IA
+  - Humanización target por perfil §1.5 (4 rangos)
 
-**Criterio acceptance T0:** batch NLP de 100+ posts completa sin WAL recovery event.
+### T-1.3 Prompt Plan IA v1 versionable
+- [ ] `backend/research/2026-04-19/PROMPT-PLAN-IA-v1.md` con:
+  - Frontmatter `version: "1.0" · fecha: 2026-04-19 · status: approved`
+  - Changelog obligatorio al inicio
+  - 8 bloques completos (rol + contexto + 18 bloques JSON + **delta B13 dinámica** + behavioral library + tarea + JSON schema + **constraint anti-vanidad**)
+  - Schema JSON de salida mapeado a `recomendaciones_plan_ia` §6.3.2
 
-## T0.5 · Drill-down B10 Humanización (observación CEO §9.8)
-
-- [ ] Extender `backend/app/services/diagnostico/humanizacion_service.py` con método `get_examples(dirigente_id, org_id) -> {top_5_institucional, top_5_humanizante}`
-- [ ] Endpoint `GET /api/v1/diagnostico/{dirigente_id}/humanizacion/examples`
-- [ ] Frontend: botón "Ver ejemplos" en card B10 (extends `cards.tsx`) que abre Drawer/Dialog con los 10 posts + keywords resaltadas
-- [ ] E2E test: click en "Ver ejemplos" → 10 posts visibles
-
-## T0.6 · Contexto explicativo B01 ER (observación CEO §9.8)
-
-- [ ] Frontend: extender card B01 en `cards.tsx` con tooltip/link explicativo sobre el benchmark empírico D-19 vs la tabla comercial IM descartada
-- [ ] Texto base: "Tu ER {er_actual}% · Benchmark empírico MX {piso}% · El benchmark comercial histórico (Sprout/Rival IQ) sobre-estimaba este rango hasta 100× — ver D-19"
-- [ ] Link al `methodology.md` del bundle Zenodo v1 (Track A Apache 2.0 público)
-
----
-
-## 8 bloques Tier 2 (MASTER §3.2)
-
-| # | Bloque | Pregunta | Input crítico | Fuente |
-|---|---|---|---|---|
-| B11 | Cross-Partisan Validation Score | ¿Mi mensaje cruza líneas partidistas? | authors comments + afiliación inferida | §3.2 #11 |
-| B12 | CIB Detector multinivel | ¿Hay comportamiento coordinado inauténtico? | TF-IDF + clustering + account age + framework ITESO | §3.2 #12 |
-| B13 | Filtro de Realidad | ¿Cuál es mi ER orgánico sin CIB? | toggle UI que recalcula métricas excluyendo CIB | §3.2 #13 |
-| B14 | Topic Drift Detector | ¿Mi caption habla de lo que los comments discuten? | TF-IDF caption vs comments | §3.2 #14 |
-| B15 | Rage Click Flag | ¿Mi engagement es indignación o conversión? | sentiment × velocity heurística | §3.2 #15 |
-| B16 | Rastreador Promesas de Campaña | ¿Cumplí lo que prometí? | tabla `promesas_dirigente` + NLP co-ocurrencia | §3.2 #16 |
-| B17 | Veda INE Compliance | ¿Puedo publicar esto en ventana veda? | filtro heurístico sobre queue publicación | §3.2 #17 |
-| B18 | Escaneo Violencia Política | ¿Hay amenazas o violencia política de género? | diccionarios hate speech MX + detector | §3.2 #18 |
+### T-1.4 Anti-vanity validator post-generación
+- [ ] `backend/app/services/plan_ia/anti_vanity_validator.py`
+  - Rechaza recomendación si no cita ≥1 bloque B01-B18 + evidencia (post_id/métrica/ventana)
+  - Re-solicita al LLM con feedback explícito cuando rechaza
+  - Test unitario con casos positivos (cita válida) y negativos ("publica más contenido")
 
 ---
 
-## Tareas (estructura)
+## S4 Core · 11 tareas D-17 (6-8 días)
 
-### T1 — Backend services (8 services Python)
-- [ ] `backend/app/services/diagnostico_tier2/` con 8 archivos: `cross_partisan_service.py`, `cib_detector_service.py`, `filtro_realidad_service.py`, `topic_drift_service.py`, `rage_click_service.py`, `promesas_service.py`, `veda_compliance_service.py`, `violencia_politica_service.py`
-- [ ] Cada service con método async `compute(dirigente_id, org_id) -> dict`
-- [ ] Tests unitarios por service en `backend/tests/diagnostico_tier2/`
+### T1 · Pipeline LLM Gemma 3:12b
+- [ ] `backend/app/services/plan_ia/llm_pipeline.py` consume 18 bloques + behavioral library + PROMPT v1
+- [ ] temperature=0.2 · seed=42 · timeout 90s warm · 180s cold (D-21 SLO)
+- [ ] Integra anti-vanity validator T-1.4 como post-processor
 
-### T2 — Endpoints REST
-- [ ] `backend/app/api/v1/endpoints/diagnostico_tier2.py` con 8 endpoints individuales + 1 agregado
-- [ ] Filtro de Realidad (B13) necesita query parameter `?filtro_cib=true` que recompute los bloques Tier 1 excluyendo cuentas CIB detectadas en B12
-- [ ] Auth JWT + org_id scoping
+### T2 · Prompt engineering §2.6.7 obligatoria
+- [ ] Verifica que cada recomendación tiene los 5 elementos de la anatomía
+- [ ] Schema enforcement JSON estricto
 
-### T3 — NLP clasificadores adicionales
-- [ ] Clasificador de afiliación partidista (B11) — diccionarios MC/MORENA/PAN/PRI + heurística sobre content
-- [ ] Clasificador hate speech MX (B18) — diccionario seed + extensibilidad a Perspective API si el presupuesto lo permite
-- [ ] Detector de sarcasmo/outrage (B15) — heurística sentiment spike + keywords negativos + velocity
+### T3 · RAG histórico dirigente + competidores
+- [ ] pgvector embeddings de posts + recomendaciones previas del Plan IA
+- [ ] Bloque #10.7 Memoria inyectable al prompt
 
-### T4 — Frontend 8 cards Tier 2 + drill-downs
-- [ ] `frontend/src/app/dashboard/diagnostico-tier2/[dirigenteId]/page.tsx`
-- [ ] 8 cards con visualizaciones específicas (red graph CIB, heatmap topic drift, timeline veda, etc.)
-- [ ] Toggle "Filtro de Realidad" en el header global del dashboard que replica hacia Tier 1 (demo del valor)
+### T4 · Generación persistible `recomendaciones_plan_ia`
+- [ ] `POST /api/v1/plan-ia/generate/{dirigente_id}` crea fila con `estado='propuesta'`
+- [ ] Persiste principio conductual + evidencia + ventana + criterio éxito
 
-### T5 — Integración + E2E
-- [ ] 8 tests E2E Playwright (1 por bloque)
-- [ ] Toggle Filtro Realidad cambia IPD visible y números Tier 1 (demostración del valor)
+### T5 · Admin panel `/dashboard/admin/plan-ia-review`
+- [ ] Cola de recomendaciones `estado='propuesta'` para MD review
+- [ ] Acciones: aprobar (→ cliente_visible), rechazar (→ descartada), modificar (→ editada)
+- [ ] **Sin este panel, Plan IA NO sale a producción** (§3.6 MASTER HITL obligatorio)
 
----
+### T6 · UI cliente `/dashboard/recomendaciones`
+- [ ] Cliente ve las recomendaciones aprobadas
+- [ ] Acciones: aprobar · rechazar · modificar con justificación
 
-## Gaps pendientes de S2 (requisitos de reactivación documentados)
+### T7 · Vinculación post ejecutor
+- [ ] Cliente publica contenido → UI permite `post_ejecutor_id` FK a social_posts
 
-Per observación CEO §9.8, los dos bloques insufficient_data del Sprint S2 quedan con criterio explícito de reactivación (no son pendientes fantasma):
+### T8 · Servicio seguimiento 14d ventana
+- [ ] Celery task diaria que actualiza `metricas_observadas` de recomendaciones en ventana
+- [ ] UI bloque #10.5 con evolución métricas observadas vs predichas
 
-- **B07 Growth Attribution Time-Decay** — retomar cuando `scrape-all-profiles-daily` haya acumulado **≥14 días de snapshots de followers**. Hasta entonces la card muestra `insufficient_data` con contador "faltan X días". Verificar cada día con `SELECT count(DISTINCT date(created_at)) FROM social_profile_snapshots;`
-- **B08 Share of Voice** — retomar cuando `run_topic_extraction.py` haya procesado **≥500 posts con `topics_extracted` poblado**. Hasta entonces la card muestra `insufficient_data` con contador "faltan X posts por clasificar". Verificar con `SELECT count(*) FROM social_posts WHERE topics_extracted IS NOT NULL;`
+### T9 · Servicio cierre automático
+- [ ] Al vencer ventana: veredicto automático por `criterio_exito` numérico
+- [ ] Opción edición cliente preservando `veredicto_original`
 
-Estos criterios NO son tareas de S3 — son watchers. El servicio detecta automáticamente cuando el umbral se cumple y pasa de `insufficient_data` a `ok` sin código nuevo. Solo se monitorean.
+### T10 · Bloque #10.7 Memoria Plan IA
+- [ ] Dashboard agregado con tasa de éxito por categoría + drill-down histórico
+- [ ] Feedback loop: las recomendaciones exitosas sesgan el RAG T3 positivamente
 
----
-
-## Paralelización operativa sugerida
-
-- **Bloque A (compute + NLP):** B11 + B12 + B14 + B15 (NLP-heavy)
-- **Bloque B (meta):** B13 Filtro Realidad + B17 Veda Compliance (transversales sobre Tier 1)
-- **Bloque C (registro + texto):** B16 Promesas + B18 Violencia Política
-- **Bloque D (frontend + drill-down B10/B01):** T4 + T0.5 + T0.6
-
-Clock estimado: **6-10h con 4-5 agents concurrentes** post-T0 cierre.
+### T11 · Reporte semanal MD/PDF
+- [ ] Cron weekly que genera 1 pagina PDF para CEO + email configurable
 
 ---
 
-## Criterio acceptance del Sprint S3
+## Observaciones operativas CEO integradas
 
-Sprint S3 se declara completo cuando:
-
-1. **T0** memory_limit Docker aplicado + smoke test NLP sin WAL recovery
-2. **T0.5** drill-down B10 operativo con endpoint + UI drawer
-3. **T0.6** contexto explicativo B01 agregado en UI
-4. 8 services Tier 2 + 8 endpoints con tests unitarios pasando
-5. 8 cards frontend renderizando con datos reales
-6. Toggle Filtro Realidad (B13) demuestra cambio visible en IPD
-7. 8 tests E2E Playwright verdes
-
-Con 6/7 dura + demo Filtro Realidad funcional → arranque Sprint S4 autorizado.
+1. **B13 Filtro Realidad delta dinámica** → bloque 4 del prompt NUNCA cableado al 16% de Piña, cada dirigente recibe su valor real calculado en `generate()` al inicio.
+2. **Ninguna recomendación acciona bloqueo CIB sin HITL §3.6** → restricción dura en bloque 1 del prompt. Máxima recomendación sobre CIB: "revisar con MD las N cuentas flagged (confidence ≥0.70) antes de decidir acción".
 
 ---
 
-## Protocolo actualización
+## Paralelización operativa
 
-Al cierre de cada T: `- [x]` + link output. Al cerrar sprint: archivar a `.context/archive/sprint-s3-YYYY-MM-DD.md` + reset para Sprint S4.
+- **Agent A** (backend-architect): T-1.1 + T-1.2 + T-1.3 + T-1.4 + T1 + T2 + T3 + T4 · Pipeline LLM completo backend
+- **Agent B** (backend-architect): T8 + T9 + T10 + T11 · Servicios de seguimiento, cierre, memoria, reporte
+- **Agent C** (frontend-architect): T5 + T6 + T7 · Admin panel + UI cliente + vinculación post
+
+Clock estimado: **3-4 días wall-clock con 3 agents concurrentes** (vs 6-8 días serial D-17).
+
+---
+
+## Criterio acceptance del Sprint S4
+
+Sprint S4 se declara completo cuando:
+
+1. T-1 completo (seed promesas + umbrales + prompt v1 + validator)
+2. Pipeline LLM genera recomendaciones con anatomía §2.6.7 completa (≥80% parse rate)
+3. Admin panel operativo y utilizable por MD (al menos 1 recomendación aprobada a mano)
+4. Flujo E2E completo: 1 recomendación generada → aprobada MD → aprobada cliente → post vinculado → seguimiento activo
+5. Memoria #10.7 con ≥1 recomendación `completada` y su veredicto registrado
+6. Reporte semanal generado correctamente al menos una vez
+
+Con 5/6 → arranque Sprint S5 autorizado (Onboarding Wizard Meta OAuth).
+
+---
+
+## Protocolo cierre
+
+Archivar a `.context/archive/sprint-s4-2026-04-19.md` + reset S5. Reporte ejecutivo `SPRINT-S4-REPORTE-EJECUTIVO.md` + revisión §9.8 CEO.

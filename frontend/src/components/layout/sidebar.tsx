@@ -107,6 +107,7 @@ const sections: Section[] = [
         leaf("/dashboard/aceptacion/fantasmas", "Fantasmas", Ghost),
       ]),
       leaf("/dashboard/planes", "Planes IA", Brain),
+      leaf("/dashboard/recomendaciones", "Recomendaciones", Sparkles),
     ],
   },
   {
@@ -141,6 +142,7 @@ const sections: Section[] = [
     items: [
       leaf("/dashboard/admin/overview", "Operacion de flota", LayoutDashboard, false),
       leaf("/dashboard/admin/clasificacion", "Clasificacion", ClipboardList, false),
+      leaf("/dashboard/admin/plan-ia-review", "Plan IA Review", Brain, false),
     ],
   },
 ];

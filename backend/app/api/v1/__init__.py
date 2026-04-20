@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
     admin_classification,
     admin_compliance,
     admin_overview,
+    admin_promesas,
     alerts_integration,
     api_keys,
     auth,
@@ -36,6 +37,8 @@ from app.api.v1.endpoints import (
     privacy_arco,
     osint,
     participacion,
+    plan_ia,
+    plan_ia_ciclo,
     planes,
     political_framework,
     posts,
@@ -56,6 +59,8 @@ api_router.include_router(posts.router, prefix="/posts", tags=["posts"])
 api_router.include_router(electoral.router, prefix="/electoral", tags=["electoral"])
 api_router.include_router(benchmark.router, prefix="/benchmark", tags=["benchmark"])
 api_router.include_router(planes.router, prefix="/planes", tags=["planes"])
+api_router.include_router(plan_ia.router, prefix="/plan-ia", tags=["plan-ia"])
+api_router.include_router(plan_ia_ciclo.router, prefix="/plan-ia", tags=["plan-ia-ciclo"])
 api_router.include_router(ciudadanos.router, prefix="/ciudadanos", tags=["ciudadanos"])
 api_router.include_router(
     ciudadanos_legacy.router,
@@ -92,6 +97,7 @@ api_router.include_router(political_framework.router, prefix="/framework", tags=
 api_router.include_router(admin_classification.router, prefix="/admin/classification", tags=["admin-classification"])
 api_router.include_router(admin_compliance.router, prefix="/admin/compliance", tags=["admin-compliance-arco"])
 api_router.include_router(admin_overview.router, prefix="/admin", tags=["admin-overview"])
+api_router.include_router(admin_promesas.router, prefix="/admin/promesas", tags=["admin-promesas"])
 api_router.include_router(indice_aceptacion.router, prefix="/social", tags=["indice-aceptacion"])
 api_router.include_router(privacy_arco.router, prefix="", tags=["privacy-arco"])
 api_router.include_router(ops.router, prefix="/ops", tags=["ops"])
