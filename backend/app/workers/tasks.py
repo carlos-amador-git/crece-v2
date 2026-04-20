@@ -201,6 +201,125 @@ def generate_plan(
         raise self.retry(exc=exc, countdown=120) from None
 
 
+# ──────────────────────────────────────────────────────────────────────
+# S5 T0 · BLOQUEANTE — Plan IA generate async via Celery worker
+# Resuelve DIFERIDO-06: FastAPI+httpx.AsyncClient+host.docker.internal
+# cuelga silenciosamente en payloads Ollama largos (>60s). El pipeline
+# corre bien vía `docker exec python` (subprocess). Al migrarlo a Celery
+# el HTTP call Ollama ocurre fuera del event loop de uvicorn.
+# ──────────────────────────────────────────────────────────────────────
+
+
+@celery_app.task(
+    bind=True,
+    name="app.workers.tasks.plan_ia_generate_async",
+    max_retries=0,
+    time_limit=600,
+    soft_time_limit=540,
+)
+def plan_ia_generate_async(
+    self, dirigente_id: int, org_id: int, force: bool = False
+) -> dict:  # type: ignore[no-untyped-def]
+    """Ejecuta el PlanIAPipeline en el worker Celery (cola ``ai``).
+
+    Se ejecuta en el event loop del worker (asyncio.run) — FUERA del
+    event loop de uvicorn. El pipeline existente hace httpx sync wrap
+    via anyio.to_thread (ya NO cuelga en payloads grandes contra
+    Ollama Coolify VPS / host.docker.internal).
+
+    Retorna dict con:
+        - status: "ok" | "error"
+        - recomendaciones_ids: list[int] (ids persistidos en DB)
+        - elapsed_s: float
+        - valid_count / rejected_count: int
+        - pipeline: dict (metadata del pipeline)
+        - error: str (solo si status=error)
+
+    Args:
+        dirigente_id: id del dirigente target
+        org_id: org scope para multi-tenant
+        force: bypass rate-limit 24h (el endpoint ya valida role=admin)
+    """
+    import asyncio
+    from datetime import UTC
+    from datetime import datetime as _dt
+
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from app.core.config import settings
+    from app.services.plan_ia.llm_pipeline import default_pipeline
+
+    start = _dt.now(UTC)
+    logger.info(
+        "plan_ia_generate_async start dirigente_id=%d org_id=%d force=%s task_id=%s",
+        dirigente_id,
+        org_id,
+        force,
+        self.request.id,
+    )
+
+    async def _run() -> dict:
+        engine = create_async_engine(settings.DATABASE_URL, echo=False, future=True)
+        SessionLocal = sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+        try:
+            async with SessionLocal() as session:
+                result = await default_pipeline.generate(
+                    session, dirigente_id, org_id
+                )
+                return result
+        finally:
+            await engine.dispose()
+
+    try:
+        result = asyncio.run(_run())
+        elapsed = (_dt.now(UTC) - start).total_seconds()
+
+        recs = result.get("recomendaciones_creadas") or []
+        rec_ids = [r.get("id") for r in recs if isinstance(r, dict) and r.get("id")]
+
+        logger.info(
+            "plan_ia_generate_async ok dirigente_id=%d elapsed=%.2fs n_recs=%d task_id=%s",
+            dirigente_id,
+            elapsed,
+            len(rec_ids),
+            self.request.id,
+        )
+
+        return {
+            "status": "ok",
+            "dirigente_id": dirigente_id,
+            "org_id": org_id,
+            "recomendaciones_ids": rec_ids,
+            "recomendaciones_creadas": recs,
+            "rechazadas": result.get("rechazadas") or [],
+            "pipeline": result.get("pipeline") or {},
+            "elapsed_s": round(elapsed, 2),
+            "valid_count": len(rec_ids),
+            "rejected_count": len(result.get("rechazadas") or []),
+            "error": result.get("error"),
+        }
+    except Exception as exc:
+        elapsed = (_dt.now(UTC) - start).total_seconds()
+        logger.exception(
+            "plan_ia_generate_async failed dirigente_id=%d elapsed=%.2fs task_id=%s: %s",
+            dirigente_id,
+            elapsed,
+            self.request.id,
+            exc,
+        )
+        return {
+            "status": "error",
+            "dirigente_id": dirigente_id,
+            "org_id": org_id,
+            "recomendaciones_ids": [],
+            "elapsed_s": round(elapsed, 2),
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+
 @celery_app.task(name="app.workers.tasks.sync_electoral_data")
 def sync_electoral_data(estado: str | None = None) -> dict:
     """Sync electoral section data from INE/official sources."""
