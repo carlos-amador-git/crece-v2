@@ -39,6 +39,8 @@ celery_app.conf.update(
         "app.workers.tasks.plan_ia_seguimiento_diario": {"queue": "ai"},
         "app.workers.tasks.plan_ia_cierre_diario": {"queue": "ai"},
         "app.workers.tasks.plan_ia_reporte_semanal": {"queue": "ai"},
+        # S5 T0 · Plan IA generate bajo demanda (resuelve DIFERIDO-06) → cola ai
+        "app.workers.tasks.plan_ia_generate_async": {"queue": "ai"},
     },
     beat_schedule={
         "scrape-all-profiles-daily": {

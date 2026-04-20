@@ -122,36 +122,33 @@ def _classify_perfil_1_5(dirigente: Dirigente) -> str:
 
 
 def _compact_bloque(raw: dict) -> dict:
-    """Reduce un bloque del diagnóstico a los campos relevantes para el prompt.
+    """Reduce un bloque del diagnóstico a KPIs escalares esenciales.
 
-    Evita inyectar listas masivas (flagged_hashes, ejemplos, por_dia breakdowns)
-    que explotan el context window de Gemma 3:12b (~8k tokens ≈ 32k chars).
-    Mantiene status + data resumida + conteos.
+    Gemma 3:12b en M4 16GB rinde lentamente; prompt >13k chars supera 450s.
+    Solo preservamos scalars (int/float/bool/str corto) en el primer nivel y
+    primer nivel de dicts anidados. Listas se resumen por conteo.
     """
     status = raw.get("status")
     if status != "ok":
-        return {
-            "status": status,
-            "missing": (raw.get("missing") or [])[:3],
-        }
+        return {"status": status}
     data = raw.get("data") or {}
-    # Campos explicitly numéricos / categóricos conservados;
-    # listas largas se resumen por conteo.
     compact: dict = {}
     for k, v in data.items():
-        if isinstance(v, list):
-            compact[k] = {"_list_count": len(v), "_sample": v[:2]}
-        elif isinstance(v, dict):
-            # un nivel de dict conservado al completo (small)
-            if sum(len(str(x)) for x in v.values()) < 400:
-                compact[k] = v
-            else:
-                compact[k] = {
-                    kk: (vv if not isinstance(vv, list) else f"list[{len(vv)}]")
-                    for kk, vv in list(v.items())[:10]
-                }
-        else:
+        if isinstance(v, int | float | bool):
             compact[k] = v
+        elif isinstance(v, str) and len(v) < 100:
+            compact[k] = v
+        elif isinstance(v, list):
+            compact[k] = f"list[{len(v)}]"
+        elif isinstance(v, dict):
+            inner = {
+                kk: vv
+                for kk, vv in v.items()
+                if isinstance(vv, int | float | bool)
+                or (isinstance(vv, str) and len(vv) < 60)
+            }
+            if inner:
+                compact[k] = dict(list(inner.items())[:8])
     return {"status": "ok", "data": compact}
 
 
@@ -345,8 +342,8 @@ class PlanIAPipeline:
         model: str = "gemma3:12b",
         temperature: float = 0.2,
         seed: int = 42,
-        num_predict: int = 1500,
-        timeout_s: float = 300.0,
+        num_predict: int = 2000,
+        timeout_s: float = 600.0,
         max_retries: int = 1,
     ) -> None:
         self.ollama_base_url = (ollama_base_url or settings.OLLAMA_BASE_URL).rstrip("/")
@@ -358,8 +355,13 @@ class PlanIAPipeline:
         self.max_retries = max_retries
         self.validator = AntiVanityValidator()
 
-    async def _call_ollama(self, prompt: str) -> str:
-        """Llama al endpoint Ollama /api/generate. Retorna el string response."""
+    def _call_ollama_sync(self, prompt: str) -> str:
+        """Sync HTTP call a Ollama. Se envuelve vía anyio.to_thread.
+
+        Sincrónico porque async httpx a host.docker.internal en Docker Desktop
+        macOS se cuelga silenciosamente en payloads grandes (Sprint S4
+        empírico 2026-04-19). Sync httpx en 16-460s según prompt.
+        """
         endpoint = f"{self.ollama_base_url}/api/generate"
         payload = {
             "model": self.model,
@@ -373,11 +375,17 @@ class PlanIAPipeline:
                 "num_ctx": 16384,
             },
         }
-        async with httpx.AsyncClient(timeout=self.timeout_s) as client:
-            resp = await client.post(endpoint, json=payload)
+        with httpx.Client(timeout=self.timeout_s) as client:
+            resp = client.post(endpoint, json=payload)
             resp.raise_for_status()
             data = resp.json()
             return str(data.get("response") or "")
+
+    async def _call_ollama(self, prompt: str) -> str:
+        """Async wrapper sobre sync call; no bloquea event loop."""
+        from anyio import to_thread
+
+        return await to_thread.run_sync(self._call_ollama_sync, prompt)
 
     async def _generate_and_validate(
         self,

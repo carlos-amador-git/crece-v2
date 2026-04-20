@@ -42,6 +42,7 @@ import {
   UserSquare2,
   Stethoscope,
   Sparkles,
+  Rocket,
 } from "lucide-react";
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -143,6 +144,7 @@ const sections: Section[] = [
       leaf("/dashboard/admin/overview", "Operacion de flota", LayoutDashboard, false),
       leaf("/dashboard/admin/clasificacion", "Clasificacion", ClipboardList, false),
       leaf("/dashboard/admin/plan-ia-review", "Plan IA Review", Brain, false),
+      leaf("/dashboard/onboarding/1", "Onboarding", Rocket, false),
     ],
   },
 ];

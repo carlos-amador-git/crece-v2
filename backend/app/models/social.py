@@ -99,6 +99,8 @@ class DataSource(enum.StrEnum):
     AUTOMATED_SCRAPER = "automated_scraper"
     MANUAL_HOST_INGEST = "manual_host_ingest"
     OFFICIAL_API = "official_api"
+    # Sprint S5 — input directo del cliente en Onboarding Wizard (D-23 flujo primario).
+    MANUAL_ONBOARDING = "manual_onboarding"
 
 
 class SocialProfile(Base):
@@ -133,6 +135,11 @@ class SocialProfile(Base):
     )
     last_manual_update: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    # Sprint S5 D-23 · regla dura: scraping automático solo si el cliente
+    # confirmó explícitamente la cuenta en el onboarding wizard.
+    is_confirmed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
     )
 
     # Relationships

@@ -69,6 +69,10 @@ class Dirigente(Base):
         server_default="T3",
         default="T3",
     )
+    # Sprint S5 · §1.5 perfiles onboarding wizard.
+    # Valores permitidos (CHECK constraint en migration s5m1):
+    #   politico_activo · funcionario_gobierno · figura_precampaña · empresario_transicion
+    perfil_1_5: Mapped[str | None] = mapped_column(String(30), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

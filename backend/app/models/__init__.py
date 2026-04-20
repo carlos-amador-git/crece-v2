@@ -21,6 +21,7 @@ from app.models.ia_content_registry import IaContentRegistry
 from app.models.legacy import CiudadanoLegacy, PromotorLegacy
 from app.models.llm_health_log import LLMHealthLog
 from app.models.metrica_social import MetricaSocial
+from app.models.oauth_token import OAuthPlatform, OAuthTokenByPlatform, OAuthTokenStatus
 from app.models.organizacion import Organizacion
 from app.models.plan_ia import PlanIA
 from app.models.programa_social import ProgramaBeneficiario, ProgramaSocial
@@ -60,6 +61,9 @@ __all__ = [
     "IntencionVoto",
     "LLMHealthLog",
     "MetricaSocial",
+    "OAuthPlatform",
+    "OAuthTokenByPlatform",
+    "OAuthTokenStatus",
     "Organizacion",
     "PlanIA",
     "ProgramaBeneficiario",

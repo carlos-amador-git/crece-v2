@@ -1,129 +1,68 @@
-# SPRINT-CURRENT — Sprint S4 Plan IA con LLM + Cierre de Ciclo
+# SPRINT-CURRENT — Sprint S5 Onboarding Wizard Meta OAuth (cierre MVP)
 
-**Sprint actual:** S4 · **Status:** 🟢 EN EJECUCIÓN autónoma · autorizado CEO 2026-04-19 post-merge PR #28 con 4 integraciones
-**Sprint previo:** S3 · `.context/archive/sprint-s3-2026-04-19.md` · reporte `backend/research/2026-04-19/SPRINT-S3-REPORTE-EJECUTIVO.md`
-**Decisiones vinculantes:** D-17 (cierre ciclo Plan IA 5 fases) · D-19 (matriz 5×5) · D-22 (competidores client-owned) · D-23 (HITL onboarding) · **D-24 (estructura prompt 8-bloques + changelog versionable)**
+**Sprint actual:** S5 · **Status:** 🟢 EN EJECUCIÓN · autorizado CEO 2026-04-20 post-smoke S4
+**Sprint previo:** S4 · `.context/archive/sprint-s4-2026-04-19.md` · PR #29 merged (`e924fb2`)
+**Decisiones vinculantes:** D-22 · D-23 · D-24 · scoping `backend/research/2026-04-19/SPRINT-S5-SCOPING.md`
 
-**Documento pre-requisitos aprobado:** `backend/research/2026-04-19/SPRINT-S4-PRE-REQUISITOS.md` · §3.6.1 MASTER
-
----
-
-## Objetivo
-
-Implementar **Plan IA con ciclo completo 5 fases** (D-17): generación → decisión → ejecución → seguimiento → cierre. Consumo de los 18 bloques del diagnóstico + RAG histórico + anatomía §2.6.7 obligatoria. Pipeline LLM Gemma 3:12b local + admin panel MD review HITL + UI cliente decisión + servicio seguimiento 14d + cierre automático + memoria #10.7.
-
-**Criterio acceptance:** CEO recibe reporte semanal + flujo E2E: 1 recomendación generada → aprobada MD review → aprobada cliente → post publicado vinculado → seguimiento 14d → veredicto automático + edición cliente → aparece en memoria histórica.
+**Al cierre S5 → MVP completo vendible** (Tier 1 + Tier 2 + Plan IA D-17 + Onboarding comercial)
 
 ---
 
-## T-1 · Pre-requisitos aprobados CEO §9.8 previa (4 componentes)
+## T0 · BLOQUEANTE · Migrar /plan-ia/generate a Celery worker (DIFERIDO-06)
 
-### T-1.1 Seed 10 promesas Piña (MD arranque mínimo, resto Onboarding S5)
-- [ ] Script `backend/scripts/seed_promesas_pina_s4.py` idempotente con 10 promesas realistas
-- [ ] Endpoint admin `POST /api/v1/admin/promesas` minimal
-- [ ] Verificar B16 Piña pasa de `insufficient_data` a `ok`
+CEO 2026-04-20: hang silencioso en endpoint FastAPI con httpx.AsyncClient + host.docker.internal. Pipeline funciona vía docker exec (Agent A: 4 recs reales). Resolver antes de Onboarding por consistencia con cierre_service.py (Celery pattern).
 
-### T-1.2 Umbrales operativos documentados
-- [ ] `backend/research/2026-04-19/UMBRALES-OPERATIVOS-S4.md`
-  - Topic Drift delta ±15% vs baseline · calibración 30d (flag rate 15-40%)
-  - CIB confidence ≥0.70 para recomendación Plan IA
-  - Humanización target por perfil §1.5 (4 rangos)
+### T0.1 Refactor
+- [ ] Nueva Celery task `plan_ia_generate_async` invocando `PlanIAPipeline.generate()`
+- [ ] Endpoint `POST /plan-ia/generate/{dirigente_id}` encola task + poll interno 180s · devuelve 200 con recs o 504 timeout
+- [ ] Logs: task_id, queued_at, started_at, completed_at, n_recomendaciones
 
-### T-1.3 Prompt Plan IA v1 versionable
-- [ ] `backend/research/2026-04-19/PROMPT-PLAN-IA-v1.md` con:
-  - Frontmatter `version: "1.0" · fecha: 2026-04-19 · status: approved`
-  - Changelog obligatorio al inicio
-  - 8 bloques completos (rol + contexto + 18 bloques JSON + **delta B13 dinámica** + behavioral library + tarea + JSON schema + **constraint anti-vanidad**)
-  - Schema JSON de salida mapeado a `recomendaciones_plan_ia` §6.3.2
+### T0.2 Smoke binario
+- [ ] `curl -X POST /plan-ia/generate/1?force=true` → HTTP 200 OK
+- [ ] Response con ≥1 recomendación
+- [ ] Roundtrip <180s warm
+- [ ] DB tiene N nuevas filas estado='propuesta'
 
-### T-1.4 Anti-vanity validator post-generación
-- [ ] `backend/app/services/plan_ia/anti_vanity_validator.py`
-  - Rechaza recomendación si no cita ≥1 bloque B01-B18 + evidencia (post_id/métrica/ventana)
-  - Re-solicita al LLM con feedback explícito cuando rechaza
-  - Test unitario con casos positivos (cita válida) y negativos ("publica más contenido")
+Falla → debug antes Onboarding. 2-3h estimado.
 
 ---
 
-## S4 Core · 11 tareas D-17 (6-8 días)
+## S5 Core · 9 secciones Onboarding
 
-### T1 · Pipeline LLM Gemma 3:12b
-- [ ] `backend/app/services/plan_ia/llm_pipeline.py` consume 18 bloques + behavioral library + PROMPT v1
-- [ ] temperature=0.2 · seed=42 · timeout 90s warm · 180s cold (D-21 SLO)
-- [ ] Integra anti-vanity validator T-1.4 como post-processor
-
-### T2 · Prompt engineering §2.6.7 obligatoria
-- [ ] Verifica que cada recomendación tiene los 5 elementos de la anatomía
-- [ ] Schema enforcement JSON estricto
-
-### T3 · RAG histórico dirigente + competidores
-- [ ] pgvector embeddings de posts + recomendaciones previas del Plan IA
-- [ ] Bloque #10.7 Memoria inyectable al prompt
-
-### T4 · Generación persistible `recomendaciones_plan_ia`
-- [ ] `POST /api/v1/plan-ia/generate/{dirigente_id}` crea fila con `estado='propuesta'`
-- [ ] Persiste principio conductual + evidencia + ventana + criterio éxito
-
-### T5 · Admin panel `/dashboard/admin/plan-ia-review`
-- [ ] Cola de recomendaciones `estado='propuesta'` para MD review
-- [ ] Acciones: aprobar (→ cliente_visible), rechazar (→ descartada), modificar (→ editada)
-- [ ] **Sin este panel, Plan IA NO sale a producción** (§3.6 MASTER HITL obligatorio)
-
-### T6 · UI cliente `/dashboard/recomendaciones`
-- [ ] Cliente ve las recomendaciones aprobadas
-- [ ] Acciones: aprobar · rechazar · modificar con justificación
-
-### T7 · Vinculación post ejecutor
-- [ ] Cliente publica contenido → UI permite `post_ejecutor_id` FK a social_posts
-
-### T8 · Servicio seguimiento 14d ventana
-- [ ] Celery task diaria que actualiza `metricas_observadas` de recomendaciones en ventana
-- [ ] UI bloque #10.5 con evolución métricas observadas vs predichas
-
-### T9 · Servicio cierre automático
-- [ ] Al vencer ventana: veredicto automático por `criterio_exito` numérico
-- [ ] Opción edición cliente preservando `veredicto_original`
-
-### T10 · Bloque #10.7 Memoria Plan IA
-- [ ] Dashboard agregado con tasa de éxito por categoría + drill-down histórico
-- [ ] Feedback loop: las recomendaciones exitosas sesgan el RAG T3 positivamente
-
-### T11 · Reporte semanal MD/PDF
-- [ ] Cron weekly que genera 1 pagina PDF para CEO + email configurable
+1. **Detección perfil §1.5** — 4 opciones (político_activo · funcionario · precampaña · empresario)
+2. **Input manual URLs** (flujo primario D-23) — por plataforma IG/FB/X/TikTok/YouTube
+3. **SERP asistido opcional** (client-driven) — Brightdata primary + Apify fallback
+4. **Validación profiles Apify** — score confianza (full_name +0.4 · verified +0.3 · fw>50K +0.2 · posts>20 +0.1 · umbral ≥0.7)
+5. **Confirmación humana OBLIGATORIA** (D-23 regla dura) — checkbox explícito por candidato
+6. **Meta OAuth activable** — IG/FB (Meta Graph) + TikTok Business + YouTube Data · X queda T3 permanente (D-19)
+7. **Seed competidores** (D-22) — cliente declara 3-5 · libera bloque #04
+8. **Seed promesas** (D-17) — libera B16
+9. **Activación + resumen** — data_fidelity_tier preview + trigger scrape_all_profiles
 
 ---
 
-## Observaciones operativas CEO integradas
+## Criterio acceptance S5
 
-1. **B13 Filtro Realidad delta dinámica** → bloque 4 del prompt NUNCA cableado al 16% de Piña, cada dirigente recibe su valor real calculado en `generate()` al inicio.
-2. **Ninguna recomendación acciona bloqueo CIB sin HITL §3.6** → restricción dura en bloque 1 del prompt. Máxima recomendación sobre CIB: "revisar con MD las N cuentas flagged (confidence ≥0.70) antes de decidir acción".
+1. T0 verde: curl endpoint 200 OK con recs persistidas <180s
+2. 9 secciones wizard navegables
+3. Confirmación humana obligatoria pre-scraping (checkbox)
+4. 1 dirigente end-to-end en wizard (demo)
+5. OAuth Meta activo ≥1 plataforma
+6. Competidores + promesas populadas vía wizard
+7. E2E Playwright cubre flujo completo
 
----
-
-## Paralelización operativa
-
-- **Agent A** (backend-architect): T-1.1 + T-1.2 + T-1.3 + T-1.4 + T1 + T2 + T3 + T4 · Pipeline LLM completo backend
-- **Agent B** (backend-architect): T8 + T9 + T10 + T11 · Servicios de seguimiento, cierre, memoria, reporte
-- **Agent C** (frontend-architect): T5 + T6 + T7 · Admin panel + UI cliente + vinculación post
-
-Clock estimado: **3-4 días wall-clock con 3 agents concurrentes** (vs 6-8 días serial D-17).
+Con 6/7 → **MVP vendible** · piloto comercial autorizable.
 
 ---
 
-## Criterio acceptance del Sprint S4
+## Paralelización
 
-Sprint S4 se declara completo cuando:
+- **Agent A** (backend): T0 Celery migration + smoke
+- **Post-T0 Agent B** (backend): secciones 2-8 backend (SERP + profile validation + OAuth + seed endpoints)
+- **Post-T0 Agent C** (frontend): wizard UI 9 pasos + E2E
 
-1. T-1 completo (seed promesas + umbrales + prompt v1 + validator)
-2. Pipeline LLM genera recomendaciones con anatomía §2.6.7 completa (≥80% parse rate)
-3. Admin panel operativo y utilizable por MD (al menos 1 recomendación aprobada a mano)
-4. Flujo E2E completo: 1 recomendación generada → aprobada MD → aprobada cliente → post vinculado → seguimiento activo
-5. Memoria #10.7 con ≥1 recomendación `completada` y su veredicto registrado
-6. Reporte semanal generado correctamente al menos una vez
-
-Con 5/6 → arranque Sprint S5 autorizado (Onboarding Wizard Meta OAuth).
-
----
+Clock estimado 3-5 días D-23 ajustado.
 
 ## Protocolo cierre
 
-Archivar a `.context/archive/sprint-s4-2026-04-19.md` + reset S5. Reporte ejecutivo `SPRINT-S4-REPORTE-EJECUTIVO.md` + revisión §9.8 CEO.
+Archivar S5 · `SPRINT-S5-REPORTE-EJECUTIVO.md` · revisión §9.8 final MVP.
