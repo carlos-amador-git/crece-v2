@@ -21,6 +21,7 @@ from app.api.v1.endpoints import (
     content_factory_integration,
     crm_integration,
     dashboard,
+    diagnostico as diagnostico_tier1,
     dirigentes,
     electoral,
     encuestas,
@@ -93,3 +94,6 @@ api_router.include_router(admin_overview.router, prefix="/admin", tags=["admin-o
 api_router.include_router(indice_aceptacion.router, prefix="/social", tags=["indice-aceptacion"])
 api_router.include_router(privacy_arco.router, prefix="", tags=["privacy-arco"])
 api_router.include_router(ops.router, prefix="/ops", tags=["ops"])
+api_router.include_router(
+    diagnostico_tier1.router, prefix="/diagnostico", tags=["diagnostico-tier1"]
+)
