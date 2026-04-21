@@ -1,5 +1,112 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-04-21 — Incidente deploy + Opción D recovery
+
+Deploy de `main @ f29d7db` (PR #36 · remoción Lenis) regresionó 15 commits UX/UI no mergeados que vivían en `feat/eval-benchmark-v1` (alertas crisis reales, card tema urgente reacomodado, toggles gráfico líneas/barras + %/N, fixes iOS, favicon amarillo, aceptación drill-down, scrapers 5 redes). Recuperación vía chain de 4 PRs + deploy post-fix.
+
+### D-OPS-01 — Opción D · cherry-pick selectivo sobre merge completo
+Recuperación del incidente vía chain de 4 PRs en lugar de merge de `feat/eval-benchmark-v1` completo:
+1. **PR #37** revert `f29d7db` → `6126421` (Lenis vuelve a main para permitir cherry-pick sin conflict)
+2. Cherry-pick selectivo de 2 commits frontend-only: `74b7b15` (alertas_crisis real) → `ffda7ec` · `7f44130` (mobile overflow + dashboard layout) → `9a00294` con conflict resuelto manualmente (omitido `data-lenis-prevent`)
+3. **PR #38 (`c22f61e`)** precondiciones técnicas: revert hunk SyntheticDataBanner (dep `OrgContext.config` no traída) + hunk mínimo `compact` prop en CrisisAlertList
+4. **PR #39 (`5a88860`)** re-aplicación de remoción Lenis sobre main actualizado
+5. Deploy prod desde `5a88860` → `frontend-osw9z35tw-marxs-projects-bb530f2b.vercel.app` (alias `frontend-zeta-sepia-46.vercel.app`)
+
+**Why:** merge directo de `feat/eval-benchmark-v1` producía conflictos en 5 archivos por divergencia de 55 commits (sprints S0-S5 en main vs eval-v1 aislada). Cherry-pick selectivo limita scope a los 4 síntomas reportados por CEO (alertas crisis, tema urgente, gráficos líneas, absolutos/%) sin traer scrapers backend, multitenant ni semáforo crecimiento no solicitados.
+**Backups remotos preservados:** `origin/backup/pre-opcion-d-main` @ `f29d7db`, `origin/backup/pre-opcion-d-eval-v1` @ `3921f10`.
+**Cross-audit:** Gemini CLI confirmó approach antes de ejecutar.
+
+### D-OPS-02 — Lenis remoción definitiva (rechazo `data-lenis-prevent`)
+Eliminar dependencia `lenis` y provider `SmoothScrollProvider` del bundle. Descartar approach previo `data-lenis-prevent` (commit `b8383f6` en `feat/eval-benchmark-v1`).
+**Why:** empíricamente comprobado con chrome-devtools MCP que `data-lenis-prevent` era insuficiente — Lenis registraba listener `wheel passive:false` en `window` que cancelaba el evento globalmente, independientemente del atributo en nodos hijos. SaaS B2B de datos densos (tablas, mapas GIS, modales Radix/shadcn) no tolera scroll hijacking. Landing sin requisito documentado de smooth-scroll. Cross-audit Gemini coincidió con eliminación completa sobre aislar en route group.
+**Trade-off:** pierde smooth-scroll en landing. Bundle reducido ~10KB gzipped.
+
+### D-OPS-03 — Política release branch (PROPUESTA + mitigación interina activa)
+**Propuesta:** `main` = único SSOT para `vercel deploy --prod`. Prohibido deploy desde ramas sueltas con CLI local. Toda feature branch debe mergearse a main antes de deploy a producción.
+**Why:** el incidente de hoy (D-OPS-01) fue causado precisamente por deploy desde main mientras `feat/eval-benchmark-v1` estaba viva con UX/UI no mergeado. Trabajo en ramas paralelas + deploy CLI rompe la garantía de "lo que está en GitHub es lo que está en prod".
+**Trade-off:** slower iteration para features grandes (no preview prod antes de merge). Mitigable con preview deployments de Vercel desde feature branches.
+**Mitigación interina (efectiva 2026-04-21, sin requerir protocolo completo):** todo deploy prod debe ir precedido de verificación `git log origin/main -1` = commit que se va a deployar. Joy + revisor §9.8 aplican esta verificación como convención operativa hasta formalización de D-OPS-03 en §9.8 intermedia 2026-05-20.
+**Status:** **PROPUESTA · NO APROBADA** formalmente. Mitigación interina **activa**. Requiere protocolo §9.8 dos puertas.
+
+### D-OPS-04 — Deuda declarada: 11 commits restantes de `feat/eval-benchmark-v1`
+Diferir merge completo de `feat/eval-benchmark-v1` a sesión §9.8 intermedia 2026-05-20.
+
+Commits pendientes (preservados en `origin/backup/pre-opcion-d-eval-v1`):
+- `821950b` (parcial — solo `compact` prop traído; resto: scrapers X Apify+Scrapling+Brightdata, `OrgContext.config`, semáforo crecimiento, multitenant hardening)
+- `a919c5f` cierre 5 redes IG+TT+FB+YT
+- `0681153` Oraculus + Demoscopía scrapers encuestas
+- `b79fab5` aceptación drill-down + Gemma3 Layer 2
+- `959e040` Fase 1 backfills + SEED-PLAN REV 3
+- `4d6286a` módulo Layer 2 benchmark
+- `73337b9` body/html max-width 100vw iOS
+- `81fe01e` iOS viewport + topbar mobile
+- `3921f10` calibración XLS por dirigente
+- `c6eddfe` favicon naranja → amarillo
+- `3765881` ocultar acceso demo + naranja → amarillo CTA
+- `22c62e2` `dirigente_nombre` en SocialPostResponse
+
+**Riesgos de seguridad aceptados durante piloto:** D-SEC-03 (21 endpoints JWT-only sin dual-auth, abierto desde 2026-04-11) + D-SEC-04 (IDOR parcial, abajo). Sprint dedicado de seguridad planeado tras frente 2 de sesión 2026-04-21.
+**Why:** cada commit requiere revisión propia para evaluar interacción con sprints S0-S5 ya en main. No urgente para piloto comercial (los 4 síntomas críticos UX/UI ya restaurados).
+
+### D-OPS-05 — Convención operativa: Fase 0 de sprint verifica BD + código
+Antes de planear implementación en cualquier sprint, Joy debe verificar en Fase 0 tanto estado de BD (tablas, filas, migraciones aplicadas) como estado de código del módulo afectado (archivos existentes, commits previos, tests). Diagnosticar solo una capa genera implementaciones redundantes o sobre premisas erróneas.
+**Why:** observado en sesión 2026-04-21 (CFDI-Motor OBS 4 conciliaciones): Joy diagnosticó BD vacía y propuso implementar módulo de cero cuando el módulo ya existía con 152KB de código, 20+ commits y 456 tests — solo no se había ejecutado post-recovery. Aplicar la regla habría ahorrado 2-4h de propuesta incorrecta.
+**Trade-off:** +5-10 min por sprint en Fase 0. Ahorra horas de re-trabajo.
+**Aplicabilidad:** cross-proyecto, no específica de CRECE.
+
+### D-OPS-06 — Formato de instrucciones revisor §9.8 → Joy
+Instrucciones del revisor §9.8 (Claude.ai) a Joy se entregan en bloques de código (```) copy-ready, sin meta-comentario ni justificación larga dentro del bloque. Razonamiento y notas §9.8 van antes o después del bloque.
+**Why:** CEO opera en móvil/desktop con copy one-click. Instrucciones embebidas en prosa obligan a seleccionar manualmente. Bloques de código tienen botón de copy nativo.
+
+### D-SEC-04 — IDOR parcial en `/dirigentes/{id}/crecimiento` (riesgo aceptado durante piloto)
+**Introducido:** commit `1d3a07e` (2026-04-13 · `feat(social): snapshots diarios + data_source enum + endpoint crecimiento`).
+**Diagnosticado:** 2026-04-20 (auditoría memoria sesión Joy).
+**Ventana de exposición:** 8 días (2026-04-13 → 2026-04-21) al registrar esta entrada.
+**Descripción:** el check de scope aplica solo si `user.dirigente_id NOT NULL` (línea 750 del archivo). Analysts/field_operators de otra org con `dirigente_id` nulo pueden bypasear y leer crecimiento de dirigentes ajenos.
+**Mitigación planeada:** aplicar patrón `_require_tenant_access` basado en `org_id` (mismo enfoque ya usado en otros endpoints multi-tenant).
+**Tráfico real:** bajo perfil (piloto con MC-CDMX únicamente, no multi-org). Sin reportes de explotación.
+**Status:** ABIERTO · **aceptado durante piloto comercial**. Sprint dedicado de seguridad post-frente 2 de sesión 2026-04-21 consolida D-SEC-03 + D-SEC-04 + auditoría 2026-04-14 de 25+ endpoints `_current_user`.
+
+---
+
+## 2026-04-20 — Apertura piloto comercial
+
+PRs merged cerrando gate: #32 (endpoints Plan IA + Admin HITL), #33 (tests state machine 15 parametrized), #34 (hotfix-pre-piloto-v2 6 findings).
+
+### D-PILOTO-01 — Apertura piloto comercial con 3 dirigentes activos + 5 shadow
+Iniciar piloto comercial 2026-04-20 con configuración:
+
+**Activos (3)** — Plan IA visible al cliente · HITL admin panel operativo · credenciales entregables:
+- Alejandro Piña Medina (id=1) · `politico_activo` · Nano (~3.1K X · 2.2K IG · 1.8K FB) · IPD 2.6/10 · MC-CDMX
+- Jorge Álvarez Máynez (id=7) · `politico_activo` · Macro (500K+ X) · ex-candidato presidencial MC 2024
+- Laura Ballesteros Mancilla (id=8) · `politico_activo` · Micro · Diputada Federal Plurinominal MC · activa desde apertura del piloto por **solicitud expresa de MC (cliente)** — ver D-PILOTO-03 para corrección documental
+
+**Shadow (5)** — procesan scraping + diagnóstico 18 bloques, sin Plan IA cliente-visible:
+- Rafael Solano Pérez (id=2) · `empresario_transicion` · caso borde Nano extremo
+- Saymi Pineda Velasco (id=3) · `funcionario_gobierno` · candidato §7.4 #3
+- Yesenia Nolasco Ramírez (id=4) · `funcionario_gobierno` · candidato expansión
+- Gabriela Jiménez Godoy (id=5) · `politico_activo` · benchmark vs Piña
+- César Cravioto Romero (id=6) · `funcionario_gobierno` · cross-partisan, caso §7.4 #3 ideal
+
+**Métrica §7.4 #1 (3 perfiles distintos):** 33% cumplida. Los 3 activos son `politico_activo` → cuentan como 1 perfil. Falta diversificar a `funcionario_gobierno` (Cravioto o Pineda) en Fase 2 del piloto (días 14-21) para cerrar métrica 1 completa.
+
+**Ventana:** 2-3 semanas calibración (2026-04-20 → 2026-05-04 / 2026-05-11) → revisión §9.8 intermedia día 30 (≈ 2026-05-20). Ventana §7.4 métrica 1: 90 días hasta ≈ 2026-07-19.
+
+**Why:** cumple parcialmente §7.4 métrica 1 por diversidad de perfiles. Permite calibración con perfiles reales sin esperar a que Fase 2 cierre el tercer perfil.
+
+### D-PILOTO-02 — Login hardening: remover accesos demo de producción
+Quitar botones "Acceso Demo" del login page (commit `4efef29` · `fix(login): quitar accesos demo del login`). Solo credenciales manuales permitidas en prod.
+**Why:** prod post-apertura piloto ya no necesita botones de demo accesibles públicamente. Credenciales se entregan por canal directo a cada dirigente. Los botones reaparecieron tras un rollback previo y fueron removidos definitivamente.
+
+### D-PILOTO-03 — Corrección documental: Ballesteros shadow → activo (no es promoción)
+Reclasificar a Laura Ballesteros Mancilla (id=8) de sección "shadow" a sección "activos" en `PILOTO-COMERCIAL-TRACKING.md`. **No es promoción operativa** — es cierre de gap documental: Ballesteros estuvo activa desde la apertura del piloto 2026-04-20 por **solicitud expresa de MC**, credenciales entregadas conforme a esa solicitud, 4 recomendaciones Plan IA aprobadas visibles en prod. El SSOT `PILOTO-COMERCIAL-TRACKING.md` nunca fue actualizado al estado real.
+**Status real desde:** 2026-04-20 (apertura piloto).
+**Documentado formalmente:** 2026-04-21 (esta decisión).
+**Why:** la discrepancia entre SSOT documental y comportamiento real estuvo por causar el mismo tipo de incidente que D-OPS-01 (ramas divergentes sin visibilidad). Cerrar el gap documentalmente elimina ambigüedad para sesiones y revisores futuros.
+**Consecuencias:** actualizar conteos en TRACKING.md (activos 2→3, shadow 6→5). Sin cambios operativos — el status de Ballesteros no cambia, solo se documenta.
+
+---
+
 ## 2026-04-20 — Gate pre-piloto cerrado
 
 Cierre del arco 2026-04-14 → 2026-04-20. PRs #32/#33/#34 merged. Credenciales Ballesteros entregables. Demo Piña agendable. Próxima ventana §9.8 intermedia ≈ 2026-05-20.

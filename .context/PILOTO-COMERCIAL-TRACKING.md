@@ -7,6 +7,10 @@
 
 ---
 
+<!-- 2026-04-21: reclasificación documental — Ballesteros (id=8) movida de shadow a activo.
+     Status real desde apertura del piloto por solicitud expresa de MC.
+     No es promoción nueva, es cierre de gap documental. Ver D-PILOTO-03 en DECISIONS.md. -->
+
 ## Dirigentes activos (Plan IA visible al cliente · HITL admin panel operativo)
 
 ### 1. Alejandro Piña Medina (id=1)
@@ -36,13 +40,26 @@
 | Competidores declarados | {5, 8} (fixture) |
 | Acción CEO pendiente | Contacto + acuerdo piloto (perfil Macro ayuda a calibrar ER real del estrato) |
 
-**⚠️ Observación métrica §7.4:** ambos son `politico_activo`. La métrica 1 de §7.4 requiere **3 perfiles distintos** (político activo + funcionario + empresario/precampaña). Si Máynez confirma precampaña 2030 cuenta 2/3. Se necesita expansión Fase 2 del piloto a 1 funcionario para cerrar métrica 1 completa.
+### 3. Laura Ballesteros Mancilla (id=8)
+
+| Campo | Valor |
+|---|---|
+| Cargo | Diputada Federal Plurinominal MC |
+| Perfil §1.5 | `politico_activo` |
+| Estrato | Micro |
+| data_origin | T3 (scraping público · pre-OAuth) |
+| Plan IA status | ✅ Activo desde apertura del piloto · 4 recomendaciones MD-aprobadas visibles en prod |
+| Acción CEO pendiente | Seguimiento continuo · revisión feedback semanal |
+
+**Nota reclasificación:** Ballesteros fue activa desde 2026-04-20 por solicitud expresa de MC (cliente). Credenciales entregadas conforme a esa solicitud. El gap documental (TRACKING.md la listaba como shadow) fue corregido el 2026-04-21. Ver D-PILOTO-03 en DECISIONS.md.
+
+**⚠️ Observación métrica §7.4:** los 3 activos son `politico_activo`. La métrica 1 de §7.4 requiere **3 perfiles distintos** (político activo + funcionario + empresario/precampaña). Si Máynez confirma precampaña 2030 sigue contando como `politico_activo` (no suma perfil nuevo). Se necesita expansión Fase 2 del piloto a 1 funcionario para cerrar métrica 1 completa (actualmente 1/3 perfiles distintos).
 
 ---
 
 ## Dirigentes shadow mode (data processing sin Plan IA cliente-visible)
 
-Estos 6 dirigentes procesan scraping + diagnóstico 18 bloques pero **NO tienen recomendaciones Plan IA visibles al cliente**. Sirven para:
+Estos 5 dirigentes procesan scraping + diagnóstico 18 bloques pero **NO tienen recomendaciones Plan IA visibles al cliente**. Sirven para:
 - Calibración estadística continua de la matriz 5×5 Zenodo (más data en Nano/Micro)
 - Validación de la pipeline contra casos diversos sin compromiso comercial
 - Expansión candidata post-calibración (días 14-21 del piloto)
@@ -54,7 +71,6 @@ Estos 6 dirigentes procesan scraping + diagnóstico 18 bloques pero **NO tienen 
 | 4 | Yesenia Nolasco Ramírez | Secretaria Movilidad SEMOVI Oaxaca | funcionario_gobierno | Candidato expansión |
 | 5 | Gabriela Jiménez Godoy | Diputada Federal Vicecoord MC | politico_activo | Benchmark comparación Piña (mismo perfil) |
 | 6 | César Cravioto Romero | Secretario de Gobierno CDMX (MORENA) | funcionario_gobierno | Cross-partisan · caso §7.4 #3 ideal |
-| 8 | Laura Ballesteros Mancilla | Diputada Federal Plurinominal MC | politico_activo | Benchmark Micro |
 
 **Recomendación expansión Fase 2** (día 14-21 del piloto): promover Cravioto (id=6) o Pineda (id=3) a activo para cerrar perfil `funcionario_gobierno` y cumplir §7.4 métrica 1 (3 perfiles distintos).
 
