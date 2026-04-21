@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Instrument_Sans, DM_Sans } from "next/font/google";
 import { QueryProvider } from "@/lib/query-provider";
 import { PHProvider } from "./providers";
-import { SmoothScrollProvider } from "@/components/providers/smooth-scroll-provider";
 import { MotionProvider } from "@/components/motion/fade-up";
 import "./globals.css";
 
@@ -40,9 +39,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background font-body antialiased">
         <PHProvider>
           <MotionProvider>
-            <SmoothScrollProvider>
-              <QueryProvider>{children}</QueryProvider>
-            </SmoothScrollProvider>
+            <QueryProvider>{children}</QueryProvider>
           </MotionProvider>
         </PHProvider>
         {/* Chatwoot widget — CRECE inbox */}
