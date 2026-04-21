@@ -8,6 +8,7 @@ import { useBackendAlerts, type BackendAlert } from "@/hooks/use-crisis-alerts";
 
 interface CrisisAlertListProps {
   limit?: number;
+  compact?: boolean;
 }
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -45,7 +46,7 @@ function AlertRow({ alert }: { alert: BackendAlert }) {
   );
 }
 
-export function CrisisAlertList({ limit = 5 }: CrisisAlertListProps) {
+export function CrisisAlertList({ limit = 5, compact = false }: CrisisAlertListProps) {
   const { data: alerts, isLoading, isError } = useBackendAlerts();
 
   const active = (alerts ?? []).filter((a) => a.estado === "abierta");
@@ -73,12 +74,14 @@ export function CrisisAlertList({ limit = 5 }: CrisisAlertListProps) {
           )}
 
           {!isLoading && !isError && visibleAlerts.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <ShieldCheck className="mb-3 h-10 w-10 text-emerald-500/50" />
+            <div className={`flex flex-col items-center justify-center text-center ${compact ? "py-4" : "py-8"}`}>
+              <ShieldCheck className={`text-emerald-500/50 ${compact ? "mb-2 h-7 w-7" : "mb-3 h-10 w-10"}`} />
               <p className="text-sm font-medium text-muted-foreground">Sin alertas activas</p>
-              <p className="mt-1 text-xs text-muted-foreground/70">
-                El sentimiento esta dentro de parametros normales.
-              </p>
+              {!compact && (
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  El sentimiento esta dentro de parametros normales.
+                </p>
+              )}
             </div>
           )}
 

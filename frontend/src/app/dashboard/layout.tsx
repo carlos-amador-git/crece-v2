@@ -14,8 +14,9 @@ function SyntheticDataBanner() {
   // Show watermark when viewing an org with synthetic data
   // The org config has has_synthetic_data flag set in seed
   const isAdmin = user?.role === "admin";
-  // Usar el flag de BD en lugar de slugs hardcodeados
-  const hasSynthetic = activeOrg?.config?.has_synthetic_data === true;
+  const orgSlug = activeOrg?.slug;
+  // GOB-OAXACA and CDMX-IND have synthetic data
+  const hasSynthetic = orgSlug === "gob-oaxaca" || orgSlug === "cdmx-ind";
 
   if (!hasSynthetic) return null;
 
