@@ -30,7 +30,7 @@ page.on("pageerror", (e) => errs.push(`pageerror: ${e.message}`));
 // ============================================================
 // 1) Login Piña + Tier 1 overview (F-05 + F-01 + F-02 fixes)
 // ============================================================
-await login(page, "pina@crece.mx", "Pina2026!");
+await login(page, "pina@crece.mx", "demo2026!");
 console.log(`Piña URL post-login: ${page.url()}`);
 
 // Tier 1 diagnostic

@@ -27,6 +27,37 @@
 
 ---
 
+## Fixes post-MVP
+
+### 2026-04-21 · Opción D · recuperación UX/UI + scroll wheel
+
+**Incidente:** deploy prod de `main @ f29d7db` (PR #36 · remoción de Lenis) regresionó 15 commits UX/UI no mergeados que vivían en `feat/eval-benchmark-v1` (alertas crisis sintéticas reemplazadas por reales, card tema urgente reacomodado en columna compact, tono discursivo con gráficos de líneas + toggles %/N, fixes iOS, favicon amarillo, aceptación drill-down).
+
+**Chain de recuperación ejecutada (2026-04-21):**
+
+1. **PR #37** · revert `f29d7db` sobre main → `6126421`
+2. **Cherry-picks selectivos** de `feat/eval-benchmark-v1` sobre main:
+   - `74b7b15` (alertas_crisis real) → `ffda7ec`
+   - `7f44130` (mobile overflow + dashboard layout) → `9a00294` con conflict-resolved (omite `data-lenis-prevent`)
+3. **PR #38 (c22f61e)** · precondiciones técnicas post cherry-pick:
+   - Revert hunk `SyntheticDataBanner` a slug-based (dep de `OrgContext.config` no disponible)
+   - Hunk mínimo `compact` prop en `CrisisAlertList` (extraído de `821950b`)
+4. **PR #39 (5a88860)** · remove Lenis v2 (re-aplicación del fix original sobre main actualizado)
+5. **Deploy prod** `2026-04-21` · URL específica `frontend-osw9z35tw-marxs-projects-bb530f2b.vercel.app` · alias `frontend-zeta-sepia-46.vercel.app` · SHA `5a88860`
+
+**Backups remotos preservados:**
+- `origin/backup/pre-opcion-d-main` @ `f29d7db`
+- `origin/backup/pre-opcion-d-eval-v1` @ `3921f10`
+
+**Deuda pendiente:** merge completo de `feat/eval-benchmark-v1` (11 commits restantes: X scrapers Apify+Scrapling+Brightdata, Oraculus + Demoscopía scrapers encuestas, aceptación drill-down por dirigente, Gemma3 Layer 2 batch, seed backfills, eval Layer 2 benchmark, 5 redes cierre integral IG+TT+FB+YT, calibración XLS). Target revisión **§9.8 intermedia 2026-05-20**.
+
+**Nueva convención propuesta (D-27 — pendiente protocolo dos puertas):**
+- `main` como único SSOT para `vercel deploy --prod`
+- Prohibido deploy desde ramas sueltas con CLI local
+- Toda feature branch debe mergearse a main antes de deploy
+
+---
+
 ## Fase actual: piloto comercial
 
 No hay sprint de desarrollo activo. Durante el piloto:
