@@ -1,5 +1,49 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-04-20 — Gate pre-piloto cerrado
+
+Cierre del arco 2026-04-14 → 2026-04-20. PRs #32/#33/#34 merged. Credenciales Ballesteros entregables. Demo Piña agendable. Próxima ventana §9.8 intermedia ≈ 2026-05-20.
+
+### D-GATE-01 — MATRIZ_ER_5x5 → Zenodo v1 empírico (F-01)
+Reemplazo de las celdas sintéticas del benchmark Efectos de Red por datos empíricos del dataset Zenodo v1. Nano X (política MX) p25-p75 = 0.013-0.213%. UI muestra "0.01%-1.1%". Tooltip contextualiza "~100× menor que Influencer Marketing commercial (3-7%)". API expone campo `zenodo_validated: bool` por celda. Matriz final: 8 VALIDATED + 17 TBD extrapoladas. Bundle: `backend/data/zenodo/v1/benchmarks_er_politicos_mx_v1.csv`. Versión: `5x5-zenodo-v1-2026-04-19`.
+**Why:** el benchmark sintético original sobre-prometía engagement. Dirigentes políticos reales validan contra Nano (no contra ER commercial), y la diferencia de orden de magnitud cambia la lectura del diagnóstico.
+
+### D-GATE-02 — F-16 typeahead Harfuch DIFERIDO §6.4
+El paso 7 Competidores del onboarding conserva paradigma manual (`nombre / cargo / url_ref`) y NO implementa typeahead sobre catálogo de dirigentes conocidos. Reactivar solo cuando un cliente sin conocimiento exacto de sus competidores intente onboarding.
+**Why:** Ballesteros, Piña y Cravioto identifican sus propios competidores sin ayuda. Respeta D-22 (ownership del cliente sobre su mapa competitivo). Typeahead agrega superficie sin demanda validada.
+
+### D-GATE-03 — Prompt Plan IA v1.1 preparado NO ACTIVO
+Branch `docs/prompt-plan-ia-v1.1-prepared` (commit `403dd31`) contiene prompt v1.1 diff-listo pero NO mergeado a main. v1.0 permanece canónico.
+**Activación condicionada:** (1) ≥7 días de uso real de v1.0 en piloto, (2) feedback explícito de redundancia o falla en output v1.0, (3) autorización CEO. Los tres son requisito, no OR.
+**Why:** two-door protocol §9.8. Cambios estructurales al prompt afectan coherencia histórica de planes generados; requieren evidencia de uso, no solo intuición de mejora.
+
+### D-GATE-05 — LaunchAgent cloudflared auto-update cierra D-INFRA-01
+Commit `a428661` introduce LaunchAgent que monitorea rotación del tunnel cloudflared (~1h) y actualiza automáticamente `NEXT_PUBLIC_API_URL` en Vercel env vars. URL runtime disponible en `/tmp/crece-tunnel.url`.
+**Why:** D-INFRA-01 llevaba 10 días abierto bloqueando tanto credenciales n8n como estabilidad del deploy Vercel en demos. El fix colateral del piloto resuelve la deuda sin necesidad de tunnel permanente (Cloudflare Named Tunnel requeriría dominio adicional).
+**Cierra:** D-INFRA-01.
+
+### D-GATE-07 — Máquina de estados Plan IA es contrato canónico
+
+**Transiciones válidas:**
+```
+pending  ──► approved
+pending  ──► rejected
+pending  ──► modified
+approved ──► executed
+modified ──► executed
+executed ──► completed
+```
+
+**Contrato:** cualquier otra transición responde `409 Conflict` con payload `{"detail": "transición inválida: {from} → {to}"}`. Estados terminales (`rejected`, `completed`) no aceptan egreso. El endpoint `PATCH /plan-ia/recomendaciones/{id}` valida contra esta máquina antes de tocar DB.
+
+**Aplicabilidad:** toda feature futura que toque Plan IA (HITL admin, bulk operations, auto-ejecución de plantillas, reintegración tras rollback) DEBE respetar este DAG. Extensiones requieren §9.8 two-door.
+
+**Evidencia de enforcement:** PR #33 aporta 15 tests parametrized que cubren el producto cartesiano de transiciones (válidas y no-válidas) — NO son la decisión, son la red de seguridad.
+
+**Why:** antes del gate, el endpoint aceptaba mutaciones libres entre estados, lo cual permitió que un dirigente "reabriera" una recomendación `rejected` y ensuciara el audit trail. El DAG elimina la clase entera de bug y fija el vocabulario para el módulo HITL Admin de Carlos (que entra en Fase C post-piloto).
+
+---
+
 ## 2026-04-13 (noche) — Cirugía Módulo Dirigente (Joy)
 
 Cross-audit Gemini (dos pases — segundo vía Carlos por fallo de capacity CLI) + refinamientos de Carlos.

@@ -1,9 +1,83 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-04-13 17:10 local
-**Sesion activa:** Sesion 2 — Whisper + Geo enrich + Org scoping fix
-**Branch activo:** `feat/sprint-c-hardening`
+**Ultimo update:** 2026-04-20 (refresh auditoría memoria · sesión Joy cerrada)
+**Sesion activa:** ninguna (siguiente: frontend findings F-06..F-15 post-gate)
+**Branch activo:** `feat/agentation-widget-and-mcp-fixes` (último commit main `34dd173`)
+**Próxima ventana §9.8:** día 30 piloto ≈ 2026-05-20
 
+---
+
+## 2026-04-20 — Gate pre-piloto CERRADO (sesión Joy)
+
+**Arco 2026-04-14 → 2026-04-20 · 7 días · ejecución autónoma + hotfixes post review visual.**
+
+### Cierre funcional
+- PRs merged: **#32** endpoints Plan IA cliente + Admin HITL · **#33** tests state machine (15 parametrized) · **#34** hotfix-pre-piloto-v2 6 findings (F-01/F-02/F-03/F-04/F-05/F-07)
+- Bug fix última milla: `6726db4` — `/plan-ia/recomendaciones` aceptaba `estado: str`; fix a `list[str] | None` + `.in_()`. Ballesteros pasó de "Pendientes (0)" → "Pendientes (4)" en prod.
+- Login hardening: `4efef29` quita accesos demo de login page producción.
+- Agentation widget frontend + crawlbase node22 fix: `34dd173`.
+
+### Sprints completados en el arco (commits en main)
+| Sprint | Alcance | Commit ref |
+|---|---|---|
+| Pre-S2 | D-22 competidores client-owned + D-23 onboarding stack + 3 inputs operativos | `b62d843`, `cbd430c` |
+| S0 | 6 tareas validación autónomas | `2d32680` |
+| S1 | 10 tareas Backend Foundations | `b0381ce` |
+| S2 | 10 bloques Diagnóstico Tier 1 Core MVP + Plutchik 21 | `21cc10d` |
+| S3 | 8 bloques Diferenciadores Tier 2 + T0 memory hardening Docker | `49e2e26`, `6fef586` |
+| S4 | Plan IA cierre ciclo D-17 · 15/15 tareas · 8 bloques prompt + 4 integraciones | `8a3e507`, `c0bd4de` |
+| S5 | Onboarding Wizard 9 secciones + T0 Celery migration + Mac M4 primary | `920702d`, `415f830` |
+| MVP cierre | SPRINT-CURRENT a 'MVP cerrado · fase piloto' + LaunchAgent cloudflared | `29d7d89`, `a428661` |
+
+### Findings review visual cerrados (F-01..F-07)
+- **F-01** MATRIZ_ER_5x5 → Zenodo v1 empírico (Nano X p25-p75 0.013-0.213%, UI "0.01%-1.1%", tooltip "~100× IM commercial 3-7%"). Campo `zenodo_validated` en API.
+- **F-02** CardShell acepta `persistentBanner`. Demo banner B04 persiste sobre insufficient_data.
+- **F-03** 9 pasos onboarding capturados. D-23 paso 5 + D-22 paso 7 verificados.
+- **F-04** B13 narrative "X% engagement en comments inauténtico" según impact_hint.
+- **F-05** Banner D-19 permanente en header Tier 1 (red-flag semantics).
+- **F-07** B14 warning "⚠️ Detector en calibración".
+
+### Credenciales entregables post-gate
+| Usuario | Email | Password | Dirigente | Estado |
+|---|---|---|---|---|
+| Admin MD | admin@consultoriamd.com | admin123 | — | HITL operativo |
+| Piña | pina@crece.mx | Pina2026! | id=1 · IPD 2.6/10 | demo 60 min agendable |
+| Ballesteros | ballesteros@crece.mx | Ballesteros2026! | id=8 · IPD 3.1/10 | entregable ahora · 4 aprobadas verificadas prod |
+
+### Data state final
+- Piña id=1: 5 aprobadas + 1 ejecutada + 1 completada + 11 rechazadas
+- Ballesteros id=8: 4 aprobadas (Cialdini Authority · Kahneman System2 · Haidt Care · Cialdini Reciprocity)
+- Matriz ER: `5x5-zenodo-v1-2026-04-19` · 8 VALIDATED · 17 TBD extrapoladas
+- Benchmarks: `backend/data/zenodo/v1/benchmarks_er_politicos_mx_v1.csv` (D-19 base)
+
+### Branches no mergeados (estado intencional)
+- `docs/prompt-plan-ia-v1.1-prepared` (commit `403dd31`) — prompt v1.1 preparado **NO ACTIVO**. Activación condicionada ≥7 días uso v1.0 + feedback redundancia + autorización CEO.
+
+### Pendientes próxima sesión (frontend)
+🟢 nice-to-have + 🟡 Fase C post-piloto:
+- **F-06** agrupar Tier 2 semánticamente (Autenticidad · Calidad mensaje · Compliance)
+- **F-08** Plan IA cards más compactas + drawer/expand
+- **F-09** B01 y B06 ejes Y mejor etiquetados
+- **F-10** B16 Promesas · timeline hechas vs cumplidas
+- **F-11** tooltips descriptivos en números grandes
+- **F-12** Settings routing · consolidar 4 rutas en tabs
+- **F-13** Plan IA post-hotfix validación coherente
+- **F-14** Histórico empty state mejorado
+- **F-15** Admin HITL columna "Días en espera" + warning >24h
+- **F-16** Typeahead Harfuch paso 7 Competidores — **DIFERIDO §6.4** (reactivar cuando cliente sin conocimiento exacto)
+
+### Blockers abiertos
+- **Agentation MCP**: config `~/.claude.json` línea 4443 fix aplicado (`server --mcp-only`) + zombie PID 76505 eliminado; `/mcp` reconnect sigue fallando → requiere **restart completo Claude Code** (no solo `/mcp`).
+- **D-SEC-03**: 21 endpoints JWT-only (sin swap a dual-auth) — abierto desde 2026-04-11.
+- **IDOR parcial** `/dirigentes/{id}/crecimiento`: check solo aplica si `user.dirigente_id NOT NULL` — analysts/field_operators de otra org podrían bypasear. Mitigación: tenant check basado en `org_id` (patrón `_require_tenant_access`).
+- **Gemini CLI 0.37.1** rate limit 429 RESOURCE_EXHAUSTED — upgrade a 0.37.2 pendiente.
+
+### Blockers MITIGADOS en el arco
+- **D-INFRA-01** Tunnel Cloudflare efímero → **MITIGADO** con LaunchAgent auto-update Vercel (`a428661`). Tunnel rota ~1h, Vercel env var se actualiza solo.
+
+### Auditoría memoria (2026-04-20)
+Capas verdes: auto-memory (43 entradas) · smart-connections (1,622 sources) · Obsidian MCP · graphify-crece-v2 (3,775 nodos) · graphify-md-design-system (534) · gbrain (3 páginas, subutilizado) · context-mode hooks activos.
+Capas con gap: MCP memory vacío (sin hidratar) · DECISIONS.md sin entradas 2026-04-14..2026-04-20 (arco post-gate sin registrar).
 
 ---
 
@@ -479,10 +553,11 @@ Ver `.context/DECISIONS.md` sección "Deudas técnicas encontradas durante cross
 - **Redis:** `:6383`
 - **MinIO:** `:9006/9007`
 
-### Tunnel Cloudflare efímero (reinicia con nombre nuevo)
-- Hoy: `musicians-oregon-judge-angela.trycloudflare.com` (PID 5762, `cloudflared tunnel --url http://localhost:8002`)
+### Tunnel Cloudflare (MITIGADO 2026-04-20 con LaunchAgent)
+- LaunchAgent auto-update Vercel env var cuando tunnel rota (~1h)
+- URL actual en runtime: `cat /tmp/crece-tunnel.url`
+- Commit `a428661` — D-INFRA-01 deuda reducida de "blocker" a "automático"
 - Log: `/private/tmp/cf-tunnel.log`
-- **Aviso:** al próximo reinicio cambia de nombre. Ver `.context/DECISIONS.md` D-INFRA-01 para alternativas robustas
 
 ### Ollama
 - **Mac local (recomendado para benchmarks):** `http://localhost:11434` con `gemma3:12b` (8GB) y `gemma4:latest`
@@ -490,13 +565,17 @@ Ver `.context/DECISIONS.md` sección "Deudas técnicas encontradas durante cross
 - CPU-only en ambos. Mac M-series ~4 min/iter; VPS x86 >17 min sin completar (inviable para loop)
 
 ### Frontend
-- **Vercel:** `https://frontend-zeta-sepia-46.vercel.app/` (production deploy)
+- **Vercel prod (oficial):** `https://frontend-zeta-sepia-46.vercel.app/` (verificado 200 OK · proyecto `frontend` · team `marxs-projects-bb530f2b`)
+- **Deploy workflow:** `cd frontend && vercel deploy --prod --yes` (alias estable). Push a GitHub NO dispara re-deploy del proyecto `frontend`.
+- **NO usar:** `crece-v2.vercel.app` (proyecto separado, no liberado — confirmación CEO 2026-04-20)
 - **Dev local:** `npm run dev` en `frontend/` (puerto 3000)
+- **Login hardened:** accesos demo removidos del login page en producción (`4efef29`)
 
-### Credenciales demo (hardcoded en login page)
-- Admin: `admin@consultoriamd.com` / `crece2026!`
-- Piña: `pina@crece.mx` / `demo2026!`
-- Solano: `solano@crece.mx` / `demo2026!`
+### Credenciales (ver sección "Credenciales entregables post-gate" arriba para estado real)
+Legacy demo creds previas (pueden estar stale):
+- Piña: `pina@crece.mx` / `demo2026!` → **actualizado a** `Pina2026!`
+- Solano: `solano@crece.mx` / `demo2026!` → **sin uso en piloto** (Ballesteros la reemplazó)
+- Admin: `admin@consultoriamd.com` / `crece2026!` → **actualizado a** `admin123`
 
 ### Organización raíz (post PR #6 seed fix)
 - `id=3, slug=mc-cdmx, nombre='Movimiento Ciudadano CDMX', tipo=PARTIDO`
