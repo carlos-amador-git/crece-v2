@@ -58,7 +58,7 @@ export default function DiagnosticoPage({ params }: Props) {
             Diagnóstico Digital · {nombre}
           </h1>
           <p className="text-sm text-muted-foreground">
-            10 bloques Tier 1 MVP — rendimiento algorítmico y de audiencia (MASTER §3.1)
+            Cómo se comporta tu contenido: alcance, interacciones y tono percibido por la audiencia.
           </p>
         </div>
         {resumen && (
