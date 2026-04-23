@@ -104,7 +104,7 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
   return (
     <CardShell
       code="B01"
-      title="ER normalizado por estrato"
+      title="Engagement vs. tu estrato"
       pregunta="¿Mi Engagement Rate está en el rango esperado para mi estrato y plataforma?"
       fidelity="T1"
       status={bloque.status}
@@ -231,7 +231,7 @@ export function CardB02({ bloque }: { bloque: BloqueBase & { data?: B02Data } })
   return (
     <CardShell
       code="B02"
-      title="Breakout Scale (Brookings)"
+      title="Escalón de viralidad"
       pregunta="¿Crucé fronteras algorítmicas hacia audiencia no-seguidora?"
       fidelity={d?.fidelity || "T1"}
       status={bloque.status}
@@ -297,7 +297,7 @@ export function CardB03({ bloque }: { bloque: BloqueBase & { data?: B03Data } })
   return (
     <CardShell
       code="B03"
-      title="Matriz 2×2 de contenido"
+      title="Calidad de tu contenido"
       pregunta="¿Qué posts amplificar (Insignia) y cuáles evitar (Crisis/Muerta)?"
       fidelity="T1"
       status={bloque.status}
@@ -461,7 +461,7 @@ export function CardB05({ bloque }: { bloque: BloqueBase & { data?: B05Data } })
   return (
     <CardShell
       code="B05"
-      title="Sentiment Plutchik (6 emociones)"
+      title="Emociones que provoca tu contenido"
       pregunta="¿Qué siente mi audiencia — confianza o enojo predominante?"
       fidelity="T2"
       status={bloque.status}
@@ -540,7 +540,7 @@ export function CardB06({ bloque }: { bloque: BloqueBase & { data?: B06Data } })
   return (
     <CardShell
       code="B06"
-      title="Crisis Spike detector"
+      title="Detector de crisis"
       pregunta="¿Hay picos anómalos de toxicidad/enojo en ventana de 2h?"
       fidelity="T1"
       status={bloque.status}
@@ -582,7 +582,7 @@ export function CardB07({ bloque }: { bloque: BloqueBase & { data?: B07Data } })
   return (
     <CardShell
       code="B07"
-      title="Growth attribution (Time-Decay)"
+      title="De dónde viene tu crecimiento"
       pregunta="¿Qué posts generaron el crecimiento de mis seguidores?"
       fidelity="T3"
       status={bloque.status}
@@ -703,7 +703,7 @@ export function CardB09({ bloque }: { bloque: BloqueBase & { data?: B09Data } })
   return (
     <CardShell
       code="B09"
-      title="Share / Like Ratio"
+      title="Qué tan compartible es tu contenido"
       pregunta="¿Mi contenido se propaga o solo recibe likes pasivos?"
       fidelity={d?.nota_fidelity?.includes("parcial") ? "T2" : "T1"}
       status={bloque.status}
@@ -920,7 +920,7 @@ export function CardB10({ bloque }: { bloque: BloqueBase & { data?: B10Data } })
   return (
     <CardShell
       code="B10"
-      title="Humanización Score"
+      title="Qué tan humano suena tu contenido"
       pregunta="¿Mi perfil se percibe humano o corporativo/institucional?"
       fidelity="T1"
       status={bloque.status}
@@ -978,7 +978,7 @@ export function CardB10WithDrilldown({
   return (
     <CardShell
       code="B10"
-      title="Humanización Score"
+      title="Qué tan humano suena tu contenido"
       pregunta="¿Mi perfil se percibe humano o corporativo/institucional?"
       fidelity="T1"
       status={bloque.status}

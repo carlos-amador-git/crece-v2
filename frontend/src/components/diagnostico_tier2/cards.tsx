@@ -93,7 +93,7 @@ export function CardB11({ bloque }: { bloque: BloqueBase & { data?: B11Data } })
   return (
     <CardShell
       code="B11"
-      title="Cross-Partisan Validation"
+      title="¿Te siguen votantes de otro bando?"
       pregunta="¿Mi mensaje cruza líneas partidistas o solo habla a mi base?"
       fidelity="T2"
       status={bloque.status}
@@ -176,7 +176,7 @@ export function CardB12({ bloque }: { bloque: BloqueBase & { data?: B12Data } })
   return (
     <CardShell
       code="B12"
-      title="CIB Detector (ITESO/DFRLab)"
+      title="Detector de coordinación artificial"
       pregunta="¿Hay comportamiento coordinado inauténtico en los comments?"
       fidelity="T2"
       status={bloque.status}
@@ -385,7 +385,7 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
   return (
     <CardShell
       code="B14"
-      title="Topic Drift Detector"
+      title="¿Tu audiencia habla de lo que publicas?"
       pregunta="¿Mi caption habla de lo que los comments discuten?"
       fidelity="T2"
       status={bloque.status}
@@ -508,7 +508,7 @@ export function CardB15({ bloque }: { bloque: BloqueBase & { data?: B15Data } })
   return (
     <CardShell
       code="B15"
-      title="Rage Click Flag"
+      title="Señales de hostilidad"
       pregunta="¿Mi engagement es conversión o indignación?"
       fidelity="T2"
       status={bloque.status}
@@ -710,7 +710,7 @@ export function CardB17({ bloque }: { bloque: BloqueBase & { data?: B17Data } })
   return (
     <CardShell
       code="B17"
-      title="Veda INE Compliance"
+      title="Cumplimiento veda electoral"
       pregunta="¿Puedo publicar en ventana veda electoral?"
       fidelity="T2"
       status={bloque.status}
