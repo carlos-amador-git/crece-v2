@@ -120,6 +120,8 @@ export default function OverviewPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<"today" | "7d" | "30d" | "90d">("30d");
+  const [platformFilter, setPlatformFilter] = useState<"" | "twitter" | "instagram" | "facebook" | "tiktok" | "youtube">("");
+  const [includeRts, setIncludeRts] = useState(false);
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -135,7 +137,11 @@ export default function OverviewPage() {
   // Use first dirigente's ID for sentiment trend (backend requires dirigente_id)
   const firstDirigenteId = topDirigentes?.[0]?.id;
   const filterDays: Record<typeof activeFilter, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
-  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(filterDays[activeFilter], firstDirigenteId);
+  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(
+    filterDays[activeFilter],
+    firstDirigenteId,
+    { platform: platformFilter || undefined, includeRts },
+  );
 
   const kpiData = kpi ?? DEFAULT_KPI;
   const trendData = sentimentData ?? [];
@@ -447,10 +453,45 @@ export default function OverviewPage() {
       {/* ── Charts Row ──────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Tono Discursivo</CardTitle>
-          <CardDescription>
-            Clasificación del contenido publicado · últimos 30 días · sin RTs · &gt;20 chars
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>Tono Discursivo</CardTitle>
+              <CardDescription>
+                Clasificación del contenido publicado · últimos 30 días{includeRts ? "" : " · sin RTs"} · &gt;20 chars
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="sr-only">Filtrar por red social</span>
+                <select
+                  value={platformFilter}
+                  onChange={(e) => setPlatformFilter(e.target.value as typeof platformFilter)}
+                  className="h-7 rounded-md border border-border bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Red social"
+                >
+                  <option value="">Todas las redes</option>
+                  <option value="twitter">Twitter/X</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="youtube">YouTube</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIncludeRts((v) => !v)}
+                aria-pressed={includeRts}
+                className={`h-7 rounded-md border px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  includeRts
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
+                }`}
+                title="Incluir retweets en el análisis"
+              >
+                RT
+              </button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {sentimentLoading ? (

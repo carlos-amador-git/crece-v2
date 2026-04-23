@@ -27,12 +27,23 @@ export function useSocialPosts(filters: SocialFilters = {}) {
   });
 }
 
-export function useSentimentTrend(days: number = 30, dirigenteId?: number) {
+export interface SentimentTrendOptions {
+  platform?: string;
+  includeRts?: boolean;
+}
+
+export function useSentimentTrend(
+  days: number = 30,
+  dirigenteId?: number,
+  options: SentimentTrendOptions = {},
+) {
   const params = new URLSearchParams();
   if (dirigenteId) params.set("dirigente_id", String(dirigenteId));
+  if (options.platform) params.set("platform", options.platform.toUpperCase());
+  if (options.includeRts) params.set("include_rts", "true");
 
   return useQuery({
-    queryKey: ["sentiment-trend", days, dirigenteId],
+    queryKey: ["sentiment-trend", days, dirigenteId, options.platform ?? "", options.includeRts ?? false],
     queryFn: () =>
       api.get<SentimentTrend[]>(`/social/sentiment-timeline?${params}`),
     enabled: dirigenteId != null,
