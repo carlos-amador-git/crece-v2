@@ -12,12 +12,17 @@ name: E2E Smoke (Vercel Preview)
 # Trigger manual disponible via workflow_dispatch para pruebas ad-hoc.
 
 on:
-  deployment_status:
+  # deployment_status trigger deshabilitado temporalmente · 2026-04-24.
+  # Razón: los tests Playwright hacen apiRequestContext.post("http://localhost:8002/...")
+  # hardcoded para seed/setup · GitHub Actions runner no tiene backend Crece levantado
+  # → ECONNREFUSED → tests always-red (ruido, no signal).
+  # Re-habilitar cuando B-CI-01 setup backend-in-CI (postgres docker + seed + uvicorn
+  # ephemeral) esté resuelto.
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Override BASE_URL (si no se usa el deployment_status target_url)"
-        required: false
+        description: "BASE_URL para Playwright (URL preview Vercel o equivalente con backend accesible)"
+        required: true
         type: string
 
 jobs:
