@@ -97,14 +97,12 @@ export default function DiagnosticoPage({ params }: Props) {
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 align-middle" aria-hidden="true" />{" "}
               rojo significa que estás por debajo de lo que logran políticos comparables,
               no que tu cuenta esté "mal" en abstracto.{" "}
-              <a
-                href="https://github.com/MarxCha/crece-v2/blob/main/backend/data/zenodo/v1/methodology.md"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/dashboard/sistema/metodologia"
                 className="underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               >
-                Detalle técnico →
-              </a>
+                Ver metodología completa →
+              </Link>
             </p>
           </div>
         </div>

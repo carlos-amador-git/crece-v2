@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { FadeUp } from "@/components/motion/fade-up";
 import { CompetitorSnapshotCard } from "@/components/dashboard/competitor-snapshot-card";
+import { rolFromPartido, disclaimerSentimientoCrudo } from "@/lib/politica/rol";
 
 // Electoral map hidden until INE shapefiles are loaded
 // const ElectoralMap = dynamic(
@@ -180,6 +181,12 @@ export default function OverviewPage() {
 
   const hasActiveAlerts = kpiData.active_alerts > 0;
 
+  // Disclaimer role-aware · interim mientras el motor §9.8 conecta afiliación al sentimiento
+  // Ver .context/BLOCKERS.md B-23-03
+  const primaryDirigente = topDirigentes?.[0];
+  const rolInferido = rolFromPartido(primaryDirigente?.partido);
+  const sentimientoDisclaimer = disclaimerSentimientoCrudo(rolInferido);
+
   return (
     <div className="space-y-6 w-full min-w-0">
       {/* ── Header ──────────────────────────────────────────── */}
@@ -274,14 +281,29 @@ export default function OverviewPage() {
                     </div>
                     <div className={`flex items-end justify-between ${isHero ? "mt-4" : "mt-2"}`}>
                       {isTemaCard ? (
-                        <p
-                          className={`line-clamp-2 text-sm font-semibold ${
-                            temaText ? "text-foreground" : "text-muted-foreground"
-                          }`}
-                          title={temaText ?? undefined}
-                        >
-                          {temaText ?? "Sin alertas en el periodo"}
-                        </p>
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <p
+                            className={`line-clamp-2 text-sm font-semibold ${
+                              temaText ? "text-foreground" : "text-muted-foreground"
+                            }`}
+                            title={temaText ?? undefined}
+                          >
+                            {temaText ?? "Sin alertas en el periodo"}
+                          </p>
+                          {temaText && (
+                            <p
+                              className="rounded-sm border border-amber-300/40 bg-amber-50/70 px-1.5 py-1 text-[10px] leading-tight text-amber-900 dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-200"
+                              title={sentimientoDisclaimer}
+                            >
+                              <span className="font-semibold">Sentimiento crudo.</span>{" "}
+                              {rolInferido === "oposicion"
+                                ? "Tu rol es oposición — críticas al gobierno pueden leerse como positivas para tu narrativa."
+                                : rolInferido === "oficialismo"
+                                  ? "Tu rol es oficialismo — críticas al gobierno aquí son riesgo real."
+                                  : "Rol independiente — signo refleja tono literal."}
+                            </p>
+                          )}
+                        </div>
                       ) : (
                         <p
                           className={`tabular-nums font-heading font-bold ${isHero ? "text-3xl" : "text-2xl"}`}
@@ -389,7 +411,16 @@ export default function OverviewPage() {
       {/* ── Alerts + Seguidores por Plataforma ─────────────── */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 w-full min-w-0">
         {/* Crisis Alerts — compact column */}
-        <div className="md:col-span-2 lg:col-span-3">
+        <div className="md:col-span-2 lg:col-span-3 space-y-2">
+          {hasActiveAlerts && (
+            <p
+              className="rounded-sm border border-amber-300/40 bg-amber-50/70 px-2 py-1 text-[10px] leading-tight text-amber-900 dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-200"
+              role="note"
+              aria-label="Disclaimer sobre signo de sentimiento"
+            >
+              <span className="font-semibold">Sentimiento crudo ·</span> {sentimientoDisclaimer}
+            </p>
+          )}
           {hasActiveAlerts ? (
             <CrisisAlertList limit={3} compact />
           ) : (
