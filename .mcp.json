@@ -3,15 +3,6 @@
     "brightdata": {
       "type": "sse",
       "url": "https://mcp.brightdata.com/sse?token=bc52cf16-49b5-4cc4-a6e4-b8eb55c1acbc&groups=advanced_scraping,social,browser"
-    },
-    "crawlbase": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["@crawlbase/mcp@latest"],
-      "env": {
-        "CRAWLBASE_TOKEN": "lEcmno-hxwVc1PDU3eJEJg",
-        "CRAWLBASE_JS_TOKEN": "tSFy6Odwaz7K4rMXeU0U9w"
-      }
     }
   }
 }
