@@ -1,9 +1,57 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-04-20 (refresh auditoría memoria · sesión Joy cerrada)
-**Sesion activa:** ninguna (siguiente: frontend findings F-06..F-15 post-gate)
-**Branch activo:** `feat/agentation-widget-and-mcp-fixes` (último commit main `34dd173`)
+**Ultimo update:** 2026-04-23 (sesión /sprint-implement post-review CEO 11 screenshots)
+**Sesion activa:** frontend hotfixes branch `hotfix/23a-ui-puros` (4 commits, pendiente push + PR)
+**Branch activo:** `hotfix/23a-ui-puros` ahead of `main @ 40e3ce1`
 **Próxima ventana §9.8:** día 30 piloto ≈ 2026-05-20
+
+---
+
+## 2026-04-23 — Sprint 23 · post-review CEO (11 screenshots)
+
+**Workflow:** `/sprint-review` + `/sprint-implement` con cross-audit Gemini.
+**Diagnóstico:** 11 findings F-23-01..F-23-11 en `.context/frontend-review-2026-04-23/DIAGNOSTICO-SCREEN-CRECE.md`.
+**Plan revisado:** `PLAN-current.md` (copia de `frontend-review-2026-04-23/PLAN-REVISADO.md`).
+**Gemini audit:** `GEMINI-AUDIT.md` (3 reclasificaciones, 2 gaps, 2 optimizaciones, 2 riesgos no vistos).
+
+### Commits en `hotfix/23a-ui-puros` (ahead of main)
+
+| SHA corto | Scope | Findings cubiertos |
+|---|---|---|
+| `787c1be` | docs(.context) · diagnóstico + plan + Gemini audit | base documental |
+| 23-A | fix(frontend) · UI hotfixes | F-23-02, F-23-05 UI, F-23-07, F-23-08, F-23-09 parcial |
+| 23-B | fix(backend,frontend) · compose URL + platform/RT filters | F-23-05 datos P1, F-23-03, F-23-04 |
+| 23-D | fix(frontend) · copy rewrite titles + context | F-23-10, F-23-11 parcial |
+
+### Findings status
+
+| # | Estado | Nota |
+|---|---|---|
+| F-23-01 Tema Urgente sin afiliación | 🔴 §9.8 pendiente | Framework 3 capas existe; no conectado a KPI |
+| F-23-02 Competitor hardcoded Piña | ✅ cerrado | Resuelto por user.full_name |
+| F-23-03 Toggle RT | ✅ cerrado | Backend ya soportaba |
+| F-23-04 Filtro red social | ✅ cerrado | Backend ya soportaba |
+| F-23-05 Post cards | ✅ UI + URL backend | P2/P3 quedan §9.8 |
+| F-23-06 Sentiment Prom. dirigente | 🔴 §9.8 pendiente | Ligado a F-23-01 |
+| F-23-07 Electoral plurinominal | ✅ cerrado | Empty state diferenciado |
+| F-23-08 Planes tab CTA | ✅ cerrado | Link a /dashboard/planes |
+| F-23-09 Header Diagnóstico | ⚠️ parcial | MASTER §3.1 quitado; destino link pendiente D-23-B |
+| F-23-10 Copy Tier 1 | ⚠️ parcial | 8/10 renames; patrón estructural propuesta Sprint 24+ |
+| F-23-11 Copy Tier 2 | ⚠️ parcial | 5/8 renames; patrón estructural propuesta Sprint 24+ |
+
+### Decisiones agregadas a DECISIONS.md
+D-23-A a D-23-G (7 nuevas · ver `.context/DECISIONS.md`).
+
+### Deuda pendiente documentada
+- `SPRINT-23B-INVESTIGACION.md` · P2 (columna url) + P3 (nullable counters) → §9.8 2026-05-20
+- `SPRINT-23D-COPY-PROPOSAL.md` · patrón "qué mide / cómo te fue / qué hacer" 4-fases → Sprint 24+
+- `SPRINT-23E-INVESTIGACION.md` · motor sentimiento con afiliación 4-fases → §9.8 2026-05-20
+
+### Próximos pasos recomendados
+1. Push branch + abrir PR `hotfix/23a-ui-puros` → main
+2. Deploy a prod (según convención D-27: `vercel deploy --prod` desde main post-merge)
+3. Screenshot Playwright post-deploy para verificar contra los 11 findings originales
+4. CEO responde D-23-B (destino metodología) y autoriza (o no) disclaimer interim F-23-01
 
 ---
 

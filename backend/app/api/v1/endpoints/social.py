@@ -20,6 +20,7 @@ from app.schemas.social import (
     SocialPostResponse,
 )
 from app.services.scraper_manager import dispatch_scrape
+from app.utils.social_urls import compose_post_url
 
 router = APIRouter()
 
@@ -101,8 +102,46 @@ async def list_posts(
     result = await db.execute(query)
     items = list(result.scalars().all())
 
+    if items:
+        profile_ids = {p.profile_id for p in items}
+        profile_rows = await db.execute(
+            select(
+                SocialProfile.id,
+                SocialProfile.platform,
+                SocialProfile.handle,
+                SocialProfile.dirigente_id,
+            ).where(SocialProfile.id.in_(profile_ids))
+        )
+        profile_map = {
+            row[0]: {"platform": row[1], "handle": row[2], "dirigente_id": row[3]}
+            for row in profile_rows.all()
+        }
+
+        dirigente_ids = {p["dirigente_id"] for p in profile_map.values()}
+        dirigente_rows = await db.execute(
+            select(Dirigente.id, Dirigente.full_name).where(
+                Dirigente.id.in_(dirigente_ids)
+            )
+        )
+        dirigente_map = {row[0]: row[1] for row in dirigente_rows.all()}
+    else:
+        profile_map = {}
+        dirigente_map = {}
+
+    serialized_items: list[SocialPostResponse] = []
+    for post in items:
+        payload = SocialPostResponse.model_validate(post)
+        profile = profile_map.get(post.profile_id)
+        if profile:
+            payload.platform = profile["platform"].value if profile["platform"] else None
+            payload.url = compose_post_url(
+                profile["platform"], profile["handle"], post.platform_post_id
+            )
+            payload.dirigente_nombre = dirigente_map.get(profile["dirigente_id"])
+        serialized_items.append(payload)
+
     return PaginatedResponse(
-        items=[SocialPostResponse.model_validate(p) for p in items],
+        items=serialized_items,
         total=total,
         page=page,
         page_size=page_size,

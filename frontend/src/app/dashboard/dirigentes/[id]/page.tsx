@@ -237,6 +237,19 @@ export default function DirigenteDetailPage() {
             <h3 className="mb-3 font-heading text-lg font-semibold">
               Detalle de Secciones
             </h3>
+            {(dirigente.secciones ?? []).length === 0 && (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                  <MessageSquare className="h-10 w-10 text-muted-foreground/50" aria-hidden="true" />
+                  <p className="text-sm font-medium">Sin territorio asignado</p>
+                  <p className="max-w-md text-xs text-muted-foreground">
+                    {dirigente.cargo?.toLowerCase().includes("plurinominal")
+                      ? "Los cargos plurinominales no se asocian a secciones electorales. Si deseas seguir un territorio específico, configúralo en el wizard de onboarding."
+                      : "Este dirigente aún no tiene secciones electorales vinculadas. Configúralas en el wizard de onboarding para ver detalle por sección."}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
               {(dirigente.secciones ?? []).map((seccion) => (
                 <Card key={seccion.id}>
@@ -281,11 +294,22 @@ export default function DirigenteDetailPage() {
         <TabsContent value="planes" className="space-y-4">
           {dirigentePlans.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Brain className="mb-3 h-10 w-10 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">
-                  No hay planes generados para este dirigente
-                </p>
+              <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+                <Brain className="h-10 w-10 text-muted-foreground/50" />
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    No hay planes generados para este dirigente
+                  </p>
+                  <p className="text-xs text-muted-foreground/80">
+                    Genera un plan de acción con IA basado en su diagnóstico actual.
+                  </p>
+                </div>
+                <Button asChild size="sm">
+                  <Link href={`/dashboard/planes?dirigente=${dirigente.id}`}>
+                    <Brain className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                    Generar plan
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           ) : (

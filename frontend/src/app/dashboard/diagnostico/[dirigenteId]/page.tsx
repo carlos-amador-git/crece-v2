@@ -58,7 +58,7 @@ export default function DiagnosticoPage({ params }: Props) {
             Diagnóstico Digital · {nombre}
           </h1>
           <p className="text-sm text-muted-foreground">
-            10 bloques Tier 1 MVP — rendimiento algorítmico y de audiencia (MASTER §3.1)
+            Cómo se comporta tu contenido: alcance, interacciones y tono percibido por la audiencia.
           </p>
         </div>
         {resumen && (
@@ -77,7 +77,7 @@ export default function DiagnosticoPage({ params }: Props) {
         )}
       </header>
 
-      {/* Contexto D-19 · elevado al overview (F-05) */}
+      {/* Contexto breve · lenguaje llano (antes: D-19 con referencias académicas) */}
       {data && !isLoading && (
         <div
           className="flex items-start gap-2.5 rounded-md border border-border/60 bg-muted/25 px-3.5 py-2.5 text-[12px] leading-snug"
@@ -86,26 +86,23 @@ export default function DiagnosticoPage({ params }: Props) {
           <Info className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden="true" />
           <div className="space-y-0.5 text-muted-foreground">
             <p>
-              Los rangos ER que ves aquí usan el{" "}
-              <span className="font-medium text-foreground">benchmark empírico MX política</span>
-              {" "}(Zenodo v1 · n=316 Nano X). Política mexicana tiene engagement
-              sustantivamente menor al benchmark comercial de Influencer Marketing
-              (<span className="font-mono">3-7%</span>) — la diferencia puede llegar a
-              factor ~100× en algunas celdas.
+              Los rangos que ves aquí se comparan contra{" "}
+              <span className="font-medium text-foreground">otros políticos mexicanos</span>
+              {" "}de tu mismo tamaño de audiencia, no contra influencers comerciales. La política
+              mexicana tiene menos interacción que el promedio comercial, así que los umbrales
+              son específicos a este contexto.
             </p>
             <p className="text-[11px]">
-              Si un bloque marca{" "}
+              Un bloque en{" "}
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 align-middle" aria-hidden="true" />{" "}
-              rojo no significa que estés "mal" según el estándar global — significa que
-              estás bajo el piso del estrato político mexicano.{" "}
-              <a
-                href="https://github.com/MarxCha/crece-v2/blob/main/backend/data/zenodo/v1/methodology.md"
-                target="_blank"
-                rel="noopener noreferrer"
+              rojo significa que estás por debajo de lo que logran políticos comparables,
+              no que tu cuenta esté "mal" en abstracto.{" "}
+              <Link
+                href="/dashboard/sistema/metodologia"
                 className="underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
               >
-                Metodología completa →
-              </a>
+                Ver metodología completa →
+              </Link>
             </p>
           </div>
         </div>

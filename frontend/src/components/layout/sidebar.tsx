@@ -133,6 +133,7 @@ const sections: Section[] = [
       group("sistema", "Sistema", Settings, [
         leaf("/dashboard/settings/analisis-politico", "Analisis Politico", Sliders, false),
         leaf("/dashboard/bot-detection", "Salud Digital", Bot),
+        leaf("/dashboard/sistema/metodologia", "Metodología", FileText, false),
         leaf("/dashboard/settings", "Configuracion", Settings, false),
       ]),
     ],
