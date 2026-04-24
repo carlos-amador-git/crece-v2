@@ -162,6 +162,8 @@ Sin configuración alguna. Ningún uptime check, cron, o webhook para detectar:
 
 El GC corre **lazy**: solo cuando entra una nueva alerta. Si el backend pasa 1h sin 5xx y luego llegan 50 excepciones idénticas en ráfaga, la primera dispara el GC (limpia entradas expiradas) y pasa · las 49 restantes caen bajo el rate-limit de esa primera durante los siguientes 5 min y no se envían. **Esto es comportamiento esperado, no bug** — diseño deliberado para evitar spam en tormenta de errores. En el debug de incidente esperar ver solo 1 alerta de N errores idénticos concurrentes.
 
+Además del GC lazy, **el dedup cache es per-process**. Con `uvicorn --workers 4` (config actual en `docker-compose.coolify.yml`), tormenta de 100 errores idénticos distribuidos entre los 4 workers puede producir **hasta 4 alertas en vez de 1**. Aceptable para piloto actual (<10 req/s · 3 usuarios activos reales). Migración a Redis pendiente como **B-RATE-LIMIT-01 en BACKLOG**.
+
 ### Tests unit · 21/21 verdes
 
 ```
@@ -256,6 +258,16 @@ Timestamp: 2026-04-24T03:28:15.xxxZ
 ---
 
 ## Better Stack setup (para el CEO, post-named tunnel)
+
+> ### ⚠️ PRE-REQUISITO DNS NO CUMPLIDO AL 2026-04-24
+>
+> El hostname `api-crece-dev.mdconsultoria-ti.org` usado en las instrucciones abajo **NO existe y NO es creable hoy**. Razones:
+> - `mdconsultoria-ti.org` está en **InterServer DNS, no en Cloudflare** (verificado via `dig NS mdconsultoria-ti.org` → `cdns1/cdns2/cdns3.interserver.net`)
+> - Named tunnel con ese hostname requiere **migrar DNS de ~12 servicios en producción** (email MX + `www/api/blog/app/mail/imap/pop/admin/n8n/chatmx/ollama/coolify`), **O comprar dominio nuevo en Cloudflare Registrar** (~$10 USD/año)
+>
+> Ambas rutas están **diferidas como B-23-05** (sesión 2026-04-23/24 · CEO las descartó por scope creep). **Better Stack NO debe configurarse hasta que B-23-05 se resuelva.**
+>
+> Las instrucciones siguientes son **documentación de referencia para ejecutar POST-B-23-05**, no tareas accionables hoy.
 
 **Pre-requisito:** named tunnel Cloudflare activo con hostname estable — CEO lo ejecuta hoy en paralelo (B-23-05). Sugerido: `api-crece-dev.mdconsultoria-ti.org`.
 

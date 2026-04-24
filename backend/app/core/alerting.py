@@ -29,6 +29,14 @@ logger = logging.getLogger(__name__)
 Level = Literal["5xx", "exception", "429", "uptime", "info"]
 
 # In-memory rate limiter: hash → last_sent_epoch_ts
+#
+# KNOWN LIMITATION: Rate limit state is per-process (in-memory dict).
+# With `uvicorn --workers N`, each worker has its own dedup cache.
+# A storm of N identical errors distributed across workers produces
+# up to N alerts instead of 1.
+# Impact: negligible for current pilot load (<10 req/s · 3 users).
+# Migration to Redis recommended when pilot scales beyond single-worker
+# effective throughput. See B-RATE-LIMIT-01 in .context/BACKLOG.md.
 _RATE_LIMIT: dict[str, float] = {}
 _RATE_LIMIT_TTL_SEC = 300  # 5 min per unique alert signature
 

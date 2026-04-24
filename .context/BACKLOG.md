@@ -78,6 +78,32 @@ Tickets diferidos con contexto para retoma.
 
 ---
 
+## Observabilidad (performance / escala)
+
+### B-RATE-LIMIT-01 · Migrar dedup cache de alerting a Redis
+
+**Origen:** review pre-merge PR #45 (sesión 2026-04-24) · hallazgo H1.
+
+**Causa:** `backend/app/core/alerting.py` usa `_RATE_LIMIT: dict[str, float]` **in-memory del proceso Python**. Con `uvicorn --workers 4` (config `docker-compose.coolify.yml`), cada worker mantiene su propio dedup cache. Tormenta de N errores idénticos distribuidos entre workers produce hasta N alertas en vez de 1.
+
+**Impacto actual:** negligible. Piloto de 3 dirigentes activos + 5 shadow genera <10 req/s. Probabilidad real de tormenta + distribución exacta entre workers = marginal.
+
+**Trigger de activación del ticket:** cuando aplique alguno de:
+- Piloto crece a >N dirigentes activos (umbral sugerido: >10)
+- Celery workers (4 concurrency actual) empiezan a generar alertas duplicadas observables en Discord
+- Se detecta un patrón real de spam multi-worker en `#crece-alerts`
+
+**Fix propuesto:**
+- Migrar `_RATE_LIMIT` a Redis con mismo TTL 5 min
+- Key pattern: `alerting:dedup:<hash_16>` · value: timestamp · TTL: 300s
+- Mantener la interfaz pública `send_discord_alert()` + `send_discord_alert_bg()` intacta
+- Actualizar tests unit para mockear Redis
+- Remove `KNOWN LIMITATION` comment en `alerting.py`
+
+**Requisitos:** Redis ya disponible en stack (`REDIS_URL` configurado) · fix ~1h incluyendo tests.
+
+---
+
 ## Housekeeping
 
 (agregar tickets aquí cuando surjan)
