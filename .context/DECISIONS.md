@@ -1016,3 +1016,22 @@ overview (`tema_urgente`) ni al SentimentBadge ni a Sentiment Prom. en ficha dir
 Propuesta 4-fases documentada en `SPRINT-23E-INVESTIGACION.md` para revisión §9.8
 del 2026-05-20. Interim opcional: disclaimer "Sentimiento crudo — no considera
 afiliación" en Tema Urgente (CEO decide si lo quiere antes del día 30).
+
+---
+
+## 2026-04-23 23:XX — Disenso CEO sobre D-23-G (pre-restart gbrain)
+
+**D-23-G' · CEO DISIENTE de la propuesta §9.8 tal como está escrita.**
+
+- Status del disenso: **abierto · por resolver en sesión posterior.**
+- Razón de cerrar hoy sin resolver: evitar conflictos con restart de MCP gbrain
+  (upgrade 0.9.3 → 0.18.2 coordinado por peer md-research, wrapper gbrain-safe
+  pendiente de respawn limpio).
+- Lo que queda vigente del Sprint 23 en el dashboard: el **disclaimer role-aware**
+  de `lib/politica/rol.ts` SÍ se queda (ya pusheado en PR #44) — no toca matriz,
+  solo comunica al usuario la limitación. El CEO no objetó el disclaimer en sí.
+- Lo que queda en espera: la propuesta 4-fases en `SPRINT-23E-INVESTIGACION.md`
+  (persistir score_tenant en social_posts + conectar a endpoints KPI/Badge/ficha).
+  No se agenda fecha; el CEO decidirá cuándo y cómo retomar.
+- Acción para próxima sesión: revisar qué parte de la propuesta choca con la
+  visión del CEO (¿arquitectura, scope, timing, todo?) antes de replantear.
