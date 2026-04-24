@@ -2,7 +2,7 @@
 
 **Estado actual:** ✅ **MVP CRECE v2 completo y vendible** · autorización CEO 2026-04-20 post-merge PR #30 · arco MVP cerrado
 **Fase activa:** PILOTO COMERCIAL (no es sprint de desarrollo)
-**Ventana:** 2-3 semanas calibración con 2 dirigentes activos + 6 shadow → expansión §7.4 si calibración exitosa
+**Ventana:** 2-3 semanas calibración con 3 dirigentes activos + 5 shadow → expansión §7.4 si calibración exitosa
 
 **Sprint previo cerrado:** S5 · `.context/archive/sprint-s5-2026-04-20.md` · reporte `backend/research/2026-04-19/SPRINT-S5-REPORTE-EJECUTIVO.md`
 
@@ -64,7 +64,7 @@ No hay sprint de desarrollo activo. Durante el piloto:
 
 ### Prioridades
 
-1. **Observación empírica** del producto con clientes reales (2 activos + 6 shadow)
+1. **Observación empírica** del producto con clientes reales (3 activos + 5 shadow · per SSOT PILOTO-COMERCIAL-TRACKING.md y D-PILOTO-03)
 2. **Captura de feedback** como GitHub issues con label `piloto-feedback`
 3. **NO reabrir decisiones estructurales** D-01 a D-24 sin protocolo §9.8
 4. **Calibraciones operativas** (umbrales Topic Drift, prompt v1→v1.1, etc.) por PRs incrementales dentro del scope aprobado

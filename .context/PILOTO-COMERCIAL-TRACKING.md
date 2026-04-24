@@ -53,6 +53,18 @@
 
 **Nota reclasificación:** Ballesteros fue activa desde 2026-04-20 por solicitud expresa de MC (cliente). Credenciales entregadas conforme a esa solicitud. El gap documental (TRACKING.md la listaba como shadow) fue corregido el 2026-04-21. Ver D-PILOTO-03 en DECISIONS.md.
 
+### ⚠️ Bandera operativa 2026-04-24
+
+**Máynez Plan IA bloqueado adicional más allá de F1.1:** sesión 2026-04-24 intentó scraping inicial de Máynez · falló 5 plataformas consecutivas por bugs en el stack de scrapers (Twitter async, Instagram auth, Facebook chromedriver · TikTok+YouTube abortados). Detalle completo en `.context/SCRAPING-MAYNEZ-2026-04-24.md` · ticket remediación en `.context/BACKLOG.md#B-SCRAPE-01`.
+
+Ruta de desbloqueo secuencial:
+1. F1.1 Schema restauración (pendiente Joy + revisor §9.8)
+2. B-SCRAPE-01 Fix stack scrapers (pendiente Joy post-F1.1)
+3. Re-ejecutar scraping Máynez (post-fix)
+4. reprocess_nlp, FODA, Plan v3
+
+Hasta entonces Máynez permanece **activo documental** (Plan IA visible al cliente habilitado) pero **sin datos reales** · dashboard mostrará estado onboarding o empty states donde apliquen.
+
 **⚠️ Observación métrica §7.4:** los 3 activos son `politico_activo`. La métrica 1 de §7.4 requiere **3 perfiles distintos** (político activo + funcionario + empresario/precampaña). Si Máynez confirma precampaña 2030 sigue contando como `politico_activo` (no suma perfil nuevo). Se necesita expansión Fase 2 del piloto a 1 funcionario para cerrar métrica 1 completa (actualmente 1/3 perfiles distintos).
 
 ---
@@ -71,6 +83,33 @@ Estos 5 dirigentes procesan scraping + diagnóstico 18 bloques pero **NO tienen 
 | 4 | Yesenia Nolasco Ramírez | Secretaria Movilidad SEMOVI Oaxaca | funcionario_gobierno | Candidato expansión |
 | 5 | Gabriela Jiménez Godoy | Diputada Federal Vicecoord MC | politico_activo | Benchmark comparación Piña (mismo perfil) |
 | 6 | César Cravioto Romero | Secretario de Gobierno CDMX (MORENA) | funcionario_gobierno | Cross-partisan · caso §7.4 #3 ideal |
+
+**Hallazgos handles Cravioto (2026-04-24 · post-falso-negativo Chrome AI):**
+
+| Plataforma | Handle correcto confirmado | Notas |
+|---|---|---|
+| X | `@craviotocesar` | ya verificado |
+| Facebook | `craviotocesar` | ya verificado |
+| Instagram | `@cesarcravioto` | ✅ Verificado visualmente CEO 2026-04-24 · Chrome AI produjo falso negativo probando `@craviotocr` + `@cesar_craviotor` que NO existen, omitió `@cesarcravioto` que SÍ es Cravioto · social_profiles.id=21 · `is_confirmed=true` · 50 posts reales ingestados 2026-04-13 · ver `.context/HANDLES-VERIFICATIONS-2026-04-24.md` |
+| TikTok | `@cesar_craviotor` (underscore) | diferente del IG · ya confirmado |
+| YouTube | `@CesarCraviotoR` | ⚠️ canal legacy de etapa Senador · solo 27 suscriptores · sin contenido activo como Secretario de Gobierno CDMX · considerar excluir YT del scoring digital de Cravioto |
+
+**Lección operativa del piloto · handles por plataforma:**
+
+**NO INFERIR UN HANDLE ÚNICO DESDE OTRO.** Cada plataforma requiere verificación independiente. Cravioto demuestra:
+- X: `craviotocesar`
+- FB: `craviotocesar` (coincide con X)
+- **IG: `cesarcravioto` (SIN sufijo "-cesar" final · distinto de X/FB)**
+- **TT: `cesar_craviotor` (underscore · distinto de todos los anteriores)**
+- YT: `CesarCraviotoR` (CamelCase · distinto)
+
+Patrón común en political accounts · el handle depende de disponibilidad histórica de cada plataforma al momento de creación.
+
+**Regla operativa al bootstrapear dirigente nuevo (aplica para Máynez y futuros):**
+1. Obtener handles individualmente por plataforma (búsqueda en cada UI oficial)
+2. Verificar `is_confirmed=true` SOLO si 2 fuentes independientes confirman el handle específico de esa plataforma
+3. Probar varios deletreos antes de asumir que un perfil no existe (Chrome AI con Cravioto probó 2 variaciones, dio por perdido antes de probar la tercera que era la correcta)
+4. Registrar razón de cada verificación en `.context/HANDLES-VERIFICATIONS-YYYY-MM-DD.md`
 
 **Recomendación expansión Fase 2** (día 14-21 del piloto): promover Cravioto (id=6) o Pineda (id=3) a activo para cerrar perfil `funcionario_gobierno` y cumplir §7.4 métrica 1 (3 perfiles distintos).
 
