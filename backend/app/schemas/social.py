@@ -53,6 +53,9 @@ class SocialPostResponse(BaseModel):
     emotions: dict | None
     is_political: bool
     scraped_at: datetime
+    platform: str | None = None
+    url: str | None = None
+    dirigente_nombre: str | None = None
 
     model_config = {"from_attributes": True}
 

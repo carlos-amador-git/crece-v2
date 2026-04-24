@@ -962,3 +962,76 @@ A (setup) → B (endpoints fix) → D.0 (framework schema) → C (analyze_full b
 - Brightdata snapshot queue lenta con múltiples URLs simultáneos
 - 200 comments Piña TikTok ingestados (Sprint IA-1 original)
 - Expansión 6×4 pendiente — script idempotente, se puede re-correr
+
+---
+
+## 2026-04-23 — Sprint 23 · Post-review CEO 11 screenshots (piloto activo)
+
+**Origen:** `/sprint-review` + `/sprint-implement` sobre diagnóstico `DIAGNOSTICO-SCREEN-CRECE.md`.
+Gemini cross-audit: `GEMINI-AUDIT.md`. Plan revisado: `PLAN-REVISADO.md`.
+Todos los sprints ejecutados en branch `hotfix/23a-ui-puros` (4 commits).
+
+**D-23-A (reclasificación Gemini — ejecutado):**
+F-23-10 (Tier 1 copy) y F-23-11 (Tier 2 copy) reclasificados de §9.8 a 🟡 CALIB.
+Razón: cambios tocan solo títulos + descripciones visibles, no fórmulas, umbrales
+o campos BD. Ejecutado parcialmente: rename de 8 bloques Tier 1 + 5 bloques Tier 2
++ rewrite del contexto académico. Rewrite estructural del patrón "qué mide / cómo
+te fue / qué hacer" documentado como propuesta 4-fases en `SPRINT-23D-COPY-PROPOSAL.md`
+para sprint 24+.
+
+**D-23-B (metodología link — pendiente CEO):**
+Link "Metodología completa" renombrado a "Detalle técnico" y sigue apuntando al
+archivo Zenodo de GitHub. Pendiente decisión: (a) página pública breve, (b) doc
+interno restringido, (c) eliminar. Default temporal: mantener apuntando al repo.
+
+**D-23-C (referencias académicas — ejecutado parcialmente):**
+Eliminadas referencias "(Brookings)", "(Plutchik)", "(ITESO/DFRLab)", "MASTER §3.1"
+del visible UI. Mantenidas en código y metodología técnica como sello académico
+interno. Si CEO pide eliminación completa, queda documentado el trade-off credibilidad
+vs simplicidad.
+
+**D-23-D (plurinominales Electoral tab — ejecutado con default):**
+Default aplicado: mostrar empty state diferenciado según `dirigente.cargo`. Si incluye
+"plurinominal" → mensaje específico. Si no → mensaje genérico. CEO puede revertir a
+ocultar tab si el default no convence.
+
+**D-23-E (F-23-05 URL backend — ejecutado P1, P2/P3 quedan §9.8):**
+Propuesta P1 (URL computada en schema sin migration) ejecutada:
+- Nuevo `backend/app/utils/social_urls.py` con 8 plataformas mapeadas.
+- `SocialPostResponse` extendido con `url`, `platform`, `dirigente_nombre`.
+- `/social/posts` endpoint join a `SocialProfile` + `Dirigente` para poblar campos.
+Propuestas P2 (columna `url` persistida) y P3 (nullable counters para distinguir
+0-real vs no-recolectado) documentadas para §9.8 del 2026-05-20.
+
+**D-23-F (F-23-03/04 — ejecutado sin backend):**
+Revelación en Sprint 23-B investigation: backend endpoint `/social/sentiment-timeline`
+ya acepta `platform` e `include_rts`. Wired up en frontend: hook `useSentimentTrend`
+extendido + toggles en Tono Discursivo card del dashboard. Cerrado como 🟡 CALIB.
+
+**D-23-G (motor sentimiento con afiliación — propuesta §9.8):**
+F-23-01 + F-23-06 son 🔴 ESTRUCTURAL. Framework político de 3 capas ya existe en
+`backend/app/services/political_framework.py` (D-NLP-01, commit 118ce13) con matriz
+(rol, tono, target) → score_tenant. Pero NO está conectado al endpoint de KPI
+overview (`tema_urgente`) ni al SentimentBadge ni a Sentiment Prom. en ficha dirigente.
+Propuesta 4-fases documentada en `SPRINT-23E-INVESTIGACION.md` para revisión §9.8
+del 2026-05-20. Interim opcional: disclaimer "Sentimiento crudo — no considera
+afiliación" en Tema Urgente (CEO decide si lo quiere antes del día 30).
+
+---
+
+## 2026-04-23 23:XX — Disenso CEO sobre D-23-G (pre-restart gbrain)
+
+**D-23-G' · CEO DISIENTE de la propuesta §9.8 tal como está escrita.**
+
+- Status del disenso: **abierto · por resolver en sesión posterior.**
+- Razón de cerrar hoy sin resolver: evitar conflictos con restart de MCP gbrain
+  (upgrade 0.9.3 → 0.18.2 coordinado por peer md-research, wrapper gbrain-safe
+  pendiente de respawn limpio).
+- Lo que queda vigente del Sprint 23 en el dashboard: el **disclaimer role-aware**
+  de `lib/politica/rol.ts` SÍ se queda (ya pusheado en PR #44) — no toca matriz,
+  solo comunica al usuario la limitación. El CEO no objetó el disclaimer en sí.
+- Lo que queda en espera: la propuesta 4-fases en `SPRINT-23E-INVESTIGACION.md`
+  (persistir score_tenant en social_posts + conectar a endpoints KPI/Badge/ficha).
+  No se agenda fecha; el CEO decidirá cuándo y cómo retomar.
+- Acción para próxima sesión: revisar qué parte de la propuesta choca con la
+  visión del CEO (¿arquitectura, scope, timing, todo?) antes de replantear.

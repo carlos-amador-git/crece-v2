@@ -43,7 +43,6 @@ Actualizar al abrir cualquier PR que toque el área del riesgo.
 - **Mitigación propuesta:** migrar a **named tunnel con hostname estable** (p.ej. `api-crece-dev.mdconsultoria-ti.org`). Requiere (1) CNAME en Cloudflare DNS hacia tunnel UUID, (2) config.yml + credentials JSON en Mac Mini, (3) modificar LaunchAgent para apuntar a named, (4) fijar `NEXT_PUBLIC_API_URL` en Vercel a nuevo hostname estable. Estimado 30-45 min. Referencia: `D-GATE-05` en MASTER.
 - **Pre-requisito de F0.1 monitor externo:** Better Stack no se configura hasta que named tunnel esté activo (URL rotatoria produciría falsos positivos horarios).
 - **Asignado:** CEO directo (configuración UI Cloudflare + LaunchAgent) · no es trabajo del agente.
-
 ---
 
 ## Resueltos

@@ -20,13 +20,14 @@ interface CompetitorProfile {
   sentiment: number;  // -1 to 1 scale
 }
 
-const DEMO_DIRIGENTE: CompetitorProfile = {
-  nombre: "Alejandro Pina",
+// Placeholder metrics until /benchmark/comparison API wires real data.
+// Name is resolved at render time from the authenticated user.
+const DIRIGENTE_METRICS_FALLBACK = {
   partido: "MC",
   followers: 8_764,
   engagement: 3.2,
   sentiment: 0.42,
-};
+} as const;
 
 const DEMO_COMPETITORS: CompetitorProfile[] = [
   {
@@ -117,10 +118,10 @@ function StatRow({
 }
 
 export function CompetitorSnapshotCard() {
-  const { activeOrg } = useAuth();
+  const { activeOrg, user } = useAuth();
   const isMcCdmx = activeOrg?.slug === MC_CDMX_SLUG;
 
-  if (!isMcCdmx) {
+  if (!isMcCdmx || !user?.full_name) {
     return (
       <Card className="card-elevated">
         <CardHeader className="pb-3">
@@ -138,9 +139,14 @@ export function CompetitorSnapshotCard() {
     );
   }
 
+  const dirigente: CompetitorProfile = {
+    nombre: user.full_name,
+    ...DIRIGENTE_METRICS_FALLBACK,
+  };
+
   // Pick the top competitor for the side-by-side view
   const competitor = DEMO_COMPETITORS[0];
-  const maxFollowers = Math.max(DEMO_DIRIGENTE.followers, competitor.followers);
+  const maxFollowers = Math.max(dirigente.followers, competitor.followers);
 
   return (
     <Card className="card-elevated">
@@ -154,9 +160,9 @@ export function CompetitorSnapshotCard() {
         {/* Names header */}
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
           <div className="text-right">
-            <p className="text-sm font-semibold leading-tight">{DEMO_DIRIGENTE.nombre}</p>
+            <p className="text-sm font-semibold leading-tight">{dirigente.nombre}</p>
             <span className="inline-block mt-0.5 rounded-full bg-[hsl(var(--chart-1)/0.15)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--chart-1))]">
-              {DEMO_DIRIGENTE.partido}
+              {dirigente.partido}
             </span>
           </div>
           <span className="text-xs font-bold text-muted-foreground/60">vs</span>
@@ -173,19 +179,19 @@ export function CompetitorSnapshotCard() {
           <StatRow
             icon={Users}
             label="Seguidores"
-            ours={formatNumber(DEMO_DIRIGENTE.followers)}
+            ours={formatNumber(dirigente.followers)}
             theirs={formatNumber(competitor.followers)}
           />
           <StatRow
             icon={TrendingUp}
             label="Engagement"
-            ours={`${DEMO_DIRIGENTE.engagement.toFixed(1)}%`}
+            ours={`${dirigente.engagement.toFixed(1)}%`}
             theirs={`${competitor.engagement.toFixed(1)}%`}
           />
           <StatRow
             icon={Heart}
             label="Sentimiento"
-            ours={DEMO_DIRIGENTE.sentiment > 0 ? `+${DEMO_DIRIGENTE.sentiment.toFixed(2)}` : DEMO_DIRIGENTE.sentiment.toFixed(2)}
+            ours={dirigente.sentiment > 0 ? `+${dirigente.sentiment.toFixed(2)}` : dirigente.sentiment.toFixed(2)}
             theirs={competitor.sentiment > 0 ? `+${competitor.sentiment.toFixed(2)}` : competitor.sentiment.toFixed(2)}
           />
         </div>
@@ -196,8 +202,8 @@ export function CompetitorSnapshotCard() {
             Seguidores totales
           </p>
           <FollowerBar
-            label={DEMO_DIRIGENTE.nombre}
-            value={DEMO_DIRIGENTE.followers}
+            label={dirigente.nombre}
+            value={dirigente.followers}
             max={maxFollowers}
             color="hsl(var(--chart-1))"
           />
@@ -215,8 +221,8 @@ export function CompetitorSnapshotCard() {
         {/* Sentiment dots legend */}
         <div className="flex items-center gap-3 pt-1 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1">
-            <SentimentDot value={DEMO_DIRIGENTE.sentiment} />
-            {DEMO_DIRIGENTE.nombre.split(" ")[0]}
+            <SentimentDot value={dirigente.sentiment} />
+            {dirigente.nombre.split(" ")[0]}
           </span>
           <span className="flex items-center gap-1">
             <SentimentDot value={competitor.sentiment} />
