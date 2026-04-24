@@ -9,9 +9,12 @@ import {
   Legend,
 } from "recharts";
 import type { SentimentDistribution } from "@/lib/api/types";
+import { adjustSentimentDistributionForRole } from "@/lib/politica/sentiment";
 
 interface SentimentPieChartProps {
   data: SentimentDistribution;
+  /** Partido del dirigente · activa ajuste D-23-G (swap positive ↔ negative para oposición). */
+  partido?: string | null;
 }
 
 const COLORS = {
@@ -20,8 +23,10 @@ const COLORS = {
   neutral: "hsl(var(--chart-neutral))",
 };
 
-export function SentimentPieChart({ data }: SentimentPieChartProps) {
-  const total = data.total || (data.positive + data.negative + data.neutral);
+export function SentimentPieChart({ data, partido }: SentimentPieChartProps) {
+  // D-23-G · swap positive/negative counts si rol=oposición.
+  const adjusted = adjustSentimentDistributionForRole(data, partido);
+  const total = adjusted.total || (adjusted.positive + adjusted.negative + adjusted.neutral);
 
   if (!total) {
     return (
@@ -34,9 +39,9 @@ export function SentimentPieChart({ data }: SentimentPieChartProps) {
   }
 
   const chartData = [
-    { name: "Positivo", value: data.positive, color: COLORS.positive },
-    { name: "Negativo", value: data.negative, color: COLORS.negative },
-    { name: "Neutral", value: data.neutral, color: COLORS.neutral },
+    { name: "Positivo", value: adjusted.positive, color: COLORS.positive },
+    { name: "Negativo", value: adjusted.negative, color: COLORS.negative },
+    { name: "Neutral", value: adjusted.neutral, color: COLORS.neutral },
   ].filter((d) => d.value > 0);
 
   return (
