@@ -123,6 +123,7 @@ export default function DirigenteDetailPage() {
                   : "negative"
               }
               score={dirigente.stats?.sentiment_avg_7d ?? 0.5}
+              partido={dirigente.partido}
             />
           </CardContent>
         </Card>
@@ -171,7 +172,7 @@ export default function DirigenteDetailPage() {
             </h3>
             <div className="space-y-3">
               {(dirigente.recent_posts ?? []).map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} post={post} partido={dirigente.partido} />
               ))}
             </div>
           </div>
@@ -215,7 +216,7 @@ export default function DirigenteDetailPage() {
             </h3>
             <div className="space-y-3">
               {(dirigente.recent_posts ?? []).map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} post={post} partido={dirigente.partido} />
               ))}
             </div>
             {(dirigente.recent_posts ?? []).length === 0 && (
