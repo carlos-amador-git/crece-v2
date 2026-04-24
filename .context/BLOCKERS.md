@@ -35,6 +35,14 @@ Actualizar al abrir cualquier PR que toque el área del riesgo.
 - **Status:** ⚠️ **PARCIAL.** Sprint 23-D cerró solo los renames de títulos (13 de 18 bloques). El patrón "qué mide / cómo te fue / qué hacer" queda pendiente.
 - **Plan:** `frontend-review-2026-04-23/BACKLOG-SPRINT-24.md` con 4 fases + 3 preguntas de arquitectura para sesión dedicada.
 
+### B-23-05 · Cloudflared tunnel rotatorio vs piloto activo · fragilidad del producto
+
+- **Origen:** Diálogo CEO + Claude Code 2026-04-23 durante diagnóstico F0.1.
+- **Status:** 🟠 **ABIERTO · producto.** El backend CRECE corre en `localhost:8002` del Mac Mini M4 expuesto vía `cloudflared tunnel --url http://localhost:8002 --no-autoupdate` (ad-hoc, URL rotatoria ~1h). LaunchAgent `com.mdconsultoria.crece-tunnel.plist` rota URL y auto-updatea `NEXT_PUBLIC_API_URL` en Vercel env vars. Durante la ventana de rotación, los 3 dirigentes activos del piloto (Piña, Máynez, Ballesteros) pueden ver pantalla rota / fetch failed hasta que Next.js re-lea env vars (requiere rebuild o re-fetch de config runtime).
+- **Impacto en piloto:** microcortes de ~N segundos cada hora × 3 dirigentes = experiencia de producto inconsistente durante la ventana crítica del piloto comercial.
+- **Mitigación propuesta:** migrar a **named tunnel con hostname estable** (p.ej. `api-crece-dev.mdconsultoria-ti.org`). Requiere (1) CNAME en Cloudflare DNS hacia tunnel UUID, (2) config.yml + credentials JSON en Mac Mini, (3) modificar LaunchAgent para apuntar a named, (4) fijar `NEXT_PUBLIC_API_URL` en Vercel a nuevo hostname estable. Estimado 30-45 min. Referencia: `D-GATE-05` en MASTER.
+- **Pre-requisito de F0.1 monitor externo:** Better Stack no se configura hasta que named tunnel esté activo (URL rotatoria produciría falsos positivos horarios).
+- **Asignado:** CEO directo (configuración UI Cloudflare + LaunchAgent) · no es trabajo del agente.
 ---
 
 ## Resueltos

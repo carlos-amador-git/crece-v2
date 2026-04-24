@@ -1,4 +1,18 @@
+ACTIVE: PLAN-recuperacion-post-incidente-2026-04-21.md
+
+---
+
 # Plan revisado — Hotfixes piloto 2026-04-23 (post-review CEO 11 screenshots)
+
+> ⚠️ SUPERSEDED 2026-04-23: el plan vigente al día de hoy es
+> `PLAN-recuperacion-post-incidente-2026-04-21.md` (v3, aprobado CEO + Joy + Gemini cross-audit).
+> Sprint 23-A..E se ejecutó en paralelo SIN invadir el incidente 3d6fe3f. Los hotfixes
+> de este documento están cerrados · lo que queda pendiente es Frente 0 (observabilidad)
+> y Frente 1 (schema restauración) del plan de recuperación.
+> Todo diagnóstico sobre migrations, schema, framework político o seguridad debe leer
+> PRIMERO `PLAN-recuperacion-post-incidente-2026-04-21.md`.
+
+---
 
 **Origen:** `/sprint-review` sobre diagnóstico `DIAGNOSTICO-SCREEN-CRECE.md` (F-23-01..F-23-11).
 **Contexto de disciplina:** MVP cerrado · piloto comercial activo · próximo §9.8 ≈ 2026-05-20.

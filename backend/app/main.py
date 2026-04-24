@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import time
+from collections import defaultdict
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -10,10 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy.exc import IntegrityError
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.api.v1 import api_router
+from app.core.alerting import send_discord_alert_bg
 from app.core.config import settings
 from app.core.database import engine
 from app.core.limiter import limiter
@@ -65,7 +69,33 @@ app = FastAPI(
 
 # E.1 — Rate limiting (P0 security)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+# F0.1 · 429 sostenido · alerta Discord si 10+ rate limits desde misma IP en 60s
+# Envuelve el handler slowapi original · timeboxed spec (no más lógica).
+_429_TRACKER: dict[str, list[float]] = defaultdict(list)
+_429_WINDOW_SEC = 60
+_429_THRESHOLD = 10
+
+
+async def rate_limit_handler_with_alert(request: Request, exc: RateLimitExceeded):
+    """Wrap slowapi handler: track 429 per IP, alert on sustained burst, then delegate."""
+    ip = get_remote_address(request)
+    now = time.time()
+    hits = [t for t in _429_TRACKER[ip] if now - t < _429_WINDOW_SEC]
+    hits.append(now)
+    _429_TRACKER[ip] = hits
+    # Fire alert exactly when we cross the threshold (not every subsequent hit)
+    if len(hits) == _429_THRESHOLD:
+        send_discord_alert_bg(
+            title=f"429 sostenido: {_429_THRESHOLD} rate limits/{_429_WINDOW_SEC}s desde {ip}",
+            level="429",
+            details={"method": request.method, "path": request.url.path, "ip": ip},
+        )
+    return _rate_limit_exceeded_handler(request, exc)
+
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler_with_alert)
 
 # E.4 — Proxy headers with restricted trusted_hosts (P1 security)
 app.add_middleware(
@@ -121,6 +151,47 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
             "message": str(exc.orig) if exc.orig else str(exc),
         },
     )
+
+
+# F0.1 · Handler genérico de excepciones no capturadas · Sentry + Discord webhook
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    # Sentry capture (si init fue ejecutado con DSN válido)
+    sentry_sdk.capture_exception(exc)
+    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+    send_discord_alert_bg(
+        title=f"Unhandled exception: {type(exc).__name__}",
+        level="exception",
+        details={
+            "method": request.method,
+            "path": request.url.path,
+            "error_type": type(exc).__name__,
+            "message": str(exc)[:500],
+        },
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "internal server error"},
+    )
+
+
+# F0.1 · Middleware para 5xx que NO provienen de exception (e.g. raise HTTPException(500) manual)
+@app.middleware("http")
+async def alert_on_5xx(request: Request, call_next):
+    response = await call_next(request)
+    if response.status_code >= 500:
+        # El exception handler ya cubre excepciones · esto captura HTTPException(500) manual
+        # y cualquier 5xx producido por código downstream que construye JSONResponse directo.
+        send_discord_alert_bg(
+            title=f"HTTP {response.status_code} on {request.url.path}",
+            level="5xx",
+            details={
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+            },
+        )
+    return response
 
 
 # Routers

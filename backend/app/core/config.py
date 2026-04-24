@@ -81,6 +81,7 @@ class Settings(BaseSettings):
 
     # ── Observability ────────────────────────────────────
     BUGSINK_DSN: str = ""  # Sentry-compatible DSN for Bugsink error tracking
+    DISCORD_WEBHOOK_URL: str = ""  # F0.1 MVP · alertas 5xx/exception/429 via Discord webhook
 
     # ── n8n Integration ──────────────────────────────────
     N8N_WEBHOOK_SECRET: str = ""
