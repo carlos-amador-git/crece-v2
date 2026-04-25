@@ -25,9 +25,10 @@ Actualizar al abrir cualquier PR que toque el área del riesgo.
 ### B-23-03 · Motor sentimiento con afiliación no conectado al dashboard
 
 - **Origen:** Findings F-23-01 + F-23-06 review CEO 2026-04-23.
-- **Status:** 🔴 **ESTRUCTURAL §9.8.** Framework político 3-capas existe en `backend/app/services/political_framework.py` con matriz (rol, tono, target) → score_tenant, pero no está conectado a `tema_urgente`, `SentimentBadge`, ni Sentiment Prom. en ficha dirigente.
-- **Mitigación interim (ejecutada 2026-04-23):** disclaimer role-aware en Tema Urgente que explicita que el sentimiento mostrado es crudo y que críticas al oficialismo pueden leerse distinto para oposición. Textos diferenciados por partido → rol federal CDMX.
-- **Plan completo:** `SPRINT-23E-INVESTIGACION.md` — propuesta 4 fases para §9.8 del 2026-05-20.
+- **Status:** 🟢 **MITIGADO 2026-04-25 vía reframe D-23-G'.** El KPI principal pasó de "Sentimiento Prom. flipeado" a "Actividad Política Alineada (% por target_politico)". El flip × -1 ya no se aplica · ya no necesitamos conectar la matriz 3-capas al `SentimentBadge` porque el KPI hero no usa polaridad. Plan reformulado: `.context/PLAN-D-23-G-actividad-alineada-2026-04-24.md`.
+- **Mitigación previa interim (2026-04-23):** disclaimer role-aware en Tema Urgente · sigue vigente como contexto secundario.
+- **Disenso D-23-G' resuelto:** la propuesta 4-fases con disenso CEO 2026-04-23 queda disuelta porque el reframe no requiere matriz v2/v3 ni clasificación humana.
+- **Deuda residual:** backfill IA del catálogo histórico (~3,800 posts) en curso · piloto activo arranca con backfill parcial (30d window).
 
 ### B-23-04 · F-23-10/11 rewrite estructural diferido
 

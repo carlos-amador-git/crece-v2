@@ -183,6 +183,19 @@ class SocialPost(Base):
     raw_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Sprint S1 T5 — Topic extractor Gemma 3:12b (1-3 topics del seed 12)
     topics_extracted: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # D-23-G' · 2026-04-24 · Actividad Política Alineada (migración d23g1).
+    # target_politico: clasificación 4-cat IA + 'no_determinado' fallback.
+    # CHECK en BD: ('oficialismo','oposicion','propio','personal','no_determinado').
+    target_politico: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    nlp_model_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # clasificacion_origen: 'ai_suggested' (default · IA) · 'human_*' reservado Phase B.
+    # CHECK en BD: ('ai_suggested','human_dirigente','human_admin','human_consultor').
+    clasificacion_origen: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        server_default="ai_suggested",
+        default="ai_suggested",
+    )
     scraped_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

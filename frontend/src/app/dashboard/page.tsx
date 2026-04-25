@@ -561,9 +561,7 @@ export default function OverviewPage() {
               </CardContent>
             </Card>
           ) : (
-            posts.map((post) => (
-              <PostCard key={post.id} post={post} partido={primaryDirigente?.partido} />
-            ))
+            posts.map((post) => <PostCard key={post.id} post={post} />)
           )}
       </section>
 

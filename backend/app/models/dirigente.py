@@ -73,6 +73,10 @@ class Dirigente(Base):
     # Valores permitidos (CHECK constraint en migration s5m1):
     #   politico_activo · funcionario_gobierno · figura_precampaña · empresario_transicion
     perfil_1_5: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # D-23-G' · 2026-04-24 · Actividad Política Alineada (migración d23g1).
+    # rol_politico deriva del partido (federal context · piloto CDMX).
+    # CHECK en BD: ('oficialismo','oposicion','independiente').
+    rol_politico: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

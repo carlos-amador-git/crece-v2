@@ -1,5 +1,56 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-04-25 — D-23-H · Reframe KPI Sentimiento → Actividad Política Alineada
+
+### Contexto
+
+D-23-G (sentiment flip × -1 por rol político) producía resultados contradictorios para oposición con posts personales. Ejemplo emblemático: Piña (MC oposición) con `sentiment_avg_7d = +0.5` (positivo crudo · contenido autopromocional/personal tipo Copa Naranja) flipeaba a `-0.5` y se mostraba como "Negativo -50%". Cliente vio el bug en sesión 2026-04-24 y planteó la pregunta: *"¿no se supone que debería ser al revés?"*
+
+Diagnóstico raíz: D-23-G aplicó **inversión de polaridad** para responder una pregunta de **alineación de actividad**. Las dos preguntas no son equivalentes. El multiplicador × -1 sobre el promedio de score crudo introduce ruido en posts no políticos del oposicionista.
+
+### Decisión
+
+**Reformular el KPI principal** de "Sentimiento Prom. ajustado" a **"Actividad Política Alineada"** computada por proporción de actividad por categoría `target_politico`:
+
+| Rol | Fórmula |
+|-----|---------|
+| Oposición | `(target=oficialismo + target=propio) / total_clasificado` |
+| Oficialismo | `(target=propio + target=oposicion) / total_clasificado` |
+| Independiente | `target=propio / total_clasificado` |
+
+IA Gemini API clasifica cada post con 4-cat excluyentes + `no_determinado` fallback. Sin score numérico ajustado · sin flip de polaridad · solo conteo de actividad.
+
+### Lo que esto disuelve
+
+- **Disenso CEO D-23-G' (2026-04-23)** sobre propuesta 4-fases: disuelto · reformulación elimina la necesidad
+- **B-23-03** motor sentimiento con afiliación: mitigado · KPI ya no requiere flip
+- **Phase B humano-clasifica** (riesgo de quedar postergada 6 meses): eliminado · KPI no depende de juicio humano
+- **Decisión CEO #12 BLOCKER** (vocabulario matriz v2/v3): cerrada · no se usa matriz de scores
+- **Cold start** (clasifica para activar): no aplica · IA backfilea desde día 1
+
+### Cross-audits
+
+- Gemini CLI · veredicto `aprobado-con-ajustes` (golden set 60, regla desempate, fallback no_determinado, multi-level government context)
+- `superpowers:code-reviewer` subagent · veredicto APROBADA CON OBSERVACIONES sobre migración `d23g1_actividad_alineada.py` (3 puntos resueltos)
+
+### Plan ejecutado · 4 días (Sesión 2026-04-24 → 2026-04-25)
+
+- **Day 1** ✅ Migración hand-written D-OPS-08/09/10 · 4 columnas + 1 partial index + 3 CHECK constraints
+- **Day 2** ✅ Clasificador Gemini API · golden set 60 posts pendiente firma CEO · prompt 4-cat con regla desempate
+- **Day 3** ✅ Backend service `actividad_alineada.py` + endpoint enriquecido · Frontend `ActividadAlineadaCard` · `sentiment.ts` marcado @deprecated (preservado en bundle por instrucción CEO)
+- **Day 4** 🔄 Backfill IA en curso (Ballesteros 7 posts confirmados · resto deuda residual documentada · piloto opera con backfill parcial 30d window)
+
+### Status
+
+- **Aprobada y ejecutada operativamente.**
+- **Forward-compat**: si Phase B "humano clasifica" se decide eventualmente, el campo `clasificacion_origen` ya tiene los valores `human_*` reservados · el resolver actual queda como fallback `ai_suggested → human_*` sin refactor.
+
+### Co-responsabilidad
+
+CEO + Claude (Opus 4.7 1M context) · sesión iniciada 2026-04-24 22:00 CDMX · cierre operativo 2026-04-25 ~02:00 CDMX. Sequential thinking aplicado en discusión del reframe (4 propuestas evaluadas: opción 1 apagar flip, opción 2 disclaimer, opción 3 4-fases, opción definitiva reframe-actividad).
+
+---
+
 ## 2026-04-21 (noche) — Post-mortem incidente `3d6fe3f1660d` + hardening operativo
 
 Cuatro decisiones post-hoc tras detectar destrucción silenciosa de schema causada por migración Alembic autogenerate contaminada. La detección ocurrió durante review frontend de la misma sesión de hoy — caso de libro de texto de por qué el review §9.8 visual importa.

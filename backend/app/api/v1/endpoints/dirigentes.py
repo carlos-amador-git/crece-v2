@@ -23,6 +23,7 @@ from app.schemas.dirigente import (
     OnboardingResponse,
     SocialSummary,
 )
+from app.services.actividad_alineada import compute_actividad_alineada
 from app.services.diagnostico import calculate_ipd
 
 router = APIRouter()
@@ -196,11 +197,15 @@ async def get_dirigente(
 
     sum(p.followers_count for p in profiles)
 
+    # D-23-G' · KPI Actividad Política Alineada (reemplaza flip de sentimiento)
+    actividad = await compute_actividad_alineada(db, dirigente, days=7)
+
     base["stats"] = {
         "total_posts_7d": total_posts_7d,
         "total_engagement_7d": round(total_engagement_7d, 4),
-        "sentiment_avg_7d": round(sentiment_sum, 2),
+        "sentiment_avg_7d": round(sentiment_sum, 2),  # se preserva como subline informacional · sin flip
         "follower_growth_30d": 0,  # Would need historical data
+        "actividad_alineada": actividad,  # KPI hero nuevo · plan D-23-G' 2026-04-24
     }
 
     # Enrich: social_accounts (what frontend expects)

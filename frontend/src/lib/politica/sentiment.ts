@@ -1,4 +1,18 @@
 /**
+ * @deprecated 2026-04-25 (D-23-G' reformulación · supersedida por Actividad Política Alineada)
+ *
+ * El KPI principal pasó de "Sentimiento Prom. flipeado" a "Actividad Política
+ * Alineada (% por target_politico)". Ver:
+ *   - .context/PLAN-D-23-G-actividad-alineada-2026-04-24.md
+ *   - app/services/actividad_alineada.py (backend)
+ *   - components/dashboard/actividad-alineada-card.tsx (frontend)
+ *
+ * Este helper se mantiene como referencia · NO se elimina del bundle por
+ * decisión CEO (preservar lógica reversible). Si Phase B "humano clasifica"
+ * se activa eventualmente, ESTE helper podría reusarse para flipear las
+ * sugerencias IA a presentar al dirigente. Mientras tanto, ningún caller
+ * en producción debe importarlo.
+ *
  * Ajuste de sentimiento por rol político · D-23-G · sesión 2026-04-24.
  *
  * El CEO estableció como regla operativa: el multiplicador de sentimiento
@@ -71,4 +85,23 @@ export function adjustSentimentDistributionForRole<
   const rol = rolFromPartido(partido);
   if (rol !== "oposicion") return dist;
   return { ...dist, positive: dist.negative, negative: dist.positive };
+}
+
+/**
+ * Deriva el label textual de sentimiento desde un score en rango -1..+1.
+ *
+ * Thresholds: `>0.2 positive`, `<-0.2 negative`, resto `neutral`.
+ * Null/undefined → null (no fabricar).
+ *
+ * Útil cuando el score ya fue ajustado por rol (flip aplicado) y necesitamos
+ * el label coherente con el valor numérico final. Reemplaza el threshold
+ * 0.4/0.6 original que estaba mal para rango -1..+1.
+ */
+export function deriveSentimentLabelFromScore(
+  score: number | null | undefined,
+): "positive" | "negative" | "neutral" | null {
+  if (score == null) return null;
+  if (score > 0.2) return "positive";
+  if (score < -0.2) return "negative";
+  return "neutral";
 }

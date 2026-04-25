@@ -56,6 +56,29 @@ export interface DirigenteStats {
   total_engagement_7d: number;
   sentiment_avg_7d: number;
   follower_growth_30d: number;
+  // D-23-G' · 2026-04-24 · KPI hero reformulado · ver actividad-alineada-card.tsx
+  actividad_alineada?: ActividadAlineada;
+}
+
+// D-23-G' · KPI Actividad Política Alineada
+// Reemplaza el flip × -1 sobre sentiment_score por conteo de actividad por target_politico.
+// Plan: .context/PLAN-D-23-G-actividad-alineada-2026-04-24.md
+export interface ActividadAlineadaBreakdown {
+  oficialismo: number;
+  oposicion: number;
+  propio: number;
+  personal: number;
+}
+
+export interface ActividadAlineada {
+  score: number | null;          // 0..1 · null si no hay datos clasificados
+  score_pct: number | null;      // 0..100 (presentación) · null si sin datos
+  breakdown: ActividadAlineadaBreakdown;
+  total_classified: number;
+  total_posts_window: number;
+  rol_politico: "oficialismo" | "oposicion" | "independiente" | string;
+  days: number;
+  empty_state: "no_classified" | null;
 }
 
 export interface SocialAccount {

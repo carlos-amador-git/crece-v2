@@ -7,8 +7,6 @@ import { Heart, MessageCircle, Share2, Eye, ExternalLink } from "lucide-react";
 
 interface PostCardProps {
   post: SocialPost;
-  /** Partido del dirigente dueño del post · activa ajuste sentimiento D-23-G. */
-  partido?: string | null;
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -21,7 +19,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   bluesky: "Bluesky",
 };
 
-export function PostCard({ post, partido }: PostCardProps) {
+export function PostCard({ post }: PostCardProps) {
   const hasUrl = Boolean(post.url && post.url.trim().length > 0);
   const platformLabel =
     PLATFORM_LABELS[post.platform?.toLowerCase() ?? ""] ??
@@ -51,7 +49,6 @@ export function PostCard({ post, partido }: PostCardProps) {
             <SentimentBadge
               sentiment={post.sentiment_label}
               score={post.sentiment_score}
-              partido={partido}
             />
           </div>
           <p className="mb-3 line-clamp-3 text-sm text-foreground/90">
