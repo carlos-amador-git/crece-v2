@@ -42,6 +42,12 @@ const adjustSentimentDistributionForRole = (dist, partido) => {
   if (rolFromPartido(partido) !== "oposicion") return dist;
   return { ...dist, positive: dist.negative, negative: dist.positive };
 };
+const deriveSentimentLabelFromScore = (score) => {
+  if (score == null) return null;
+  if (score > 0.2) return "positive";
+  if (score < -0.2) return "negative";
+  return "neutral";
+};
 
 // ─── Tests ─────────────────────────────────────────────────
 let passed = 0;
@@ -116,6 +122,32 @@ run("oficialismo mantiene distribución", () => {
   const dist = { positive: 10, negative: 20, neutral: 5 };
   const r = adjustSentimentDistributionForRole(dist, "MORENA");
   assert.deepEqual(r, dist);
+});
+
+console.log("\nderiveSentimentLabelFromScore");
+run("0.59 > 0.2 → positive", () => {
+  assert.equal(deriveSentimentLabelFromScore(0.59), "positive");
+});
+run("-0.59 < -0.2 → negative", () => {
+  assert.equal(deriveSentimentLabelFromScore(-0.59), "negative");
+});
+run("0.2 exacto (no mayor) → neutral", () => {
+  assert.equal(deriveSentimentLabelFromScore(0.2), "neutral");
+});
+run("-0.2 exacto (no menor) → neutral", () => {
+  assert.equal(deriveSentimentLabelFromScore(-0.2), "neutral");
+});
+run("0 → neutral", () => {
+  assert.equal(deriveSentimentLabelFromScore(0), "neutral");
+});
+run("-0.5 (Piña flipado) → negative (resuelve bug Neutral -50%)", () => {
+  assert.equal(deriveSentimentLabelFromScore(-0.5), "negative");
+});
+run("null → null", () => {
+  assert.equal(deriveSentimentLabelFromScore(null), null);
+});
+run("undefined → null", () => {
+  assert.equal(deriveSentimentLabelFromScore(undefined), null);
 });
 
 console.log(`\n${passed} passed · ${failed} failed`);

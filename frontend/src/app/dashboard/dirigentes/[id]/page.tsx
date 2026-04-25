@@ -7,6 +7,7 @@ import { useSentimentTrend } from "@/lib/api/hooks/use-social";
 import { usePlanes } from "@/lib/api/hooks/use-planes";
 import { TendenciaPorRedWidget } from "@/components/charts/tendencia-por-red-widget";
 import { SemaforoCrecimiento } from "@/components/dashboard/semaforo-crecimiento";
+import { ActividadAlineadaCard } from "@/components/dashboard/actividad-alineada-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +17,8 @@ import { IpdRadarChart } from "@/components/charts/ipd-radar-chart";
 import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
 import { EngagementBarChart } from "@/components/charts/engagement-bar-chart";
 import { PostCard } from "@/components/social/post-card";
-import { SentimentBadge } from "@/components/social/sentiment-badge";
+// SentimentBadge ya no se usa en ficha dirigente · D-23-G' KPI hero ahora es ActividadAlineadaCard.
+// El componente se preserva para PostCard y otras vistas (no se borra del bundle · decisión CEO 2026-04-25).
 import { formatNumber, formatDate } from "@/lib/utils";
 import { ArrowLeft, MessageSquare, Users, Brain } from "lucide-react";
 import Link from "next/link";
@@ -111,22 +113,8 @@ export default function DirigenteDetailPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Sentimiento Prom.</p>
-            <SentimentBadge
-              sentiment={
-                (dirigente.stats?.sentiment_avg_7d ?? 0.5) > 0.6
-                  ? "positive"
-                  : (dirigente.stats?.sentiment_avg_7d ?? 0.5) > 0.4
-                  ? "neutral"
-                  : "negative"
-              }
-              score={dirigente.stats?.sentiment_avg_7d ?? 0.5}
-              partido={dirigente.partido}
-            />
-          </CardContent>
-        </Card>
+        {/* D-23-G' · KPI hero reformulado · 2026-04-24 · reemplaza Sentimiento Prom. flipeado */}
+        <ActividadAlineadaCard data={dirigente.stats?.actividad_alineada} />
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Crecimiento (30d)</p>
@@ -172,7 +160,7 @@ export default function DirigenteDetailPage() {
             </h3>
             <div className="space-y-3">
               {(dirigente.recent_posts ?? []).map((post) => (
-                <PostCard key={post.id} post={post} partido={dirigente.partido} />
+                <PostCard key={post.id} post={post} />
               ))}
             </div>
           </div>
@@ -216,7 +204,7 @@ export default function DirigenteDetailPage() {
             </h3>
             <div className="space-y-3">
               {(dirigente.recent_posts ?? []).map((post) => (
-                <PostCard key={post.id} post={post} partido={dirigente.partido} />
+                <PostCard key={post.id} post={post} />
               ))}
             </div>
             {(dirigente.recent_posts ?? []).length === 0 && (
