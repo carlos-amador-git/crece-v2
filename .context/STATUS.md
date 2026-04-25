@@ -1,9 +1,67 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-04-23 (sesión /sprint-implement post-review CEO 11 screenshots)
-**Sesion activa:** frontend hotfixes branch `hotfix/23a-ui-puros` (4 commits, pendiente push + PR)
+**Ultimo update:** 2026-04-25 (D-23-G' reformulación · KPI Actividad Política Alineada)
+**Sesion activa:** frontend hotfixes branch `hotfix/23a-ui-puros` (sin PR · D-23-G' adelante)
 **Branch activo:** `hotfix/23a-ui-puros` ahead of `main @ 40e3ce1`
 **Próxima ventana §9.8:** día 30 piloto ≈ 2026-05-20
+
+---
+
+## 2026-04-25 — D-23-G' Actividad Política Alineada (3 días ejecutados)
+
+**Plan:** `.context/PLAN-D-23-G-actividad-alineada-2026-04-24.md` (vigente)
+**Cross-audit:** Gemini aprobado-con-ajustes (golden set 60, regla desempate, fallback `no_determinado`)
+**Code-reviewer:** subagent independiente · ✅ APROBADA CON OBSERVACIONES (3 ya cubiertas)
+
+### Reframe del KPI (cambio fundamental)
+
+Antes intentábamos arreglar el flip × -1 sobre score crudo. Ahora reformulamos el KPI a **proporción de actividad alineada a rol**:
+
+| Rol | Fórmula |
+|-----|---------|
+| Oposición | `(target=oficialismo + target=propio) / total_clasificado` |
+| Oficialismo | `(target=propio + target=oposicion) / total_clasificado` |
+| Independiente | `target=propio / total_clasificado` |
+
+Sin flip · sin score numérico · solo conteo de actividad por `target_politico` ∈ `{oficialismo, oposicion, propio, personal, no_determinado}`.
+
+### Day 1 ✅ Migración hand-written aplicada
+
+`d23g1_actividad_alineada.py` (head actual). 4 columnas core, 1 partial index, 3 CHECK constraints. D-OPS-08/09/10 cumplidos.
+
+- `social_posts.target_politico` VARCHAR(32) NULL
+- `social_posts.nlp_model_version` VARCHAR(64) NULL
+- `social_posts.clasificacion_origen` VARCHAR(32) NOT NULL DEFAULT 'ai_suggested'
+- `dirigentes.rol_politico` VARCHAR(32) NULL
+- `ix_social_posts_profile_target_politico` partial index
+
+Models actualizados (`app/models/social.py` y `dirigente.py`). `dirigentes.rol_politico` poblado por mapping partido→rol (8/8 dirigentes).
+
+### Day 2 ✅ Clasificador IA + golden set generado
+
+- `app/nlp/target_politico_prompt.py` con 4-cat + `no_determinado` fallback + regla desempate "prioriza propio si hay CTA"
+- `scripts/classify_target_politico.py` idempotente · `WHERE target_politico IS NULL OR nlp_model_version != 'crece-political-v1'` · dry-run · per-dirigente · golden-set mode
+- Smoke test 3 posts Ballesteros: `propio`, `oficialismo`, `propio` (correctos · 121s total)
+- Golden set 60 posts generado a `.context/golden-set-target-politico-2026-04-24.json` · pendiente CEO marca `target_human` por post para validación F1
+
+### Day 3 ✅ Backend service + Frontend KPI
+
+- `app/services/actividad_alineada.py` · función `compute_actividad_alineada(db, dirigente, days=7)`
+- Endpoint `/api/v1/dirigentes/{id}` enriquecido con campo `stats.actividad_alineada`
+- Frontend tipos: `ActividadAlineada` + `ActividadAlineadaBreakdown` en `lib/api/types.ts`
+- `components/dashboard/actividad-alineada-card.tsx` · KPI hero con breakdown 4-cat barras apiladas
+- Ficha dirigente reemplaza "Sentimiento Prom." (flipeado) → `ActividadAlineadaCard`
+- `lib/politica/sentiment.ts` marcado **@deprecated** · NO se elimina del bundle (decisión CEO 2026-04-25 · preservar lógica reversible)
+- TypeScript clean · API smoke OK (Ballesteros responde con `empty_state: 'no_classified'` correctamente)
+
+### Day 4 🔄 Backfill en curso
+
+- Ballesteros backfill 40 posts arrancó en background (PID en bash log) · ETA ~22-27 min
+- Pendiente: Piña (61 posts 30d) + Máynez (5 posts total) + 5 shadow (Solano, Pineda, Nolasco, Jiménez, Cravioto)
+- Validación visual post-backfill: KPI debe mostrar % no-vacío para Ballesteros tras completar
+- Cierre B-23-03 + DECISIONS D-23-H pendiente al cerrar Day 4
+
+---
 
 ---
 

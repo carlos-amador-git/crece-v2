@@ -1,4 +1,4 @@
-ACTIVE: PLAN-recuperacion-post-incidente-2026-04-21.md
+ACTIVE: PLAN-D-23-G-actividad-alineada-2026-04-24.md
 
 ---
 
