@@ -20,9 +20,14 @@
 
 services:
 
-  # PostgreSQL 16 + PostGIS 3.4 (electoral maps, canvassing routes, citizen geolocation)
+  # PostgreSQL 16 + PostGIS 3.4 + pgvector (electoral maps, canvassing routes, embeddings)
+  # Custom Dockerfile compiles pgvector from source on top of postgis:16-3.4.
+  # Required by topic_trends migration b2c3d4e5f6a7 (HNSW vector(384) column).
   crece-db:
-    image: postgis/postgis:16-3.4
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    image: crece-db:16-postgis-pgvector
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-crece}
