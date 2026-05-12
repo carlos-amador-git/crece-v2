@@ -34,7 +34,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-crece_production}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Renamed from postgres_data to postgres_data_v2 on 2026-05-12 to force
+      # fresh init on a clean volume: the legacy volume was created from Carlos's
+      # stub models, and MarxCha's migration history couldn't apply cleanly on
+      # top of it (DROP INDEX/TABLE statements failing on never-created objects).
+      # Old postgres_data volume is left orphaned on disk for rollback if needed.
+      - postgres_data_v2:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crece} -d ${POSTGRES_DB:-crece_production}"]
@@ -216,7 +221,7 @@ services:
     command: ["node", "server.js"]
 
 volumes:
-  postgres_data:
+  postgres_data_v2:
   redis_data:
   minio_data:
 
