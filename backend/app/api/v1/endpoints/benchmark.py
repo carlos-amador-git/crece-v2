@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,8 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user
 from app.models.benchmark import Competidor, CompetidorSocialProfile
+from app.models.dirigente import Dirigente
+from app.models.social import SocialPost, SocialProfile
 from app.models.user import User
 from app.schemas.benchmark import (
+    BenchmarkComparisonItem,
+    BenchmarkData,
     CompetidorCreate,
     CompetidorResponse,
     CompetidorUpdate,
@@ -19,8 +23,68 @@ from app.schemas.benchmark import (
     RankingResponse,
 )
 from app.schemas.common import PaginatedResponse
+from app.schemas.dirigente import DirigenteResponse
 
 router = APIRouter()
+
+
+async def _dirigente_metrics(db: AsyncSession, dirigente_id: int) -> tuple[int, float]:
+    followers_q = select(func.coalesce(func.sum(SocialProfile.followers_count), 0)).where(
+        SocialProfile.dirigente_id == dirigente_id
+    )
+    followers = int((await db.execute(followers_q)).scalar_one() or 0)
+
+    since = datetime.now(UTC) - timedelta(days=30)
+    engagement_q = (
+        select(func.coalesce(func.avg(SocialPost.engagement_rate), 0.0))
+        .join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
+        .where(SocialProfile.dirigente_id == dirigente_id)
+        .where(SocialPost.published_at >= since)
+    )
+    engagement = float((await db.execute(engagement_q)).scalar_one() or 0.0)
+    return followers, engagement
+
+
+@router.get("", response_model=BenchmarkData)
+async def compare_benchmark(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _current_user: Annotated[User, Depends(get_current_user)],
+    dirigente_id: int = Query(...),
+    competidor_id: int = Query(..., description="Another dirigente_id to compare against"),
+) -> BenchmarkData:
+    """Compare two dirigentes by total followers and avg engagement (30d)."""
+    result = await db.execute(
+        select(Dirigente).where(Dirigente.id.in_([dirigente_id, competidor_id]))
+    )
+    rows = {d.id: d for d in result.scalars().all()}
+    dirigente = rows.get(dirigente_id)
+    competidor = rows.get(competidor_id)
+    if dirigente is None or competidor is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente or competidor not found")
+
+    d_followers, d_engagement = await _dirigente_metrics(db, dirigente_id)
+    c_followers, c_engagement = await _dirigente_metrics(db, competidor_id)
+
+    comparison = [
+        BenchmarkComparisonItem(
+            metric="follower_growth",
+            dirigente_value=float(d_followers),
+            competidor_values=[{"nombre": competidor.full_name, "value": float(c_followers)}],
+        ),
+        BenchmarkComparisonItem(
+            metric="engagement_rate",
+            dirigente_value=round(d_engagement, 2),
+            competidor_values=[
+                {"nombre": competidor.full_name, "value": round(c_engagement, 2)}
+            ],
+        ),
+    ]
+
+    return BenchmarkData(
+        dirigente=DirigenteResponse.model_validate(dirigente),
+        competidores=[DirigenteResponse.model_validate(competidor)],
+        comparison=comparison,
+    )
 
 
 @router.get("/competidores", response_model=PaginatedResponse[CompetidorResponse])

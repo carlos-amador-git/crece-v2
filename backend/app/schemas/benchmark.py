@@ -62,3 +62,20 @@ class RankingEntry(BaseModel):
 class RankingResponse(BaseModel):
     entries: list[RankingEntry]
     generated_at: str
+
+
+class BenchmarkComparisonItem(BaseModel):
+    metric: str
+    dirigente_value: float
+    competidor_values: list[dict[str, str | float]]
+
+
+class BenchmarkData(BaseModel):
+    dirigente: "DirigenteResponse"
+    competidores: list["DirigenteResponse"]
+    comparison: list[BenchmarkComparisonItem]
+
+
+from app.schemas.dirigente import DirigenteResponse  # noqa: E402
+
+BenchmarkData.model_rebuild()
