@@ -30,6 +30,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# NEXT_PUBLIC_* must be available at build time so Next.js can inline them
+# into the bundled JS. Without these ARGs the bundle keeps localhost:8002
+# as the API URL (the dev default), which breaks the deployed frontend.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ARG NEXT_PUBLIC_MAPLIBRE_STYLE
+ENV NEXT_PUBLIC_MAPLIBRE_STYLE=${NEXT_PUBLIC_MAPLIBRE_STYLE}
+
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DOCKER_BUILD=true
 

@@ -201,6 +201,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      # NEXT_PUBLIC_* must be passed as build args, NOT just environment.
+      # Next.js inlines these into the JS bundle at build time; runtime env
+      # has no effect on what the browser sees.
+      args:
+        NEXT_PUBLIC_API_URL: https://api-crece.mdconsultoria-ti.org/api/v1
+        NEXT_PUBLIC_MAPLIBRE_STYLE: https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json
     restart: always
     expose:
       - "3000"
