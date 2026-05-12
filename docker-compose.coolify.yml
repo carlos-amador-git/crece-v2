@@ -82,11 +82,14 @@ services:
 
   # FastAPI Backend — "EL CEREBRO"
   # In Coolify: set domain api-crece.mdconsultoria-ti.org → port 8000
+  # Image is shared with celery-worker/celery-beat (same Dockerfile, different command)
+  # to avoid 3× parallel builds that OOM-killed the VPS on 2026-05-12.
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: runtime
+    image: crece-backend:latest
     restart: always
     expose:
       - "8000"
@@ -132,11 +135,9 @@ services:
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --loop uvloop --http httptools --no-access-log"]
 
   # Celery Worker — scrapers, NLP analysis, voter scoring
+  # Reuses backend image (built above) — no separate build to avoid OOM.
   celery-worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: runtime
+    image: crece-backend:latest
     restart: always
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@crece-db:5432/${POSTGRES_DB:-crece_production}
@@ -164,11 +165,9 @@ services:
         --max-tasks-per-child=100
 
   # Celery Beat — scheduled scraping, metrics snapshots
+  # Reuses backend image (built above) — no separate build to avoid OOM.
   celery-beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: runtime
+    image: crece-backend:latest
     restart: always
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@crece-db:5432/${POSTGRES_DB:-crece_production}
