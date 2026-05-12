@@ -34,7 +34,7 @@ POLITICAL_TOPICS: list[str] = [
 # ---------------------------------------------------------------------------
 # Model identifiers — centralised so they can be overridden via env vars later
 # ---------------------------------------------------------------------------
-CONTROVERSY_MODEL_ID = "PlanTL-GOB-ES/roberta-base-bne"
+CONTROVERSY_MODEL_ID = "cardiffnlp/twitter-roberta-base-offensive"
 TOXICITY_MODEL_ID = "citizenlab/distilbert-base-multilingual-cased-toxicity"
 TOPIC_MODEL_ID = "joeddav/xlm-roberta-large-xnli"
 
@@ -61,10 +61,11 @@ class _ModelRegistry:
     # -- helpers -------------------------------------------------------------
 
     @staticmethod
-    def _safe_import_pipeline():  # noqa: ANN205
+    def _safe_import_pipeline():
         """Import ``transformers.pipeline`` with a clear error message."""
         try:
             from transformers import pipeline  # type: ignore[import-untyped]
+
             return pipeline
         except ImportError:
             logger.error(
@@ -85,7 +86,11 @@ class _ModelRegistry:
         with self._lock:
             # Double-check after acquiring the lock.
             if self._controversy_pipeline is not None:
-                return None if self._controversy_pipeline is self._FAILED else self._controversy_pipeline
+                return (
+                    None
+                    if self._controversy_pipeline is self._FAILED
+                    else self._controversy_pipeline
+                )
 
             pipeline_fn = self._safe_import_pipeline()
             if pipeline_fn is None:
@@ -99,9 +104,7 @@ class _ModelRegistry:
                     truncation=True,
                     max_length=512,
                 )
-                logger.info(
-                    "Controversy model loaded: %s", CONTROVERSY_MODEL_ID
-                )
+                logger.info("Controversy model loaded: %s", CONTROVERSY_MODEL_ID)
             except Exception:
                 logger.warning(
                     "Failed to load controversy model (%s)",
@@ -138,9 +141,7 @@ class _ModelRegistry:
                     truncation=True,
                     max_length=512,
                 )
-                logger.info(
-                    "Toxicity model loaded: %s", TOXICITY_MODEL_ID
-                )
+                logger.info("Toxicity model loaded: %s", TOXICITY_MODEL_ID)
             except Exception:
                 logger.warning(
                     "Failed to load toxicity model (%s)",
@@ -175,9 +176,7 @@ class _ModelRegistry:
                     "zero-shot-classification",
                     model=TOPIC_MODEL_ID,
                 )
-                logger.info(
-                    "Topic classification model loaded: %s", TOPIC_MODEL_ID
-                )
+                logger.info("Topic classification model loaded: %s", TOPIC_MODEL_ID)
             except Exception:
                 logger.warning(
                     "Failed to load topic model (%s)",
@@ -197,6 +196,7 @@ model_registry = _ModelRegistry()
 # ---------------------------------------------------------------------------
 # Public inference helpers
 # ---------------------------------------------------------------------------
+
 
 def predict_controversy(text: str) -> float | None:
     """Return a controversy score in [0.0, 1.0] or ``None`` on failure.

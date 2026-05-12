@@ -2,41 +2,66 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import Role, RoleChecker, get_current_user
-from app.models.dirigente import Dirigente
-from app.models.social import SentimentLabel, SocialPost, SocialProfile
+from app.core.security import Role, RoleChecker, get_current_user, hash_password
+from app.models.dirigente import Dirigente, DirigenteSyncStatus
+from app.models.social import DataSource, Platform, SocialPost, SocialProfile, SocialProfileSnapshot
 from app.models.user import User
-from app.schemas.common import PaginatedResponse
 from app.schemas.dirigente import (
     DiagnosticoResponse,
     DirigenteCreate,
     DirigenteResponse,
     DirigenteUpdate,
+    FlashAnalysisResponse,
+    OnboardingProgressResponse,
+    OnboardingProgressStep,
+    OnboardingRequest,
+    OnboardingResponse,
     SocialSummary,
 )
+from app.services.actividad_alineada import compute_actividad_alineada
 from app.services.diagnostico import calculate_ipd
 
 router = APIRouter()
 
 
-@router.get("/", response_model=PaginatedResponse[DirigenteResponse])
+@router.get("/")
 async def list_dirigentes(
+    request: "Request",
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     estado: str | None = None,
     partido: str | None = None,
     search: str | None = None,
-) -> PaginatedResponse[DirigenteResponse]:
-    """List dirigentes with filtering and pagination."""
+) -> dict:
+    """List dirigentes with IPD scores and platform counts.
+
+    If user has dirigente_id, only show their own dirigente.
+    Admin can switch org via X-Org-Id header.
+    """
     query = select(Dirigente)
     count_query = select(func.count(Dirigente.id))
+
+    # Resolve effective org_id: admin can switch via X-Org-Id header
+    effective_org_id: int | None = getattr(current_user, "org_id", None)
+    if current_user.role == "admin":
+        header_org = request.headers.get("x-org-id")
+        if header_org and header_org.isdigit():
+            effective_org_id = int(header_org)
+
+    # Auto-scope: dirigente users see only their own; other users see their org's dirigentes
+    if current_user.dirigente_id is not None:
+        query = query.where(Dirigente.id == current_user.dirigente_id)
+        count_query = count_query.where(Dirigente.id == current_user.dirigente_id)
+    elif effective_org_id is not None:
+        query = query.where(Dirigente.org_id == effective_org_id)
+        count_query = count_query.where(Dirigente.org_id == effective_org_id)
 
     if estado:
         query = query.where(Dirigente.estado == estado)
@@ -55,27 +80,178 @@ async def list_dirigentes(
     result = await db.execute(query)
     items = list(result.scalars().all())
 
-    return PaginatedResponse(
-        items=[DirigenteResponse.model_validate(d) for d in items],
-        total=total,
-        page=page,
-        page_size=page_size,
-        pages=(total + page_size - 1) // page_size if total > 0 else 0,
-    )
+    # Enrich each dirigente with IPD and platform count
+    enriched = []
+    for d in items:
+        base = DirigenteResponse.model_validate(d).model_dump()
+        try:
+            ipd = await calculate_ipd(db, d)
+            base["ipd_score"] = ipd.ipd_score
+            base["platform_coverage"] = ipd.platform_coverage
+        except Exception:
+            base["ipd_score"] = 0.0
+            base["platform_coverage"] = 0.0
+
+        # Platform count
+        prof_r = await db.execute(
+            select(func.count(SocialProfile.id)).where(SocialProfile.dirigente_id == d.id)
+        )
+        base["platform_count"] = prof_r.scalar_one()
+        enriched.append(base)
+
+    return {
+        "items": enriched,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": (total + page_size - 1) // page_size if total > 0 else 0,
+    }
 
 
-@router.get("/{dirigente_id}", response_model=DirigenteResponse)
+@router.get("/{dirigente_id}")
 async def get_dirigente(
     dirigente_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
-) -> Dirigente:
-    """Get a single dirigente by ID."""
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    """Get a single dirigente by ID with enriched data for the dashboard.
+
+    Scope enforcement (P0 — data leak fix 2026-04-14):
+    - Viewer con ``dirigente_id`` asignado sólo puede ver su propio dirigente.
+    - Non-admin sólo puede ver dirigentes de su misma ``org_id``.
+    - Admin bypasses ambos checks (puede cambiar org vía X-Org-Id a futuro).
+
+    Patrón idéntico al ya aplicado en ``/flash-analysis`` y ``/crecimiento``.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    # Viewer (o cualquier user con dirigente_id) sólo ve el suyo.
+    if (
+        current_user.dirigente_id is not None
+        and current_user.dirigente_id != dirigente_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes acceso a este dirigente",
+        )
+
     result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
-    return dirigente
+
+    # Org-level isolation para non-admin.
+    if (
+        current_user.role != "admin"
+        and dirigente.org_id is not None
+        and current_user.org_id is not None
+        and dirigente.org_id != current_user.org_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Dirigente pertenece a otra organizacion",
+        )
+
+    # Base response
+    base = DirigenteResponse.model_validate(dirigente).model_dump()
+
+    # Enrich: IPD breakdown from diagnostico
+    try:
+        ipd = await calculate_ipd(db, dirigente)
+        base["ipd_score"] = ipd.ipd_score
+        base["ipd_breakdown"] = ipd.platform_scores
+    except Exception:
+        base["ipd_score"] = 0.0
+        base["ipd_breakdown"] = {}
+
+    # Enrich: stats (7d)
+    seven_days_ago = datetime.now(UTC) - timedelta(days=7)
+    datetime.now(UTC) - timedelta(days=30)
+
+    profiles_result = await db.execute(
+        select(SocialProfile).where(SocialProfile.dirigente_id == dirigente_id)
+    )
+    profiles = list(profiles_result.scalars().all())
+    profile_ids = [p.id for p in profiles]
+
+    total_posts_7d = 0
+    total_engagement_7d = 0.0
+    sentiment_sum = 0.0
+
+    if profile_ids:
+        stats_r = await db.execute(
+            select(
+                func.count(SocialPost.id),
+                func.avg(SocialPost.engagement_rate),
+                func.avg(SocialPost.sentiment_score),
+            ).where(
+                SocialPost.profile_id.in_(profile_ids),
+                SocialPost.published_at >= seven_days_ago,
+            )
+        )
+        row = stats_r.one()
+        total_posts_7d = int(row[0])
+        total_engagement_7d = float(row[1]) if row[1] else 0.0
+        sentiment_sum = float(row[2]) if row[2] else 0.5
+        int(row[0])
+
+    sum(p.followers_count for p in profiles)
+
+    # D-23-G' · KPI Actividad Política Alineada (reemplaza flip de sentimiento)
+    actividad = await compute_actividad_alineada(db, dirigente, days=7)
+
+    base["stats"] = {
+        "total_posts_7d": total_posts_7d,
+        "total_engagement_7d": round(total_engagement_7d, 4),
+        "sentiment_avg_7d": round(sentiment_sum, 2),  # se preserva como subline informacional · sin flip
+        "follower_growth_30d": 0,  # Would need historical data
+        "actividad_alineada": actividad,  # KPI hero nuevo · plan D-23-G' 2026-04-24
+    }
+
+    # Enrich: social_accounts (what frontend expects)
+    base["social_accounts"] = [
+        {
+            "platform": p.platform.value.lower(),
+            "handle": p.handle,
+            "followers": p.followers_count,
+            "url": p.url,
+        }
+        for p in profiles
+    ]
+
+    # Enrich: recent_posts
+    if profile_ids:
+        posts_r = await db.execute(
+            select(SocialPost)
+            .where(SocialPost.profile_id.in_(profile_ids))
+            .order_by(SocialPost.published_at.desc())
+            .limit(10)
+        )
+        posts = list(posts_r.scalars().all())
+        base["recent_posts"] = [
+            {
+                "id": post.id,
+                "content": post.content,
+                "platform": next(
+                    (p.platform.value.lower() for p in profiles if p.id == post.profile_id),
+                    "unknown",
+                ),
+                "published_at": post.published_at.isoformat() if post.published_at else None,
+                "likes": post.likes,
+                "comments": post.comments,
+                "shares": post.shares,
+                "engagement_rate": post.engagement_rate,
+                "sentiment_score": post.sentiment_score,
+                "sentiment_label": post.sentiment_label.value if post.sentiment_label else None,
+            }
+            for post in posts
+        ]
+    else:
+        base["recent_posts"] = []
+
+    base["secciones"] = []
+
+    return base
 
 
 @router.post(
@@ -152,6 +328,144 @@ async def get_diagnostico(
     return await calculate_ipd(db, dirigente)
 
 
+@router.get("/{dirigente_id}/flash-analysis", response_model=FlashAnalysisResponse)
+async def get_flash_analysis(
+    dirigente_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    days: int = Query(7, ge=1, le=90, description="Ventana de analisis en dias"),
+) -> FlashAnalysisResponse:
+    """Flash Analysis: quick aggregated snapshot of a dirigente's digital presence.
+
+    Pure SQL aggregations — no LLM call. Returns sentiment, engagement,
+    top post, and a suggested action computed from data patterns.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    # Scope check: viewer users can only see their own dirigente
+    if current_user.dirigente_id is not None and current_user.dirigente_id != dirigente_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes acceso a este dirigente",
+        )
+
+    # Fetch dirigente
+    result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
+    dirigente = result.scalar_one_or_none()
+    if dirigente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+
+    # Fetch profiles
+    profiles_result = await db.execute(
+        select(SocialProfile).where(SocialProfile.dirigente_id == dirigente_id)
+    )
+    profiles = list(profiles_result.scalars().all())
+    profile_ids = [p.id for p in profiles]
+
+    followers_total = sum(p.followers_count for p in profiles)
+    platforms_active = len(profiles)
+
+    now = datetime.now(UTC)
+    period_start = now - timedelta(days=days)
+    prev_period_start = period_start - timedelta(days=days)
+    periodo = f"Ultimos {days} dias"
+
+    # Defaults for empty data
+    total_posts = 0
+    avg_sentiment = 0.0
+    engagement_avg = 0.0
+    engagement_delta = 0.0
+    top_post_content: str | None = None
+    top_post_likes = 0
+
+    if profile_ids:
+        # Current period aggregations
+        stats_r = await db.execute(
+            select(
+                func.count(SocialPost.id),
+                func.avg(SocialPost.sentiment_score),
+                func.avg(SocialPost.engagement_rate),
+            ).where(
+                SocialPost.profile_id.in_(profile_ids),
+                SocialPost.published_at >= period_start,
+            )
+        )
+        row = stats_r.one()
+        total_posts = int(row[0])
+        avg_sentiment = round(float(row[1]), 3) if row[1] is not None else 0.0
+        engagement_avg = round(float(row[2]), 3) if row[2] is not None else 0.0
+
+        # Previous period engagement for delta calculation
+        prev_r = await db.execute(
+            select(func.avg(SocialPost.engagement_rate)).where(
+                SocialPost.profile_id.in_(profile_ids),
+                SocialPost.published_at >= prev_period_start,
+                SocialPost.published_at < period_start,
+            )
+        )
+        prev_engagement = prev_r.scalar_one()
+        if prev_engagement is not None and float(prev_engagement) > 0:
+            engagement_delta = round(
+                ((engagement_avg - float(prev_engagement)) / float(prev_engagement)) * 100, 1
+            )
+
+        # Top post by likes in current period
+        top_r = await db.execute(
+            select(SocialPost.content, SocialPost.likes)
+            .where(
+                SocialPost.profile_id.in_(profile_ids),
+                SocialPost.published_at >= period_start,
+            )
+            .order_by(SocialPost.likes.desc())
+            .limit(1)
+        )
+        top_row = top_r.one_or_none()
+        if top_row is not None:
+            top_post_content = top_row[0]
+            top_post_likes = int(top_row[1])
+
+    # Sentiment label
+    if avg_sentiment > 0.1:
+        sentiment_label = "Positivo"
+    elif avg_sentiment < -0.1:
+        sentiment_label = "Negativo"
+    else:
+        sentiment_label = "Neutral"
+
+    # Suggested action logic
+    if total_posts == 0:
+        suggested_action = "Sin publicaciones en el periodo. Activar calendario editorial."
+    elif avg_sentiment < -0.2:
+        suggested_action = (
+            "Atencion: sentimiento negativo predominante. "
+            "Considerar respuesta o reposicionamiento."
+        )
+    elif engagement_avg < 2.0:
+        suggested_action = (
+            "El engagement esta por debajo del promedio. "
+            "Incrementar contenido interactivo."
+        )
+    elif avg_sentiment > 0.3 and engagement_avg > 3.0:
+        suggested_action = "Buen momento. Capitalizar con contenido de valor."
+    else:
+        suggested_action = "Rendimiento estable. Mantener frecuencia de publicacion."
+
+    return FlashAnalysisResponse(
+        dirigente_name=dirigente.full_name,
+        periodo=periodo,
+        total_posts=total_posts,
+        avg_sentiment=avg_sentiment,
+        sentiment_label=sentiment_label,
+        engagement_avg=engagement_avg,
+        engagement_delta=engagement_delta,
+        top_post_content=top_post_content,
+        top_post_likes=top_post_likes,
+        followers_total=followers_total,
+        platforms_active=platforms_active,
+        suggested_action=suggested_action,
+    )
+
+
 @router.get("/{dirigente_id}/social-summary", response_model=SocialSummary)
 async def get_social_summary(
     dirigente_id: int,
@@ -218,3 +532,350 @@ async def get_social_summary(
         sentiment_breakdown=sentiment_breakdown,
         top_platforms=top_platforms,
     )
+
+
+# ─────────────────────────────────────────────────────────────
+# S5 — Onboarding wizard endpoints
+# ─────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/onboard",
+    response_model=OnboardingResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RoleChecker([Role.ADMIN]))],
+)
+async def onboard_dirigente(
+    payload: OnboardingRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> OnboardingResponse:
+    """S5.3a — Crear User + Dirigente + SocialProfiles en una transacción.
+
+    Retorna 201 con `sync_status='pending'` inmediatamente (D-S5-01). Dispara
+    la Celery chain `onboard_dirigente_chain` para scrape inicial → NLP → IPD,
+    pero NO espera a que termine — el wizard UI consulta `/onboarding-progress`.
+    """
+    from datetime import UTC, datetime
+
+    # 1. Reject duplicate email
+    existing_user = await db.execute(select(User).where(User.email == payload.email))
+    if existing_user.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Usuario con email {payload.email} ya existe",
+        )
+
+    # 2. Default org: admin's own org, or id=3 (MC CDMX root) per D16
+    org_id = payload.org_id or current_user.org_id or 3
+
+    # 3. Create Dirigente (without sync_status default so we override it)
+    dirigente = Dirigente(
+        full_name=payload.full_name,
+        cargo=payload.cargo,
+        partido=payload.partido,
+        estado=payload.estado,
+        municipio=payload.municipio,
+        seccion_electoral=payload.seccion_electoral,
+        org_id=org_id,
+        sync_status=DirigenteSyncStatus.PENDING,
+        sync_updated_at=datetime.now(UTC),
+    )
+    db.add(dirigente)
+    await db.flush()  # get dirigente.id
+
+    # 4. Create User for the new dirigente with role=cliente (viewer)
+    user = User(
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        full_name=payload.full_name,
+        role=Role.VIEWER,
+        is_active=True,
+        org_id=org_id,
+        dirigente_id=dirigente.id,
+    )
+    db.add(user)
+    await db.flush()
+
+    # 5. Create SocialProfiles (one per handle)
+    profiles_created = 0
+    for h in payload.handles:
+        try:
+            plat_enum = Platform[h.platform]
+        except KeyError:
+            continue  # ignore invalid platform silently (validated by Pydantic Literal)
+        profile = SocialProfile(
+            dirigente_id=dirigente.id,
+            platform=plat_enum,
+            handle=h.handle,
+            url=h.url,
+            followers_count=0,
+            following_count=0,
+            posts_count=0,
+        )
+        db.add(profile)
+        profiles_created += 1
+
+    await db.flush()
+    await db.commit()
+    await db.refresh(dirigente)
+
+    # 6. Fire-and-forget Celery chain (S5.3b). If the worker is down,
+    # the chain enqueue fails silently and sync_status stays 'pending'.
+    task_id: str | None = None
+    try:
+        from app.workers.tasks import onboard_dirigente_chain
+
+        result = onboard_dirigente_chain.delay(dirigente.id)
+        task_id = str(result.id)
+        dirigente.sync_task_id = task_id
+        await db.flush()
+        await db.commit()
+    except Exception:
+        # Don't block the response on a worker outage
+        pass
+
+    return OnboardingResponse(
+        dirigente_id=dirigente.id,
+        user_id=user.id,
+        sync_status=dirigente.sync_status.value,
+        task_id=task_id,
+        profiles_created=profiles_created,
+    )
+
+
+@router.get(
+    "/{dirigente_id}/onboarding-progress",
+    response_model=OnboardingProgressResponse,
+)
+async def get_onboarding_progress(
+    dirigente_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _current_user: Annotated[User, Depends(get_current_user)],
+) -> OnboardingProgressResponse:
+    """S5.4 — Poll del estado de onboarding."""
+    result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
+    dirigente = result.scalar_one_or_none()
+    if dirigente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+
+    status_map = {
+        DirigenteSyncStatus.PENDING: 0,
+        DirigenteSyncStatus.SCRAPING: 25,
+        DirigenteSyncStatus.ANALYZING: 55,
+        DirigenteSyncStatus.CALCULATING_IPD: 85,
+        DirigenteSyncStatus.READY: 100,
+        DirigenteSyncStatus.ERROR: 0,
+    }
+    progress_pct = status_map.get(dirigente.sync_status, 0)
+
+    def _step_status(step_order: int, current_order: int) -> str:
+        if dirigente.sync_status == DirigenteSyncStatus.ERROR and step_order == current_order:
+            return "error"
+        if step_order < current_order:
+            return "done"
+        if step_order == current_order:
+            return "running" if dirigente.sync_status != DirigenteSyncStatus.READY else "done"
+        return "pending"
+
+    order = {
+        DirigenteSyncStatus.PENDING: 0,
+        DirigenteSyncStatus.SCRAPING: 1,
+        DirigenteSyncStatus.ANALYZING: 2,
+        DirigenteSyncStatus.CALCULATING_IPD: 3,
+        DirigenteSyncStatus.READY: 4,
+        DirigenteSyncStatus.ERROR: -1,
+    }
+    current_order = order.get(dirigente.sync_status, 0)
+
+    steps = [
+        OnboardingProgressStep(
+            name="scraping",
+            status=_step_status(1, current_order),  # type: ignore[arg-type]
+        ),
+        OnboardingProgressStep(
+            name="analyzing",
+            status=_step_status(2, current_order),  # type: ignore[arg-type]
+        ),
+        OnboardingProgressStep(
+            name="calculating_ipd",
+            status=_step_status(3, current_order),  # type: ignore[arg-type]
+        ),
+        OnboardingProgressStep(
+            name="ready",
+            status="done" if dirigente.sync_status == DirigenteSyncStatus.READY else "pending",
+        ),
+    ]
+
+    return OnboardingProgressResponse(
+        dirigente_id=dirigente.id,
+        sync_status=dirigente.sync_status.value,
+        task_id=dirigente.sync_task_id,
+        error=dirigente.sync_error,
+        progress_pct=progress_pct,
+        steps=steps,
+        updated_at=dirigente.sync_updated_at,
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# Cirugía dirigente — crecimiento por red con semáforo
+# ─────────────────────────────────────────────────────────────
+
+_FRESH_STALENESS_HOURS = 48
+
+
+def _growth_status(delta_pct: float | None) -> str:
+    if delta_pct is None:
+        return "desconocido"
+    if delta_pct > 1.0:
+        return "verde"
+    if delta_pct < -1.0:
+        return "rojo"
+    return "ambar"
+
+
+@router.get("/{dirigente_id}/crecimiento")
+async def get_crecimiento(
+    dirigente_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    """Crecimiento de followers por red — series 7d/30d/90d + semáforo 30d/30d.
+
+    Consume ``social_profile_snapshots`` (denormalizada por ``platform`` + ``org_id``
+    + ``dirigente_id``). Calcula deltas (followers_hoy − followers_hace_Nd) y
+    semáforo comparando últimos 30d vs 30d anteriores. Marca ``stale_manual=true``
+    si el perfil es ``data_source='manual_host_ingest'`` y ``last_manual_update``
+    supera las 48h — alerta de deuda de frescura.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    # Scope check — viewer solo ve su propio dirigente
+    if current_user.dirigente_id is not None and current_user.dirigente_id != dirigente_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes acceso a este dirigente",
+        )
+
+    result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
+    dirigente = result.scalar_one_or_none()
+    if dirigente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+
+    profiles_r = await db.execute(
+        select(SocialProfile).where(SocialProfile.dirigente_id == dirigente_id)
+    )
+    profiles = list(profiles_r.scalars().all())
+
+    now = datetime.now(UTC)
+    windows = {"7d": 7, "30d": 30, "90d": 90}
+
+    platforms_out: list[dict] = []
+
+    for profile in profiles:
+        deltas: dict[str, float | None] = {}
+        for label, days in windows.items():
+            past_cut = now - timedelta(days=days)
+            past_r = await db.execute(
+                select(SocialProfileSnapshot.followers_count)
+                .where(
+                    SocialProfileSnapshot.profile_id == profile.id,
+                    SocialProfileSnapshot.taken_at <= past_cut,
+                )
+                .order_by(SocialProfileSnapshot.taken_at.desc())
+                .limit(1)
+            )
+            past_followers = past_r.scalar_one_or_none()
+            if past_followers is None or past_followers == 0:
+                deltas[label] = None
+                continue
+            delta_pct = ((profile.followers_count - past_followers) / past_followers) * 100
+            deltas[label] = round(delta_pct, 2)
+
+        # Semáforo: 30d actual vs 30d anterior (medidos como avg en ventana)
+        cur_start = now - timedelta(days=30)
+        prev_start = now - timedelta(days=60)
+        cur_r = await db.execute(
+            select(func.avg(SocialProfileSnapshot.followers_count)).where(
+                SocialProfileSnapshot.profile_id == profile.id,
+                SocialProfileSnapshot.taken_at >= cur_start,
+            )
+        )
+        prev_r = await db.execute(
+            select(func.avg(SocialProfileSnapshot.followers_count)).where(
+                SocialProfileSnapshot.profile_id == profile.id,
+                SocialProfileSnapshot.taken_at >= prev_start,
+                SocialProfileSnapshot.taken_at < cur_start,
+            )
+        )
+        cur_avg = cur_r.scalar_one_or_none()
+        prev_avg = prev_r.scalar_one_or_none()
+        if cur_avg is not None and prev_avg is not None and float(prev_avg) > 0:
+            trend_30v30 = round(
+                ((float(cur_avg) - float(prev_avg)) / float(prev_avg)) * 100, 2
+            )
+        else:
+            trend_30v30 = None
+        semaforo = _growth_status(trend_30v30)
+
+        # Deuda de frescura
+        stale_manual = False
+        if profile.data_source == DataSource.MANUAL_HOST_INGEST:
+            if profile.last_manual_update is None:
+                stale_manual = True
+            else:
+                age = now - profile.last_manual_update
+                stale_manual = age > timedelta(hours=_FRESH_STALENESS_HOURS)
+
+        platforms_out.append(
+            {
+                "platform": profile.platform.value,
+                "handle": profile.handle,
+                "followers_now": profile.followers_count,
+                "delta_pct": deltas,
+                "trend_30v30_pct": trend_30v30,
+                "semaforo": semaforo,
+                "data_source": profile.data_source.value,
+                "last_manual_update": (
+                    profile.last_manual_update.isoformat()
+                    if profile.last_manual_update
+                    else None
+                ),
+                "stale_manual": stale_manual,
+            }
+        )
+
+    # Serie temporal para charts (union de todos los snapshots de todos los perfiles)
+    profile_ids = [p.id for p in profiles]
+    series_points: list[dict] = []
+    if profile_ids:
+        since = now - timedelta(days=90)
+        snapshots_r = await db.execute(
+            select(
+                SocialProfileSnapshot.taken_at,
+                SocialProfileSnapshot.platform,
+                SocialProfileSnapshot.followers_count,
+                SocialProfileSnapshot.posts_count,
+            )
+            .where(
+                SocialProfileSnapshot.profile_id.in_(profile_ids),
+                SocialProfileSnapshot.taken_at >= since,
+            )
+            .order_by(SocialProfileSnapshot.taken_at.asc())
+        )
+        for row in snapshots_r.all():
+            series_points.append(
+                {
+                    "taken_at": row[0].isoformat(),
+                    "platform": row[1].value,
+                    "followers": int(row[2]),
+                    "posts": int(row[3]),
+                }
+            )
+
+    return {
+        "dirigente_id": dirigente_id,
+        "platforms": platforms_out,
+        "series": series_points,
+    }

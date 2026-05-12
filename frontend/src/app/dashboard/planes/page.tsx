@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import { usePlanes, useGeneratePlan, useApprovePlan, useRejectPlan } from "@/lib/api/hooks/use-planes";
+import Link from "next/link";
+import { usePlanes, useGeneratePlan } from "@/lib/api/hooks/use-planes";
 import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,61 +23,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDate } from "@/lib/utils";
-import type { PlanIA, PlanStatus, PlanType } from "@/lib/api/types";
+import type { PlanIA, PlanType } from "@/lib/api/types";
 import {
   Brain,
-  Plus,
-  Check,
-  X,
-  FileText,
   Loader2,
   Sparkles,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Rocket,
 } from "lucide-react";
 
 const PLAN_TYPES: { value: PlanType; label: string }[] = [
-  { value: "crecimiento", label: "Crecimiento" },
-  { value: "crisis", label: "Crisis" },
-  { value: "engagement", label: "Engagement" },
-  { value: "posicionamiento", label: "Posicionamiento" },
-  { value: "contenido", label: "Contenido" },
+  { value: "DIAGNOSTICO", label: "Diagnostico" },
+  { value: "CONSOLIDACION", label: "Consolidacion" },
+  { value: "CRISIS", label: "Crisis" },
+  { value: "CONTENIDO", label: "Contenido" },
 ];
 
-const STATUS_CONFIG: Record<
-  PlanStatus,
-  { label: string; variant: "default" | "secondary" | "success" | "danger"; icon: typeof Clock }
-> = {
-  draft: { label: "Borrador", variant: "secondary", icon: Clock },
-  approved: { label: "Aprobado", variant: "success", icon: CheckCircle2 },
-  rejected: { label: "Rechazado", variant: "danger", icon: XCircle },
-  executed: { label: "Ejecutado", variant: "default", icon: Rocket },
+const TIPO_SUBTITLES: Record<string, string> = {
+  DIAGNOSTICO: "Presencia Digital",
+  CONSOLIDACION: "Plan 90 dias",
+  CRISIS: "Manejo de Crisis",
+  CONTENIDO: "Calendario Editorial",
+};
+
+const TIPO_COLORS: Record<string, string> = {
+  DIAGNOSTICO: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
+  CONSOLIDACION: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200",
+  CRISIS: "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200",
+  CONTENIDO: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200",
 };
 
 export default function PlanesPage() {
   const [generateOpen, setGenerateOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<PlanIA | null>(null);
   const [newPlanDirigente, setNewPlanDirigente] = useState("");
-  const [newPlanType, setNewPlanType] = useState<PlanType>("crecimiento");
-  const [filterStatus, setFilterStatus] = useState<PlanStatus | "all">("all");
+  const [newPlanType, setNewPlanType] = useState<PlanType>("DIAGNOSTICO");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const { data, isLoading } = usePlanes(
-    filterStatus === "all" ? undefined : filterStatus
-  );
+  const { data, isLoading } = usePlanes(undefined, 1);
   const { data: dirigentesData } = useDirigentes({ per_page: 50 });
   const generateMutation = useGeneratePlan();
-  const approveMutation = useApprovePlan();
-  const rejectMutation = useRejectPlan();
 
   const plans = data?.items ?? [];
   const dirigentesForSelect = dirigentesData?.items ?? [];
+
+  // Build dirigente name lookup
+  const dirigenteNames: Record<number, string> = {};
+  for (const d of dirigentesForSelect) {
+    dirigenteNames[d.id] = d.full_name;
+  }
+
+  // Filter by status
   const filteredPlans =
     filterStatus === "all"
       ? plans
-      : plans.filter((p) => p.status === filterStatus);
+      : filterStatus === "approved"
+      ? plans.filter((p) => p.aprobado)
+      : filterStatus === "draft"
+      ? plans.filter((p) => !p.aprobado)
+      : plans;
+
+  // Group plans by dirigente+tipo for version numbering
+  const versionMap = new Map<string, number>();
+  const sortedPlans = [...plans].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+  for (const plan of sortedPlans) {
+    const key = `${plan.dirigente_id}-${plan.tipo}`;
+    const current = versionMap.get(key) ?? 0;
+    versionMap.set(key, current + 1);
+  }
+  // Now build version for each plan
+  function getPlanVersion(plan: PlanIA): number {
+    const key = `${plan.dirigente_id}-${plan.tipo}`;
+    const sameGroup = sortedPlans.filter(
+      (p) => p.dirigente_id === plan.dirigente_id && p.tipo === plan.tipo
+    );
+    const idx = sameGroup.findIndex((p) => p.id === plan.id);
+    return idx + 1;
+  }
 
   const handleGenerate = async () => {
     if (!newPlanDirigente) return;
@@ -108,26 +129,30 @@ export default function PlanesPage() {
       </div>
 
       {/* Status filter */}
-      <div className="flex gap-2">
-        {(["all", "draft", "approved", "executed", "rejected"] as const).map(
-          (status) => (
-            <Button
-              key={status}
-              variant={filterStatus === status ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus(status)}
-            >
-              {status === "all" ? "Todos" : STATUS_CONFIG[status].label}
-            </Button>
-          )
-        )}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { value: "all", label: "Todos" },
+          { value: "draft", label: "Borrador" },
+          { value: "approved", label: "Aprobado" },
+          { value: "executed", label: "Ejecutado" },
+          { value: "rejected", label: "Rechazado" },
+        ].map((status) => (
+          <Button
+            key={status.value}
+            variant={filterStatus === status.value ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilterStatus(status.value)}
+          >
+            {status.label}
+          </Button>
+        ))}
       </div>
 
       {/* Plans list */}
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full" />
+            <Skeleton key={i} className="h-32 w-full" />
           ))}
         </div>
       ) : filteredPlans.length === 0 ? (
@@ -143,91 +168,70 @@ export default function PlanesPage() {
       ) : (
         <div className="space-y-3">
           {filteredPlans.map((plan) => {
-            const statusCfg = STATUS_CONFIG[plan.status];
-            const StatusIcon = statusCfg.icon;
+            const preview = (plan.contenido ?? "")
+              .slice(0, 250)
+              .replace(/[#*|_]/g, "")
+              .trim();
+            const tipoLabel = PLAN_TYPES.find((t) => t.value === plan.tipo)?.label ?? plan.tipo;
+            const subtitle = TIPO_SUBTITLES[plan.tipo] ?? "";
+            const tipoColor = TIPO_COLORS[plan.tipo] ?? "bg-muted text-muted-foreground";
+            const version = getPlanVersion(plan);
+            const dirigenteName = dirigenteNames[plan.dirigente_id] ?? `Dirigente #${plan.dirigente_id}`;
+            const createdTime = new Date(plan.created_at).toLocaleString("es-MX", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const charCount = ((plan.contenido ?? "").length / 1000).toFixed(1);
+
             return (
+              <Link key={plan.id} href={`/dashboard/planes/${plan.id}`}>
               <Card
-                key={plan.id}
                 className="cursor-pointer transition-shadow hover:shadow-md"
-                onClick={() => setSelectedPlan(plan)}
               >
-                <CardContent className="flex items-center gap-4 p-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10">
-                    <FileText className="h-5 w-5 text-accent" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{plan.titulo}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {plan.dirigente_nombre}
-                      </span>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {plan.tipo}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(plan.created_at)}
-                      </span>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <Badge className={tipoColor}>{plan.tipo}</Badge>
+                        <Badge variant="outline" className="text-[10px]">
+                          v{version}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {dirigenteName}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {createdTime}
+                        </span>
+                      </div>
+                      <p className="font-heading font-semibold text-foreground">
+                        {tipoLabel} — {subtitle}
+                      </p>
+                      <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {preview || "Sin contenido"}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          {plan.modelo_ia ?? "IA"}
+                        </span>
+                        <span>{charCount}K caracteres</span>
+                        <span>Plan #{plan.id}</span>
+                      </div>
                     </div>
+                    <Badge variant={plan.aprobado ? "default" : "secondary"} className="shrink-0">
+                      {plan.aprobado ? "Aprobado" : "Borrador"}
+                    </Badge>
                   </div>
-                  <Badge variant={statusCfg.variant} className="gap-1 shrink-0">
-                    <StatusIcon className="h-3 w-3" />
-                    {statusCfg.label}
-                  </Badge>
                 </CardContent>
               </Card>
+              </Link>
             );
           })}
         </div>
       )}
-
-      {/* Plan detail dialog */}
-      <Dialog
-        open={!!selectedPlan}
-        onOpenChange={(open) => !open && setSelectedPlan(null)}
-      >
-        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
-          {selectedPlan && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedPlan.titulo}</DialogTitle>
-                <DialogDescription>
-                  {selectedPlan.dirigente_nombre} &mdash;{" "}
-                  {formatDate(selectedPlan.created_at)}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown>{selectedPlan.contenido}</ReactMarkdown>
-              </div>
-              {selectedPlan.status === "draft" && (
-                <DialogFooter className="gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      rejectMutation.mutate(selectedPlan.id);
-                      setSelectedPlan(null);
-                    }}
-                    disabled={rejectMutation.isPending}
-                  >
-                    <X className="h-4 w-4" />
-                    Rechazar
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      approveMutation.mutate(selectedPlan.id);
-                      setSelectedPlan(null);
-                    }}
-                    disabled={approveMutation.isPending}
-                  >
-                    <Check className="h-4 w-4" />
-                    Aprobar
-                  </Button>
-                </DialogFooter>
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Generate plan dialog */}
       <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
         <DialogContent>
@@ -250,7 +254,7 @@ export default function PlanesPage() {
                 <SelectContent>
                   {dirigentesForSelect.map((d) => (
                     <SelectItem key={d.id} value={String(d.id)}>
-                      {d.nombre} {d.apellido_paterno}
+                      {d.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>

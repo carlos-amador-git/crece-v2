@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,9 +19,7 @@ class SegmentoVotante(StrEnum):
 
 class VoterScore(Base):
     __tablename__ = "voter_scores"
-    __table_args__ = (
-        UniqueConstraint("ciudadano_id", name="uq_voter_scores_ciudadano_id"),
-    )
+    __table_args__ = (UniqueConstraint("ciudadano_id", name="uq_voter_scores_ciudadano_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     ciudadano_id: Mapped[int] = mapped_column(

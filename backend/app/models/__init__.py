@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from app.models.alcaldia import AlcaldiaCDMX
 from app.models.alerta_crisis import AlertaCrisis
 from app.models.api_key import ApiKey
 from app.models.benchmark import Competidor, CompetidorSocialProfile
-from app.models.campana import Campana, CampanaMensaje, CampanaSegmento
 from app.models.campaign_integration import Campaign
+from app.models.campana import Campana, CampanaMensaje, CampanaSegmento
 from app.models.canvassing import PuntoRuta, RutaCanvassing
 from app.models.ciudadano import Ciudadano
+from app.models.compliance_purge_audit import CompliancePurgeAudit
 from app.models.contenido import ContenidoGenerado
 from app.models.contenido_pieza import ContenidoPieza
 from app.models.crm_interaccion import CrmInteraccion
@@ -16,27 +18,37 @@ from app.models.encuesta import Encuesta
 from app.models.evento import Evento, EventoAsistente
 from app.models.gasto_electoral import AlertaCompliance, GastoElectoral
 from app.models.ia_content_registry import IaContentRegistry
+from app.models.legacy import CiudadanoLegacy, PromotorLegacy
+from app.models.llm_health_log import LLMHealthLog
 from app.models.metrica_social import MetricaSocial
+from app.models.oauth_token import OAuthPlatform, OAuthTokenByPlatform, OAuthTokenStatus
 from app.models.organizacion import Organizacion
 from app.models.plan_ia import PlanIA
 from app.models.programa_social import ProgramaBeneficiario, ProgramaSocial
+from app.models.promesa_dirigente import PromesaDirigente, PromesaEstado
+from app.models.recomendacion_plan_ia import RecomendacionPlanIA
 from app.models.social import SentimentAnalysis, SocialPost, SocialProfile
 from app.models.solicitud import SeguimientoSolicitud, SolicitudCiudadana
+from app.models.topic_trend import TopicTrend
+from app.models.unidad_territorial import UnidadTerritorial
 from app.models.user import User
 from app.models.voter_score import VoterScore
 from app.models.voter_score_integration import VoterScoreIntegration
 
 __all__ = [
+    "AlcaldiaCDMX",
     "AlertaCompliance",
     "AlertaCrisis",
     "ApiKey",
-    "Campana",
     "Campaign",
+    "Campana",
     "CampanaMensaje",
     "CampanaSegmento",
     "Ciudadano",
+    "CiudadanoLegacy",
     "Competidor",
     "CompetidorSocialProfile",
+    "CompliancePurgeAudit",
     "ContenidoGenerado",
     "ContenidoPieza",
     "CrmInteraccion",
@@ -47,19 +59,29 @@ __all__ = [
     "GastoElectoral",
     "IaContentRegistry",
     "IntencionVoto",
+    "LLMHealthLog",
     "MetricaSocial",
+    "OAuthPlatform",
+    "OAuthTokenByPlatform",
+    "OAuthTokenStatus",
     "Organizacion",
     "PlanIA",
-    "PuntoRuta",
     "ProgramaBeneficiario",
     "ProgramaSocial",
+    "PromesaDirigente",
+    "PromesaEstado",
+    "PromotorLegacy",
+    "PuntoRuta",
     "RutaCanvassing",
+    "RecomendacionPlanIA",
     "SeccionElectoral",
     "SeguimientoSolicitud",
     "SentimentAnalysis",
     "SocialPost",
     "SocialProfile",
     "SolicitudCiudadana",
+    "TopicTrend",
+    "UnidadTerritorial",
     "User",
     "VoterScore",
     "VoterScoreIntegration",

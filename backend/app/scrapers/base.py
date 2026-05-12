@@ -52,14 +52,30 @@ class BaseScraper(ABC):
         """
         ...
 
+    def capture_url(self, url: str) -> dict[str, Any] | None:
+        """Optional: ingest a single URL into a normalized post dict.
+
+        Default implementation returns None. Subclasses may override to support
+        the "paste-a-URL-from-Slack" workflow without running a full profile
+        scrape. Callers should check for None and fall back to OpenGraph
+        extraction or mark the URL as unsupported.
+
+        Returns a dict matching SocialPost column names, or None if the scraper
+        cannot handle single-URL capture.
+        """
+        return None
+
 
 def get_scraper(platform: str) -> BaseScraper:
     """Factory: return the scraper instance for a given platform."""
     scrapers: dict[str, type[BaseScraper]] = {}
 
     # Lazy imports to avoid loading heavy dependencies at module level
+    from app.scrapers.bluesky import BlueskyScraper
     from app.scrapers.facebook import FacebookScraper
     from app.scrapers.instagram import InstagramScraper
+    from app.scrapers.telegram import TelegramScraper
+    from app.scrapers.threads import ThreadsScraper
     from app.scrapers.tiktok import TikTokScraper
     from app.scrapers.twitter import TwitterScraper
     from app.scrapers.youtube import YouTubeScraper
@@ -70,6 +86,9 @@ def get_scraper(platform: str) -> BaseScraper:
         "facebook": FacebookScraper,
         "tiktok": TikTokScraper,
         "youtube": YouTubeScraper,
+        "bluesky": BlueskyScraper,
+        "threads": ThreadsScraper,
+        "telegram": TelegramScraper,
     }
 
     scraper_class = scrapers.get(platform)

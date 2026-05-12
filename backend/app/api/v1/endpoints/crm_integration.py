@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user_or_api_key
+from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.integration import (
@@ -28,7 +28,7 @@ router = APIRouter()
 async def create_interaction(
     payload: InteraccionCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> InteraccionResponse:
     """Create a CRM interaction record."""
     from app.models.crm_interaccion import CrmInteraccion
@@ -41,7 +41,7 @@ async def create_interaction(
         notas=payload.notas,
         referencia_tipo=payload.referencia_tipo,
         referencia_id=payload.referencia_id,
-        registrado_por_id=current_user.id,
+        promotor_id=current_user.id,
         org_id=current_user.org_id,
     )
     db.add(interaccion)
@@ -54,7 +54,7 @@ async def create_interaction(
 @router.get("/interactions", response_model=PaginatedResponse[InteraccionResponse])
 async def list_interactions(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
     ciudadano_id: int | None = None,
     tipo: str | None = None,
     canal: str | None = None,
@@ -111,15 +111,13 @@ async def list_interactions(
 async def get_voter_score(
     ciudadano_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    _current_user: Annotated[User, Depends(get_current_user)],
 ) -> VoterScoreResponse:
     """Get the voter score for a specific ciudadano. 404 if not calculated."""
     from app.models.voter_score_integration import VoterScoreIntegration
 
     result = await db.execute(
-        select(VoterScoreIntegration).where(
-            VoterScoreIntegration.ciudadano_id == ciudadano_id
-        )
+        select(VoterScoreIntegration).where(VoterScoreIntegration.ciudadano_id == ciudadano_id)
     )
     score = result.scalar_one_or_none()
     if score is None:
@@ -134,7 +132,7 @@ async def get_voter_score(
 @router.get("/scores", response_model=PaginatedResponse[VoterScoreResponse])
 async def list_voter_scores(
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    _current_user: Annotated[User, Depends(get_current_user)],
     score_favorable_min: float | None = None,
     score_persuadible_min: float | None = None,
     order_by: str = "score_favorable",
@@ -148,16 +146,12 @@ async def list_voter_scores(
     count_query = select(func.count(VoterScoreIntegration.id))
 
     if score_favorable_min is not None:
-        query = query.where(
-            VoterScoreIntegration.score_favorable >= score_favorable_min
-        )
+        query = query.where(VoterScoreIntegration.score_favorable >= score_favorable_min)
         count_query = count_query.where(
             VoterScoreIntegration.score_favorable >= score_favorable_min
         )
     if score_persuadible_min is not None:
-        query = query.where(
-            VoterScoreIntegration.score_persuadible >= score_persuadible_min
-        )
+        query = query.where(VoterScoreIntegration.score_persuadible >= score_persuadible_min)
         count_query = count_query.where(
             VoterScoreIntegration.score_persuadible >= score_persuadible_min
         )

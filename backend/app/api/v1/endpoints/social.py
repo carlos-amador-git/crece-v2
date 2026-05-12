@@ -3,13 +3,14 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import and_, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import Date
 
 from app.core.database import get_db
 from app.core.security import Role, RoleChecker, get_current_user
+from app.models.dirigente import Dirigente
 from app.models.social import Platform, SentimentLabel, SocialPost, SocialProfile
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
@@ -19,43 +20,71 @@ from app.schemas.social import (
     SocialPostResponse,
 )
 from app.services.scraper_manager import dispatch_scrape
+from app.utils.social_urls import compose_post_url
 
 router = APIRouter()
 
 
 @router.get("/posts", response_model=PaginatedResponse[SocialPostResponse])
 async def list_posts(
+    request: "Request",
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int | None = None,
-    platform: Platform | None = None,
-    sentiment: SentimentLabel | None = None,
+    platform: str | None = None,
+    sentiment: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     is_political: bool | None = None,
+    exclude_rts: bool = False,
+    min_length: int | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> PaginatedResponse[SocialPostResponse]:
     """List social posts with comprehensive filtering."""
     query = select(SocialPost).join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
-    count_query = (
-        select(func.count(SocialPost.id))
-        .join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
+    count_query = select(func.count(SocialPost.id)).join(
+        SocialProfile, SocialPost.profile_id == SocialProfile.id
     )
 
+    # Normalize case-insensitive enum params
+    platform_enum = Platform(platform.upper()) if platform else None
+    sentiment_enum = SentimentLabel(sentiment.upper()) if sentiment else None
+
+    # Resolve effective org_id: admin can switch via X-Org-Id header
+    effective_org_id: int | None = getattr(current_user, "org_id", None)
+    if current_user.role == "admin":
+        header_org = request.headers.get("x-org-id")
+        if header_org and header_org.isdigit():
+            effective_org_id = int(header_org)
+
+    # Auto-scope: dirigente users see only their own; org users see their org
+    effective_dirigente_id = dirigente_id
+    if current_user.dirigente_id is not None:
+        effective_dirigente_id = current_user.dirigente_id
+
     filters = []
-    if dirigente_id is not None:
-        filters.append(SocialProfile.dirigente_id == dirigente_id)
-    if platform is not None:
-        filters.append(SocialProfile.platform == platform)
-    if sentiment is not None:
-        filters.append(SocialPost.sentiment_label == sentiment)
+    if effective_dirigente_id is not None:
+        filters.append(SocialProfile.dirigente_id == effective_dirigente_id)
+    elif effective_org_id is not None:
+        # Scope to org's dirigentes (works for admin with X-Org-Id and non-admin)
+        filters.append(SocialProfile.dirigente_id.in_(
+            select(Dirigente.id).where(Dirigente.org_id == effective_org_id)
+        ))
+    if platform_enum is not None:
+        filters.append(SocialProfile.platform == platform_enum)
+    if sentiment_enum is not None:
+        filters.append(SocialPost.sentiment_label == sentiment_enum)
     if date_from is not None:
         filters.append(SocialPost.published_at >= date_from)
     if date_to is not None:
         filters.append(SocialPost.published_at <= date_to)
     if is_political is not None:
         filters.append(SocialPost.is_political == is_political)
+    if exclude_rts:
+        filters.append(~SocialPost.content.like("RT @%"))
+    if min_length is not None:
+        filters.append(func.length(SocialPost.content) >= min_length)
 
     if filters:
         condition = and_(*filters)
@@ -73,8 +102,46 @@ async def list_posts(
     result = await db.execute(query)
     items = list(result.scalars().all())
 
+    if items:
+        profile_ids = {p.profile_id for p in items}
+        profile_rows = await db.execute(
+            select(
+                SocialProfile.id,
+                SocialProfile.platform,
+                SocialProfile.handle,
+                SocialProfile.dirigente_id,
+            ).where(SocialProfile.id.in_(profile_ids))
+        )
+        profile_map = {
+            row[0]: {"platform": row[1], "handle": row[2], "dirigente_id": row[3]}
+            for row in profile_rows.all()
+        }
+
+        dirigente_ids = {p["dirigente_id"] for p in profile_map.values()}
+        dirigente_rows = await db.execute(
+            select(Dirigente.id, Dirigente.full_name).where(
+                Dirigente.id.in_(dirigente_ids)
+            )
+        )
+        dirigente_map = {row[0]: row[1] for row in dirigente_rows.all()}
+    else:
+        profile_map = {}
+        dirigente_map = {}
+
+    serialized_items: list[SocialPostResponse] = []
+    for post in items:
+        payload = SocialPostResponse.model_validate(post)
+        profile = profile_map.get(post.profile_id)
+        if profile:
+            payload.platform = profile["platform"].value if profile["platform"] else None
+            payload.url = compose_post_url(
+                profile["platform"], profile["handle"], post.platform_post_id
+            )
+            payload.dirigente_nombre = dirigente_map.get(profile["dirigente_id"])
+        serialized_items.append(payload)
+
     return PaginatedResponse(
-        items=[SocialPostResponse.model_validate(p) for p in items],
+        items=serialized_items,
         total=total,
         page=page,
         page_size=page_size,
@@ -90,9 +157,25 @@ async def sentiment_timeline(
     platform: Platform | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    include_rts: bool = False,
 ) -> list[SentimentTimelinePoint]:
-    """Get sentiment time series data grouped by day."""
+    """Get sentiment time series data grouped by day.
+
+    Quality filters (D-NLP-auditoria-2026-04-13):
+    - Excludes retweets by default (RT @... prefix) — use include_rts=true to keep
+    - Excludes posts with <20 chars (unreliable sentiment)
+    - Deduplicates identical content (same post cross-platform counts once)
+    """
     day_col = cast(SocialPost.published_at, Date)
+
+    # Build quality filters
+    quality_filters = [
+        SocialProfile.dirigente_id == dirigente_id,
+        SocialPost.sentiment_score.is_not(None),
+        func.length(SocialPost.content) >= 20,
+    ]
+    if not include_rts:
+        quality_filters.append(~SocialPost.content.like("RT @%"))
 
     base_query = (
         select(
@@ -110,10 +193,7 @@ async def sentiment_timeline(
             .label("neutral"),
         )
         .join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
-        .where(
-            SocialProfile.dirigente_id == dirigente_id,
-            SocialPost.sentiment_score.is_not(None),
-        )
+        .where(*quality_filters)
     )
 
     if platform is not None:

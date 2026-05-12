@@ -14,16 +14,32 @@ import type { IpdBreakdown } from "@/lib/api/types";
 interface IpdRadarChartProps {
   data: IpdBreakdown;
   compareTo?: IpdBreakdown;
+  /** Display name for the primary candidate (shown in tooltip) */
+  candidateName?: string;
+  /** Display name for the comparison candidate (shown in tooltip) */
+  compareName?: string;
 }
 
-export function IpdRadarChart({ data, compareTo }: IpdRadarChartProps) {
+export function IpdRadarChart({
+  data,
+  compareTo,
+  candidateName = "Dirigente",
+  compareName = "Competidor",
+}: IpdRadarChartProps) {
+  if (!data) {
+    return <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">Sin datos de IPD disponibles</div>;
+  }
+
+  // B1 post-cross-audit Gemini: radar muestra sólo fuerza por plataforma (cada eje
+  // ya integra alcance+engagement+frecuencia en el IPD 0-10). Engagement global se
+  // muestra como KPI/bar aparte en EngagementBarChart. YouTube NO se oculta aunque
+  // sea 0 — la carencia penaliza platform coverage y debe ser visible.
   const chartData = [
-    { axis: "Twitter", value: data.twitter, compare: compareTo?.twitter },
-    { axis: "Instagram", value: data.instagram, compare: compareTo?.instagram },
-    { axis: "Facebook", value: data.facebook, compare: compareTo?.facebook },
-    { axis: "TikTok", value: data.tiktok, compare: compareTo?.tiktok },
-    { axis: "YouTube", value: data.youtube, compare: compareTo?.youtube },
-    { axis: "Engagement", value: data.engagement, compare: compareTo?.engagement },
+    { axis: "Twitter", value: data.twitter ?? 0, compare: compareTo?.twitter },
+    { axis: "Instagram", value: data.instagram ?? 0, compare: compareTo?.instagram },
+    { axis: "Facebook", value: data.facebook ?? 0, compare: compareTo?.facebook },
+    { axis: "TikTok", value: data.tiktok ?? 0, compare: compareTo?.tiktok },
+    { axis: "YouTube", value: data.youtube ?? 0, compare: compareTo?.youtube },
   ];
 
   return (
@@ -49,7 +65,7 @@ export function IpdRadarChart({ data, compareTo }: IpdRadarChartProps) {
           }}
         />
         <Radar
-          name="IPD"
+          name={candidateName}
           dataKey="value"
           stroke="hsl(var(--chart-accent))"
           fill="hsl(var(--chart-accent))"
@@ -58,13 +74,13 @@ export function IpdRadarChart({ data, compareTo }: IpdRadarChartProps) {
         />
         {compareTo && (
           <Radar
-            name="Competidor"
+            name={compareName}
             dataKey="compare"
-            stroke="hsl(var(--chart-negative))"
-            fill="hsl(var(--chart-negative))"
+            stroke="#F97316"
+            fill="#F97316"
             fillOpacity={0.1}
             strokeWidth={2}
-            strokeDasharray="4 4"
+            strokeDasharray="5 5"
           />
         )}
       </RadarChart>

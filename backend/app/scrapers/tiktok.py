@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-import asyncio
+import json
 import logging
+import os
+import subprocess
+import sys
 from datetime import UTC, datetime
 from typing import Any
 
@@ -14,23 +17,118 @@ from app.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
 
-# How many recent videos to fetch per scrape run.
-_MAX_VIDEOS = 30
-# Timeout for the entire TikTokApi session (seconds).
-_ASYNC_TIMEOUT = 60
+_MAX_VIDEOS = 30  # Videos per scrape run.
+_YT_DLP_TIMEOUT = 120  # Seconds before yt-dlp subprocess is killed.
+_TIKTOKAPI_TIMEOUT = 60  # Seconds for TikTokApi async operations.
+
+
+def _yt_dlp_path() -> str:
+    """Resolve the yt-dlp binary co-located with the current Python interpreter."""
+    return os.path.join(os.path.dirname(sys.executable), "yt-dlp")
+
+
+def _safe_int(value: Any) -> int:
+    """Coerce a value to int, returning 0 on failure."""
+    if value is None:
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _run_yt_dlp(args: list[str], timeout: int = _YT_DLP_TIMEOUT) -> str | None:
+    """Run yt-dlp as a subprocess and return stdout, or None on failure."""
+    cmd = [_yt_dlp_path(), *args]
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        if result.returncode != 0:
+            stderr = result.stderr.strip()
+            if stderr:
+                logger.warning("yt-dlp stderr: %s", stderr[:500])
+            return None
+        return result.stdout
+    except FileNotFoundError:
+        logger.error("yt-dlp binary not found at %s", _yt_dlp_path())
+        return None
+    except subprocess.TimeoutExpired:
+        logger.error("yt-dlp timed out after %ds", timeout)
+        return None
+    except Exception as exc:
+        logger.error("yt-dlp subprocess failed: %s", exc)
+        return None
+
+
+def _parse_yt_dlp_jsonl(output: str) -> list[dict[str, Any]]:
+    """Parse newline-delimited JSON output from yt-dlp --dump-json."""
+    results: list[dict[str, Any]] = []
+    for line in output.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            results.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            logger.debug("Skipping malformed yt-dlp JSON line: %s", exc)
+    return results
+
+
+def _sanitise_raw(raw: dict[str, Any]) -> dict[str, Any]:
+    """Strip non-serialisable or excessively large fields before storing as JSONB."""
+    keep_keys = {
+        "id",
+        "title",
+        "description",
+        "uploader",
+        "uploader_id",
+        "uploader_url",
+        "channel",
+        "channel_id",
+        "upload_date",
+        "timestamp",
+        "duration",
+        "view_count",
+        "like_count",
+        "comment_count",
+        "repost_count",
+        "thumbnail",
+        "webpage_url",
+        "categories",
+        "tags",
+    }
+    clean: dict[str, Any] = {}
+    for k, v in raw.items():
+        if k not in keep_keys:
+            continue
+        if isinstance(v, datetime):
+            clean[k] = v.isoformat()
+        elif isinstance(v, (str, int, float, bool, type(None))):
+            clean[k] = v
+        elif isinstance(v, (list, dict)):
+            try:
+                json.dumps(v)
+                clean[k] = v
+            except (TypeError, ValueError):
+                clean[k] = str(v)
+        else:
+            clean[k] = str(v)
+    return clean
 
 
 class TikTokScraper(BaseScraper):
-    """TikTok scraper using the unofficial *TikTokApi* library.
+    """TikTok scraper using yt-dlp (primary) with TikTokApi fallback.
 
-    TikTokApi uses Playwright internally for browser-based session handling.
-    Because Celery tasks run in a synchronous context, the async calls are
-    executed via ``asyncio.run()``.
+    Primary pipeline (no token required):
+    yt-dlp fetches video metadata directly from TikTok user pages.
+    Tested successfully with real handles (e.g. @rafasolanoperez).
 
-    The scraper degrades gracefully when:
-    * TikTokApi is not installed.
-    * No ``ms_token`` is configured (``settings.TIKTOK_MS_TOKEN``).
-    * TikTok blocks or rate-limits the request.
+    Fallback pipeline (requires ``settings.TIKTOK_MS_TOKEN``):
+    Uses the unofficial TikTokApi library with Playwright.
     """
 
     platform = "tiktok"
@@ -44,50 +142,89 @@ class TikTokScraper(BaseScraper):
         )
 
     # ------------------------------------------------------------------
-    # Internal async helpers
+    # Primary: yt-dlp
     # ------------------------------------------------------------------
 
-    @staticmethod
-    async def _fetch_videos(handle: str, count: int) -> list[dict[str, Any]]:
-        """Async coroutine that drives TikTokApi to fetch user videos."""
+    def _fetch_via_yt_dlp(self, handle: str, max_videos: int = _MAX_VIDEOS) -> list[dict[str, Any]]:
+        """Fetch TikTok video metadata using yt-dlp."""
+        clean_handle = handle.lstrip("@")
+        url = f"https://www.tiktok.com/@{clean_handle}"
+
+        output = _run_yt_dlp(
+            [
+                "--dump-json",
+                "--no-download",
+                "--no-warnings",
+                "--playlist-items",
+                f"1-{max_videos}",
+                url,
+            ]
+        )
+
+        if not output:
+            return []
+
+        entries = _parse_yt_dlp_jsonl(output)
+        logger.info("yt-dlp fetched %d TikTok videos for @%s", len(entries), clean_handle)
+        return entries
+
+    # ------------------------------------------------------------------
+    # Fallback: TikTokApi (Playwright-based)
+    # ------------------------------------------------------------------
+
+    def _fetch_via_tiktokapi(
+        self, handle: str, max_videos: int = _MAX_VIDEOS
+    ) -> list[dict[str, Any]]:
+        """Fallback: fetch videos using the unofficial TikTokApi library."""
+        import asyncio
+
         try:
             from TikTokApi import TikTokApi
         except ImportError:
-            logger.error(
-                "TikTokApi is not installed. "
-                "Install with: pip install TikTokApi"
-            )
+            logger.warning("TikTokApi is not installed — fallback unavailable")
             return []
 
         ms_token = settings.TIKTOK_MS_TOKEN or None
-        videos: list[dict[str, Any]] = []
+
+        async def _fetch() -> list[dict[str, Any]]:
+            videos: list[dict[str, Any]] = []
+            try:
+                async with TikTokApi() as api:
+                    await api.create_sessions(
+                        ms_tokens=[ms_token] if ms_token else [],
+                        num_sessions=1,
+                        headless=True,
+                        sleep_after=3,
+                    )
+                    user = api.user(handle)
+                    async for video in user.videos(count=max_videos):
+                        videos.append(video.as_dict)
+            except Exception as exc:
+                logger.error("TikTokApi fetch failed for @%s: %s", handle, exc)
+            return videos
 
         try:
-            async with TikTokApi() as api:
-                await api.create_sessions(
-                    ms_tokens=[ms_token] if ms_token else [],
-                    num_sessions=1,
-                    headless=True,
-                    sleep_after=3,
+            return asyncio.run(asyncio.wait_for(_fetch(), timeout=_TIKTOKAPI_TIMEOUT))
+        except TimeoutError:
+            logger.error("TikTokApi timed out for @%s", handle)
+            return []
+        except RuntimeError:
+            # Already running event loop — create a new one.
+            try:
+                loop = asyncio.new_event_loop()
+                result = loop.run_until_complete(
+                    asyncio.wait_for(_fetch(), timeout=_TIKTOKAPI_TIMEOUT)
                 )
+                loop.close()
+                return result
+            except Exception as exc:
+                logger.error("TikTokApi fallback loop failed for @%s: %s", handle, exc)
+                return []
 
-                user = api.user(handle)
-                async for video in user.videos(count=count):
-                    video_dict = video.as_dict
-                    videos.append(video_dict)
+    def _fetch_user_info_via_tiktokapi(self, handle: str) -> dict[str, Any]:
+        """Fallback: fetch user profile metadata via TikTokApi."""
+        import asyncio
 
-        except Exception as exc:
-            logger.error(
-                "TikTokApi fetch failed for @%s: %s",
-                handle,
-                exc,
-            )
-
-        return videos
-
-    @staticmethod
-    async def _fetch_user_info(handle: str) -> dict[str, Any]:
-        """Async coroutine that fetches user profile metadata."""
         try:
             from TikTokApi import TikTokApi
         except ImportError:
@@ -95,21 +232,24 @@ class TikTokScraper(BaseScraper):
 
         ms_token = settings.TIKTOK_MS_TOKEN or None
 
+        async def _fetch() -> dict[str, Any]:
+            try:
+                async with TikTokApi() as api:
+                    await api.create_sessions(
+                        ms_tokens=[ms_token] if ms_token else [],
+                        num_sessions=1,
+                        headless=True,
+                        sleep_after=3,
+                    )
+                    user = api.user(handle)
+                    return await user.info()
+            except Exception as exc:
+                logger.warning("TikTokApi user info failed for @%s: %s", handle, exc)
+                return {}
+
         try:
-            async with TikTokApi() as api:
-                await api.create_sessions(
-                    ms_tokens=[ms_token] if ms_token else [],
-                    num_sessions=1,
-                    headless=True,
-                    sleep_after=3,
-                )
-
-                user = api.user(handle)
-                user_data = await user.info()
-                return user_data
-
-        except Exception as exc:
-            logger.warning("TikTokApi user info failed for @%s: %s", handle, exc)
+            return asyncio.run(asyncio.wait_for(_fetch(), timeout=_TIKTOKAPI_TIMEOUT))
+        except Exception:
             return {}
 
     # ------------------------------------------------------------------
@@ -117,70 +257,85 @@ class TikTokScraper(BaseScraper):
     # ------------------------------------------------------------------
 
     def fetch_raw(self, handle: str, **kwargs: Any) -> list[dict[str, Any]]:
-        """Fetch recent TikTok videos for a user.
-
-        Runs the async TikTokApi call inside ``asyncio.run()`` since Celery
-        workers operate in a synchronous context.
-        """
+        """Fetch recent TikTok videos. Primary: yt-dlp. Fallback: TikTokApi."""
         handle = handle.lstrip("@")
         count = kwargs.get("count", _MAX_VIDEOS)
 
-        try:
-            raw = asyncio.run(
-                asyncio.wait_for(
-                    self._fetch_videos(handle, count),
-                    timeout=_ASYNC_TIMEOUT,
-                )
-            )
-        except asyncio.TimeoutError:
-            logger.error("TikTokApi timed out for @%s after %ds", handle, _ASYNC_TIMEOUT)
-            raw = []
-        except RuntimeError:
-            # Already running event loop (e.g. Jupyter/tests) — use nest_asyncio
-            # or fall back to creating a new loop explicitly.
-            try:
-                loop = asyncio.new_event_loop()
-                raw = loop.run_until_complete(
-                    asyncio.wait_for(
-                        self._fetch_videos(handle, count),
-                        timeout=_ASYNC_TIMEOUT,
-                    )
-                )
-                loop.close()
-            except Exception as exc:
-                logger.error("TikTokApi fallback loop failed for @%s: %s", handle, exc)
-                raw = []
+        # Primary: yt-dlp.
+        raw = self._fetch_via_yt_dlp(handle, count)
+        if raw:
+            logger.info("Primary pipeline (yt-dlp) returned %d TikTok videos", len(raw))
+            return raw
 
-        logger.info(
-            "Fetched %d raw TikTok videos for @%s",
-            len(raw),
-            handle,
-        )
-        return raw
+        # Fallback: TikTokApi.
+        logger.info("yt-dlp returned nothing — falling back to TikTokApi")
+        fallback_raw = self._fetch_via_tiktokapi(handle, count)
+        if fallback_raw:
+            logger.info("TikTokApi fallback returned %d videos", len(fallback_raw))
+        return fallback_raw
 
     def parse(self, raw_data: dict[str, Any]) -> dict[str, Any]:
-        """Parse a single TikTokApi video dict into SocialPost fields.
+        """Parse a video dict into SocialPost fields.
 
-        Field mapping
-        ~~~~~~~~~~~~~
-        * ``id`` -> ``platform_post_id``
-        * ``desc`` -> ``content``
-        * ``stats.diggCount`` -> ``likes``
-        * ``stats.commentCount`` -> ``comments``
-        * ``stats.shareCount`` -> ``shares``
-        * ``stats.playCount`` -> ``views``
-        * ``createTime`` (unix epoch) -> ``published_at``
-        * ``post_type`` is ``video`` or ``reel`` (< 60s with music = reel)
+        Handles both yt-dlp format and TikTokApi format.
         """
+        # Detect format: TikTokApi uses "stats" and "desc" keys.
+        if "stats" in raw_data and "desc" in raw_data:
+            return self._parse_tiktokapi_format(raw_data)
+        return self._parse_ytdlp_format(raw_data)
+
+    def _parse_ytdlp_format(self, raw_data: dict[str, Any]) -> dict[str, Any]:
+        """Parse yt-dlp --dump-json output for a TikTok video."""
+        title = raw_data.get("title", "") or raw_data.get("description", "")
+        content = title.strip()
+
+        # yt-dlp provides "timestamp" (unix) or "upload_date" (YYYYMMDD).
+        timestamp = raw_data.get("timestamp")
+        upload_date_str = raw_data.get("upload_date", "")
+
+        if timestamp is not None:
+            try:
+                published_at = datetime.fromtimestamp(int(timestamp), tz=UTC)
+            except (TypeError, ValueError, OSError):
+                published_at = datetime.now(UTC)
+        elif upload_date_str and len(upload_date_str) == 8:
+            try:
+                published_at = datetime(
+                    int(upload_date_str[:4]),
+                    int(upload_date_str[4:6]),
+                    int(upload_date_str[6:8]),
+                    tzinfo=UTC,
+                )
+            except (ValueError, TypeError):
+                published_at = datetime.now(UTC)
+        else:
+            published_at = datetime.now(UTC)
+
+        # TikTok videos are typically short-form.
+        duration = _safe_int(raw_data.get("duration", 0))
+        post_type = PostType.REEL if 0 < duration < 180 else PostType.VIDEO
+
+        return {
+            "platform_post_id": str(raw_data.get("id", "")),
+            "content": content[:10_000],
+            "post_type": post_type.value,
+            "published_at": published_at,
+            "likes": _safe_int(raw_data.get("like_count", 0)),
+            "comments": _safe_int(raw_data.get("comment_count", 0)),
+            "shares": _safe_int(raw_data.get("repost_count", 0)),
+            "views": _safe_int(raw_data.get("view_count", 0)),
+            "raw_data": _sanitise_raw(raw_data),
+        }
+
+    def _parse_tiktokapi_format(self, raw_data: dict[str, Any]) -> dict[str, Any]:
+        """Parse TikTokApi video dict (fallback format)."""
         stats = raw_data.get("stats", {})
         video_meta = raw_data.get("video", {})
 
-        # Determine if it is a short-form "reel" (TikTok-style).
         duration = _safe_int(video_meta.get("duration", 0))
         music = raw_data.get("music")
         post_type = PostType.REEL if (duration > 0 and duration < 60 and music) else PostType.VIDEO
 
-        # Unix timestamp -> aware datetime.
         create_time = raw_data.get("createTime")
         if create_time is not None:
             try:
@@ -242,9 +397,7 @@ class TikTokScraper(BaseScraper):
                     continue
 
                 existing = session.execute(
-                    select(SocialPost).where(
-                        SocialPost.platform_post_id == platform_post_id
-                    )
+                    select(SocialPost).where(SocialPost.platform_post_id == platform_post_id)
                 ).scalar_one_or_none()
 
                 if existing is not None:
@@ -301,77 +454,49 @@ class TikTokScraper(BaseScraper):
         }
 
     def update_profile_stats(self, handle: str) -> dict[str, int]:
-        """Fetch TikTok user profile statistics (followers, following, videos)."""
+        """Fetch TikTok user profile statistics.
+
+        Primary: extract from yt-dlp metadata of the first video (channel info).
+        Fallback: TikTokApi user info endpoint.
+        """
         handle = handle.lstrip("@")
+        empty = {"followers_count": 0, "following_count": 0, "posts_count": 0}
 
-        try:
-            user_data = asyncio.run(
-                asyncio.wait_for(
-                    self._fetch_user_info(handle),
-                    timeout=_ASYNC_TIMEOUT,
-                )
-            )
-        except Exception as exc:
-            logger.warning("Could not fetch TikTok stats for @%s: %s", handle, exc)
-            return {"followers_count": 0, "following_count": 0, "posts_count": 0}
-
-        if not user_data:
-            return {"followers_count": 0, "following_count": 0, "posts_count": 0}
-
-        # TikTokApi nests stats under "userInfo" -> "stats".
-        stats = (
-            user_data.get("userInfo", {}).get("stats", {})
-            or user_data.get("stats", {})
+        # Primary: yt-dlp -- fetch just 1 video to get channel metadata.
+        output = _run_yt_dlp(
+            [
+                "--dump-json",
+                "--no-download",
+                "--no-warnings",
+                "--playlist-items",
+                "1",
+                f"https://www.tiktok.com/@{handle}",
+            ],
+            timeout=30,
         )
+
+        if output:
+            entries = _parse_yt_dlp_jsonl(output)
+            if entries:
+                entry = entries[0]
+                # yt-dlp sometimes includes channel_follower_count for TikTok.
+                followers = _safe_int(entry.get("channel_follower_count", 0))
+                if followers > 0:
+                    return {
+                        "followers_count": followers,
+                        "following_count": 0,
+                        "posts_count": 0,
+                    }
+
+        # Fallback: TikTokApi.
+        user_data = self._fetch_user_info_via_tiktokapi(handle)
+        if not user_data:
+            return empty
+
+        stats = user_data.get("userInfo", {}).get("stats", {}) or user_data.get("stats", {})
 
         return {
             "followers_count": _safe_int(stats.get("followerCount", 0)),
             "following_count": _safe_int(stats.get("followingCount", 0)),
             "posts_count": _safe_int(stats.get("videoCount", 0)),
         }
-
-
-# ------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------
-
-
-def _safe_int(value: Any) -> int:
-    """Coerce a value to int, returning 0 on failure."""
-    if value is None:
-        return 0
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _sanitise_raw(raw: dict[str, Any]) -> dict[str, Any]:
-    """Strip non-serialisable objects before storing as JSONB.
-
-    TikTokApi ``as_dict`` usually produces clean JSON, but edge cases
-    with nested objects or datetime values can occur.
-    """
-    import json
-
-    try:
-        json.dumps(raw)
-        return raw
-    except (TypeError, ValueError):
-        pass
-
-    clean: dict[str, Any] = {}
-    for key, value in raw.items():
-        if isinstance(value, datetime):
-            clean[key] = value.isoformat()
-        elif isinstance(value, (str, int, float, bool, type(None))):
-            clean[key] = value
-        elif isinstance(value, (list, dict)):
-            try:
-                json.dumps(value)
-                clean[key] = value
-            except (TypeError, ValueError):
-                clean[key] = str(value)
-        else:
-            clean[key] = str(value)
-    return clean

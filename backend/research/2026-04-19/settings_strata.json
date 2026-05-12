@@ -1,0 +1,125 @@
+{
+  "_metadata": {
+    "task": "S0 T0.2 — Validación benchmarks ER por estrato",
+    "fecha": "2026-04-19",
+    "autor": "Claude Opus 4.7 (1M)",
+    "modelo": "n/a (análisis estadístico sin LLM)",
+    "script": "análisis inline python3 sobre nlp_layer2_gemma_out.jsonl",
+    "temperature": "N/A",
+    "seed": "N/A",
+    "input_primario": "/Users/marxchavez/Projects/crece-v2/backend/benchmarks/scraping/results/2026-04-19/nlp_layer2_gemma_out.jsonl",
+    "input_secundario": "/Users/marxchavez/Projects/crece-v2/backend/research/2026-04-19/SINTESIS-4-FUENTES.md",
+    "referencia_estratos": "Gemini DR §2.2 — Nano 1K-10K (6-10%) · Micro 10K-50K (3.5-6%) · Mid-Tier 50K-100K (2-4%) · Macro 100K-500K (1.5-2.5%) · Mega 500K+ (1-2%)",
+    "metodo_asignacion": "Triangulación (a) followers públicos conocidos + (b) volumen comentarios 90d en JSONL + (c) diversidad autores. Confianza HIGH = followers confirmados; MEDIUM = inferido por señales cruzadas; LOW = estimación única fuente",
+    "criterio_criterio_binario_master": "si delta >30% en >=3 dirigentes -> recalibrar; <30% -> adoptar tabla Gemini DR",
+    "veredicto_S0T0.2": "AMBIGUO — ER real no computable sin likes/views/followers a nivel post (no en dataset). Se adopta tabla Gemini DR por defecto y se flaggea pendiente de validación post-S1 cuando follower snapshots diarios estén activos."
+  },
+  "dirigentes": {
+    "alejandro_pinha": {
+      "estrato": "Nano",
+      "confidence": "HIGH",
+      "followers_estimados": {"twitter": 3100, "instagram": 2231, "facebook": 1800},
+      "handles_observados": ["Alejandro_Pinha", "alejandro.pinha"],
+      "comments_90d_total": 128,
+      "unique_authors_total": 43,
+      "evidencia": "CLAUDE.md proyecto confirma IPD ~4/10 con 3.1K X + 2.2K IG. Encaja 1K-10K Nano.",
+      "er_esperado_rango": "6.0-10.0%",
+      "er_observable": "NO_COMPUTABLE_SIN_LIKES_VIEWS",
+      "notas": "Dataset JSONL no incluye likes/views/followers_snapshot; solo comments. Imposible calcular ER numérico."
+    },
+    "rafael_solano": {
+      "estrato": "Nano",
+      "confidence": "HIGH",
+      "followers_estimados": {"twitter": "<500", "instagram": "~1K", "linkedin": 170},
+      "handles_observados": ["rafasolanoperez"],
+      "comments_90d_total": 8,
+      "unique_authors_total": 6,
+      "evidencia": "CLAUDE.md proyecto confirma IPD ~2/10, 170 LinkedIn, sin presencia política digital. Extremo bajo de Nano — frontera con sub-Nano.",
+      "er_esperado_rango": "6.0-10.0% (extremo volátil por N bajo)",
+      "er_observable": "NO_COMPUTABLE_SIN_LIKES_VIEWS",
+      "notas": "Volumen 90d (8 comments) tan bajo que cualquier ER es estadísticamente ruidoso. FLAG recalibración S1."
+    },
+    "saymi_pineda": {
+      "estrato": "Nano",
+      "confidence": "MEDIUM",
+      "followers_estimados": {"twitter": "3K-8K (inferido)", "instagram": "2K-5K (inferido)"},
+      "handles_observados": ["saymipinedav", "saymipinedavelasco"],
+      "comments_90d_total": 52,
+      "unique_authors_total": 18,
+      "evidencia": "Diputada local CDMX MC. Volumen comentarios y diversidad autores compatibles con perfil Nano 1K-10K. X div 5.9% sugiere posible CIB (2 autores generan 34 comentarios).",
+      "er_esperado_rango": "6.0-10.0%",
+      "er_observable": "NO_COMPUTABLE_SIN_LIKES_VIEWS",
+      "notas": "Div X muy baja (2 autores/34 comments) — señal CIB potencial para T0.3 pipeline, no confusión estrato."
+    },
+    "yessenia_nolasco": {
+      "estrato": "Nano",
+      "confidence": "MEDIUM",
+      "followers_estimados": {"twitter": "3K-8K (inferido)", "instagram": "1K-3K (inferido)"},
+      "handles_observados": ["Yes_Nolasco", "yes_nolasco"],
+      "comments_90d_total": 114,
+      "unique_authors_total": 13,
+      "evidencia": "Dirigente local Oaxaca. Volumen intermedio pero diversidad X 4.2% extremadamente baja (4 autores/96 comments) — patrón compatible con CIB o base muy concentrada.",
+      "er_esperado_rango": "6.0-10.0%",
+      "er_observable": "NO_COMPUTABLE_SIN_LIKES_VIEWS",
+      "notas": "Señal CIB fuerte. Estrato nominal Nano pero ER calculado sobre esa base estará inflado por bot/coro."
+    },
+    "gabriela_jimenez": {
+      "estrato": "Micro",
+      "confidence": "MEDIUM",
+      "followers_estimados": {"twitter": "15K-40K (inferido)", "instagram": "10K-30K (inferido)"},
+      "handles_observados": ["GabyJimenezMX", "gabyjimenezgo"],
+      "comments_90d_total": 367,
+      "unique_authors_total": 272,
+      "evidencia": "Volumen alto (367 comments) con altísima diversidad autores (74% X, 64% IG). Perfil consistente con Micro (diputada local/alcaldesa emergente). Mayor engagement genuino que Piña/Solano.",
+      "er_esperado_rango": "3.5-6.0%",
+      "er_observable": "NO_COMPUTABLE_SIN_LIKES_VIEWS",
+      "notas": "Sin followers reales podría ser Nano alto (8K-10K) o Micro bajo. Validar con snapshot Sprint S1 T1."
+    },
+    "cesar_cravioto": {
+      "estrato": "Micro",
+      "confidence": "MEDIUM",
+      "followers_estimados": {"twitter": "20K-60K (inferido)", "instagram": "5K-15K (inferido)"},
+      "handles_observados": ["craviotocesar", "cesarcravioto"],
+      "comments_90d_total": 44,
+      "unique_authors_total": 33,
+      "evidencia": "Secretario de gobierno CDMX — perfil público medio. Diversidad alta (75%+). Volumen 44 bajo para el estrato esperado — posible limitación de scraping, no falta de audiencia.",
+      "er_esperado_rango": "3.5-6.0%",
+      "er_observable": "NO_COMPUTABLE_SIN_LIKES_VIEWS",
+      "notas": "Cargo público importante sugiere Micro; volumen bajo de comments puede reflejar sampling del benchmark, no su alcance real."
+    },
+    "laura_ballesteros": {
+      "estrato": "Micro",
+      "confidence": "MEDIUM",
+      "followers_estimados": {"twitter": "30K-80K (inferido)", "instagram": "20K-60K (inferido)"},
+      "handles_observados": ["LBallesterosM", "lauraballesterosm"],
+      "comments_90d_total": 224,
+      "unique_authors_total": 178,
+      "evidencia": "Ex-diputada federal con presencia consolidada en movilidad urbana. Volumen alto + diversidad 80%+ en ambas plataformas sugiere Micro consolidada, potencialmente frontera Mid-Tier.",
+      "er_esperado_rango": "3.5-6.0%",
+      "er_observable": "NO_COMPUTABLE_SIN_LIKES_VIEWS",
+      "notas": "Frontera Micro/Mid. Requiere snapshot followers S1 para confirmar."
+    },
+    "jorge_alvarez_maynez": {
+      "estrato": "Macro",
+      "confidence": "HIGH",
+      "followers_estimados": {"twitter": "500K+", "instagram": "200K-500K"},
+      "handles_observados": ["alvarezmaynez"],
+      "comments_90d_total": 168,
+      "unique_authors_total": 160,
+      "evidencia": "Candidato presidencial 2024 MC. Perfil público nacional. 95% diversidad autores confirma audiencia nacional no-concentrada. Macro confirmado (puede ser frontera Macro/Mega en X).",
+      "er_esperado_rango": "1.5-2.5%",
+      "er_observable": "NO_COMPUTABLE_SIN_LIKES_VIEWS",
+      "notas": "Frontera Macro/Mega. Según sc_research X=9M seguidores sería Mega, pero es Sheinbaum no Máynez — Máynez probablemente Macro alto."
+    }
+  },
+  "gaps_datos_criticos": [
+    "No hay likes por post en el JSONL",
+    "No hay views/impressions por post",
+    "No hay followers_count por dirigente ni snapshot diario",
+    "ER real (engagement/followers o engagement/views) = INCOMPUTABLE con datos actuales",
+    "Solo se capturaron X + IG en el NLP corrido; FB, TikTok, YouTube ausentes",
+    "Volúmenes 90d heterogéneos (Solano 8 vs Jiménez 367) — sampling desigual impide comparación directa"
+  ],
+  "decision": "ADOPTAR_TABLA_GEMINI_DR_CONDICIONAL",
+  "decision_racional": "Criterio binario <30% delta requiere ER numérico. Sin likes/followers ER no es numérico. Se adopta tabla Gemini DR como baseline para Sprint S1 T2 y se flaggea validación diferida a Sprint S1 T3 (snapshot diario followers activo) + S2 (likes en social_posts)."
+}

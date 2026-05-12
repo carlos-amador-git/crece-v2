@@ -14,12 +14,22 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { FunnelBar } from "@/components/dashboard/funnel-bar";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useCampanas, useCampanaAnalytics, useCreateCampana,
   type Campana, type CampanaEstado, type CampanaTipo,
 } from "@/lib/api/hooks/use-campanas";
+import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
+import { useCiudadanos } from "@/lib/api/hooks/use-ciudadanos";
 import { formatNumber, formatDate } from "@/lib/utils";
-import { Send, Plus, Loader2, ArrowRight } from "lucide-react";
+import { Send, Plus, Loader2, ArrowRight, Users } from "lucide-react";
+
+const SEGMENTOS = [
+  { value: "todos", label: "Todos los ciudadanos" },
+  { value: "promotable", label: "Promotable (alta probabilidad MC)" },
+  { value: "persuadible", label: "Persuadible (indecisos convertibles)" },
+  { value: "indeciso", label: "Indeciso" },
+];
 
 const TIPOS: CampanaTipo[] = ["whatsapp", "sms", "email", "mixta"];
 
@@ -55,17 +65,24 @@ function CampanaCard({ campana, onSelect }: { campana: Campana; onSelect: (id: n
 export default function CampanasPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [form, setForm] = useState({ nombre: "", tipo: "", plantilla: "", dirigente_id: "" });
+  const [form, setForm] = useState({ nombre: "", tipo: "", plantilla: "", dirigente_id: "", mensaje: "", segmento: "todos" });
 
   const { data: campanas, isLoading } = useCampanas();
-  const { data: analytics } = useCampanaAnalytics(selectedId ?? undefined);
+  const selectedCampana = campanas?.find((c) => c.id === selectedId);
+  const isEnviando = selectedCampana?.estado === "activa" || selectedCampana?.estado === "programada";
+  const { data: analytics } = useCampanaAnalytics(selectedId ?? undefined, isEnviando);
+  const { data: dirigentesData } = useDirigentes({ per_page: 50 });
+  const { data: ciudadanosData } = useCiudadanos({ per_page: 1 });
   const createCampana = useCreateCampana();
 
+  const dirigentesForSelect = dirigentesData?.items ?? [];
+  const totalCiudadanos = ciudadanosData?.total ?? 0;
+
   const handleCreate = async () => {
-    if (!form.nombre || !form.tipo || !form.plantilla || !form.dirigente_id) return;
-    await createCampana.mutateAsync({ nombre: form.nombre, tipo: form.tipo as CampanaTipo, plantilla: form.plantilla, dirigente_id: Number(form.dirigente_id) });
+    if (!form.nombre || !form.tipo || !form.dirigente_id) return;
+    await createCampana.mutateAsync({ nombre: form.nombre, tipo: form.tipo as CampanaTipo, plantilla: form.plantilla || form.mensaje, dirigente_id: Number(form.dirigente_id) });
     setDialogOpen(false);
-    setForm({ nombre: "", tipo: "", plantilla: "", dirigente_id: "" });
+    setForm({ nombre: "", tipo: "", plantilla: "", dirigente_id: "", mensaje: "", segmento: "todos" });
   };
 
   return (
@@ -87,20 +104,53 @@ export default function CampanasPage() {
                 <label htmlFor="camp-nombre" className="text-sm font-medium">Nombre</label>
                 <Input id="camp-nombre" placeholder="Nombre de la campana" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))} />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Tipo</label>
+                  <Select value={form.tipo} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
+                    <SelectContent>{TIPOS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Dirigente</label>
+                  <Select value={form.dirigente_id} onValueChange={(v) => setForm((f) => ({ ...f, dirigente_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar dirigente" /></SelectTrigger>
+                    <SelectContent>
+                      {dirigentesForSelect.map((d) => (
+                        <SelectItem key={d.id} value={String(d.id)}>{d.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium">Tipo</label>
-                <Select value={form.tipo} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
-                  <SelectContent>{TIPOS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                <label className="text-sm font-medium">Segmento Objetivo</label>
+                <Select value={form.segmento} onValueChange={(v) => setForm((f) => ({ ...f, segmento: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SEGMENTOS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <label htmlFor="camp-plantilla" className="text-sm font-medium">Plantilla</label>
-                <Input id="camp-plantilla" placeholder="Nombre de la plantilla" value={form.plantilla} onChange={(e) => setForm((f) => ({ ...f, plantilla: e.target.value }))} />
+                <label className="text-sm font-medium">Mensaje</label>
+                <Textarea
+                  placeholder="Escribe el mensaje o selecciona una plantilla del Content Factory"
+                  value={form.mensaje}
+                  onChange={(e) => setForm((f) => ({ ...f, mensaje: e.target.value }))}
+                  rows={4}
+                />
               </div>
-              <div className="grid gap-2">
-                <label htmlFor="camp-dirigente" className="text-sm font-medium">Dirigente ID</label>
-                <Input id="camp-dirigente" placeholder="ID del dirigente" value={form.dirigente_id} onChange={(e) => setForm((f) => ({ ...f, dirigente_id: e.target.value }))} />
+              <div className="rounded-md border border-border/50 bg-muted/30 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    Esta campana se enviara a <span className="font-semibold text-foreground">~{formatNumber(totalCiudadanos)}</span> ciudadanos con telefono registrado
+                  </span>
+                </div>
               </div>
             </div>
             <DialogFooter>
@@ -113,8 +163,8 @@ export default function CampanasPage() {
         </Dialog>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <section className="space-y-3 lg:col-span-3" aria-label="Lista de campanas">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+        <section className="space-y-3 md:col-span-1 lg:col-span-3" aria-label="Lista de campanas">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => <Card key={i} className="card-elevated"><CardContent className="p-5"><Skeleton className="mb-2 h-5 w-48" /><Skeleton className="h-16 w-full" /></CardContent></Card>)
           ) : !campanas || campanas.length === 0 ? (
@@ -122,7 +172,7 @@ export default function CampanasPage() {
           ) : campanas.map((c) => <CampanaCard key={c.id} campana={c} onSelect={setSelectedId} />)}
         </section>
 
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Analytics</CardTitle>
             <CardDescription>{selectedId ? `Campana #${selectedId}` : "Selecciona una campana"}</CardDescription>

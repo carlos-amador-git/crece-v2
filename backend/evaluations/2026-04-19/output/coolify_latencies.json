@@ -1,0 +1,95 @@
+{
+  "model": "gemma3:12b",
+  "endpoint": "http://163.245.208.96:11434",
+  "timestamp": "2026-04-19T16:28:40Z",
+  "ping_ms": {
+    "min": 144.96433304157108,
+    "median": 148.7870829878375,
+    "max": 172.3757500294596
+  },
+  "warmup_s": 101.94330329191871,
+  "inference_s": {
+    "n": 10,
+    "min": 8.081221082946286,
+    "p50": 10.748020062514115,
+    "p95": 24.43690600001719,
+    "max": 123.30037891608663,
+    "mean": 23.803064541507048
+  },
+  "tokens_per_s": {
+    "p50": 0.802416063821448,
+    "mean": 0.8127043776430551
+  },
+  "runs": [
+    {
+      "iter": 1,
+      "elapsed_s": 10.280432790983468,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 0.9727196732472368
+    },
+    {
+      "iter": 2,
+      "elapsed_s": 24.43690600001719,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 0.326830048581621
+    },
+    {
+      "iter": 3,
+      "elapsed_s": 8.425745625048876,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 1.1481162981901358
+    },
+    {
+      "iter": 4,
+      "elapsed_s": 15.316730791935697,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 0.5100681182047003
+    },
+    {
+      "iter": 5,
+      "elapsed_s": 10.682416624971665,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 0.7440362306984227
+    },
+    {
+      "iter": 6,
+      "elapsed_s": 8.081221082946286,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 1.0463647346020613
+    },
+    {
+      "iter": 7,
+      "elapsed_s": 123.30037891608663,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 0.7934436298221145
+    },
+    {
+      "iter": 8,
+      "elapsed_s": 16.36119016702287,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 1.0301796946613626
+    },
+    {
+      "iter": 9,
+      "elapsed_s": 10.331999916001223,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 0.8113884978207816
+    },
+    {
+      "iter": 10,
+      "elapsed_s": 10.813623500056565,
+      "response": "Ofensivo.",
+      "eval_count": 6,
+      "tokens_per_s": 0.7438968506021151
+    }
+  ]
+}

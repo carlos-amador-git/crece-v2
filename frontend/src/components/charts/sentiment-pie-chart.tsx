@@ -21,11 +21,25 @@ const COLORS = {
 };
 
 export function SentimentPieChart({ data }: SentimentPieChartProps) {
+  // D-23-G scope: distribución por categoría se mantiene cruda · el flip
+  // aplica solo a KPI agregado "Sentimiento Prom." (no a charts de conteo).
+  const total = data.total || (data.positive + data.negative + data.neutral);
+
+  if (!total) {
+    return (
+      <div className="flex h-[260px] flex-col items-center justify-center text-center">
+        <div className="mb-2 text-3xl">📊</div>
+        <p className="text-sm font-medium text-muted-foreground">Sin datos de sentimiento</p>
+        <p className="mt-1 text-xs text-muted-foreground/70">Los datos se calculan al ejecutar el pipeline NLP</p>
+      </div>
+    );
+  }
+
   const chartData = [
     { name: "Positivo", value: data.positive, color: COLORS.positive },
     { name: "Negativo", value: data.negative, color: COLORS.negative },
     { name: "Neutral", value: data.neutral, color: COLORS.neutral },
-  ];
+  ].filter((d) => d.value > 0);
 
   return (
     <ResponsiveContainer width="100%" height={260}>
@@ -53,7 +67,7 @@ export function SentimentPieChart({ data }: SentimentPieChartProps) {
             fontSize: 12,
           }}
           formatter={(value: number) => [
-            `${value} (${((value / data.total) * 100).toFixed(1)}%)`,
+            `${value} (${((value / total) * 100).toFixed(1)}%)`,
           ]}
         />
         <Legend

@@ -113,13 +113,14 @@ class CiudadanoResponse(BaseModel):
     registrado_por_id: int
     # ── New fields ──────────────────────────────────────
     intencion_voto: IntencionVotoCiudadano | None
-    programas_sociales: list[dict] | None
-    problematicas: list[dict] | None
+    programas_sociales: list | dict | None
+    problematicas: list | dict | None
     colonia: str | None
     codigo_postal: str | None
     escolaridad: Escolaridad | None
     foto_ine_url: str | None
     org_id: int | None
+    data_source: str | None = None
     created_at: datetime
     updated_at: datetime
 

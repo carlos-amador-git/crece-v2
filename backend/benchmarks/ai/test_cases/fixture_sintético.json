@@ -1,0 +1,34 @@
+{
+  "dirigente_id": 1,
+  "dirigente_nombre": "Alejandro Piña (fixture)",
+  "tipo_plan": "DIAGNOSTICO",
+  "_note": "Fixture sintético para smoke tests del runner. Se reemplaza cuando build_test_cases.py pueda correr contra DB viva.",
+  "context": {
+    "dirigente": {
+      "nombre": "Alejandro Piña",
+      "cargo": "Diputado Local",
+      "partido": "Movimiento Ciudadano",
+      "estado": "CDMX",
+      "municipio": "Cuauhtémoc"
+    },
+    "ipd": {
+      "score": 3.9,
+      "scale": "0-10",
+      "platform_scores": {"INSTAGRAM": 4.5, "TWITTER": 4.2, "FACEBOOK": 3.8},
+      "platform_coverage": "60%",
+      "posting_frequency_per_day": 0.8,
+      "interpretation": "BAJO"
+    },
+    "social_profiles": [
+      {"platform": "INSTAGRAM", "handle": "@alejandro.pinha", "followers": 2231, "posts_30d": 12, "avg_engagement_30d": 0.0774, "avg_sentiment_30d": 0.35},
+      {"platform": "TWITTER", "handle": "@Alejandro_Pinha", "followers": 3105, "posts_30d": 18, "avg_engagement_30d": 0.0152, "avg_sentiment_30d": -0.12},
+      {"platform": "FACEBOOK", "handle": "Alejandro Piña", "followers": 1840, "posts_30d": 5, "avg_engagement_30d": 0.0321, "avg_sentiment_30d": 0.18}
+    ],
+    "sentiment_30d": {"POSITIVE": 8, "NEUTRAL": 21, "NEGATIVE": 6},
+    "top_competitors": [
+      {"nombre": "Martí Batres", "partido": "MORENA", "total_followers": 285000},
+      {"nombre": "Sandra Cuevas", "partido": "PAN", "total_followers": 124000}
+    ],
+    "analysis_date": "2026-04-11T07:00:00+00:00"
+  }
+}

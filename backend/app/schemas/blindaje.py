@@ -10,7 +10,6 @@ from app.models.gasto_electoral import (
     TipoAlertaCompliance,
 )
 
-
 # ── Gasto Electoral ──────────────────────────────────────────
 
 

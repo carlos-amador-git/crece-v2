@@ -9,10 +9,20 @@ from starlette.responses import JSONResponse
 from app.core.config import settings
 
 # Paths blocked during veda electoral (write operations on political content)
+#
+# NOTA (S3.5): /api/v1/planes NO está en esta lista intencionalmente.
+# Los planes IA son análisis interno (generación, edición de tareas, registro
+# de métricas reales, cambio de estado en el Kanban). NO son publicaciones
+# externas y deben seguir operativos durante veda — el equipo necesita poder
+# planificar, delegar tareas internas y medir avance sin importar el período
+# electoral. Las publicaciones externas (posts, contenido IA publicado en
+# redes) quedan cubiertas por los otros prefijos de esta lista + la auditoría
+# de ia_content_registry. Ver cross-audit Gemini del PLAN-current.md nota 5.
 _VEDA_BLOCKED_PATHS: list[tuple[str, set[str]]] = [
-    ("/api/v1/planes", {"POST", "PATCH", "PUT", "DELETE"}),
     ("/api/v1/social", {"POST", "PATCH", "PUT"}),
     ("/api/v1/encuestas", {"POST"}),
+    ("/api/v1/content/pieces", {"PATCH"}),  # aprobar publicaciones externas
+    ("/api/v1/content/generate", {"POST"}),  # generar contenido para publicar
 ]
 
 # Paths that always remain operational
@@ -66,9 +76,7 @@ class VedaElectoralMiddleware(BaseHTTPMiddleware):
     - Health endpoints
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # Only check if veda is active
         if not _is_veda_active():
             return await call_next(request)

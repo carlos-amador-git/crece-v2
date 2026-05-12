@@ -1,0 +1,155 @@
+"""B05 — Sentiment composition Plutchik 6 emociones.
+
+MASTER §3.1 #05.
+
+Agrega las 6 emociones Plutchik discretas presentes en ``social_posts.emotions``
+(poblado por Sprint S1 T5 Gemma 3:12b) y ``sentiment_analyses.emotions`` (Layer 2
+NLP sobre comments). Emociones trackeadas:
+
+    trust · anger · joy · fear · sadness · disgust
+
+Compute lógica:
+    1. Extraer ``emotions`` JSONB dict de social_posts (proxy caption sentiment)
+    2. Extraer ``emotions`` de sentiment_analyses (agregado sobre comments)
+    3. Promediar por emoción
+    4. Reportar ratio trust/anger y warnings si ratio < 1 o anger > 0.30
+
+Returns:
+    {
+        "status": "ok",
+        "data": {
+            "emociones_promedio": {"trust": 0.21, "anger": 0.15, ...},
+            "n_posts_con_emotions": 45,
+            "n_comments_con_emotions": 120,
+            "ratio_trust_anger": 1.4,
+            "warnings": ["anger 35% supera umbral 30%"],
+        }
+    }
+
+Insufficient:
+    - 0 posts con ``emotions`` populated (Sprint S2 T3 extensión pendiente)
+"""
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.social import SentimentAnalysis, SocialPost, SocialProfile
+from app.services.diagnostico._common import (
+    build_dirigente_not_found,
+    build_insufficient,
+    build_ok,
+    load_dirigente_scoped,
+)
+
+BLOQUE = "B05"
+VENTANA_DIAS = 90
+PLUTCHIK_6 = ["trust", "anger", "joy", "fear", "sadness", "disgust"]
+
+UMBRAL_ANGER_ALERTA = 0.30
+UMBRAL_RATIO_TA_MIN = 1.0
+
+
+def _normalize_emotions(raw: dict | None) -> dict[str, float]:
+    """Normaliza el dict emotions extrayendo las 6 Plutchik (acepta claves mixtas)."""
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, float] = {}
+    for emo in PLUTCHIK_6:
+        val = raw.get(emo)
+        if val is None:
+            val = raw.get(emo.upper())
+        if val is None:
+            val = raw.get(emo.capitalize())
+        if isinstance(val, (int, float)):
+            out[emo] = float(val)
+    return out
+
+
+async def compute(
+    db: AsyncSession,
+    dirigente_id: int,
+    org_id: int | None = None,
+) -> dict:
+    dirigente = await load_dirigente_scoped(db, dirigente_id, org_id)
+    if dirigente is None:
+        return build_dirigente_not_found(BLOQUE, dirigente_id)
+
+    profiles_result = await db.execute(
+        select(SocialProfile).where(SocialProfile.dirigente_id == dirigente_id)
+    )
+    profiles = list(profiles_result.scalars().all())
+    if not profiles:
+        return build_insufficient(BLOQUE, missing=["social_profiles=0"])
+
+    since = datetime.now(UTC) - timedelta(days=VENTANA_DIAS)
+    profile_ids = [p.id for p in profiles]
+
+    posts_result = await db.execute(
+        select(SocialPost).where(
+            SocialPost.profile_id.in_(profile_ids),
+            SocialPost.published_at >= since,
+            SocialPost.emotions.is_not(None),
+        )
+    )
+    posts = list(posts_result.scalars().all())
+
+    sa_result = await db.execute(
+        select(SentimentAnalysis)
+        .join(SocialPost, SentimentAnalysis.post_id == SocialPost.id)
+        .where(
+            SocialPost.profile_id.in_(profile_ids),
+            SocialPost.published_at >= since,
+            SentimentAnalysis.emotions.is_not(None),
+        )
+    )
+    analyses = list(sa_result.scalars().all())
+
+    if not posts and not analyses:
+        return build_insufficient(
+            BLOQUE,
+            missing=[
+                "social_posts.emotions=NULL en todos los posts 90d",
+                "sentiment_analyses.emotions=NULL en todos los analyses 90d",
+                "Sprint S2 T3 extensión NLP Plutchik pendiente (cierre Joy 2026-04-19)",
+            ],
+        )
+
+    acumulado: dict[str, list[float]] = {e: [] for e in PLUTCHIK_6}
+    for p in posts:
+        ems = _normalize_emotions(p.emotions)
+        for k, v in ems.items():
+            acumulado[k].append(v)
+    for a in analyses:
+        ems = _normalize_emotions(a.emotions)
+        for k, v in ems.items():
+            acumulado[k].append(v)
+
+    emociones_promedio: dict[str, float] = {}
+    for emo in PLUTCHIK_6:
+        values = acumulado[emo]
+        emociones_promedio[emo] = round(sum(values) / len(values), 4) if values else 0.0
+
+    trust = emociones_promedio["trust"]
+    anger = emociones_promedio["anger"]
+    ratio = round(trust / anger, 3) if anger > 0 else None
+
+    warnings: list[str] = []
+    if anger >= UMBRAL_ANGER_ALERTA:
+        warnings.append(f"anger {anger * 100:.0f}% supera umbral {UMBRAL_ANGER_ALERTA * 100:.0f}%")
+    if ratio is not None and ratio < UMBRAL_RATIO_TA_MIN:
+        warnings.append(f"ratio trust/anger {ratio} < umbral {UMBRAL_RATIO_TA_MIN}")
+
+    return build_ok(
+        BLOQUE,
+        {
+            "emociones_promedio": emociones_promedio,
+            "n_posts_con_emotions": len(posts),
+            "n_comments_con_emotions": len(analyses),
+            "ratio_trust_anger": ratio,
+            "warnings": warnings,
+            "ventana_dias": VENTANA_DIAS,
+        },
+    )

@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
+// import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
-import { EngagementBarChart } from "@/components/charts/engagement-bar-chart";
 import { PostCard } from "@/components/social/post-card";
 import { useKpiOverview, useTopDirigentes, useSystemStatus } from "@/lib/api/hooks/use-overview";
 import { useSentimentTrend, useSocialPosts } from "@/lib/api/hooks/use-social";
 import { formatNumber, formatRelativeTime } from "@/lib/utils";
+import { CrisisAlertList } from "@/components/alerts/crisis-alert-list";
 import {
   Users,
   TrendingUp,
@@ -18,17 +20,20 @@ import {
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
-  ArrowRight,
   Clock,
   Activity,
   Cpu,
 } from "lucide-react";
+import { FadeUp } from "@/components/motion/fade-up";
+import { CompetitorSnapshotCard } from "@/components/dashboard/competitor-snapshot-card";
+import { rolFromPartido, disclaimerSentimientoCrudo } from "@/lib/politica/rol";
 
-const ElectoralMap = dynamic(
-  () =>
-    import("@/components/maps/electoral-map").then((m) => m.ElectoralMap),
-  { ssr: false, loading: () => <Skeleton className="h-[300px] w-full rounded-lg" /> }
-);
+// Electoral map hidden until INE shapefiles are loaded
+// const ElectoralMap = dynamic(
+//   () =>
+//     import("@/components/maps/electoral-map").then((m) => m.ElectoralMap),
+//   { ssr: false, loading: () => <Skeleton className="h-[300px] w-full rounded-lg" /> }
+// );
 
 /* Default values shown while API loads */
 const DEFAULT_KPI = {
@@ -36,38 +41,44 @@ const DEFAULT_KPI = {
   avg_ipd_score: 0,
   posts_monitored_24h: 0,
   active_alerts: 0,
-  dirigentes_change: 0,
-  ipd_change: 0,
+  dirigentes_change: null as number | null,
+  ipd_change: null as number | null,
   posts_change: 0,
   alerts_change: 0,
+  total_audiencia: 0,
+  contactos_periodo: 0,
+  tema_urgente: null as string | null,
 };
 
 const TIME_FILTERS = [
-  { label: "Hoy", value: "today" },
-  { label: "7 dias", value: "7d" },
-  { label: "30 dias", value: "30d" },
-  { label: "90 dias", value: "90d" },
-] as const;
+  { label: "Hoy", value: "today" as const },
+  { label: "7 dias", value: "7d" as const },
+  { label: "30 dias", value: "30d" as const },
+  { label: "90 dias", value: "90d" as const },
+];
 
 const kpiCards = [
   {
-    title: "Total Dirigentes",
-    key: "total_dirigentes" as const,
-    changeKey: "dirigentes_change" as const,
+    title: "Tu Audiencia",
+    subtitle: "Personas que te siguen",
+    key: "total_audiencia" as const,
+    changeKey: "posts_change" as const, // proxy — no history yet
     icon: Users,
     format: (v: number) => formatNumber(v),
     isAlerts: false,
   },
   {
-    title: "Avg IPD Score",
+    title: "Presencia Digital",
+    subtitle: "Tu IPD sobre 10",
     key: "avg_ipd_score" as const,
     changeKey: "ipd_change" as const,
     icon: TrendingUp,
-    format: (v: number) => v.toFixed(1),
+    format: (v: number) => `${v.toFixed(1)} / 10`,
     isAlerts: false,
   },
   {
-    title: "Posts (24h)",
+    title: "Conversacion",
+    subtitle: "Posts monitoreados en el periodo",
     key: "posts_monitored_24h" as const,
     changeKey: "posts_change" as const,
     icon: MessageSquare,
@@ -75,7 +86,8 @@ const kpiCards = [
     isAlerts: false,
   },
   {
-    title: "Alertas Activas",
+    title: "Tema Urgente",
+    subtitle: "Alerta mas reciente",
     key: "active_alerts" as const,
     changeKey: "alerts_change" as const,
     icon: AlertTriangle,
@@ -106,24 +118,77 @@ function CurrentDateTime() {
 }
 
 export default function OverviewPage() {
-  const [activeFilter, setActiveFilter] = useState<string>("30d");
+  const router = useRouter();
+  const { user } = useAuth();
+  const [activeFilter, setActiveFilter] = useState<"today" | "7d" | "30d" | "90d">("30d");
+  const [platformFilter, setPlatformFilter] = useState<"" | "twitter" | "instagram" | "facebook" | "tiktok" | "youtube">("");
+  const [includeRts, setIncludeRts] = useState(false);
 
-  const { data: kpi, isLoading: kpiLoading } = useKpiOverview();
-  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(30);
+  useEffect(() => {
+    if (user?.role === "admin") {
+      router.replace("/dashboard/admin/overview");
+    }
+  }, [user, router]);
+
+  const { data: kpi, isLoading: kpiLoading } = useKpiOverview(activeFilter);
   const { data: topDirigentes, isLoading: topLoading } = useTopDirigentes(10);
   const { data: postsData, isLoading: postsLoading } = useSocialPosts({ per_page: 5 });
   const { data: systemStatus } = useSystemStatus();
 
+  // Use first dirigente's ID for sentiment trend (backend requires dirigente_id)
+  const firstDirigenteId = topDirigentes?.[0]?.id;
+  const filterDays: Record<typeof activeFilter, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
+  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(
+    filterDays[activeFilter],
+    firstDirigenteId,
+    { platform: platformFilter || undefined, includeRts },
+  );
+
   const kpiData = kpi ?? DEFAULT_KPI;
   const trendData = sentimentData ?? [];
-  const topData =
-    topDirigentes?.map((d) => ({ name: d.nombre, value: d.ipd_score })) ?? [];
   const posts = postsData?.items ?? [];
+
+  // Aggregate followers by platform across all visible dirigentes
+  const PLATFORM_LABELS: Record<string, string> = {
+    twitter: "Twitter", x: "Twitter",
+    instagram: "Instagram",
+    facebook: "Facebook",
+    tiktok: "TikTok",
+    youtube: "YouTube",
+    bluesky: "Bluesky",
+  };
+  const platformColors: Record<string, string> = {
+    Twitter: "#1DA1F2",
+    Instagram: "#E4405F",
+    Facebook: "#1877F2",
+    TikTok: "#010101",
+    YouTube: "#FF0000",
+    Bluesky: "#0085FF",
+  };
+  const platformData = (() => {
+    const map: Record<string, number> = {};
+    for (const d of topDirigentes ?? []) {
+      for (const p of (d as any).social_profiles ?? []) {
+        const raw = (p.platform ?? "").toLowerCase();
+        const label = PLATFORM_LABELS[raw] ?? (raw.charAt(0).toUpperCase() + raw.slice(1));
+        map[label] = (map[label] ?? 0) + (p.followers_count ?? p.followers ?? 0);
+      }
+    }
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value, fill: platformColors[name] ?? "hsl(var(--chart-accent))" }))
+      .sort((a, b) => b.value - a.value);
+  })();
 
   const hasActiveAlerts = kpiData.active_alerts > 0;
 
+  // Disclaimer role-aware · interim mientras el motor §9.8 conecta afiliación al sentimiento
+  // Ver .context/BLOCKERS.md B-23-03
+  const primaryDirigente = topDirigentes?.[0];
+  const rolInferido = rolFromPartido(primaryDirigente?.partido);
+  const sentimientoDisclaimer = disclaimerSentimientoCrudo(rolInferido);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0">
       {/* ── Header ──────────────────────────────────────────── */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -131,9 +196,17 @@ export default function OverviewPage() {
             Dashboard
           </h1>
           <CurrentDateTime />
+          <a
+            href="/dashboard/settings/analisis-politico"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-400"
+            title="Tu análisis es deliberado por 3 IAs y revisado por MD Consultoría"
+          >
+            <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Analisis Contextual · 3 IAs deliberaron
+          </a>
         </div>
 
-        <nav aria-label="Filtros de periodo" className="flex gap-2">
+        <nav aria-label="Filtros de periodo" className="flex flex-wrap gap-2">
           {TIME_FILTERS.map((filter) => (
             <button
               key={filter.value}
@@ -152,41 +225,52 @@ export default function OverviewPage() {
         </nav>
       </header>
 
-      {/* ── KPI Cards ───────────────────────────────────────── */}
+      {/* ── KPI Cards — BentoGrid ─────────────────────────────── */}
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 w-full min-w-0"
         aria-label="Indicadores clave"
       >
         {kpiLoading
           ? Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="card-elevated">
-                <CardContent className="p-5">
+              <Card key={i} className="card-elevated bento-enter">
+                <CardContent className="p-6">
                   <Skeleton className="h-4 w-24 mb-3" />
-                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className={i < 2 ? "h-10 w-20" : "h-8 w-16"} />
                 </CardContent>
               </Card>
             ))
-          : kpiCards.map((card) => {
-              const value = kpiData[card.key];
+          : kpiCards.map((card, idx) => {
+              const rawValue = kpiData[card.key];
               const change = kpiData[card.changeKey];
-              const isPositive = change >= 0;
+              const hasChange = change !== null && change !== undefined;
+              const isPositive = hasChange && (change as number) >= 0;
               const showPulse = card.isAlerts && hasActiveAlerts;
+              const isHero = idx < 2;
+
+              // Special rendering for "Tema Urgente" — show the alert text
+              const isTemaCard = card.key === "active_alerts";
+              const temaText = kpiData.tema_urgente;
 
               return (
+                <FadeUp key={card.key} index={idx}>
                 <Card
-                  key={card.key}
-                  className={`card-elevated ${
-                    card.isAlerts ? "accent-bar-left" : ""
-                  }`}
+                  className={`card-elevated ${card.isAlerts ? "accent-bar-left" : ""}`}
                   data-active={card.isAlerts && hasActiveAlerts ? "true" : undefined}
                 >
-                  <CardContent className="p-5">
+                  <CardContent className={isHero ? "p-6" : "p-6"}>
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        {card.title}
-                      </p>
+                      <div>
+                        <p className={`font-medium text-muted-foreground ${isHero ? "text-sm" : "text-sm"}`}>
+                          {card.title}
+                        </p>
+                        {card.subtitle && (
+                          <p className="text-xs text-muted-foreground/70">
+                            {card.subtitle}
+                          </p>
+                        )}
+                      </div>
                       <div className="relative">
-                        <card.icon className="h-4.5 w-4.5 text-muted-foreground" />
+                        <card.icon className={`text-muted-foreground ${isHero ? "h-5 w-5" : "h-4.5 w-4.5"}`} />
                         {showPulse && (
                           <span
                             className="absolute -right-0.5 -top-0.5 block h-2 w-2 rounded-full bg-red-500 pulse-dot"
@@ -195,32 +279,72 @@ export default function OverviewPage() {
                         )}
                       </div>
                     </div>
-                    <div className="mt-2 flex items-end justify-between">
-                      <p
-                        className="tabular-nums font-heading text-2xl font-bold"
-                        data-numeric="true"
-                      >
-                        {card.format(value)}
-                      </p>
-                      <span
-                        className={`flex items-center text-xs font-medium ${
-                          isPositive
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {isPositive ? (
-                          <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" />
+                    <div className={`flex items-end justify-between ${isHero ? "mt-4" : "mt-2"}`}>
+                      {isTemaCard ? (
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <p
+                            className={`line-clamp-2 text-sm font-semibold ${
+                              temaText ? "text-foreground" : "text-muted-foreground"
+                            }`}
+                            title={temaText ?? undefined}
+                          >
+                            {temaText ?? "Sin alertas en el periodo"}
+                          </p>
+                          {temaText && (
+                            <p
+                              className="rounded-sm border border-amber-300/40 bg-amber-50/70 px-1.5 py-1 text-[10px] leading-tight text-amber-900 dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-200"
+                              title={sentimientoDisclaimer}
+                            >
+                              <span className="font-semibold">Sentimiento crudo.</span>{" "}
+                              {rolInferido === "oposicion"
+                                ? "Tu rol es oposición — críticas al gobierno pueden leerse como positivas para tu narrativa."
+                                : rolInferido === "oficialismo"
+                                  ? "Tu rol es oficialismo — críticas al gobierno aquí son riesgo real."
+                                  : "Rol independiente — signo refleja tono literal."}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p
+                          className={`tabular-nums font-heading font-bold ${isHero ? "text-3xl" : "text-2xl"}`}
+                          data-numeric="true"
+                        >
+                          {card.format(Number(rawValue))}
+                        </p>
+                      )}
+                      {!isTemaCard && (
+                        hasChange ? (
+                          <span
+                            className={`flex items-center text-xs font-medium ${
+                              isPositive
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-red-600 dark:text-red-400"
+                            }`}
+                            aria-label={`${isPositive ? "Aumento" : "Disminucion"} de ${Math.abs(change as number)} por ciento`}
+                          >
+                            {isPositive ? (
+                              <ArrowUpRight className="mr-0.5 h-3.5 w-3.5" aria-hidden="true" />
+                            ) : (
+                              <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" aria-hidden="true" />
+                            )}
+                            <span data-numeric="true" className="tabular-nums">
+                              {Math.abs(change as number)}%
+                            </span>
+                          </span>
                         ) : (
-                          <ArrowDownRight className="mr-0.5 h-3.5 w-3.5" />
-                        )}
-                        <span data-numeric="true" className="tabular-nums">
-                          {Math.abs(change)}%
-                        </span>
-                      </span>
+                          <span
+                            className="text-xs font-medium text-muted-foreground/60 tabular-nums"
+                            title="Sin histórico suficiente para calcular delta"
+                            aria-label="Sin cambio disponible"
+                          >
+                            —
+                          </span>
+                        )
+                      )}
                     </div>
                   </CardContent>
                 </Card>
+                </FadeUp>
               );
             })}
       </section>
@@ -284,78 +408,142 @@ export default function OverviewPage() {
         </span>
       </div>
 
-      {/* ── Charts Row ──────────────────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* Sentiment trend -- larger */}
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Tendencia de Sentimiento</CardTitle>
-            <CardDescription>Ultimos 30 dias</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {sentimentLoading ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : trendData.length === 0 ? (
-              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
-                Sin datos de sentimiento disponibles
-              </div>
-            ) : (
-              <SentimentLineChart data={trendData} />
-            )}
-          </CardContent>
-        </Card>
+      {/* ── Alerts + Seguidores por Plataforma ─────────────── */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 w-full min-w-0">
+        {/* Crisis Alerts — compact column */}
+        <div className="md:col-span-2 lg:col-span-3 space-y-2">
+          {hasActiveAlerts && (
+            <p
+              className="rounded-sm border border-amber-300/40 bg-amber-50/70 px-2 py-1 text-[10px] leading-tight text-amber-900 dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-200"
+              role="note"
+              aria-label="Disclaimer sobre signo de sentimiento"
+            >
+              <span className="font-semibold">Sentimiento crudo ·</span> {sentimientoDisclaimer}
+            </p>
+          )}
+          {hasActiveAlerts ? (
+            <CrisisAlertList limit={3} compact />
+          ) : (
+            <div className="flex h-full min-h-[80px] items-center justify-center rounded-lg border border-dashed border-border/50 text-sm text-muted-foreground">
+              Sin alertas activas
+            </div>
+          )}
+        </div>
 
-        {/* Top dirigentes by IPD */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Top Penetracion Digital</CardTitle>
+        {/* Followers by platform */}
+        <Card className="md:col-span-2 lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle>Seguidores por Plataforma</CardTitle>
+            <CardDescription>Audiencia total por red social</CardDescription>
           </CardHeader>
           <CardContent>
             {topLoading ? (
               <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-6 w-full" />
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full" />
                 ))}
               </div>
-            ) : topData.length === 0 ? (
+            ) : platformData.length === 0 ? (
               <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-                Sin datos de dirigentes
+                Sin perfiles sociales
               </div>
             ) : (
               <div className="space-y-3">
-                {topData.slice(0, 10).map((item, index) => (
-                  <div
-                    key={item.name}
-                    className="flex items-center gap-3"
-                  >
-                    <span
-                      className="tabular-nums flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
-                      data-numeric="true"
-                      aria-label={`Posicion ${index + 1}`}
-                    >
-                      {index + 1}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {item.name}
-                    </span>
-                    <span
-                      className="tabular-nums text-sm font-semibold"
-                      data-numeric="true"
-                    >
-                      {item.value.toFixed(1)}
-                    </span>
-                  </div>
-                ))}
+                {platformData.map((p) => {
+                  const max = platformData[0]?.value || 1;
+                  const pct = Math.max((p.value / max) * 100, 4);
+                  return (
+                    <div key={p.name} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{p.name}</span>
+                        <span className="tabular-nums text-muted-foreground" data-numeric="true">
+                          {formatNumber(p.value)}
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-full rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, backgroundColor: p.fill }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="mt-2 pt-2 border-t flex items-center justify-between text-sm">
+                  <span className="font-medium text-muted-foreground">Total</span>
+                  <span className="tabular-nums font-bold" data-numeric="true">
+                    {formatNumber(platformData.reduce((s, p) => s + p.value, 0))}
+                  </span>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* ── Bottom Row: Posts + Map ─────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* Recent posts */}
-        <section className="space-y-3 lg:col-span-3" aria-label="Publicaciones recientes">
+      {/* ── Charts Row ──────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>Tono Discursivo</CardTitle>
+              <CardDescription>
+                Clasificación del contenido publicado · últimos 30 días{includeRts ? "" : " · sin RTs"} · &gt;20 chars
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="sr-only">Filtrar por red social</span>
+                <select
+                  value={platformFilter}
+                  onChange={(e) => setPlatformFilter(e.target.value as typeof platformFilter)}
+                  className="h-7 rounded-md border border-border bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Red social"
+                >
+                  <option value="">Todas las redes</option>
+                  <option value="twitter">Twitter/X</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="youtube">YouTube</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIncludeRts((v) => !v)}
+                aria-pressed={includeRts}
+                className={`h-7 rounded-md border px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  includeRts
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
+                }`}
+                title="Incluir retweets en el análisis"
+              >
+                RT
+              </button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {sentimentLoading ? (
+            <Skeleton className="h-[300px] w-full" aria-label="Cargando datos de sentimiento" />
+          ) : trendData.length === 0 ? (
+            <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground" role="status">
+              Sin datos de sentimiento disponibles
+            </div>
+          ) : (
+            <SentimentLineChart data={trendData} />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Competitor Snapshot ──────────────────────────────── */}
+      <FadeUp index={0}>
+        <CompetitorSnapshotCard />
+      </FadeUp>
+
+      {/* ── Bottom Row: Posts ───────────────────────────────── */}
+      <section className="space-y-3" aria-label="Publicaciones recientes">
           <h2 className="font-heading text-lg font-semibold">
             Publicaciones Recientes
           </h2>
@@ -375,29 +563,7 @@ export default function OverviewPage() {
           ) : (
             posts.map((post) => <PostCard key={post.id} post={post} />)
           )}
-        </section>
-
-        {/* Map preview */}
-        <Card className="flex flex-col lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Mapa Electoral</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 p-0">
-            <div className="h-[300px] overflow-hidden">
-              <ElectoralMap className="h-full" />
-            </div>
-          </CardContent>
-          <CardFooter className="justify-end border-t px-6 py-3">
-            <Link
-              href="/dashboard/mapa"
-              className="flex items-center gap-1 text-sm font-medium text-primary transition-colors duration-150 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              Ver mapa completo
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </CardFooter>
-        </Card>
-      </div>
+      </section>
 
       {/* ── Pulse dot animation (CSS-only, respects reduced-motion) ── */}
       <style jsx>{`

@@ -7,7 +7,10 @@ import type {
   PaginatedResponse,
 } from "../types";
 
-export function useDirigentes(filters: DirigenteFilters = {}) {
+export function useDirigentes(
+  filters: DirigenteFilters = {},
+  options: { enabled?: boolean } = {},
+) {
   const params = new URLSearchParams();
   if (filters.partido) params.set("partido", filters.partido);
   if (filters.estado) params.set("estado", filters.estado);
@@ -23,6 +26,7 @@ export function useDirigentes(filters: DirigenteFilters = {}) {
   return useQuery({
     queryKey: ["dirigentes", filters],
     queryFn: () => api.get<PaginatedResponse<Dirigente>>(endpoint),
+    enabled: options.enabled ?? true,
   });
 }
 
@@ -31,6 +35,40 @@ export function useDirigente(id: number | string) {
     queryKey: ["dirigente", id],
     queryFn: () => api.get<DirigenteDetail>(`/dirigentes/${id}`),
     enabled: !!id,
+  });
+}
+
+export interface CrecimientoPlatform {
+  platform: string;
+  handle: string;
+  followers_now: number;
+  delta_pct: { "7d": number | null; "30d": number | null; "90d": number | null };
+  trend_30v30_pct: number | null;
+  semaforo: "verde" | "ambar" | "rojo" | "desconocido";
+  data_source: string;
+  last_manual_update: string | null;
+  stale_manual: boolean;
+}
+
+export interface CrecimientoSeriesPoint {
+  taken_at: string;
+  platform: string;
+  followers: number;
+  posts: number;
+}
+
+export interface CrecimientoResponse {
+  dirigente_id: number;
+  platforms: CrecimientoPlatform[];
+  series: CrecimientoSeriesPoint[];
+}
+
+export function useDirigenteCrecimiento(id: number | string) {
+  return useQuery({
+    queryKey: ["dirigente-crecimiento", id],
+    queryFn: () => api.get<CrecimientoResponse>(`/dirigentes/${id}/crecimiento`),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

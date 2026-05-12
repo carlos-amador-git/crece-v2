@@ -83,3 +83,45 @@ celerybeat.pid
 *.pt
 *.onnx
 /models/
+
+# ── Scraper state (runtime) ──────────────────────────────────
+*.db
+!*.db.example
+backend/vendor/
+.vercel
+
+# Graphify knowledge graph (local analysis)
+graphify-out/
+
+# ── Claude Code session artifacts ────────────────────────────
+.claude/
+
+# ── Local secrets (never track) ──────────────────────────────
+.env.vercel
+
+# ── Ephemeral session state ──────────────────────────────────
+.context/HANDOFF
+
+# ── Backend local cache and state (gigabytes) ────────────────
+backend/.cache/
+backend/.local/
+
+# ── Frontend env with rotating Cloudflare tunnel URLs ────────
+frontend/.env.production
+
+# ── PII / LFPDPPP (Ruta C — D-DATA-01) ────────────────────────
+# Datos originales del CRECE Oracle APEX con PII de ~63K ciudadanos.
+# NUNCA commitear. Gated por env var CRECE_MC_RAW_DIR.
+backend/data/raw/mc_original/
+backend/.config/
+backend/.pki/
+backend/.wdm/
+backend/data/models/*.pkl
+backend/.env.scraping-keys
+
+backend/data/raw/ine_cartografia/**/*.shp
+backend/data/raw/ine_cartografia/**/*.dbf
+backend/data/raw/ine_cartografia/**/*.shx
+backend/data/raw/ine_cartografia/**/*.prj
+backend/data/raw/ine_cartografia/**/*.cpg
+backend/data/raw/ine_cartografia/**/*.zip

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, date
+from datetime import UTC, date, datetime
 from enum import StrEnum
 
 from sqlalchemy import (
@@ -131,9 +131,7 @@ class AlertaCompliance(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    resuelta_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    resuelta_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

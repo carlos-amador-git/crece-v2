@@ -18,6 +18,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 from app.core.security import hash_password
+from app.models.organizacion import Organizacion
 from app.models.user import User, Role
 from app.models.dirigente import Dirigente
 from app.models.social import SocialProfile, SocialPost, Platform, PostType, SentimentLabel
@@ -34,13 +35,27 @@ async def seed():
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with async_session() as session:
-        # ── Users ──────────────────────────────────────────────────
+        # ── Organización raíz (D-DX-01 fix) ────────────────────────
+        # El endpoint POST /api/v1/api-keys requiere current_user.org_id
+        # no NULL (modelo ApiKey.org_id es NOT NULL con FK a organizaciones).
+        # Sin este bootstrap, `make reset-db && make seed` dejaba users con
+        # org_id=NULL y cualquier creación de API key reventaba con 500.
+        org_mc = Organizacion(
+            nombre="Movimiento Ciudadano CDMX",
+            slug="mc-cdmx",
+            tipo="PARTIDO",
+        )
+        session.add(org_mc)
+        await session.flush()
+
+        # ── Users (todos scopados a la org raíz) ──────────────────
         admin = User(
             email="admin@consultoriamd.com",
             hashed_password=hash_password("crece2026!"),
             full_name="Marx Chávez",
             role=Role.ADMIN,
             is_active=True,
+            org_id=org_mc.id,
         )
         analyst = User(
             email="analista@consultoriamd.com",
@@ -48,6 +63,7 @@ async def seed():
             full_name="Ana García",
             role=Role.ANALYST,
             is_active=True,
+            org_id=org_mc.id,
         )
         field_op = User(
             email="campo@consultoriamd.com",
@@ -55,8 +71,44 @@ async def seed():
             full_name="Carlos López",
             role=Role.FIELD_OPERATOR,
             is_active=True,
+            org_id=org_mc.id,
         )
-        session.add_all([admin, analyst, field_op])
+        # Demo users for dirigentes (login page quick access)
+        user_pina = User(
+            email="pina@crece.mx",
+            hashed_password=hash_password("demo2026!"),
+            full_name="Alejandro Piña Medina",
+            role=Role.VIEWER,
+            is_active=True,
+            org_id=org_mc.id,
+        )
+        user_solano = User(
+            email="solano@crece.mx",
+            hashed_password=hash_password("demo2026!"),
+            full_name="Rafael Solano Pérez",
+            role=Role.VIEWER,
+            is_active=True,
+            org_id=org_mc.id,
+        )
+        session.add_all([admin, analyst, field_op, user_pina, user_solano])
+        await session.flush()
+
+        # ── Organizaciones adicionales (Multi-Tenant) ─────────────
+        org_oaxaca = Organizacion(
+            nombre="Gobierno Oaxaca",
+            slug="gob-oaxaca",
+            tipo="GOBIERNO",
+            estado="Oaxaca",
+            config={"is_demo": True, "has_synthetic_data": True},
+        )
+        org_cdmx_ind = Organizacion(
+            nombre="CDMX Independiente",
+            slug="cdmx-ind",
+            tipo="GOBIERNO",
+            estado="Ciudad de México",
+            config={"is_demo": True, "has_synthetic_data": True},
+        )
+        session.add_all([org_oaxaca, org_cdmx_ind])
         await session.flush()
 
         # ── Dirigentes MC CDMX ────────────────────────────────────
@@ -67,6 +119,7 @@ async def seed():
             estado="Ciudad de México",
             municipio="CDMX",
             seccion_electoral="0901",
+            org_id=org_mc.id,
         )
         solano = Dirigente(
             full_name="Rafael Solano Pérez",
@@ -75,8 +128,94 @@ async def seed():
             estado="Ciudad de México",
             municipio="CDMX",
             seccion_electoral="0905",
+            org_id=org_mc.id,
         )
         session.add_all([pina, solano])
+        await session.flush()
+
+        # Link demo users to dirigentes
+        user_pina.dirigente_id = pina.id
+        user_solano.dirigente_id = solano.id
+        await session.flush()
+
+        # ── Dirigentes GOB-OAXACA ─────────────────────────────────
+        pineda = Dirigente(
+            full_name="Saymi Adriana Pineda Velasco",
+            cargo="Secretaria de Turismo Oaxaca",
+            partido="MORENA",
+            estado="Oaxaca",
+            municipio="Oaxaca de Juárez",
+            org_id=org_oaxaca.id,
+        )
+        nolasco = Dirigente(
+            full_name="Yesenia Nolasco Ramírez",
+            cargo="Secretaria de Movilidad (SEMOVI) Oaxaca",
+            partido="MORENA",
+            estado="Oaxaca",
+            municipio="Oaxaca de Juárez",
+            org_id=org_oaxaca.id,
+        )
+        session.add_all([pineda, nolasco])
+        await session.flush()
+
+        # ── Dirigentes CDMX-IND ───────────────────────────────────
+        jimenez = Dirigente(
+            full_name="Gabriela Jiménez Godoy",
+            cargo="Diputada Federal, Vicecoordinadora",
+            partido="MORENA",
+            estado="Ciudad de México",
+            municipio="CDMX",
+            org_id=org_cdmx_ind.id,
+        )
+        cravioto = Dirigente(
+            full_name="César Cravioto Romero",
+            cargo="Secretario de Gobierno CDMX",
+            partido="MORENA",
+            estado="Ciudad de México",
+            municipio="CDMX",
+            org_id=org_cdmx_ind.id,
+        )
+        session.add_all([jimenez, cravioto])
+        await session.flush()
+
+        # ── Users para nuevas orgs ────────────────────────────────
+        user_pineda = User(
+            email="pineda@crece.mx",
+            hashed_password=hash_password("demo2026!"),
+            full_name="Saymi Pineda Velasco",
+            role=Role.VIEWER,
+            is_active=True,
+            org_id=org_oaxaca.id,
+            dirigente_id=pineda.id,
+        )
+        user_nolasco = User(
+            email="nolasco@crece.mx",
+            hashed_password=hash_password("demo2026!"),
+            full_name="Yesenia Nolasco Ramírez",
+            role=Role.VIEWER,
+            is_active=True,
+            org_id=org_oaxaca.id,
+            dirigente_id=nolasco.id,
+        )
+        user_jimenez = User(
+            email="jimenez@crece.mx",
+            hashed_password=hash_password("demo2026!"),
+            full_name="Gabriela Jiménez Godoy",
+            role=Role.VIEWER,
+            is_active=True,
+            org_id=org_cdmx_ind.id,
+            dirigente_id=jimenez.id,
+        )
+        user_cravioto = User(
+            email="cravioto@crece.mx",
+            hashed_password=hash_password("demo2026!"),
+            full_name="César Cravioto Romero",
+            role=Role.VIEWER,
+            is_active=True,
+            org_id=org_cdmx_ind.id,
+            dirigente_id=cravioto.id,
+        )
+        session.add_all([user_pineda, user_nolasco, user_jimenez, user_cravioto])
         await session.flush()
 
         # ── Social Profiles: Piña ─────────────────────────────────
@@ -128,9 +267,111 @@ async def seed():
             posts_count=50,
         )
 
+        # ── Social Profiles: Pineda (Oaxaca) ─────────────────────
+        pineda_twitter = SocialProfile(
+            dirigente_id=pineda.id,
+            platform=Platform.TWITTER,
+            handle="@saymipinedav",
+            url="https://x.com/saymipinedav",
+            followers_count=8800,
+            following_count=1500,
+            posts_count=3200,
+        )
+        pineda_instagram = SocialProfile(
+            dirigente_id=pineda.id,
+            platform=Platform.INSTAGRAM,
+            handle="@saymipinedavelasco",
+            url="https://instagram.com/saymipinedavelasco",
+            followers_count=12000,
+            following_count=950,
+            posts_count=680,
+        )
+
+        # ── Social Profiles: Nolasco (Oaxaca) ────────────────────
+        nolasco_twitter = SocialProfile(
+            dirigente_id=nolasco.id,
+            platform=Platform.TWITTER,
+            handle="@Yes_Nolasco",
+            url="https://x.com/Yes_Nolasco",
+            followers_count=5200,
+            following_count=890,
+            posts_count=2100,
+        )
+        nolasco_facebook = SocialProfile(
+            dirigente_id=nolasco.id,
+            platform=Platform.FACEBOOK,
+            handle="YesNolasco",
+            url="https://facebook.com/YesNolasco",
+            followers_count=32000,
+            following_count=0,
+            posts_count=1500,
+        )
+
+        # ── Social Profiles: Jiménez (CDMX-IND) ─────────────────
+        jimenez_twitter = SocialProfile(
+            dirigente_id=jimenez.id,
+            platform=Platform.TWITTER,
+            handle="@GabyJimenezMX",
+            url="https://x.com/GabyJimenezMX",
+            followers_count=45000,
+            following_count=2300,
+            posts_count=18000,
+        )
+        jimenez_instagram = SocialProfile(
+            dirigente_id=jimenez.id,
+            platform=Platform.INSTAGRAM,
+            handle="@gabyjimenezgo",
+            url="https://instagram.com/gabyjimenezgo",
+            followers_count=28000,
+            following_count=1200,
+            posts_count=950,
+        )
+        jimenez_facebook = SocialProfile(
+            dirigente_id=jimenez.id,
+            platform=Platform.FACEBOOK,
+            handle="GabyJimenezGo",
+            url="https://facebook.com/GabyJimenezGo",
+            followers_count=92000,
+            following_count=0,
+            posts_count=4200,
+        )
+        jimenez_tiktok = SocialProfile(
+            dirigente_id=jimenez.id,
+            platform=Platform.TIKTOK,
+            handle="@gabyjimenezmx",
+            url="https://tiktok.com/@gabyjimenezmx",
+            followers_count=15000,
+            following_count=100,
+            posts_count=320,
+        )
+
+        # ── Social Profiles: Cravioto (CDMX-IND) ────────────────
+        cravioto_twitter = SocialProfile(
+            dirigente_id=cravioto.id,
+            platform=Platform.TWITTER,
+            handle="@craviotocesar",
+            url="https://x.com/craviotocesar",
+            followers_count=67000,
+            following_count=3100,
+            posts_count=25000,
+        )
+        cravioto_facebook = SocialProfile(
+            dirigente_id=cravioto.id,
+            platform=Platform.FACEBOOK,
+            handle="craviotocesar",
+            url="https://facebook.com/craviotocesar",
+            followers_count=48000,
+            following_count=0,
+            posts_count=3800,
+        )
+
         session.add_all([
             pina_twitter, pina_instagram, pina_facebook,
             solano_instagram, solano_linkedin,
+            pineda_twitter, pineda_instagram,
+            nolasco_twitter, nolasco_facebook,
+            jimenez_twitter, jimenez_instagram, jimenez_facebook, jimenez_tiktok,
+            cravioto_twitter, cravioto_facebook,
         ])
         await session.flush()
 
@@ -302,15 +543,15 @@ async def seed():
             es_rival=True,
         )
         pan_cdmx = Competidor(
-            nombre="Representante PAN CDMX",
+            nombre="Santiago Taboada Cortina",
             partido="PAN",
-            cargo="Dirigente Estatal",
+            cargo="Candidato Jefe de Gobierno CDMX",
             es_rival=True,
         )
         session.add_all([morena_cdmx, pan_cdmx])
         await session.flush()
 
-        comp_profile = CompetidorSocialProfile(
+        comp_profile_morena_tw = CompetidorSocialProfile(
             competidor_id=morena_cdmx.id,
             platform=Platform.TWITTER,
             handle="@martlobo",
@@ -319,7 +560,25 @@ async def seed():
             following_count=3200,
             posts_count=45000,
         )
-        session.add(comp_profile)
+        comp_profile_pan_tw = CompetidorSocialProfile(
+            competidor_id=pan_cdmx.id,
+            platform=Platform.TWITTER,
+            handle="@Santiago_Taboada",
+            url="https://x.com/Santiago_Taboada",
+            followers_count=198000,
+            following_count=2100,
+            posts_count=32000,
+        )
+        comp_profile_pan_ig = CompetidorSocialProfile(
+            competidor_id=pan_cdmx.id,
+            platform=Platform.INSTAGRAM,
+            handle="@santiagotaboadac",
+            url="https://instagram.com/santiagotaboadac",
+            followers_count=156000,
+            following_count=1200,
+            posts_count=2800,
+        )
+        session.add_all([comp_profile_morena_tw, comp_profile_pan_tw, comp_profile_pan_ig])
 
         # ── Sample AI Plan ────────────────────────────────────────
         plan = PlanIA(
@@ -589,13 +848,14 @@ async def seed():
 
         await session.commit()
         print("\n✅ Seed completado exitosamente!")
-        print("   - 3 usuarios (admin, analista, campo)")
-        print("   - 2 dirigentes (Piña, Solano)")
-        print("   - 5 perfiles sociales")
+        print("   - 3 organizaciones (MC-CDMX, GOB-OAXACA, CDMX-IND)")
+        print("   - 9 usuarios (admin, analista, campo + 6 dirigentes)")
+        print("   - 6 dirigentes (Piña, Solano, Pineda, Nolasco, Jiménez, Cravioto)")
+        print("   - 15 perfiles sociales")
         print("   - 6 posts de ejemplo")
         print("   - 5 secciones electorales CDMX")
         print("   - 5 registros de intención de voto")
-        print("   - 2 competidores")
+        print("   - 2 competidores (Batres, Taboada) con 3 perfiles sociales")
         print("   - 1 plan IA de ejemplo")
         print("   - 5 ciudadanos (2 promotores)")
         print("   - 4 eventos (1 completado, 3 programados)")

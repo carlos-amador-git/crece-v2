@@ -118,9 +118,7 @@ class PuntoRuta(Base):
         nullable=True,
     )
     visitado: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    visitado_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    visitado_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     resultado: Mapped[ResultadoVisita | None] = mapped_column(
         Enum(ResultadoVisita, name="resultado_visita", native_enum=True),
         nullable=True,

@@ -117,6 +117,9 @@ class Ciudadano(Base):
     # Field capture
     foto_ine_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
+    # Data provenance
+    data_source: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
     # Multi-tenant
     org_id: Mapped[int | None] = mapped_column(
         ForeignKey("organizaciones.id", ondelete="CASCADE"),

@@ -234,8 +234,18 @@ function LoginForm() {
             </Button>
           </form>
 
+          {/* Forgot password */}
+          <p className="mt-6 text-center text-sm">
+            <a
+              href="/forgot-password"
+              className="text-muted-foreground transition-colors duration-150 hover:text-foreground"
+            >
+              ¿Olvidaste tu contraseña?
+            </a>
+          </p>
+
           {/* Version badge */}
-          <p className="mt-10 text-center text-xs text-muted-foreground">
+          <p className="mt-8 text-center text-xs text-muted-foreground">
             CRECE v2.0
           </p>
         </div>

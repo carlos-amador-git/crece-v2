@@ -80,8 +80,9 @@ export default function ScoringPage() {
 
   const segments = kpi?.segments ?? [];
   const pieData = segments.map((s: ScoringSegment) => ({
-    name: SEGMENT_LABELS[s.segment] ?? s.segment,
+    name: `${SEGMENT_LABELS[s.segment] ?? s.segment} (${s.percentage.toFixed(1)}%)`,
     value: s.count,
+    percentage: s.percentage,
     color: SEGMENT_COLORS[s.segment] ?? "hsl(212, 18%, 70%)",
   }));
 
@@ -109,9 +110,18 @@ export default function ScoringPage() {
         </Button>
       </header>
 
+      {/* Data source notice */}
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+        <p className="font-medium">Datos sinteticos — INEGI Censo 2020 CDMX</p>
+        <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+          606 ciudadanos generados con distribuciones demograficas verificables (edad, genero, escolaridad por alcaldia).
+          En produccion, cada dirigente vera solo los ciudadanos de sus secciones electorales asignadas.
+        </p>
+      </div>
+
       {/* KPI Cards */}
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 md:grid-cols-4"
         aria-label="Metricas de scoring"
       >
         {kpiLoading ? (
@@ -176,9 +186,9 @@ export default function ScoringPage() {
       </section>
 
       {/* Charts + Table */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         {/* Pie Chart */}
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Distribucion por Segmento</CardTitle>
             <CardDescription>Proporcion de votantes por clasificacion</CardDescription>
@@ -209,7 +219,10 @@ export default function ScoringPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => formatNumber(value)}
+                    formatter={(value: number, name: string) => [
+                      `${formatNumber(value)} ciudadanos`,
+                      name,
+                    ]}
                   />
                   <Legend />
                 </PieChart>
@@ -219,7 +232,7 @@ export default function ScoringPage() {
         </Card>
 
         {/* Heatmap Table */}
-        <Card className="lg:col-span-3">
+        <Card className="md:col-span-1 lg:col-span-3">
           <CardHeader>
             <CardTitle>Scoring por Seccion</CardTitle>
             <CardDescription>

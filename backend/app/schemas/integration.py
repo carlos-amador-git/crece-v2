@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
-
+from pydantic import BaseModel, field_validator
 
 # ── Campaign Schemas ─────────────────────────────────────
 
@@ -84,6 +83,11 @@ class ContentPieceResponse(BaseModel):
     modelo_ia: str
     estado: str
     created_at: datetime
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def coerce_uuid_to_str(cls, v: object) -> str:
+        return str(v)
 
     model_config = {"from_attributes": True}
 

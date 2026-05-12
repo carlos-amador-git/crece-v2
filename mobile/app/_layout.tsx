@@ -23,7 +23,7 @@ function RootNavigator() {
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
-      router.replace("/(tabs)/encuestas");
+      router.replace("/(tabs)/dashboard");
     }
   }, [isAuthenticated, isLoading, segments, router]);
 

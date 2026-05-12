@@ -11,7 +11,7 @@ export default function IndexRoute() {
   const { isAuthenticated } = useAuth();
 
   if (isAuthenticated) {
-    return <Redirect href="/(tabs)/encuestas" />;
+    return <Redirect href="/(tabs)/dashboard" />;
   }
 
   return <Redirect href="/(auth)/login" />;

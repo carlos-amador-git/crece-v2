@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user_or_api_key
+from app.core.security import get_current_user
 from app.models.ciudadano import Ciudadano
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
@@ -27,7 +27,7 @@ router = APIRouter()
 async def segment_ciudadanos(
     payload: CampaignSegmentRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> CampaignSegmentResponse:
     """Segment ciudadanos by multiple criteria for campaign targeting.
 
@@ -54,9 +54,7 @@ async def segment_ciudadanos(
 
     if payload.programa_social:
         # JSONB contains check — programas_sociales is a JSONB column
-        query = query.where(
-            Ciudadano.programas_sociales.op("?")(payload.programa_social)
-        )
+        query = query.where(Ciudadano.programas_sociales.op("?")(payload.programa_social))
 
     if payload.excluir_contactados_dias:
         # Exclude ciudadanos with recent CRM interactions
@@ -104,7 +102,7 @@ async def segment_ciudadanos(
 async def create_campaign(
     payload: CampaignCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> CampaignResponse:
     """Create a new campaign."""
     from app.models.campaign_integration import Campaign
@@ -147,7 +145,7 @@ async def create_campaign(
 @router.get("/", response_model=PaginatedResponse[CampaignResponse])
 async def list_campaigns(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
     estado: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -156,9 +154,7 @@ async def list_campaigns(
     from app.models.campaign_integration import Campaign
 
     query = select(Campaign).where(Campaign.org_id == current_user.org_id)
-    count_query = select(func.count(Campaign.id)).where(
-        Campaign.org_id == current_user.org_id
-    )
+    count_query = select(func.count(Campaign.id)).where(Campaign.org_id == current_user.org_id)
 
     if estado:
         query = query.where(Campaign.estado == estado)
@@ -168,9 +164,7 @@ async def list_campaigns(
     total = total_result.scalar_one()
 
     query = (
-        query.order_by(Campaign.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+        query.order_by(Campaign.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     result = await db.execute(query)
     items = list(result.scalars().all())
@@ -188,7 +182,7 @@ async def list_campaigns(
 async def get_campaign(
     campaign_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user_or_api_key)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> CampaignResponse:
     """Get a single campaign by UUID."""
     from uuid import UUID
@@ -201,7 +195,7 @@ async def get_campaign(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid campaign ID format",
-        )
+        ) from None
 
     result = await db.execute(
         select(Campaign).where(
@@ -211,8 +205,6 @@ async def get_campaign(
     )
     campaign = result.scalar_one_or_none()
     if campaign is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
     return CampaignResponse.model_validate(campaign)

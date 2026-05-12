@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +14,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
     # ── Database ──────────────────────────────────────────
@@ -28,6 +29,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 1440  # 24 hours
 
+    # ── PII encryption (D-DATA-02 LFPDPPP) ────────────────
+    # pgp_sym_encrypt symmetric key for ciudadanos_legacy PII columns.
+    # NEVER commit the real key. Rotation: scripts/rotate_pii_key.py (future).
+    PII_ENCRYPTION_KEY: str = "CHANGE-ME-pii-dev-key-min-32-chars"
+
     # ── MinIO ─────────────────────────────────────────────
     MINIO_ENDPOINT: str = "localhost:9000"
     MINIO_ACCESS_KEY: str = "minioadmin"
@@ -39,17 +45,31 @@ class Settings(BaseSettings):
     CLAUDE_API_KEY: str = ""
     CLAUDE_MODEL: str = "claude-sonnet-4-20250514"
 
+    # ── Ollama (local AI) ────────────────────────────────
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "gemma3:12b"
+    AI_PROVIDER: str = "claude"  # "claude" | "ollama"
+
     # ── YouTube Data API v3 ──────────────────────────────
     YOUTUBE_API_KEY: str = ""
+
+    # ── Twitter/X ────────────────────────────────────────
+    TWITTER_AUTH_TOKEN: str = ""  # auth_token cookie from x.com browser session (for Scweet)
 
     # ── TikTok ───────────────────────────────────────────
     TIKTOK_MS_TOKEN: str = ""
 
     # ── Facebook ─────────────────────────────────────────
-    FACEBOOK_COOKIES_FILE: str = ""
+    FACEBOOK_COOKIES_FILE: str = ""  # deprecated — kept for backward compat
+    FACEBOOK_C_USER: str = ""  # c_user cookie from authenticated FB session
+    FACEBOOK_XS: str = ""  # xs cookie from authenticated FB session
 
     # ── CORS ──────────────────────────────────────────────
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://frontend-zeta-sepia-46.vercel.app",
+    ]
 
     # ── Veda Electoral ───────────────────────────────────
     VEDA_ELECTORAL_ACTIVE: bool = False
@@ -59,8 +79,14 @@ class Settings(BaseSettings):
     # ── Blindaje Legal ───────────────────────────────────
     TOPE_CAMPANA_MXN: float = 500_000.0
 
-    # ── Webhooks ─────────────────────────────────────────
+    # ── Observability ────────────────────────────────────
+    BUGSINK_DSN: str = ""  # Sentry-compatible DSN for Bugsink error tracking
+    DISCORD_WEBHOOK_URL: str = ""  # F0.1 MVP · alertas 5xx/exception/429 via Discord webhook
+
+    # ── n8n Integration ──────────────────────────────────
     N8N_WEBHOOK_SECRET: str = ""
+    N8N_CAMPAIGN_WEBHOOK_URL: str = ""  # n8n webhook URL for campaign dispatch
+    N8N_CRECE_TOKEN: str = ""  # shared secret for CRECE→n8n auth (Gemini G1)
 
     # ── App ───────────────────────────────────────────────
     APP_ENV: str = "development"
@@ -74,6 +100,22 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+    @model_validator(mode="after")
+    def _guard_production_secrets(self) -> Settings:
+        """E.5 — Refuse to start in production with default secrets."""
+        if self.APP_ENV == "production":
+            _defaults = {
+                "JWT_SECRET": "CHANGE-ME-in-production",
+                "PII_ENCRYPTION_KEY": "CHANGE-ME-pii-dev-key-min-32-chars",
+            }
+            for field_name, default_val in _defaults.items():
+                if getattr(self, field_name) == default_val:
+                    raise ValueError(
+                        f"{field_name} still has its default value. "
+                        f"Set a real secret before running in production."
+                    )
+        return self
 
     @property
     def is_production(self) -> bool:

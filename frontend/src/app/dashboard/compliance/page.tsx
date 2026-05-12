@@ -27,15 +27,16 @@ import {
   type AlertaSeveridad,
 } from "@/lib/api/hooks/use-compliance";
 import { formatNumber, formatDate } from "@/lib/utils";
+import { ImportGastosDialog } from "@/components/compliance/import-gastos-dialog";
 import {
   Shield,
   DollarSign,
   AlertTriangle,
-  Bot,
   Play,
   Loader2,
   CheckCircle2,
   XCircle,
+  Upload,
 } from "lucide-react";
 
 function severityVariant(s: AlertaSeveridad) {
@@ -61,6 +62,7 @@ export default function CompliancePage() {
   const { data: alertas, isLoading: alertasLoading } = useAlertas();
   const runAudit = useRunAudit();
   const [running, setRunning] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const handleRunAudit = async () => {
     setRunning(true);
@@ -88,19 +90,25 @@ export default function CompliancePage() {
             Monitoreo de cumplimiento INE, gastos y deteccion de bots
           </p>
         </div>
-        <Button onClick={handleRunAudit} disabled={running} className="gap-2">
-          {running ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-          Run Audit
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
+            <Upload className="h-4 w-4" />
+            Importar Gastos
+          </Button>
+          <Button onClick={handleRunAudit} disabled={running} className="gap-2">
+            {running ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+            Run Audit
+          </Button>
+        </div>
       </header>
 
       {/* KPI Cards */}
       <section
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 md:grid-cols-4"
         aria-label="Metricas de compliance"
       >
         {reportLoading ? (
@@ -159,13 +167,14 @@ export default function CompliancePage() {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-muted-foreground">
-                    Bot Posts Detected
+                    Tope Campana INE
                   </p>
-                  <Bot className="h-4.5 w-4.5 text-muted-foreground" />
+                  <DollarSign className="h-4.5 w-4.5 text-muted-foreground" />
                 </div>
                 <p className="mt-2 font-heading text-2xl font-bold tabular-nums">
-                  {report?.bot_posts_detected ?? 0}
+                  $500K
                 </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">CDMX 2024</p>
               </CardContent>
             </Card>
           </>
@@ -173,9 +182,9 @@ export default function CompliancePage() {
       </section>
 
       {/* Gastos Table + Alertas */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         {/* Gastos */}
-        <Card className="lg:col-span-3">
+        <Card className="md:col-span-1 lg:col-span-3">
           <CardHeader>
             <CardTitle>Gastos Registrados</CardTitle>
             <CardDescription>Trazabilidad de gastos de campana</CardDescription>
@@ -233,7 +242,7 @@ export default function CompliancePage() {
         </Card>
 
         {/* Alertas */}
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Alertas</CardTitle>
             <CardDescription>Alertas de cumplimiento activas</CardDescription>
@@ -283,6 +292,67 @@ export default function CompliancePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Electoral Data 2024 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Referencia Electoral CDMX 2024</CardTitle>
+          <CardDescription>
+            Topes de gasto y datos de referencia INE para cumplimiento
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-lg border p-4">
+              <p className="text-xs font-medium text-muted-foreground">Tope de Gastos de Campana</p>
+              <p className="mt-1 font-heading text-xl font-bold">$500,000 MXN</p>
+              <p className="mt-1 text-xs text-muted-foreground">Por candidato a diputado local CDMX</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs font-medium text-muted-foreground">Tope Precampana</p>
+              <p className="mt-1 font-heading text-xl font-bold">$100,000 MXN</p>
+              <p className="mt-1 text-xs text-muted-foreground">20% del tope de campana</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs font-medium text-muted-foreground">Financiamiento Privado</p>
+              <p className="mt-1 font-heading text-xl font-bold">$50,000 MXN</p>
+              <p className="mt-1 text-xs text-muted-foreground">Maximo por aportante individual</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs font-medium text-muted-foreground">Lista Nominal CDMX</p>
+              <p className="mt-1 font-heading text-xl font-bold">7,459,827</p>
+              <p className="mt-1 text-xs text-muted-foreground">Ciudadanos con credencial vigente</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs font-medium text-muted-foreground">Participacion 2024</p>
+              <p className="mt-1 font-heading text-xl font-bold">62.3%</p>
+              <p className="mt-1 text-xs text-muted-foreground">Eleccion federal + local</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs font-medium text-muted-foreground">MC Votacion CDMX 2024</p>
+              <p className="mt-1 font-heading text-xl font-bold">8.7%</p>
+              <p className="mt-1 text-xs text-muted-foreground">~410K votos en CDMX</p>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+            <p className="font-medium">Categorias de gasto fiscalizables (INE)</p>
+            <div className="mt-2 grid grid-cols-2 gap-1 text-xs text-amber-700 dark:text-amber-300 sm:grid-cols-3">
+              <span>Propaganda</span>
+              <span>Operativos</span>
+              <span>Produccion</span>
+              <span>Transporte</span>
+              <span>Alimentacion</span>
+              <span>Alquiler inmuebles</span>
+              <span>Servicios personales</span>
+              <span>Publicidad en redes</span>
+              <span>Otros</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ImportGastosDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

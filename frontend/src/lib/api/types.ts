@@ -6,10 +6,14 @@
 export interface User {
   id: number;
   email: string;
-  nombre: string;
-  rol: "admin" | "analista" | "consultor";
+  full_name: string;
+  role: "admin" | "analyst" | "field_operator" | "viewer";
   avatar_url?: string;
   is_active: boolean;
+  dirigente_id?: number | null;
+  org_id?: number | null;
+  org_nombre?: string | null;
+  org_slug?: string | null;
 }
 
 export interface AuthTokens {
@@ -25,17 +29,15 @@ export interface LoginCredentials {
 
 export interface Dirigente {
   id: number;
-  nombre: string;
-  apellido_paterno: string;
-  apellido_materno?: string;
+  full_name: string;
   cargo: string;
   partido: string;
   estado: string;
   municipio?: string;
+  seccion_electoral?: string;
+  social_profiles: SocialAccount[];
   avatar_url?: string;
-  ipd_score: number;
-  platforms: SocialPlatform[];
-  last_activity?: string;
+  ipd_score?: number;
   created_at: string;
   updated_at: string;
 }
@@ -54,6 +56,29 @@ export interface DirigenteStats {
   total_engagement_7d: number;
   sentiment_avg_7d: number;
   follower_growth_30d: number;
+  // D-23-G' · 2026-04-24 · KPI hero reformulado · ver actividad-alineada-card.tsx
+  actividad_alineada?: ActividadAlineada;
+}
+
+// D-23-G' · KPI Actividad Política Alineada
+// Reemplaza el flip × -1 sobre sentiment_score por conteo de actividad por target_politico.
+// Plan: .context/PLAN-D-23-G-actividad-alineada-2026-04-24.md
+export interface ActividadAlineadaBreakdown {
+  oficialismo: number;
+  oposicion: number;
+  propio: number;
+  personal: number;
+}
+
+export interface ActividadAlineada {
+  score: number | null;          // 0..1 · null si no hay datos clasificados
+  score_pct: number | null;      // 0..100 (presentación) · null si sin datos
+  breakdown: ActividadAlineadaBreakdown;
+  total_classified: number;
+  total_posts_window: number;
+  rol_politico: "oficialismo" | "oposicion" | "independiente" | string;
+  days: number;
+  empty_state: "no_classified" | null;
 }
 
 export interface SocialAccount {
@@ -82,8 +107,8 @@ export interface SocialPost {
   platform: SocialPlatform;
   content: string;
   url: string;
-  sentiment: SentimentType;
-  sentiment_score: number;
+  sentiment_label: string | null;
+  sentiment_score: number | null;
   likes: number;
   comments: number;
   shares: number;
@@ -96,9 +121,14 @@ export type SentimentType = "positive" | "negative" | "neutral";
 
 export interface SentimentTrend {
   date: string;
+  avg_sentiment: number;
+  post_count: number;
   positive: number;
+  positive_pct: number;
   negative: number;
+  negative_pct: number;
   neutral: number;
+  neutral_pct: number;
 }
 
 export interface SentimentDistribution {
@@ -143,18 +173,17 @@ export interface ElectoralFeature {
 export interface PlanIA {
   id: number;
   dirigente_id: number;
-  dirigente_nombre?: string;
-  tipo: PlanType;
-  titulo: string;
+  tipo: string;
   contenido: string;
-  status: PlanStatus;
+  modelo_ia: string;
+  prompt_usado: string;
+  datos_entrada: Record<string, unknown> | null;
+  generado_por_id: number;
+  aprobado: boolean;
   created_at: string;
-  updated_at: string;
-  approved_by?: string;
-  approved_at?: string;
 }
 
-export type PlanType = "crecimiento" | "crisis" | "engagement" | "posicionamiento" | "contenido";
+export type PlanType = "DIAGNOSTICO" | "CONSOLIDACION" | "CRISIS" | "CONTENIDO";
 export type PlanStatus = "draft" | "approved" | "rejected" | "executed";
 
 export interface Benchmark {
@@ -185,10 +214,14 @@ export interface KpiOverview {
   avg_ipd_score: number;
   posts_monitored_24h: number;
   active_alerts: number;
-  dirigentes_change: number;
-  ipd_change: number;
+  dirigentes_change: number | null;
+  ipd_change: number | null;
   posts_change: number;
   alerts_change: number;
+  // political KPIs
+  total_audiencia: number;
+  contactos_periodo: number;
+  tema_urgente: string | null;
 }
 
 export interface PaginatedResponse<T> {

@@ -59,6 +59,7 @@ class NLPAnalyzer:
         self._emotion = None
         self._hate = None
         self._spacy_nlp = None
+        self._sentiment_spanish = None
         self._loaded = False
 
     # ---- model loading -----------------------------------------------------
@@ -76,6 +77,16 @@ class NLPAnalyzer:
             logger.info("pysentimiento models loaded successfully")
         except Exception as e:
             logger.warning("Failed to load pysentimiento models: %s", e)
+
+        try:
+            from sentiment_analysis_spanish import (
+                sentiment_analysis,  # type: ignore[import-untyped]
+            )
+
+            self._sentiment_spanish = sentiment_analysis.SentimentAnalysisSpanish()
+            logger.info("sentiment-analysis-spanish model loaded successfully")
+        except Exception as e:
+            logger.warning("Failed to load sentiment-analysis-spanish: %s", e)
 
         try:
             import spacy  # type: ignore[import-untyped]
@@ -139,11 +150,9 @@ class NLPAnalyzer:
         if self._spacy_nlp:
             doc = self._spacy_nlp(text[:5000])
             entities = [{"text": e.text, "label": e.label_} for e in doc.ents]
-            topics = list({
-                t.lemma_.lower()
-                for t in doc
-                if t.pos_ in ("NOUN", "PROPN") and len(t.text) > 2
-            })[:20]
+            topics = list(
+                {t.lemma_.lower() for t in doc if t.pos_ in ("NOUN", "PROPN") and len(t.text) > 2}
+            )[:20]
 
         return SentimentResult(
             sentiment_score=round(score, 4),
@@ -179,6 +188,7 @@ class NLPAnalyzer:
         -------
         dict with keys:
             - sentiment
+            - sentiment_secondary
             - controversy_score
             - toxicity
             - topics
@@ -196,6 +206,9 @@ class NLPAnalyzer:
         # -- 1. Sentiment (pysentimiento) ------------------------------------
         sentiment_dict = self._predict_sentiment(text)
 
+        # -- 1b. Secondary sentiment (sentiment-analysis-spanish CNN) ---------
+        sentiment_secondary = self._predict_sentiment_spanish(text)
+
         # -- 2. Controversy (HuggingFace) ------------------------------------
         controversy_score = self._predict_controversy(text)
 
@@ -211,12 +224,11 @@ class NLPAnalyzer:
         if platform:
             # normalize_sentiment expects [-1, 1]; our raw_score is already
             # in that range (POS - NEG).
-            platform_adjusted = round(
-                _remap_to_unit(normalize_sentiment(raw_score, platform)), 4
-            )
+            platform_adjusted = round(_remap_to_unit(normalize_sentiment(raw_score, platform)), 4)
 
         return {
             "sentiment": sentiment_dict,
+            "sentiment_secondary": sentiment_secondary,
             "controversy_score": controversy_score,
             "toxicity": toxicity_score,
             "topics": topics,
@@ -247,6 +259,46 @@ class NLPAnalyzer:
             }
         except Exception:
             logger.warning("Sentiment prediction failed", exc_info=True)
+            return {
+                "label": "NEU",
+                "score": 0.0,
+                "modelo_ia": None,
+            }
+
+    def _predict_sentiment_spanish(self, text: str) -> dict[str, Any]:
+        """Run sentiment-analysis-spanish CNN model as secondary validation.
+
+        Returns a dict with label, score, and modelo_ia.  The underlying model
+        returns a float in [0, 1] where 0 = negative, 1 = positive.  We remap
+        to a bipolar [-1, 1] score for consistency with pysentimiento output.
+        """
+        if not self._sentiment_spanish:
+            return {
+                "label": "NEU",
+                "score": 0.0,
+                "modelo_ia": None,
+            }
+
+        try:
+            # sentiment() returns float in [0, 1]: 0=negative, 1=positive
+            raw = self._sentiment_spanish.sentiment(text)
+            # Remap [0, 1] -> [-1, 1] for consistency
+            bipolar_score = round((raw * 2.0) - 1.0, 4)
+
+            if bipolar_score > 0.15:
+                label = "POS"
+            elif bipolar_score < -0.15:
+                label = "NEG"
+            else:
+                label = "NEU"
+
+            return {
+                "label": label,
+                "score": bipolar_score,
+                "modelo_ia": "sentiment-spanish/cnn",
+            }
+        except Exception:
+            logger.warning("sentiment-spanish prediction failed", exc_info=True)
             return {
                 "label": "NEU",
                 "score": 0.0,
@@ -315,6 +367,11 @@ def _empty_result() -> dict[str, Any]:
     """Canonical empty result when input text is blank."""
     return {
         "sentiment": {
+            "label": "NEU",
+            "score": 0.0,
+            "modelo_ia": None,
+        },
+        "sentiment_secondary": {
             "label": "NEU",
             "score": 0.0,
             "modelo_ia": None,

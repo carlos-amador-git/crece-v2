@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 
 from app.models.campana import EstadoCampana, EstadoMensaje, TipoCampana
 
-
 # ── CampanaSegmento schemas ─────────────────────────────
 
 

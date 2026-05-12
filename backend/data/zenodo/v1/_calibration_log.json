@@ -1,0 +1,12 @@
+{
+  "run_at": "2026-04-19T19:53:01.074269+00:00",
+  "window_days": 90,
+  "window_start": "2026-01-19T19:53:00.398885+00:00",
+  "window_end": "2026-04-19T19:53:00.398885+00:00",
+  "total_observaciones": 1431,
+  "cells_total": 25,
+  "cells_validated": 8,
+  "cells_tbd": 17,
+  "bootstrap_samples": 1000,
+  "csv_path": "/app/data/zenodo/v1/benchmarks_er_politicos_mx_v1.csv"
+}

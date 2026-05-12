@@ -5,13 +5,13 @@ import logging
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 
+import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.contenido import ContenidoGenerado, EstadoContenido, FormatoContenido
 from app.models.dirigente import Dirigente
-from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,8 @@ _PLATFORM_CONSTRAINTS: dict[FormatoContenido, dict[str, object]] = {
         "max_chars": 3000,
         "instruction": (
             "Escribe un guion para un Reel/TikTok de 30-60 segundos. "
-            "Estructura: HOOK (primeros 3 segundos, crucial) → CONTENIDO (20-40 seg) → CTA (5-10 seg). "
+            "Estructura: HOOK (primeros 3 segundos, crucial) "
+            "→ CONTENIDO (20-40 seg) → CTA (5-10 seg). "
             "Incluye indicaciones visuales entre corchetes [accion/escena]. "
             "El hook debe ser una pregunta provocadora o dato impactante. "
             "Lenguaje coloquial, ritmo rapido, frases cortas."
@@ -131,14 +132,16 @@ async def _gather_dirigente_context(db: AsyncSession, dirigente: Dirigente) -> d
             )
         )
         row = stats_result.one()
-        profiles_data.append({
-            "platform": p.platform.value,
-            "handle": p.handle,
-            "followers": p.followers_count,
-            "posts_30d": int(row[0]),
-            "avg_engagement_30d": round(float(row[1]), 4) if row[1] else 0.0,
-            "avg_sentiment_30d": round(float(row[2]), 4) if row[2] else None,
-        })
+        profiles_data.append(
+            {
+                "platform": p.platform.value,
+                "handle": p.handle,
+                "followers": p.followers_count,
+                "posts_30d": int(row[0]),
+                "avg_engagement_30d": round(float(row[1]), 4) if row[1] else 0.0,
+                "avg_sentiment_30d": round(float(row[2]), 4) if row[2] else None,
+            }
+        )
 
     # Recent top-performing post themes
     top_posts_result = await db.execute(
@@ -208,9 +211,9 @@ Tono: **{tono}**
 Plataforma destino: **{plataforma_destino}**
 
 ## RESTRICCIONES DEL FORMATO
-{constraints['instruction']}
-Estructura sugerida: {constraints['example_structure']}
-Maximo de caracteres: {constraints['max_chars']}
+{constraints["instruction"]}
+Estructura sugerida: {constraints["example_structure"]}
+Maximo de caracteres: {constraints["max_chars"]}
 
 ## CONTEXTO DEL DIRIGENTE (datos reales, NO inventes adicionales)
 {context_json}
@@ -245,7 +248,48 @@ Maximo de caracteres: {constraints['max_chars']}
 
 
 class ContentFactory:
-    """AI-powered political content generator using Claude API."""
+    """AI-powered political content generator — supports Claude and Ollama."""
+
+    @staticmethod
+    async def _generate_with_ollama(system_prompt: str, user_prompt: str) -> str:
+        """Generate content using local Ollama instance."""
+        combined = f"{system_prompt}\n\n{user_prompt}"
+        async with httpx.AsyncClient(timeout=600.0) as client:
+            resp = await client.post(
+                f"{settings.OLLAMA_BASE_URL}/api/generate",
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "prompt": combined,
+                    "stream": False,
+                },
+            )
+            resp.raise_for_status()
+            return resp.json()["response"]
+
+    @staticmethod
+    async def _stream_with_ollama(
+        system_prompt: str, user_prompt: str
+    ) -> AsyncGenerator[str, None]:
+        """Stream content generation using local Ollama instance."""
+        combined = f"{system_prompt}\n\n{user_prompt}"
+        async with (
+            httpx.AsyncClient(timeout=600.0) as client,
+            client.stream(
+                "POST",
+                f"{settings.OLLAMA_BASE_URL}/api/generate",
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "prompt": combined,
+                    "stream": True,
+                },
+            ) as resp,
+        ):
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if line:
+                    chunk = json.loads(line)
+                    if chunk.get("response"):
+                        yield chunk["response"]
 
     @staticmethod
     async def generate(
@@ -257,17 +301,8 @@ class ContentFactory:
         plataforma_destino: str,
         user_id: int,
     ) -> ContenidoGenerado:
-        """Generate content for a dirigente and persist it.
-
-        Raises:
-            ValueError: If CLAUDE_API_KEY is not configured.
-            LookupError: If the dirigente does not exist.
-        """
-        if not settings.CLAUDE_API_KEY:
-            raise ValueError(
-                "CLAUDE_API_KEY no esta configurada. "
-                "Configura la variable de entorno para usar la generacion de contenido con IA."
-            )
+        """Generate content for a dirigente and persist it."""
+        provider = settings.AI_PROVIDER
 
         # Load dirigente
         dirigente = await _load_dirigente(db, dirigente_id)
@@ -279,19 +314,55 @@ class ContentFactory:
         system_prompt, user_prompt = _build_prompt(context, formato, tema, tono, plataforma_destino)
         full_prompt_for_audit = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
 
-        # Call Claude API (sync client in thread — acceptable for non-streaming)
-        import anthropic
+        if provider == "ollama":
+            for _attempt in range(2):
+                try:
+                    generated_text = await ContentFactory._generate_with_ollama(
+                        system_prompt, user_prompt
+                    )
+                    model_name = f"ollama/{settings.OLLAMA_MODEL}"
+                    tokens_in, tokens_out = 0, 0
+                    break
+                except Exception:
+                    if _attempt == 0:
+                        logger.warning("Ollama generation failed (attempt 1), retrying...")
+                        continue
+                    logger.exception("Ollama generation failed after 2 attempts")
+                    generated_text = "Error generando contenido. Intente nuevamente."
+                    model_name = f"ollama/{settings.OLLAMA_MODEL}"
+                    tokens_in, tokens_out = 0, 0
+        else:
+            if not settings.CLAUDE_API_KEY:
+                raise ValueError("CLAUDE_API_KEY no configurada y AI_PROVIDER=claude.")
+            import anthropic
 
-        client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
-
-        message = client.messages.create(
-            model=settings.CLAUDE_MODEL,
-            max_tokens=4096,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
-
-        generated_text = message.content[0].text
+            client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
+            generated_text = None
+            for _attempt in range(2):
+                try:
+                    message = client.messages.create(
+                        model=settings.CLAUDE_MODEL,
+                        max_tokens=4096,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_prompt}],
+                    )
+                    generated_text = message.content[0].text
+                    model_name = settings.CLAUDE_MODEL
+                    tokens_in = message.usage.input_tokens
+                    tokens_out = message.usage.output_tokens
+                    break
+                except Exception:
+                    if _attempt == 0:
+                        logger.warning("Claude API call failed (attempt 1), retrying...")
+                        continue
+                    logger.exception("Claude API call failed after 2 attempts")
+                    generated_text = "Error generando contenido. Intente nuevamente."
+                    model_name = settings.CLAUDE_MODEL
+                    tokens_in, tokens_out = 0, 0
+            if generated_text is None:
+                generated_text = "Error generando contenido. Intente nuevamente."
+                model_name = settings.CLAUDE_MODEL
+                tokens_in, tokens_out = 0, 0
 
         # Append INE disclaimer
         final_content = generated_text + _INE_DISCLAIMER
@@ -308,9 +379,9 @@ class ContentFactory:
             prompt_usado=full_prompt_for_audit,
             plataforma_destino=plataforma_destino,
             estado=EstadoContenido.BORRADOR,
-            modelo_ia=settings.CLAUDE_MODEL,
-            tokens_input=message.usage.input_tokens,
-            tokens_output=message.usage.output_tokens,
+            modelo_ia=model_name,
+            tokens_input=tokens_in,
+            tokens_output=tokens_out,
             etiqueta_ia=True,
         )
         db.add(contenido)
@@ -318,14 +389,12 @@ class ContentFactory:
         await db.refresh(contenido)
 
         logger.info(
-            "Content generated: id=%d dirigente=%s formato=%s tokens_in=%d tokens_out=%d",
+            "Content generated: id=%d dirigente=%s formato=%s provider=%s",
             contenido.id,
             dirigente.full_name,
             formato.value,
-            message.usage.input_tokens,
-            message.usage.output_tokens,
+            provider,
         )
-
         return contenido
 
     @staticmethod
@@ -338,25 +407,8 @@ class ContentFactory:
         plataforma_destino: str,
         user_id: int,
     ) -> AsyncGenerator[str, None]:
-        """Stream content generation via SSE-compatible chunks.
-
-        Yields JSON strings formatted for EventSourceResponse:
-        - {"type": "chunk", "content": "..."}  during generation
-        - {"type": "complete", "contenido_id": 123}  when finished
-
-        Raises:
-            ValueError: If CLAUDE_API_KEY is not configured.
-            LookupError: If the dirigente does not exist.
-        """
-        if not settings.CLAUDE_API_KEY:
-            yield json.dumps({
-                "type": "error",
-                "message": (
-                    "CLAUDE_API_KEY no esta configurada. "
-                    "Configura la variable de entorno para usar la generacion de contenido con IA."
-                ),
-            })
-            return
+        """Stream content generation via SSE-compatible chunks."""
+        provider = settings.AI_PROVIDER
 
         # Load dirigente
         dirigente = await _load_dirigente(db, dirigente_id)
@@ -368,28 +420,68 @@ class ContentFactory:
         system_prompt, user_prompt = _build_prompt(context, formato, tema, tono, plataforma_destino)
         full_prompt_for_audit = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
 
-        import anthropic
-
-        client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
-
         collected_text = ""
-        total_input_tokens = 0
-        total_output_tokens = 0
+        tokens_in, tokens_out = 0, 0
 
-        with client.messages.stream(
-            model=settings.CLAUDE_MODEL,
-            max_tokens=4096,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-        ) as stream:
-            for text in stream.text_stream:
-                collected_text += text
-                yield json.dumps({"type": "chunk", "content": text})
+        if provider == "ollama":
+            model_name = f"ollama/{settings.OLLAMA_MODEL}"
+            stream_failed = False
+            for _attempt in range(2):
+                try:
+                    async for chunk in ContentFactory._stream_with_ollama(
+                        system_prompt, user_prompt
+                    ):
+                        collected_text += chunk
+                        yield json.dumps({"type": "chunk", "content": chunk})
+                    stream_failed = False
+                    break
+                except Exception:
+                    if _attempt == 0:
+                        logger.warning("Ollama stream failed (attempt 1), retrying...")
+                        collected_text = ""
+                        stream_failed = True
+                        continue
+                    logger.exception("Ollama stream failed after 2 attempts")
+                    stream_failed = True
+            if stream_failed:
+                collected_text = "Error generando contenido. Intente nuevamente."
+                yield json.dumps({"type": "chunk", "content": collected_text})
+        else:
+            if not settings.CLAUDE_API_KEY:
+                yield json.dumps({"type": "error", "message": "CLAUDE_API_KEY no configurada."})
+                return
+            import anthropic
 
-            # Capture usage from the final message
-            final_message = stream.get_final_message()
-            total_input_tokens = final_message.usage.input_tokens
-            total_output_tokens = final_message.usage.output_tokens
+            client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
+            model_name = settings.CLAUDE_MODEL
+            stream_failed = False
+            for _attempt in range(2):
+                try:
+                    with client.messages.stream(
+                        model=settings.CLAUDE_MODEL,
+                        max_tokens=4096,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_prompt}],
+                    ) as stream:
+                        for text in stream.text_stream:
+                            collected_text += text
+                            yield json.dumps({"type": "chunk", "content": text})
+                        final_message = stream.get_final_message()
+                        tokens_in = final_message.usage.input_tokens
+                        tokens_out = final_message.usage.output_tokens
+                    stream_failed = False
+                    break
+                except Exception:
+                    if _attempt == 0:
+                        logger.warning("Claude stream failed (attempt 1), retrying...")
+                        collected_text = ""
+                        stream_failed = True
+                        continue
+                    logger.exception("Claude stream failed after 2 attempts")
+                    stream_failed = True
+            if stream_failed:
+                collected_text = "Error generando contenido. Intente nuevamente."
+                yield json.dumps({"type": "chunk", "content": collected_text})
 
         # Append INE disclaimer
         final_content = collected_text + _INE_DISCLAIMER
@@ -406,9 +498,9 @@ class ContentFactory:
             prompt_usado=full_prompt_for_audit,
             plataforma_destino=plataforma_destino,
             estado=EstadoContenido.BORRADOR,
-            modelo_ia=settings.CLAUDE_MODEL,
-            tokens_input=total_input_tokens,
-            tokens_output=total_output_tokens,
+            modelo_ia=model_name,
+            tokens_input=tokens_in,
+            tokens_output=tokens_out,
             etiqueta_ia=True,
         )
         db.add(contenido)
@@ -416,14 +508,12 @@ class ContentFactory:
         await db.refresh(contenido)
 
         logger.info(
-            "Content streamed: id=%d dirigente=%s formato=%s tokens_in=%d tokens_out=%d",
+            "Content streamed: id=%d dirigente=%s formato=%s provider=%s",
             contenido.id,
             dirigente.full_name,
             formato.value,
-            total_input_tokens,
-            total_output_tokens,
+            provider,
         )
-
         yield json.dumps({"type": "complete", "contenido_id": contenido.id})
 
     @staticmethod
@@ -459,14 +549,15 @@ class ContentFactory:
             content_preview = row[0][:80] if row[0] else ""
             engagement = float(row[1]) if row[1] else 0.0
             if content_preview:
-                temas.append({
-                    "tema": f"Seguimiento: {content_preview}...",
-                    "relevancia_score": min(1.0, engagement * 10),
-                    "fuente": "engagement_alto",
-                })
+                temas.append(
+                    {
+                        "tema": f"Seguimiento: {content_preview}...",
+                        "relevancia_score": min(1.0, engagement * 10),
+                        "fuente": "engagement_alto",
+                    }
+                )
 
         # 2. Topics from negative sentiment (issues to address)
-        from app.models.social import SentimentAnalysis
 
         negative_result = await db.execute(
             select(SocialPost.content, SocialPost.sentiment_score)
@@ -483,11 +574,13 @@ class ContentFactory:
         for row in negative_result.all():
             content_preview = row[0][:80] if row[0] else ""
             if content_preview:
-                temas.append({
-                    "tema": f"Respuesta a critica: {content_preview}...",
-                    "relevancia_score": 0.8,
-                    "fuente": "sentimiento_negativo",
-                })
+                temas.append(
+                    {
+                        "tema": f"Respuesta a critica: {content_preview}...",
+                        "relevancia_score": 0.8,
+                        "fuente": "sentimiento_negativo",
+                    }
+                )
 
         # 3. Topics from ciudadano reports (constituent concerns)
         try:
@@ -507,11 +600,13 @@ class ContentFactory:
             for row in ciudadano_result.all():
                 if row[0]:
                     count = int(row[1])
-                    temas.append({
-                        "tema": f"Atencion ciudadana: {row[0]}",
-                        "relevancia_score": min(1.0, count / 10),
-                        "fuente": "ciudadanos",
-                    })
+                    temas.append(
+                        {
+                            "tema": f"Atencion ciudadana: {row[0]}",
+                            "relevancia_score": min(1.0, count / 10),
+                            "fuente": "ciudadanos",
+                        }
+                    )
         except Exception:
             # Ciudadano model may have different schema; gracefully skip
             logger.debug("Could not query ciudadano problematicas for topic suggestions")

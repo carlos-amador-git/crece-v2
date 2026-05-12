@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Instrument_Sans, DM_Sans } from "next/font/google";
 import { QueryProvider } from "@/lib/query-provider";
+import { PHProvider } from "./providers";
+import { MotionProvider } from "@/components/motion/fade-up";
 import "./globals.css";
 
 const instrumentSans = Instrument_Sans({
@@ -35,7 +37,38 @@ export default function RootLayout({
       className={`${instrumentSans.variable} ${dmSans.variable}`}
     >
       <body className="min-h-screen bg-background font-body antialiased">
-        <QueryProvider>{children}</QueryProvider>
+        <PHProvider>
+          <MotionProvider>
+            <QueryProvider>{children}</QueryProvider>
+          </MotionProvider>
+        </PHProvider>
+        {/* Chatwoot widget — CRECE inbox */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(d,t) {
+                var BASE_URL="https://chatmx.mdconsultoria-ti.org";
+                var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+                g.src=BASE_URL+"/packs/js/sdk.js";
+                g.defer=true;
+                g.async=true;
+                s.parentNode.insertBefore(g,s);
+                g.onload=function(){
+                  window.chatwootSettings = {
+                    hideMessageBubble: false,
+                    position: "right",
+                    locale: "es",
+                    type: "standard"
+                  };
+                  window.chatwootSDK.run({
+                    websiteToken: "rVsDDzAbVn8Lq7foP1tHrJAG",
+                    baseUrl: BASE_URL
+                  });
+                }
+              })(document,"script");
+            `,
+          }}
+        />
       </body>
     </html>
   );

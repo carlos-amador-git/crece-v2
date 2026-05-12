@@ -9,10 +9,12 @@ import type {
   HealthCheck,
 } from "../types";
 
-export function useKpiOverview() {
+export type OverviewPeriod = "today" | "7d" | "30d" | "90d";
+
+export function useKpiOverview(period: OverviewPeriod = "30d") {
   return useQuery({
-    queryKey: ["kpi-overview"],
-    queryFn: () => api.get<KpiOverview>("/dashboard/overview"),
+    queryKey: ["kpi-overview", period],
+    queryFn: () => api.get<KpiOverview>(`/dashboard/overview?period=${period}`),
     refetchInterval: 60_000,
   });
 }
@@ -29,8 +31,11 @@ export function useAlerts(unreadOnly = false) {
 export function useTopDirigentes(limit = 10) {
   return useQuery({
     queryKey: ["top-dirigentes", limit],
-    queryFn: () =>
-      api.get<Dirigente[]>(`/dirigentes/top?limit=${limit}&sort=ipd_score`),
+    queryFn: async () => {
+      const res = await api.get<{ items: Dirigente[] }>(`/dirigentes/?per_page=${limit}`);
+      const items = res.items ?? [];
+      return items.sort((a, b) => (b.ipd_score ?? 0) - (a.ipd_score ?? 0));
+    },
   });
 }
 

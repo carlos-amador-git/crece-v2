@@ -39,24 +39,23 @@ async def chatwoot_webhook(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     x_n8n_signature: Annotated[str | None, Header(alias="X-N8N-Signature")] = None,
+    x_chatwoot_signature: Annotated[str | None, Header(alias="X-Chatwoot-Signature")] = None,
 ) -> dict:
-    """Receive events pre-processed by n8n from Chatwoot.
+    """Receive events from Chatwoot (directly or via n8n).
 
-    Verifies HMAC-SHA256 signature, then dispatches by event type:
-    - message_reply: update CRM interactions
-    - contact_created: create ciudadano if not exists
-    - propuesta: log proposal interaction
+    Accepts signatures from both X-N8N-Signature and X-Chatwoot-Signature headers.
+    Dispatches by event type — supports both n8n-preprocessed and raw Chatwoot payloads.
     """
     payload_bytes = await request.body()
 
-    # Verify signature
-    if not _verify_signature(payload_bytes, x_n8n_signature):
+    # Accept signature from either header
+    signature = x_n8n_signature or x_chatwoot_signature
+    if not _verify_signature(payload_bytes, signature):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing webhook signature",
         )
 
-    # Parse payload
     import json
 
     try:
@@ -65,11 +64,14 @@ async def chatwoot_webhook(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid JSON payload",
-        )
+        ) from None
+
+    # Handle raw Chatwoot payload (has "event" key) vs n8n-preprocessed (has "tipo" key)
+    if "event" in raw and "tipo" not in raw:
+        return await _handle_chatwoot_direct(db, raw)
 
     payload = ChatwootWebhookPayload(**raw)
 
-    # Dispatch by event type
     if payload.tipo == "message_reply":
         return await _handle_message_reply(db, payload.data)
     elif payload.tipo == "contact_created":
@@ -81,8 +83,43 @@ async def chatwoot_webhook(
         return {"status": "ignored", "tipo": payload.tipo}
 
 
+async def _handle_chatwoot_direct(db: AsyncSession, raw: dict) -> dict:
+    """Handle raw Chatwoot webhook payloads (not preprocessed by n8n)."""
+    event = raw.get("event", "")
+    logger.info("Chatwoot direct event: %s", event)
+
+    if event == "contact_created":
+        contact = raw.get("contact", {}) or raw.get("data", {})
+        data = {
+            "nombre": contact.get("name", "Contacto"),
+            "telefono": contact.get("phone_number"),
+        }
+        if data["telefono"]:
+            return await _handle_contact_created(db, data)
+        return {"status": "skipped", "reason": "no phone_number"}
+
+    elif event == "message_created":
+        message = raw.get("message", {}) or raw.get("data", {})
+        conversation = raw.get("conversation", {})
+        return {
+            "status": "received",
+            "event": event,
+            "conversation_id": conversation.get("id"),
+            "message_type": message.get("message_type"),
+        }
+
+    elif event in ("conversation_created", "message_updated"):
+        return {"status": "received", "event": event}
+
+    else:
+        logger.info("Unhandled Chatwoot event: %s", event)
+        return {"status": "ignored", "event": event}
+
+
 async def _handle_message_reply(db: AsyncSession, data: dict) -> dict:
     """Update CRM interaction when a citizen replies via Chatwoot."""
+    from app.models.ciudadano import Ciudadano
+
     ciudadano_id = data.get("ciudadano_id")
     mensaje = data.get("mensaje", "")
     canal = data.get("canal", "chatwoot")
@@ -90,11 +127,36 @@ async def _handle_message_reply(db: AsyncSession, data: dict) -> dict:
     if not ciudadano_id:
         return {"status": "skipped", "reason": "no ciudadano_id in payload"}
 
+    # Validate ciudadano exists and resolve org_id
+    result = await db.execute(select(Ciudadano).where(Ciudadano.id == ciudadano_id))
+    ciudadano = result.scalar_one_or_none()
+    if not ciudadano:
+        return {"status": "skipped", "reason": "ciudadano_id not found"}
+
+    # Validate org_id if provided in payload
+    payload_org_id = data.get("org_id")
+    if payload_org_id and int(payload_org_id) != ciudadano.org_id:
+        logger.warning(
+            "org_id mismatch: payload=%s, ciudadano=%s, ciudadano_id=%s",
+            payload_org_id, ciudadano.org_id, ciudadano_id,
+        )
+        return {"status": "rejected", "reason": "org_id mismatch"}
+
+    org_id = ciudadano.org_id
+
+    # D.2b — Opt-out handler (LFPDPPP / WABA compliance)
+    if mensaje and mensaje.strip().upper() in ("STOP", "BAJA", "CANCELAR", "NO MAS"):
+        ciudadano.no_contactar = True
+        await db.flush()
+        logger.info("Opt-out: ciudadano %d marked no_contactar=True", ciudadano_id)
+        return {"status": "opt_out", "ciudadano_id": ciudadano_id}
+
     try:
         from app.models.crm_interaccion import CrmInteraccion
 
         interaccion = CrmInteraccion(
             ciudadano_id=ciudadano_id,
+            org_id=org_id,
             tipo="respuesta_entrante",
             canal=canal,
             resultado="recibido",
@@ -119,9 +181,7 @@ async def _handle_contact_created(db: AsyncSession, data: dict) -> dict:
         return {"status": "skipped", "reason": "no telefono in payload"}
 
     # Check if already exists
-    result = await db.execute(
-        select(Ciudadano).where(Ciudadano.telefono == telefono).limit(1)
-    )
+    result = await db.execute(select(Ciudadano).where(Ciudadano.telefono == telefono).limit(1))
     existing = result.scalar_one_or_none()
     if existing is not None:
         return {"status": "exists", "ciudadano_id": existing.id}
@@ -134,7 +194,7 @@ async def _handle_contact_created(db: AsyncSession, data: dict) -> dict:
         seccion_id=data.get("seccion_id", 1),  # Must be enriched later
         edad_rango=data.get("edad_rango", "26-35"),
         registrado_por_id=data.get("registrado_por_id", 1),
-        org_id=data.get("org_id"),
+        org_id=data.get("org_id") or 3,  # D.2 fix: default MC CDMX org
     )
     db.add(ciudadano)
     await db.flush()
@@ -152,10 +212,28 @@ async def _handle_propuesta(db: AsyncSession, data: dict) -> dict:
         return {"status": "skipped", "reason": "no ciudadano_id in payload"}
 
     try:
+        from app.models.ciudadano import Ciudadano
         from app.models.crm_interaccion import CrmInteraccion
+
+        c_result = await db.execute(
+            select(Ciudadano.org_id).where(Ciudadano.id == ciudadano_id)
+        )
+        ciudadano_org_id = c_result.scalar_one_or_none()
+        if ciudadano_org_id is None:
+            return {"status": "skipped", "reason": "ciudadano_id not found"}
+
+        # Validate org_id if provided in payload
+        payload_org_id = data.get("org_id")
+        if payload_org_id and int(payload_org_id) != ciudadano_org_id:
+            logger.warning(
+                "org_id mismatch in propuesta: payload=%s, ciudadano=%s",
+                payload_org_id, ciudadano_org_id,
+            )
+            return {"status": "rejected", "reason": "org_id mismatch"}
 
         interaccion = CrmInteraccion(
             ciudadano_id=ciudadano_id,
+            org_id=ciudadano_org_id,
             tipo="propuesta",
             canal=data.get("canal", "chatwoot"),
             resultado="registrada",

@@ -19,9 +19,7 @@ class ContenidoPieza(Base):
 
     __tablename__ = "contenido_piezas"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     org_id: Mapped[int] = mapped_column(
         ForeignKey("organizaciones.id", ondelete="CASCADE"),
         nullable=False,
@@ -44,9 +42,7 @@ class ContenidoPieza(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    aprobado_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    aprobado_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     programacion: Mapped[dict | None] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
