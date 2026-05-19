@@ -1,6 +1,59 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-19 tarde · /sprint-implement Bloque A · smoke pre-piloto §9.8 18/18 OK · concern Gemini bug control chars refutado empíricamente
+**Ultimo update:** 2026-05-19 noche · Plan deuda 16 fallos · P0+P1+P2 cerrados · 14 fixes en prod · 1 diferido post-piloto
+
+## 2026-05-19 noche · Plan deuda 16 fallos · P0+P1+P2 CLOSED (~3h total)
+
+**Origen:** CEO revisión visual prod identificó 16 fallos. `/plan` aprobado + `/sprint-implement` con autonomía concedida.
+
+### Sprints ejecutados
+
+**P0 · pre-piloto (commit `be519aed` · PR #51):**
+- #2+#7 sentiment NULL no inventa "Neutral" (sentiment-badge + computeDistribution + pie chart + callout amarillo)
+- #3 `@@saymipineda` → `@saymipineda` (handle.startsWith guard)
+- #6 Monitoreo "19 posts" caveat dedup + tooltip
+
+**P1 · post-piloto (commit `0c523cf1` · PR #52):**
+- #8 Split-view cliente_seed (CuratedSeedList nuevo · grid xl:grid-cols-2)
+- #9 Indicador plataforma Top Posts (badge prominente)
+- #11 Overview chart empty state real cuando 0 clasificados
+- #12 Banda gris Fantasmas dual (acumulando vs sin cobertura RADAR)
+- #1 sentiment_label → tono_discurso · **DIFERIDO** (requiere endpoint backend nuevo · cubierto parcialmente por #11)
+
+**P2 · misma PR #52:**
+- #14 "sin RTs" condicional por plataforma
+- #15-16 Top Posts tooltip "elegibles"
+- #4+#10 Warning visual cards con bajas interacciones absolutas (<10)
+- #5 Glosario disonancia Fantasmas (tooltip reactions vs likes públicos)
+
+### Validación
+
+- TS check verde · ambos PRs
+- Smoke CI verde · ambos PRs
+- Cross-audit Gemini P0: `approve_with_changes` · 2 blocking concerns absorbidos (Alert externo no SVG · NO ampliar Monitoreo a 30d)
+- Cross-audit Gemini P1.#8: `approve_split_view` aplicado al diseño
+- Playwright validación global post-deploy: P0+P1+P2 todos verdes · 0 errores 5xx · plan_id=52 carga · split-view confirmado visual
+
+### Deploy
+
+- PR #51 → main `be519aed` → `vercel --prod --yes` → alias `frontend-zeta-sepia-46.vercel.app`
+- PR #52 → main `0c523cf1` → `vercel --prod --yes` → deploy `frontend-avkf0r3t7` aliased
+
+### Documentación
+
+- `.context/OBSERVACIONES-CEO-2026-05-19.md` · 9 OBS + tabla consolidada 16 fallos
+- `.context/PLAN-2026-05-19-deuda-tests-y-fixes.md` v2 · separado (plan tests)
+- `.context/PLAN-2026-05-19-content-hub.md` v2 · backlog F4 cubre #13
+- `~/.claude/plans/greedy-strolling-graham.md` · plan aprobado de los 16 fallos
+
+### Pendiente
+
+- #1 sentiment_label → tono_discurso: sprint backend post-piloto (endpoint nuevo)
+- #13 Monitoreo + Comentarios consolidación: backlog Content Hub F4 (4-6 sem)
+
+---
+
+## 2026-05-19 tarde · /sprint-implement Bloque A · smoke pre-piloto §9.8 18/18 OK · concern Gemini bug control chars refutado empíricamente
 
 ## 2026-05-19 tarde · /sprint-implement Bloque A · Smoke pre-piloto §9.8 (CLOSED)
 
