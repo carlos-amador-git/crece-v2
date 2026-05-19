@@ -46,6 +46,7 @@ import {
   Wand2,
   Trophy,
   Film,
+  Star,
 } from "lucide-react";
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -112,6 +113,7 @@ const sections: Section[] = [
         leaf("/dashboard/aceptacion", "Overview", LayoutDashboard),
         leaf("/dashboard/aceptacion/dirigentes", "Por dirigente", UserSquare2),
         leaf("/dashboard/aceptacion/fantasmas", "Fantasmas", Ghost),
+        leaf("/dashboard/aceptacion/fans", "Fans y Perfiles", Star),
       ]),
       leaf("/dashboard/planes", "Planes IA", Brain),
       leaf("/dashboard/reels", "Reels (guiones)", Film),
