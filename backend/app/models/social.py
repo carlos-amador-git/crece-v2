@@ -180,6 +180,8 @@ class SocialPost(Base):
     )
     emotions: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     is_political: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # spm_media1 · array URLs imágenes/videos · media_urls[0] thumbnail principal
+    media_urls: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     raw_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Sprint S1 T5 — Topic extractor Gemma 3:12b (1-3 topics del seed 12)
     topics_extracted: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
@@ -200,6 +202,21 @@ class SocialPost(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         nullable=False,
+    )
+    # Sprint S1 Editor HITL — review tracking (migration dse_hitl_audit)
+    last_reviewed_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=False),
+        nullable=True,
+    )
+    review_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        server_default="unreviewed",
+        default="unreviewed",
     )
 
     # Relationships

@@ -11,7 +11,7 @@ import json
 import re
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -97,7 +97,7 @@ def classify(comment: dict, template: str) -> dict:
         try:
             raw = call_ollama(url, prompt)
             break
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             err = f"{url}: {type(e).__name__}: {e}"
             continue
     else:
@@ -143,7 +143,7 @@ def main() -> None:
             "emocion": cls.get("emocion"),
             "topics": cls.get("topics"),
             "_err": cls.get("_err"),
-            "classified_at": datetime.now(timezone.utc).isoformat(),
+            "classified_at": datetime.now(UTC).isoformat(),
         }
         with OUT_PATH.open("a") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")

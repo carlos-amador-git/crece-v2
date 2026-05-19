@@ -26,7 +26,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.config import settings
 from app.services import embeddings
 
-
 FAKE_EMBEDDING_A = [0.1] * 384
 FAKE_EMBEDDING_B = [0.11] * 384  # very similar to A
 

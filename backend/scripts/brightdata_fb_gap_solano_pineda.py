@@ -25,7 +25,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import psycopg2
@@ -85,7 +85,7 @@ def upsert_post(conn, profile_id: int, post_id: str) -> int | None:
     if row:
         cur.close()
         return row[0]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cur.execute(
         """
         INSERT INTO social_posts

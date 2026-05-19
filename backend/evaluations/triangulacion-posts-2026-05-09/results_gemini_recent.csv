@@ -1,0 +1,218 @@
+post_id,dirigente_id,dirigente_nombre,tono_gemini,target_gemini,sentimiento_gemini,razon_gemini,raw_response,elapsed_s
+4499,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Enfatiza una identidad política centrada en las causas ciudadanas con un tono optimista y diferenciador.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Enfatiza una identidad política centrada en las causas ciudadanas con un tono optimista y diferenciador.""
+}",15.19
+4487,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Promueve una visión política centrada en la ciudadanía con un tono optimista y coloquial.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Promueve una visión política centrada en la ciudadanía con un tono optimista y coloquial.""}",13.71
+4500,1,Alejandro Piña Medina,propositivo,autopromocion,positivo,Presentación de perfil político mediante analogía deportiva y compromiso con la comunidad.,"{""tono"":""propositivo"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Presentación de perfil político mediante analogía deportiva y compromiso con la comunidad.""}",10.82
+4498,1,Alejandro Piña Medina,propositivo,autopromocion,positivo,Presentación de perfil y misión política mediante metáforas deportivas con un enfoque en la unidad comunitaria.,"{
+""tono"": ""propositivo"",
+""target"": ""autopromocion"",
+""sentimiento"": ""positivo"",
+""razon"": ""Presentación de perfil y misión política mediante metáforas deportivas con un enfoque en la unidad comunitaria.""
+}",10.66
+4490,1,Alejandro Piña Medina,critico,gobierno,negativo,Denuncia simulación gubernamental y el ocultamiento de problemas sociales tras una fachada de orden.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Denuncia simulación gubernamental y el ocultamiento de problemas sociales tras una fachada de orden.""}",14.08
+4501,1,Alejandro Piña Medina,celebratorio,gobierno,positivo,Utiliza narrativa de Star Wars para proyectarse como relevo generacional frente al sistema actual.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Utiliza narrativa de Star Wars para proyectarse como relevo generacional frente al sistema actual.""
+}",14.37
+4489,1,Alejandro Piña Medina,propositivo,autopromocion,positivo,Uso de metáfora de Star Wars para posicionarse como el futuro relevo político frente al 'viejo imperio'.,"{""tono"":""propositivo"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Uso de metáfora de Star Wars para posicionarse como el futuro relevo político frente al 'viejo imperio'.""}",15.41
+4502,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Promoción de programa social infantil con mensaje de unidad y futuro.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Promoción de programa social infantil con mensaje de unidad y futuro.""}",12.73
+4483,1,Alejandro Piña Medina,critico,gobierno,negativo,Contrasta la propaganda gubernamental con la inseguridad y violencia percibida en Azcapotzalco.,"{
+  ""tono"": ""critico"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Contrasta la propaganda gubernamental con la inseguridad y violencia percibida en Azcapotzalco.""
+}",10.00
+4503,1,Alejandro Piña Medina,critico,gobierno,negativo,Critica el contraste entre la narrativa oficial de inauguraciones y la realidad de inseguridad en Azcapotzalco.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Critica el contraste entre la narrativa oficial de inauguraciones y la realidad de inseguridad en Azcapotzalco.""}",9.93
+4482,1,Alejandro Piña Medina,propositivo,tema_especifico,positivo,Conmemora la lucha histórica por derechos para impulsar la reforma de las 40 horas.,"{""tono"":""propositivo"",""target"":""tema_especifico"",""sentimiento"":""positivo"",""razon"":""Conmemora la lucha histórica por derechos para impulsar la reforma de las 40 horas.""}",9.89
+4504,1,Alejandro Piña Medina,propositivo,tema_especifico,positivo,Reivindicación del 1 de mayo para proponer reformas laborales concretas como la jornada de 40 horas y salarios dignos.,"{
+  ""tono"": ""propositivo"",
+  ""target"": ""tema_especifico"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Reivindicación del 1 de mayo para proponer reformas laborales concretas como la jornada de 40 horas y salarios dignos.""
+}",18.12
+4505,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Mensaje emotivo por el Día del Niño que proyecta valores personales y compromiso con el futuro.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Mensaje emotivo por el Día del Niño que proyecta valores personales y compromiso con el futuro.""}",12.49
+4485,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Mensaje emotivo por el Día del Niño que proyecta valores personales y compromiso con el futuro.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Mensaje emotivo por el Día del Niño que proyecta valores personales y compromiso con el futuro.""}",11.88
+4506,1,Alejandro Piña Medina,critico,gobierno,negativo,Denuncia del mal estado del Metro y crítica a las prioridades del gobierno frente a eventos masivos.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Denuncia del mal estado del Metro y crítica a las prioridades del gobierno frente a eventos masivos.""}",17.41
+4492,1,Alejandro Piña Medina,critico,gobierno,negativo,Denuncia el deterioro del transporte público y critica la prioridad de eventos masivos sobre infraestructura básica,"{
+  ""tono"": ""critico"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Denuncia el deterioro del transporte público y critica la prioridad de eventos masivos sobre infraestructura básica""
+}",10.27
+4481,1,Alejandro Piña Medina,critico,gobierno,negativo,Denuncia de violencia e inseguridad crítica en Azcapotzalco.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Denuncia de violencia e inseguridad crítica en Azcapotzalco.""}",9.57
+4507,1,Alejandro Piña Medina,critico,gobierno,negativo,Denuncia de inseguridad y exigencia de justicia ante un hecho violento.,"{
+""tono"": ""critico"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Denuncia de inseguridad y exigencia de justicia ante un hecho violento.""
+}",8.33
+4508,1,Alejandro Piña Medina,critico,gobierno,negativo,Crítica a la gestión de infraestructura y servicios públicos (Metro) señalando improvisación y falta de inversión.,"{
+  ""tono"": ""critico"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Crítica a la gestión de infraestructura y servicios públicos (Metro) señalando improvisación y falta de inversión.""
+}",9.52
+4488,1,Alejandro Piña Medina,critico,gobierno,negativo,Crítica a la gestión pública del Metro y la falta de inversión en infraestructura urbana.,"{
+  ""tono"": ""critico"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Crítica a la gestión pública del Metro y la falta de inversión en infraestructura urbana.""
+}",8.12
+4523,2,Rafael Solano Pérez,solidario,ciudadania,positivo,Expresa empatía y buenos deseos hacia un grupo que enfrenta condiciones difíciles.,"{""tono"":""solidario"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Expresa empatía y buenos deseos hacia un grupo que enfrenta condiciones difíciles.""}",12.62
+4522,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Saludo y deseo de éxito a una persona mencionada (@lrubin),"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""tema_especifico"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Saludo y deseo de éxito a una persona mencionada (@lrubin)""
+}
+(node:71540) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",28.75
+4521,2,Rafael Solano Pérez,critico,dirigente,negativo,Cuestiona la fuerza política del dirigente comparando márgenes de victoria y predice una gestión difícil.,"{
+  ""tono"": ""critico"",
+  ""target"": ""dirigente"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Cuestiona la fuerza política del dirigente comparando márgenes de victoria y predice una gestión difícil.""
+}",10.08
+4520,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Critica el apoyo de la comentocracia a Hillary frente a la estrategia de Trump,"{""tono"":""critico"",""target"":""tema_especifico"",""sentimiento"":""negativo"",""razon"":""Critica el apoyo de la comentocracia a Hillary frente a la estrategia de Trump""}",24.07
+4519,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Valora positivamente un ejemplo externo aplicable a organizaciones en general.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""tema_especifico"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Valora positivamente un ejemplo externo aplicable a organizaciones en general.""
+}
+Error executing tool read_file: File not found.
+(node:72031) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",28.80
+4518,2,Rafael Solano Pérez,celebratorio,dirigente,positivo,Elogio a una fotografía y saludo cordial entre figuras públicas.,"{
+""tono"": ""celebratorio"",
+""target"": ""dirigente"",
+""sentimiento"": ""positivo"",
+""razon"": ""Elogio a una fotografía y saludo cordial entre figuras públicas.""
+}",10.88
+4517,2,Rafael Solano Pérez,informativo,autopromocion,positivo,Promoción de contenido propio (columna de opinión),"{""tono"":""informativo"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Promoción de contenido propio (columna de opinión)""}",12.11
+4516,2,Rafael Solano Pérez,critico,gobierno,negativo,Advierte sobre posibles complicaciones electorales para la autoridad.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Advierte sobre posibles complicaciones electorales para la autoridad.""}",14.75
+4515,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Expresa preocupación por los retos de seguridad ante el Mundial.,"{""tono"":""critico"",""target"":""tema_especifico"",""sentimiento"":""negativo"",""razon"":""Expresa preocupación por los retos de seguridad ante el Mundial.""}",11.17
+4514,2,Rafael Solano Pérez,informativo,tema_especifico,neutro,Reflexión sobre el rol de empresas privadas en la sociedad y la tecnología.,"{
+  ""tono"": ""informativo"",
+  ""target"": ""tema_especifico"",
+  ""sentimiento"": ""neutro"",
+  ""razon"": ""Reflexión sobre el rol de empresas privadas en la sociedad y la tecnología.""
+}",24.80
+4512,2,Rafael Solano Pérez,celebratorio,dirigente,positivo,Celebra la respuesta de María Corina frente a Maduro y destaca su impacto internacional.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""dirigente"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Celebra la respuesta de María Corina frente a Maduro y destaca su impacto internacional.""
+}",13.61
+4513,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Celebración de una narración deportiva histórica de Messi.,"{""tono"":""celebratorio"",""target"":""tema_especifico"",""sentimiento"":""positivo"",""razon"":""Celebración de una narración deportiva histórica de Messi.""}",9.66
+4525,2,Rafael Solano Pérez,critico,tema_especifico,neutro,Análisis prospectivo sobre las debilidades de los partidos políticos y el panorama electoral hacia 2027.,"{
+  ""tono"": ""critico"",
+  ""target"": ""tema_especifico"",
+  ""sentimiento"": ""neutro"",
+  ""razon"": ""Análisis prospectivo sobre las debilidades de los partidos políticos y el panorama electoral hacia 2027.""
+}",30.48
+4526,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Análisis crítico del panorama de partidos y descontento ciudadano hacia 2027.,"{""tono"":""critico"",""target"":""tema_especifico"",""sentimiento"":""negativo"",""razon"":""Análisis crítico del panorama de partidos y descontento ciudadano hacia 2027.""}",33.41
+832,2,Rafael Solano Pérez,informativo,tema_especifico,neutro,Retuit y cita de una noticia internacional sobre resultados electorales en Hungría.,"{
+""tono"": ""informativo"",
+""target"": ""tema_especifico"",
+""sentimiento"": ""neutro"",
+""razon"": ""Retuit y cita de una noticia internacional sobre resultados electorales en Hungría.""
+}",6.43
+833,2,Rafael Solano Pérez,informativo,tema_especifico,neutro,Reporte periodístico sobre la derrota electoral de Viktor Orbán en Hungría.,"{""tono"":""informativo"",""target"":""tema_especifico"",""sentimiento"":""neutro"",""razon"":""Reporte periodístico sobre la derrota electoral de Viktor Orbán en Hungría.""}",12.24
+834,2,Rafael Solano Pérez,informativo,tema_especifico,neutro,Difusión de datos estadísticos del Censo 2020 sobre adultos mayores por alcaldía.,"{""tono"":""informativo"",""target"":""tema_especifico"",""sentimiento"":""neutro"",""razon"":""Difusión de datos estadísticos del Censo 2020 sobre adultos mayores por alcaldía.""}",11.44
+4527,2,Rafael Solano Pérez,critico,tema_especifico,neutro,Análisis prospectivo sobre el proceso electoral 2027 y el desgaste de las fuerzas políticas actuales.,"{
+""tono"": ""critico"",
+""target"": ""tema_especifico"",
+""sentimiento"": ""neutro"",
+""razon"": ""Análisis prospectivo sobre el proceso electoral 2027 y el desgaste de las fuerzas políticas actuales.""
+}",12.67
+4524,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Análisis crítico sobre el desgaste de las fuerzas políticas y el hartazgo ciudadano de cara a 2027.,"{
+  ""tono"": ""critico"",
+  ""target"": ""tema_especifico"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Análisis crítico sobre el desgaste de las fuerzas políticas y el hartazgo ciudadano de cara a 2027.""
+}",33.92
+586,2,Rafael Solano Pérez,critico,tema_especifico,neutro,Análisis prospectivo sobre el estado de las fuerzas políticas y el hartazgo ciudadano rumbo a 2027.,"{
+""tono"": ""critico"",
+""target"": ""tema_especifico"",
+""sentimiento"": ""neutro"",
+""razon"": ""Análisis prospectivo sobre el estado de las fuerzas políticas y el hartazgo ciudadano rumbo a 2027.""
+}",11.57
+4432,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Crítica directa a Morena por presunta protección a políticos corruptos y fomento de la impunidad.,"{
+  ""tono"": ""ataque"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Crítica directa a Morena por presunta protección a políticos corruptos y fomento de la impunidad.""
+}",9.83
+4407,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Denuncia de un patrón sistemático de impunidad y protección a la corrupción dentro de Morena.,"{
+""tono"": ""ataque"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Denuncia de un patrón sistemático de impunidad y protección a la corrupción dentro de Morena.""
+}",11.42
+4433,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Anuncio del estreno de su noticiero personal para cuestionar al poder y construir comunidad.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Anuncio del estreno de su noticiero personal para cuestionar al poder y construir comunidad.""
+}",16.96
+4405,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Anuncio del estreno de un nuevo espacio informativo propio para rendir cuentas.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Anuncio del estreno de un nuevo espacio informativo propio para rendir cuentas.""}",12.30
+4454,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Acusa al gobierno de encubrimiento criminal y negligencia en la justicia ciudadana.,"{""tono"":""ataque"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Acusa al gobierno de encubrimiento criminal y negligencia en la justicia ciudadana.""}",9.54
+4434,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Acusa al gobierno de encubrimiento ('Narco Washing') y protección a criminales.,"{
+""tono"": ""ataque"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Acusa al gobierno de encubrimiento ('Narco Washing') y protección a criminales.""
+}",11.90
+4409,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Crítica severa al gobierno acusándolo de encubrimiento criminal y negligencia judicial sistemática.,"{""tono"":""ataque"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Crítica severa al gobierno acusándolo de encubrimiento criminal y negligencia judicial sistemática.""}",10.30
+4435,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Crítica agresiva a Morena por postergar la reforma de 40 horas y promoción de contenido propio.,"{""tono"":""ataque"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Crítica agresiva a Morena por postergar la reforma de 40 horas y promoción de contenido propio.""}",10.11
+4406,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Crítica a Morena por el incumplimiento de la jornada de 40 horas y promoción de programa informativo propio.,"{
+""tono"": ""critico"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Crítica a Morena por el incumplimiento de la jornada de 40 horas y promoción de programa informativo propio.""
+}",12.20
+4455,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Uso de metáfora deportiva para resaltar la identidad y labor de defensa de causas ciudadanas.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Uso de metáfora deportiva para resaltar la identidad y labor de defensa de causas ciudadanas.""}",31.53
+4436,8,Laura Ballesteros Mancilla,propositivo,autopromocion,positivo,Uso de metáfora deportiva para posicionar la labor política como una defensa constante de causas sociales.,"{
+""tono"": ""propositivo"",
+""target"": ""autopromocion"",
+""sentimiento"": ""positivo"",
+""razon"": ""Uso de metáfora deportiva para posicionar la labor política como una defensa constante de causas sociales.""
+}",13.18
+4408,8,Laura Ballesteros Mancilla,propositivo,autopromocion,positivo,Metáfora deportiva para destacar la labor política y la defensa de causas sociales.,"{
+  ""tono"": ""propositivo"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Metáfora deportiva para destacar la labor política y la defensa de causas sociales.""
+}",9.64
+4456,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Critica falta de inversión en movilidad en CDMX en comparación con NL y Jalisco.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Critica falta de inversión en movilidad en CDMX en comparación con NL y Jalisco.""}",11.79
+4437,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Compara falta de inversión en transporte en CDMX frente a NL y Jalisco.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Compara falta de inversión en transporte en CDMX frente a NL y Jalisco.""}",11.84
+4410,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Crítica a la falta de inversión en movilidad en CDMX en contraste con Nuevo León y Jalisco.,"{
+""tono"": ""critico"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Crítica a la falta de inversión en movilidad en CDMX en contraste con Nuevo León y Jalisco.""
+}",9.41
+4438,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Anuncio del lanzamiento de su nuevo noticiero personal e invitación a la ciudadanía.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Anuncio del lanzamiento de su nuevo noticiero personal e invitación a la ciudadanía.""}",12.66
+4423,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Anuncio entusiasta del lanzamiento de un nuevo noticiero personal para informar y rendir cuentas.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Anuncio entusiasta del lanzamiento de un nuevo noticiero personal para informar y rendir cuentas.""
+}
+(node:76173) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",20.90
+4439,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Anuncio de lanzamiento de noticiero propio en YouTube.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Anuncio de lanzamiento de noticiero propio en YouTube.""}",12.55
+4457,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Denuncia de desastre ambiental y negligencia gubernamental atribuida a Morena y Pemex.,"{
+  ""tono"": ""critico"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Denuncia de desastre ambiental y negligencia gubernamental atribuida a Morena y Pemex.""
+}",9.39
+4440,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Denuncia de encubrimiento e impunidad del gobierno tras el desastre de Pemex en Veracruz.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Denuncia de encubrimiento e impunidad del gobierno tras el desastre de Pemex en Veracruz.""}",21.88

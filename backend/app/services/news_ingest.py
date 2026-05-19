@@ -134,7 +134,7 @@ async def fetch_feed(client: httpx.AsyncClient, feed: RssFeed) -> list[RssItem]:
 
 def _platform_post_id(item: RssItem) -> str:
     raw = item.guid or item.link
-    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:24]
+    digest = hashlib.sha1(raw.encode("utf-8"), usedforsecurity=False).hexdigest()[:24]
     return f"news:{digest}"
 
 

@@ -8,7 +8,6 @@ Output markdown table para CEO review.
 Usage (host, venv local):
     python3 backend/scripts/llm_political_pilot.py > /tmp/pilot-output.md
 """
-import json
 import os
 import sys
 import time
@@ -17,7 +16,7 @@ import psycopg2
 import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from app.nlp.political_llm_prompt import build_prompt, parse_response, apply_matrix
+from app.nlp.political_llm_prompt import apply_matrix, build_prompt, parse_response
 
 DB_URL = os.environ.get("DATABASE_URL_SYNC", "postgresql://crece:crece_dev@localhost:5438/crece")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
@@ -98,7 +97,7 @@ def main():
 
     print("# Pilot v2 — Gemma compact + Python matrix\n")
     print(f"**Modelo:** {MODEL} · **Prompt:** v2 compacto (~300 tokens)")
-    print(f"**Arquitectura:** LLM clasifica tono+target · Python aplica matriz del tenant\n")
+    print("**Arquitectura:** LLM clasifica tono+target · Python aplica matriz del tenant\n")
     print("---\n")
 
     times = []

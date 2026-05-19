@@ -45,10 +45,21 @@ class Settings(BaseSettings):
     CLAUDE_API_KEY: str = ""
     CLAUDE_MODEL: str = "claude-sonnet-4-20250514"
 
-    # ── Ollama (local AI) ────────────────────────────────
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    # ── Groq (tier gratuito · Llama 3.3 70B) ─────────────
+    # Usado por /api/v1/reels/generate-script (D-REELS-GROQ-1, 2026-05-15)
+    # Registrar en console.groq.com (gratuito, 30 req/min)
+    GROQ_API_KEY: str = ""
+
+    # ── Ollama (Coolify VPS — gemma3:12b) ────────────────
+    # STATUS 2026-05-15: DORMANT. AI_PROVIDER="claude" por default →
+    # plan_generator usa Claude. Para prender Ollama (cuando VPS rinda
+    # mejor o el costo Claude se vuelva limitante): poner
+    # AI_PROVIDER=ollama en .env, sin redeploy de código.
+    # Gemma local fue removido del Mac Mini 2026-04-25. NO restaurar
+    # localhost sin coordinar con el CEO.
+    OLLAMA_BASE_URL: str = "http://163.245.208.96:11434"
     OLLAMA_MODEL: str = "gemma3:12b"
-    AI_PROVIDER: str = "claude"  # "claude" | "ollama"
+    AI_PROVIDER: str = "claude"  # "claude" | "ollama" — Ollama dormant
 
     # ── YouTube Data API v3 ──────────────────────────────
     YOUTUBE_API_KEY: str = ""
@@ -103,18 +114,33 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _guard_production_secrets(self) -> Settings:
-        """E.5 — Refuse to start in production with default secrets."""
-        if self.APP_ENV == "production":
-            _defaults = {
-                "JWT_SECRET": "CHANGE-ME-in-production",
-                "PII_ENCRYPTION_KEY": "CHANGE-ME-pii-dev-key-min-32-chars",
-            }
-            for field_name, default_val in _defaults.items():
-                if getattr(self, field_name) == default_val:
-                    raise ValueError(
-                        f"{field_name} still has its default value. "
-                        f"Set a real secret before running in production."
-                    )
+        """E.5 — Refuse to start in production/staging with default secrets.
+
+        F-ALTO-02 (AUDIT-SECURITY-RBAC-2026-05-15): default JWT_SECRET could
+        be reused across stacks. Now `production` and `staging` both reject
+        defaults. `development` logs a stderr warning but proceeds.
+        """
+        _defaults = {
+            "JWT_SECRET": "CHANGE-ME-in-production",
+            "PII_ENCRYPTION_KEY": "CHANGE-ME-pii-dev-key-min-32-chars",
+        }
+        offenders = [
+            name for name, default_val in _defaults.items()
+            if getattr(self, name) == default_val
+        ]
+        if not offenders:
+            return self
+        if self.APP_ENV in {"production", "staging"}:
+            raise ValueError(
+                f"{', '.join(offenders)} still have default values. "
+                f"Set real secrets before running in {self.APP_ENV}."
+            )
+        import sys
+        print(
+            f"[config] WARNING: {', '.join(offenders)} using default values. "
+            f"OK for APP_ENV=development; reject in staging/production.",
+            file=sys.stderr,
+        )
         return self
 
     @property

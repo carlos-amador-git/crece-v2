@@ -19,6 +19,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 from app.models.dirigente import Dirigente
+from app.models.plan_ia import PlanIA, TipoPlan
 from app.models.social import (
     Platform,
     PostType,
@@ -26,8 +27,6 @@ from app.models.social import (
     SocialPost,
     SocialProfile,
 )
-from app.models.plan_ia import PlanIA, TipoPlan
-
 
 # Sample posts for each new dirigente
 DIRIGENTE_POSTS = {
@@ -359,7 +358,7 @@ async def seed_org_data():
                 continue
 
             # Find admin user for generado_por_id
-            from app.models.user import User, Role
+            from app.models.user import Role, User
             admin_result = await session.execute(
                 select(User.id).where(User.role == Role.ADMIN).limit(1)
             )
@@ -387,7 +386,7 @@ async def seed_org_data():
         # Summary
         total_posts = (await session.execute(text("SELECT count(*) FROM social_posts"))).scalar()
         total_plans = (await session.execute(text("SELECT count(*) FROM planes_ia"))).scalar()
-        print(f"\n✅ Org data seed completado!")
+        print("\n✅ Org data seed completado!")
         print(f"   Posts created this run: {posts_created}")
         print(f"   Plans created this run: {plans_created}")
         print(f"   Total posts in DB: {total_posts}")

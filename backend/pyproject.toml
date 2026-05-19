@@ -40,6 +40,19 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Backend API: solo spaCy NER (location_inference). ~150MB.
+nlp-light = [
+    "spacy>=3.8.0",
+]
+# Celery workers: stack NLP completo. ~3.5GB.
+nlp-heavy = [
+    "pysentimiento>=0.7.0",
+    "sentiment-analysis-spanish>=0.0.25",
+    "spacy>=3.8.0",
+    "transformers>=4.40.0",
+    "torch>=2.2.0",
+]
+# Alias compat hacia atrás. Equivale a nlp-heavy. NO usar en backend.
 nlp = [
     "pysentimiento>=0.7.0",
     "sentiment-analysis-spanish>=0.0.25",

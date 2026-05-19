@@ -308,7 +308,7 @@ def main() -> None:
     parser.add_argument("--output", required=True, help="Markdown report output path")
     args = parser.parse_args()
 
-    print(f"=== Test competidor resolution ===")
+    print("=== Test competidor resolution ===")
     print(f"Nombre: {args.nombre}")
     print(f"Cargo:  {args.cargo}")
     print()

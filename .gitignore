@@ -8,6 +8,10 @@
 .env.*.local
 !.env.example
 
+# ── MCP local config (contains tokens) ────────────────────────
+.mcp.json
+!.mcp.json.example
+
 # ── Python ────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
@@ -102,6 +106,19 @@ graphify-out/
 # ── Ephemeral session state ──────────────────────────────────
 .context/HANDOFF
 
+# ── Research artifacts transitorios (.context/) ───────────────
+# Capturas y JSON crudos de sesiones de scraping/audit que NO son
+# fuente canónica — los reportes consolidados sí van a docs.
+.context/apify_*.json
+.context/apify-*.json
+.context/fb_pw*.png
+.context/fb_pw*.json
+.context/scraper_one_*.json
+.context/screenshot-*.png
+.context/juan-saymi-*.json
+.context/saymi-batch-*.json
+backend/.context/
+
 # ── Backend local cache and state (gigabytes) ────────────────
 backend/.cache/
 backend/.local/
@@ -125,3 +142,23 @@ backend/data/raw/ine_cartografia/**/*.shx
 backend/data/raw/ine_cartografia/**/*.prj
 backend/data/raw/ine_cartografia/**/*.cpg
 backend/data/raw/ine_cartografia/**/*.zip
+
+# Demoscopía CSVs (raw data, ingested via scripts/ingest_demoscopia_csvs.py)
+backend/data/demoscopia_csvs/
+
+# Test artifacts (Playwright screenshots, dev runtime)
+frontend/test-results/
+
+# SQLite WAL/SHM (runtime, regenerated on open)
+*.db-shm
+*.db-wal
+
+# Portfolio MD-Consultoría (out of scope CRECE, prevent root drops)
+/Portafolio_*.csv
+/task_plan.md
+
+# Plan IA reports (output runtime)
+backend/data/reportes_plan_ia/
+
+# Scratch outputs scrapers (testing — usar MinIO para archivar)
+backend/scripts/data/

@@ -24,9 +24,11 @@ import {
   Target,
   Users2,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CardShell, EmptyMetric } from "@/components/diagnostico/card-shell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { BloqueBase } from "@/lib/api/hooks/use-diagnostico-tier1";
 import type {
   B11Data,
@@ -99,6 +101,12 @@ export function CardB11({ bloque }: { bloque: BloqueBase & { data?: B11Data } })
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b11"
+      technicalNotes={
+        <>
+          Score sobre comments clasificados solamente. Diccionario conservador —
+          extender en Sprint S4 NLP pass.
+        </>
+      }
     >
       <div className="flex items-baseline gap-3" data-testid="b11-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
@@ -146,12 +154,6 @@ export function CardB11({ bloque }: { bloque: BloqueBase & { data?: B11Data } })
         </div>
       )}
 
-      {total > 0 && (
-        <p className="text-[10px] italic text-muted-foreground/80 leading-snug">
-          Score sobre comments clasificados solamente. Diccionario conservador — extender
-          en Sprint S4 NLP pass.
-        </p>
-      )}
     </CardShell>
   );
 }
@@ -391,6 +393,16 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b14"
+      calibrating
+      technicalNotes={
+        <>
+          <span className="font-medium">Detector en calibración.</span> Jaccard
+          sobre captions cortos tiende a saturar cerca de{" "}
+          <span className="font-mono">1.0</span> — los scores individuales
+          todavía no son interpretables de manera confiable. Úsalo como señal
+          relativa entre posts, no como medida absoluta.
+        </>
+      }
     >
       <div className="flex items-baseline gap-3" data-testid="b14-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
@@ -410,11 +422,8 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
         data-testid="b14-calibration-warning"
       >
         <p className="text-amber-800 dark:text-amber-300">
-          <span className="font-medium">⚠️ Detector en calibración.</span>{" "}
-          Jaccard sobre captions cortos tiende a saturar cerca de{" "}
-          <span className="font-mono">1.0</span> — los scores individuales todavía no
-          son interpretables de manera confiable. Úsalo como señal relativa entre
-          posts, no como medida absoluta.
+          <span className="font-medium">⚠️ En calibración</span> · usa el grid
+          solo como señal relativa entre posts. Detalle técnico en el ⓘ.
         </p>
       </div>
 
@@ -431,6 +440,9 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
               />
             ))}
           </div>
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+            <span className="italic">1 cuadro = 1 post · más reciente →</span>
+          </div>
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-sm bg-[hsl(var(--chart-positive))]" />
@@ -442,7 +454,7 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
             </span>
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-sm bg-[hsl(var(--chart-negative))]" />
-              alto
+              drift alto
             </span>
           </div>
         </div>
@@ -671,10 +683,20 @@ export function CardB16({ bloque }: { bloque: BloqueBase & { data?: B16Data } })
           </div>
         </div>
       ) : (
-        <p className="text-[11px] text-muted-foreground italic" data-testid="b16-empty-inline">
-          Sin promesas registradas. Activar B16 requiere registrar promesas en la
-          tabla <span className="font-mono">promesas_dirigente</span>.
-        </p>
+        <div
+          className="flex flex-col items-start gap-2 rounded-md border border-dashed border-border bg-muted/20 p-3"
+          data-testid="b16-empty-inline"
+        >
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Sin promesas registradas todavía. Captura la primera para empezar a
+            rastrear cumplimiento.
+          </p>
+          <Button size="sm" variant="default" asChild className="h-7 text-[11px]">
+            <Link href="/dashboard/onboarding">
+              Registrar primera promesa →
+            </Link>
+          </Button>
+        </div>
       )}
     </CardShell>
   );
@@ -716,6 +738,10 @@ export function CardB17({ bloque }: { bloque: BloqueBase & { data?: B17Data } })
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b17"
+      className={cn(
+        vedaActiva && !puede &&
+          "border-[hsl(var(--chart-negative))]/70 ring-2 ring-[hsl(var(--chart-negative))]/30 animate-pulse",
+      )}
     >
       <div
         className={cn(

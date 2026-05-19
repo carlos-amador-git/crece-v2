@@ -43,6 +43,9 @@ import {
   Stethoscope,
   Sparkles,
   Rocket,
+  Wand2,
+  Trophy,
+  Film,
 } from "lucide-react";
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -69,6 +72,7 @@ interface Section {
   label: string;
   adminOnly?: boolean;
   clientOnly?: boolean;
+  viewerHide?: boolean;
   items: SidebarItem[];
 }
 
@@ -95,12 +99,14 @@ const sections: Section[] = [
     items: [
       leaf("/dashboard", "Overview", LayoutDashboard),
       leaf("/dashboard/dirigentes", "Dirigentes", Users),
-      leaf("/dashboard/diagnostico/1", "Diagnostico", Stethoscope),
-      leaf("/dashboard/diagnostico-tier2/1", "Diferenciadores", Sparkles),
+      leaf("/dashboard/diagnostico", "Diagnostico", Stethoscope),
+      leaf("/dashboard/diagnostico-tier2", "Diferenciadores", Sparkles),
+      leaf("/dashboard/diagnostico/foda", "FODA", Shield),
       group("social", "Social", MessageSquare, [
         leaf("/dashboard/social", "Monitoreo", Activity),
         leaf("/dashboard/social/comentarios", "Comentarios", MessageSquare),
-        leaf("/dashboard/benchmark", "Benchmarks", BarChart3),
+        leaf("/dashboard/social/clima", "Clima Político", Activity),
+        leaf("/dashboard/content/top", "Top Posts", Trophy),
       ]),
       group("aceptacion", "Indice Aceptacion", Gauge, [
         leaf("/dashboard/aceptacion", "Overview", LayoutDashboard),
@@ -108,12 +114,25 @@ const sections: Section[] = [
         leaf("/dashboard/aceptacion/fantasmas", "Fantasmas", Ghost),
       ]),
       leaf("/dashboard/planes", "Planes IA", Brain),
-      leaf("/dashboard/recomendaciones", "Recomendaciones", Sparkles),
+      leaf("/dashboard/reels", "Reels (guiones)", Film),
+      leaf("/dashboard/recomendaciones", "Recomendaciones", Wand2),
+      leaf("/dashboard/settings/evaluacion-nlp", "Mi Evaluación", ClipboardList),
+    ],
+  },
+  {
+    label: "Configuración",
+    clientOnly: true,
+    items: [
+      group("configuracion", "Configuración", Settings, [
+        leaf("/dashboard/settings/analisis-politico", "Precisiones de análisis", Sliders, false),
+        leaf("/dashboard/sistema/metodologia", "Metodología", FileText, false),
+      ]),
     ],
   },
   {
     label: "Territorio y campana",
     clientOnly: true,
+    viewerHide: true,
     items: [
       group("territorio", "Territorio y campana", MapPin, [
         leaf("/dashboard/ciudadanos", "Ciudadanos", Users),
@@ -129,6 +148,7 @@ const sections: Section[] = [
   {
     label: "Sistema",
     clientOnly: true,
+    viewerHide: true,
     items: [
       group("sistema", "Sistema", Settings, [
         leaf("/dashboard/settings/analisis-politico", "Analisis Politico", Sliders, false),
@@ -143,6 +163,7 @@ const sections: Section[] = [
     adminOnly: true,
     items: [
       leaf("/dashboard/admin/overview", "Operacion de flota", LayoutDashboard, false),
+      leaf("/dashboard/admin/ranking", "Ranking competidores", BarChart3, false),
       leaf("/dashboard/admin/clasificacion", "Clasificacion", ClipboardList, false),
       leaf("/dashboard/admin/plan-ia-review", "Plan IA Review", Brain, false),
       leaf("/dashboard/onboarding/1", "Onboarding", Rocket, false),
@@ -200,15 +221,28 @@ export function Sidebar() {
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
-    // Diagnóstico: highlight para cualquier dirigente id, no solo /1
-    if (href.startsWith("/dashboard/diagnostico/")) {
+    // Diagnóstico: highlight en /dashboard/diagnostico (dispatcher) y /dashboard/diagnostico/{id}
+    // pero NO en /dashboard/diagnostico-tier2/... (mismo prefix).
+    if (href === "/dashboard/diagnostico") {
       return (
-        pathname.startsWith("/dashboard/diagnostico/") &&
-        !pathname.startsWith("/dashboard/diagnostico-tier2/")
+        (pathname === "/dashboard/diagnostico" ||
+          (pathname.startsWith("/dashboard/diagnostico/") &&
+            !pathname.endsWith("/foda") &&
+            !pathname.startsWith("/dashboard/diagnostico/foda"))) &&
+        !pathname.startsWith("/dashboard/diagnostico-tier2")
       );
     }
-    if (href.startsWith("/dashboard/diagnostico-tier2/")) {
-      return pathname.startsWith("/dashboard/diagnostico-tier2/");
+    if (href === "/dashboard/diagnostico/foda") {
+      return (
+        pathname === "/dashboard/diagnostico/foda" ||
+        (pathname.startsWith("/dashboard/diagnostico/") && pathname.endsWith("/foda"))
+      );
+    }
+    if (href === "/dashboard/diagnostico-tier2") {
+      return (
+        pathname === "/dashboard/diagnostico-tier2" ||
+        pathname.startsWith("/dashboard/diagnostico-tier2/")
+      );
     }
     return pathname.startsWith(href);
   };
@@ -383,8 +417,10 @@ export function Sidebar() {
             {sections
               .filter((section) => {
                 const isAdmin = user?.role === "admin";
+                const isViewer = user?.role === "viewer";
                 if (section.adminOnly) return isAdmin;
                 if (section.clientOnly && isAdmin) return false;
+                if (section.viewerHide && isViewer) return false;
                 return true;
               })
               .map((section) => (

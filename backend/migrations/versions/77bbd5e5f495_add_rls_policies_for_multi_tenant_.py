@@ -14,18 +14,15 @@ Strategy:
 """
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
-import sqlalchemy as sa
-import geoalchemy2
-
 
 # revision identifiers, used by Alembic.
 revision: str = '77bbd5e5f495'
-down_revision: Union[str, None] = 'ecb44c21a495'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'ecb44c21a495'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # Tables that have org_id and need RLS
 _RLS_TABLES = [

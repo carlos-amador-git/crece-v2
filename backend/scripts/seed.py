@@ -12,22 +12,21 @@ from pathlib import Path
 # Add backend root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.models.organizacion import Organizacion
-from app.models.user import User, Role
+from app.models.competitor_profile import CompetitorProfile
+from app.models.ciudadano import Ciudadano, Genero, NivelInteres, RangoEdad
 from app.models.dirigente import Dirigente
-from app.models.social import SocialProfile, SocialPost, Platform, PostType, SentimentLabel
-from app.models.electoral import SeccionElectoral, IntencionVoto
-from app.models.benchmark import Competidor, CompetidorSocialProfile
+from app.models.electoral import IntencionVoto, SeccionElectoral
+from app.models.evento import EstadoEvento, Evento, EventoAsistente, TipoEvento
+from app.models.organizacion import Organizacion
 from app.models.plan_ia import PlanIA, TipoPlan
-from app.models.ciudadano import Ciudadano, RangoEdad, Genero, NivelInteres
-from app.models.evento import Evento, EventoAsistente, TipoEvento, EstadoEvento
-from app.models.programa_social import ProgramaSocial, ProgramaBeneficiario, NivelGobierno
+from app.models.programa_social import NivelGobierno, ProgramaBeneficiario, ProgramaSocial
+from app.models.social import Platform, PostType, SentimentLabel, SocialPost, SocialProfile
+from app.models.user import Role, User
 
 
 async def seed():
@@ -535,50 +534,23 @@ async def seed():
             )
             session.add(iv)
 
-        # ── Competidores ──────────────────────────────────────────
-        morena_cdmx = Competidor(
-            nombre="Martí Batres Guadarrama",
-            partido="MORENA",
-            cargo="Jefe de Gobierno CDMX",
-            es_rival=True,
+        # ── Competidores (referentes light · D-MODEL-WAR-ROOM-1) ───────
+        # Demo: 1 competidor para Piña (cliente MC). En prod los carga MD
+        # via /api/v1/aceptacion/competitors. Tabla `competidores` legacy
+        # deprecada 2026-05-14.
+        demo_competidor_pina = CompetitorProfile(
+            org_id=org_mc.id,
+            dirigente_objetivo_id=pina.id,
+            display_name="Competidor Demo",
+            partido="PRI",
+            cargo="Diputado Local CDMX",
+            platform="TWITTER",
+            profile_external_id="seed_demo_competidor",
+            verified=False,
+            tags=["demo", "seed"],
+            notes="Fixture seed bootstrap. Reemplazar con competidores reales por org.",
         )
-        pan_cdmx = Competidor(
-            nombre="Santiago Taboada Cortina",
-            partido="PAN",
-            cargo="Candidato Jefe de Gobierno CDMX",
-            es_rival=True,
-        )
-        session.add_all([morena_cdmx, pan_cdmx])
-        await session.flush()
-
-        comp_profile_morena_tw = CompetidorSocialProfile(
-            competidor_id=morena_cdmx.id,
-            platform=Platform.TWITTER,
-            handle="@martlobo",
-            url="https://x.com/martlobo",
-            followers_count=285000,
-            following_count=3200,
-            posts_count=45000,
-        )
-        comp_profile_pan_tw = CompetidorSocialProfile(
-            competidor_id=pan_cdmx.id,
-            platform=Platform.TWITTER,
-            handle="@Santiago_Taboada",
-            url="https://x.com/Santiago_Taboada",
-            followers_count=198000,
-            following_count=2100,
-            posts_count=32000,
-        )
-        comp_profile_pan_ig = CompetidorSocialProfile(
-            competidor_id=pan_cdmx.id,
-            platform=Platform.INSTAGRAM,
-            handle="@santiagotaboadac",
-            url="https://instagram.com/santiagotaboadac",
-            followers_count=156000,
-            following_count=1200,
-            posts_count=2800,
-        )
-        session.add_all([comp_profile_morena_tw, comp_profile_pan_tw, comp_profile_pan_ig])
+        session.add(demo_competidor_pina)
 
         # ── Sample AI Plan ────────────────────────────────────────
         plan = PlanIA(

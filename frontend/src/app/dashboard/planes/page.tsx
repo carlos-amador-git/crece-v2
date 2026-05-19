@@ -122,9 +122,13 @@ export default function PlanesPage() {
             Planes estrategicos generados con inteligencia artificial
           </p>
         </div>
-        <Button onClick={() => setGenerateOpen(true)}>
+        <Button
+          disabled
+          title="Feature pausada 2026-05-15 · refactor a Claude Code + Gemini CLI pendiente"
+        >
           <Sparkles className="h-4 w-4" />
           Generar Plan
+          <span className="ml-1 text-[10px] opacity-70">(en mantenimiento)</span>
         </Button>
       </div>
 

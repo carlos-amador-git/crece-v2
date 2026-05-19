@@ -2,19 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import date
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import Role
-from app.models.dirigente import Dirigente
-from app.models.electoral import IntencionVoto, SeccionElectoral
+from app.models.electoral import SeccionElectoral
 from app.models.user import User
 from tests.conftest import auth_headers
-
 
 # ---------------------------------------------------------------------------
 # Helpers

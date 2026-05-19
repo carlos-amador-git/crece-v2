@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings
 from app.services.location_inference import (
-    LocationResult,
     infer_location,
     normalize_social_text,
 )

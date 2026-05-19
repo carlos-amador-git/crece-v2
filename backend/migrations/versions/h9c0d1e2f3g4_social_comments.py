@@ -11,9 +11,8 @@ Tabla para comments/replies scrapeados de posts. LFPDPPP compliant:
 - is_follower booleano (si el hash aparece también en profile_snapshot de followers)
 - es_externo derivado por defecto hasta tener followers list
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 revision = 'h9c0d1e2f3g4'
 down_revision = 'g8b9c0d1e2f3'

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
-from typing import Annotated, Any
 
-from fastapi import Depends, Request
+from fastapi import Request
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase

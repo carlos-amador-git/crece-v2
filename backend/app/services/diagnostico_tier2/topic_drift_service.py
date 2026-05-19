@@ -55,7 +55,7 @@ STOPWORDS_ES = {
     "era", "ser", "estar", "este", "esta", "esto", "ese", "esa", "eso",
     "me", "te", "se", "le", "les", "mi", "tu", "su", "yo", "nos", "nosotros",
     "más", "mas", "muy", "ya", "hay", "fue", "está", "están", "ha", "han",
-    "he", "su", "sus", "lo", "las", "https", "http", "www", "rt", "ft",
+    "he", "sus", "lo", "https", "http", "www", "rt", "ft",
     "jajaja", "jaja", "jaj", "jeje", "hola", "gracias",
 }
 

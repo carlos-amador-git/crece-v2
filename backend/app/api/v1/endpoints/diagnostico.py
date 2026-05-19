@@ -8,10 +8,11 @@ sobrescribir con header ``X-Org-Id``). No-admins solo ven dirigentes de su org.
 """
 from __future__ import annotations
 
-import asyncio
+import re
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -234,4 +235,267 @@ async def get_diagnostico_completo(
             "total": len(bloques),
         },
         "bloque_version": "tier1-v1",
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# FODA · vista dedicada para que el dirigente lea su Fortalezas/Debilidades
+# /Oportunidades/Amenazas en cuadrante 2×2.
+#
+# Lee el último DIAGNOSTICO de planes_ia y parsea el bloque ## FODA.
+# ──────────────────────────────────────────────────────────────────────────
+_FODA_HEADER_RE = re.compile(r"^#{2,4}\s*(?:\d+(?:[.)]\d+)?[.)]?\s*)?(Fortalezas|Oportunidades|Debilidades|Amenazas)\b", re.IGNORECASE)
+_FODA_COMBINED_HEADER_RE = re.compile(
+    r"^#{2,4}\s*(?:\d+(?:[.)]\d+)?[.)]?\s*)?(Fortalezas|Oportunidades|Debilidades|Amenazas)"
+    r"\s+y\s+(Fortalezas|Oportunidades|Debilidades|Amenazas)\b",
+    re.IGNORECASE,
+)
+_BULLET_RE = re.compile(r"^[-*]\s+(.*)$")
+_FODA_SECTION_START_RE = re.compile(r"^#{1,4}\s*(?:\d+[.)]\s*)?(?:Análisis\s+)?FODA\b", re.IGNORECASE)
+_TABLE_SEPARATOR_RE = re.compile(r"^\|\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$")
+_QUADRANT_NAMES = {"fortalezas", "oportunidades", "debilidades", "amenazas"}
+_SECTION_KEY = {q: q for q in _QUADRANT_NAMES}
+# Prefijo F1, O1, D1, A1, F-1, O-1, etc. en primera celda de tabla
+_QUADRANT_PREFIX_RE = re.compile(r"^\*{0,2}\s*([FODA])-?(\d+)\s*\*{0,2}\s*$", re.IGNORECASE)
+_PREFIX_TO_QUAD = {
+    "F": "fortalezas",
+    "O": "oportunidades",
+    "D": "debilidades",
+    "A": "amenazas",
+}
+# Header columns que indican formato 4-col (#|Hallazgo|Evidencia|Implicación)
+_HEADER_HALLAZGO_RE = re.compile(r"^\*{0,2}\s*(hallazgo|oportunidad|amenaza|debilidad|fortaleza)\s*\*{0,2}", re.IGNORECASE)
+
+
+def _strip_md_inline(text: str) -> str:
+    """Quita ** y * de inline emphasis y normaliza espacios."""
+    return re.sub(r"\*+", "", text).strip()
+
+
+def _split_table_row(line: str) -> list[str]:
+    """Devuelve celdas de una row markdown sin las pipes de borde."""
+    s = line.strip()
+    if s.startswith("|"):
+        s = s[1:]
+    if s.endswith("|"):
+        s = s[:-1]
+    return [c.strip() for c in s.split("|")]
+
+
+def _classify_cell(cell: str) -> str | None:
+    """Si una celda de header es exactamente uno de los 4 cuadrantes, devuelve la key normalizada."""
+    norm = _strip_md_inline(cell).lower()
+    return norm if norm in _QUADRANT_NAMES else None
+
+
+def _parse_foda(contenido: str) -> dict:
+    """Parser markdown tolerante del bloque FODA del DIAGNOSTICO.
+
+    Soporta:
+    - Estilo bullet (Piña): `## FODA` con `### Fortalezas` y `- item`
+    - Estilo tabla (Ballesteros): `### N. Análisis FODA` con tablas markdown
+      `| **Fortalezas** | **Debilidades** |` + filas de celdas
+    """
+    out: dict[str, list[str]] = {
+        "fortalezas": [],
+        "oportunidades": [],
+        "debilidades": [],
+        "amenazas": [],
+    }
+    if not contenido:
+        return out
+
+    lines = contenido.splitlines()
+    # Encuentra inicio del bloque FODA
+    start = None
+    for i, raw in enumerate(lines):
+        if _FODA_SECTION_START_RE.match(raw.strip()):
+            start = i + 1
+            break
+    if start is None:
+        return out
+
+    # Determina el final: siguiente heading del mismo o mayor nivel (no subheading)
+    # `### N. FODA` → corta en `### M.` (M != el número actual) o en `## `
+    end = len(lines)
+    for j in range(start, len(lines)):
+        s = lines[j].strip()
+        if s.startswith("## ") and not _FODA_SECTION_START_RE.match(s):
+            end = j
+            break
+        if s.startswith("### ") and not _FODA_SECTION_START_RE.match(s) and _FODA_HEADER_RE.match(s) is None:
+            # otra subsección numerada (### 6. ...)
+            end = j
+            break
+
+    block = lines[start:end]
+
+    # Estado para modo tabla
+    table_columns: list[str | None] | None = None  # mapping col_idx → quadrant key
+    expecting_separator = False
+    # Quadrant inferido por sección o header (formato 4-col: #|Hallazgo|Ev|Impl)
+    section_quadrant: str | None = None
+
+    # Estado para modo bullet
+    current_bullet: str | None = None
+
+    for raw in block:
+        line = raw.rstrip()
+        stripped = line.lstrip()
+
+        # Detección heading combinado (#### 5.1 Fortalezas y Oportunidades)
+        # → no fija un quadrant; deja que prefijos F1/O1 los discriminen
+        hcomb = _FODA_COMBINED_HEADER_RE.match(stripped)
+        if hcomb:
+            section_quadrant = None
+            current_bullet = None
+            table_columns = None
+            expecting_separator = False
+            continue
+
+        # Detección heading bullet o single-quadrant (### Fortalezas, #### 5.1 Amenazas)
+        h = _FODA_HEADER_RE.match(stripped)
+        if h:
+            quad = _SECTION_KEY[h.group(1).lower()]
+            current_bullet = quad
+            section_quadrant = quad
+            table_columns = None
+            expecting_separator = False
+            continue
+
+        # Detección de tabla
+        if stripped.startswith("|"):
+            cells = _split_table_row(stripped)
+
+            if expecting_separator and _TABLE_SEPARATOR_RE.match(stripped):
+                expecting_separator = False
+                continue
+
+            # Header row 2-col con celdas Fortalezas|Debilidades
+            mapped = [_classify_cell(c) for c in cells]
+            quadrants_in_row = [m for m in mapped if m]
+            if len(quadrants_in_row) >= 2:
+                table_columns = mapped
+                expecting_separator = True
+                current_bullet = None
+                continue
+
+            # Header row formato 4-col: #|Hallazgo|Evidencia|Implicación
+            # → setear modo prefijo (cada fila usa F1/O1 en col 0 para identificar)
+            if any(_HEADER_HALLAZGO_RE.match(c) for c in cells):
+                table_columns = None  # señaliza modo prefijo
+                expecting_separator = True
+                continue
+
+            # Data row dentro de una tabla 2-col activa
+            if table_columns is not None:
+                for col_idx, cell_raw in enumerate(cells):
+                    if col_idx >= len(table_columns):
+                        break
+                    quadrant = table_columns[col_idx]
+                    if not quadrant:
+                        continue
+                    item = _strip_md_inline(cell_raw)
+                    if item:
+                        out[quadrant].append(item)
+                continue
+
+            # Data row formato 4-col: chequear prefijo F1/O1/D1/A1 en primera celda
+            if cells:
+                prefix_match = _QUADRANT_PREFIX_RE.match(cells[0])
+                if prefix_match:
+                    quad = _PREFIX_TO_QUAD[prefix_match.group(1).upper()]
+                    # Concatenar resto de columnas como item
+                    item = " — ".join(_strip_md_inline(c) for c in cells[1:] if _strip_md_inline(c))
+                    if item:
+                        out[quad].append(item)
+                    continue
+
+                # Si no tiene prefijo pero hay section_quadrant activo
+                # → usar todo el row (skip "#" header de columna numérica)
+                if section_quadrant and len(cells) >= 2:
+                    item = " — ".join(_strip_md_inline(c) for c in cells if _strip_md_inline(c))
+                    if item and not _HEADER_HALLAZGO_RE.match(cells[0] if cells else ""):
+                        out[section_quadrant].append(item)
+                    continue
+
+            # pipe row sin contexto → ignorar
+            continue
+
+        # Si la línea está vacía o no es tabla, sale del modo tabla
+        if not stripped:
+            # mantén tabla activa por si vienen más rows tras blank line
+            continue
+
+        # Modo bullet
+        if current_bullet is None:
+            continue
+        b = _BULLET_RE.match(stripped)
+        if b:
+            item = b.group(1).strip()
+            if item:
+                out[current_bullet].append(item)
+
+    return out
+
+
+@router.get("/foda/{dirigente_id}")
+async def get_diagnostico_foda(
+    dirigente_id: int,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    """Devuelve el FODA estructurado del último DIAGNOSTICO del dirigente.
+
+    Scope (Option A):
+      - admin → cualquier dirigente
+      - viewer con dirigente_id propio → solo SU dirigente
+      - resto → cualquier dirigente de su org
+    """
+    # Scope check
+    if current_user.role == "admin":
+        pass
+    elif current_user.role == "viewer" and current_user.dirigente_id and current_user.dirigente_id != dirigente_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sin acceso a este dirigente")
+
+    sql = text("""
+        SELECT id, contenido, created_at
+          FROM planes_ia
+         WHERE dirigente_id = :did AND tipo = 'DIAGNOSTICO'
+         ORDER BY created_at DESC
+         LIMIT 1
+    """)
+    row = (await db.execute(sql, {"did": dirigente_id})).first()
+    if not row:
+        return {
+            "dirigente_id": dirigente_id,
+            "fortalezas": [],
+            "oportunidades": [],
+            "debilidades": [],
+            "amenazas": [],
+            "diagnostico_id": None,
+            "generado_at": None,
+            "plan_derivado_id": None,
+        }
+
+    diag_id, contenido, created_at = row
+    foda = _parse_foda(contenido or "")
+
+    plan_sql = text("""
+        SELECT id FROM planes_ia
+         WHERE dirigente_id = :did AND tipo = 'CONSOLIDACION'
+         ORDER BY created_at DESC LIMIT 1
+    """)
+    plan_row = (await db.execute(plan_sql, {"did": dirigente_id})).first()
+
+    return {
+        "dirigente_id": dirigente_id,
+        "fortalezas": foda["fortalezas"],
+        "oportunidades": foda["oportunidades"],
+        "debilidades": foda["debilidades"],
+        "amenazas": foda["amenazas"],
+        "diagnostico_id": diag_id,
+        "generado_at": created_at.isoformat() if created_at else None,
+        "plan_derivado_id": plan_row[0] if plan_row else None,
     }

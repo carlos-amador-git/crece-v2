@@ -23,10 +23,11 @@ Metadatos:
 Criterio pass: >60% detección con <15% FP vs baseline.
 Si no hay suficientes CIB positivos en baseline → documentar ambigüedad.
 """
-import json
 import csv
+import json
 from collections import Counter, defaultdict
 from pathlib import Path
+
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity

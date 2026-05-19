@@ -20,7 +20,15 @@ const SEMAFORO_LABEL: Record<CrecimientoPlatform["semaforo"], string> = {
   verde: "Mejorando",
   ambar: "Estable",
   rojo: "Decayendo",
-  desconocido: "Sin histórico",
+  desconocido: "Necesita 7d más",
+};
+
+const SEMAFORO_TOOLTIP: Record<CrecimientoPlatform["semaforo"], string> = {
+  verde: "Crecimiento ≥ +1% en 30d vs 30d anteriores",
+  ambar: "Cambio entre -1% y +1% en 30d (estable)",
+  rojo: "Decaimiento ≤ -1% en 30d vs 30d anteriores",
+  desconocido:
+    "Necesitamos al menos 7 días más de snapshots para comparar. El cron de followers empezó hoy — los próximos días llenarán la serie.",
 };
 
 export function SemaforoCrecimiento({ platforms }: Props) {
@@ -69,14 +77,21 @@ export function SemaforoCrecimiento({ platforms }: Props) {
               {p.stale_manual && (
                 <Badge
                   variant="outline"
-                  className="gap-1 border-amber-500/40 text-amber-600"
+                  className="gap-1.5 border-amber-500/50 bg-amber-500/15 font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
                   title={`Última actualización manual: ${p.last_manual_update ?? "nunca"}`}
                 >
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  </span>
                   <AlertTriangle className="h-3 w-3" />
                   {">48h sin update"}
                 </Badge>
               )}
-              <Badge className={SEMAFORO_CLASS[p.semaforo]}>
+              <Badge
+                className={SEMAFORO_CLASS[p.semaforo]}
+                title={SEMAFORO_TOOLTIP[p.semaforo]}
+              >
                 {SEMAFORO_LABEL[p.semaforo]}
               </Badge>
             </div>

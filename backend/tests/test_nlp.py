@@ -6,7 +6,7 @@ in the test environment. The focus is on the logic wrappers, not the models.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -19,7 +19,6 @@ from app.nlp.platform_weights import (
     normalize_sentiment,
     weighted_sentiment,
 )
-
 
 # ---------------------------------------------------------------------------
 # NLPAnalyzer (with mocked models)

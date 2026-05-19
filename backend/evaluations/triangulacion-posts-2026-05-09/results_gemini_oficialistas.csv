@@ -1,0 +1,116 @@
+post_id,dirigente_id,dirigente_nombre,tono_gemini,target_gemini,sentimiento_gemini,razon_gemini,raw_response,elapsed_s
+4774,5,Gabriela Jiménez Godoy,solidario,gobierno,positivo,Expresa respaldo y solidaridad directa a la Presidenta,"{""tono"":""solidario"",""target"":""gobierno"",""sentimiento"":""positivo"",""razon"":""Expresa respaldo y solidaridad directa a la Presidenta""}",12.49
+4778,5,Gabriela Jiménez Godoy,celebratorio,gobierno,positivo,Muestra entusiasmo por el encuentro institucional con la Presidenta.,"{""tono"":""celebratorio"",""target"":""gobierno"",""sentimiento"":""positivo"",""razon"":""Muestra entusiasmo por el encuentro institucional con la Presidenta.""}",12.08
+4761,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Celebra el relevo histórico en el CIME y vincula su labor legislativa con la visión de desarrollo nacional y soberanía energética.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Celebra el relevo histórico en el CIME y vincula su labor legislativa con la visión de desarrollo nacional y soberanía energética.""
+}",16.62
+4747,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Celebra hito histórico de género en ingeniería y promociona iniciativas legislativas de infraestructura.,"{
+""tono"": ""celebratorio"",
+""target"": ""autopromocion"",
+""sentimiento"": ""positivo"",
+""razon"": ""Celebra hito histórico de género en ingeniería y promociona iniciativas legislativas de infraestructura.""
+}",12.72
+4777,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Celebración de la visita de niñas y niños de Azcapotzalco a la Cámara de Diputados para promover sus derechos.,"{""tono"":""celebratorio"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Celebración de la visita de niñas y niños de Azcapotzalco a la Cámara de Diputados para promover sus derechos.""}",11.33
+4750,5,Gabriela Jiménez Godoy,informativo,autopromocion,positivo,Informa sobre la participación infantil en la Cámara de Diputados y el diálogo con legisladoras,"{""tono"":""informativo"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Informa sobre la participación infantil en la Cámara de Diputados y el diálogo con legisladoras""}",15.11
+4762,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Post celebratorio que resalta la labor legislativa y el acercamiento con la infancia de Azcapotzalco.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Post celebratorio que resalta la labor legislativa y el acercamiento con la infancia de Azcapotzalco.""
+}",11.09
+4737,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,"Celebra la visita de niños de Azcapotzalco a la Cámara de Diputados, destacando la labor legislativa y la promoción de derechos infantiles.","{
+  ""tono"": ""celebratorio"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Celebra la visita de niños de Azcapotzalco a la Cámara de Diputados, destacando la labor legislativa y la promoción de derechos infantiles.""
+}",12.20
+4779,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Celebración del Día del Niño con familias y compromiso legislativo a favor de la niñez.,"{""tono"":""celebratorio"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Celebración del Día del Niño con familias y compromiso legislativo a favor de la niñez.""}",12.18
+4763,5,Gabriela Jiménez Godoy,informativo,autopromocion,positivo,Invitación a leer columna de opinión propia sobre la transformación.,"{
+  ""tono"": ""informativo"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Invitación a leer columna de opinión propia sobre la transformación.""
+}",16.50
+4764,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Celebración del Día del Niño en comunidad con mensaje de compromiso legislativo.,"{""tono"":""celebratorio"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Celebración del Día del Niño en comunidad con mensaje de compromiso legislativo.""}",10.99
+4736,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Visita a comunidad por el Día del Niño resaltando labor legislativa y cercanía ciudadana.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Visita a comunidad por el Día del Niño resaltando labor legislativa y cercanía ciudadana.""}",10.32
+4765,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Inauguración de negocio local y respaldo al emprendimiento femenino en Azcapotzalco.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Inauguración de negocio local y respaldo al emprendimiento femenino en Azcapotzalco.""}",15.94
+4759,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Apoyo al emprendimiento local femenino y posicionamiento personal de cercanía en Azcapotzalco.,"{
+""tono"": ""celebratorio"",
+""target"": ""autopromocion"",
+""sentimiento"": ""positivo"",
+""razon"": ""Apoyo al emprendimiento local femenino y posicionamiento personal de cercanía en Azcapotzalco.""
+}",10.83
+4780,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Celebración de la apertura de un negocio local y posicionamiento de compromiso con el emprendimiento femenino.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Celebración de la apertura de un negocio local y posicionamiento de compromiso con el emprendimiento femenino.""}",13.08
+4766,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Celebración del Día de la Niñez resaltando compromiso social y colaboración institucional en un evento comunitario.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Celebración del Día de la Niñez resaltando compromiso social y colaboración institucional en un evento comunitario.""}",11.32
+4760,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Celebración del Día de la Niñez destacando compromiso social y colaboración política.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Celebración del Día de la Niñez destacando compromiso social y colaboración política.""}",10.43
+4767,5,Gabriela Jiménez Godoy,propositivo,tema_especifico,positivo,Promueve la erradicación de la violencia de género y el compromiso institucional por la igualdad.,"{""tono"":""propositivo"",""target"":""tema_especifico"",""sentimiento"":""positivo"",""razon"":""Promueve la erradicación de la violencia de género y el compromiso institucional por la igualdad.""}",13.13
+4734,5,Gabriela Jiménez Godoy,propositivo,tema_especifico,positivo,Llamado a la unidad institucional y empoderamiento para erradicar la violencia contra las mujeres.,"{""tono"":""propositivo"",""target"":""tema_especifico"",""sentimiento"":""positivo"",""razon"":""Llamado a la unidad institucional y empoderamiento para erradicar la violencia contra las mujeres.""}",11.57
+4781,5,Gabriela Jiménez Godoy,propositivo,ciudadania,positivo,Llamado a la acción colectiva y unidad institucional para erradicar la violencia de género.,"{
+  ""tono"": ""propositivo"",
+  ""target"": ""ciudadania"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Llamado a la acción colectiva y unidad institucional para erradicar la violencia de género.""
+}",11.42
+4808,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Resalta beneficios del Cablebús y trabajo conjunto con la Jefa de Gobierno.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Resalta beneficios del Cablebús y trabajo conjunto con la Jefa de Gobierno.""}",14.23
+4835,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Destaca beneficios de movilidad y economía del Cablebús resaltando la gestión de Brugada.,"{
+""tono"": ""celebratorio"",
+""target"": ""autopromocion"",
+""sentimiento"": ""positivo"",
+""razon"": ""Destaca beneficios de movilidad y economía del Cablebús resaltando la gestión de Brugada.""
+}",14.88
+4836,6,César Cravioto Romero,informativo,autopromocion,positivo,Informa sobre entrevista y destaca la colaboración institucional y el diálogo constante.,"{""tono"":""informativo"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Informa sobre entrevista y destaca la colaboración institucional y el diálogo constante.""}",14.15
+4822,6,César Cravioto Romero,celebratorio,gobierno,positivo,Resalta logros en transporte público y el liderazgo de la Jefa de Gobierno.,"{
+""tono"": ""celebratorio"",
+""target"": ""gobierno"",
+""sentimiento"": ""positivo"",
+""razon"": ""Resalta logros en transporte público y el liderazgo de la Jefa de Gobierno.""
+}",13.24
+4837,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Destaca los avances en movilidad y el liderazgo de la Jefa de Gobierno.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Destaca los avances en movilidad y el liderazgo de la Jefa de Gobierno.""}",11.86
+4839,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Comparte columna personal resaltando los principios de la 4T y la importancia de la unidad.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Comparte columna personal resaltando los principios de la 4T y la importancia de la unidad.""}",13.24
+4812,6,César Cravioto Romero,celebratorio,gobierno,positivo,Celebración de la inauguración de luminarias y mejoras de seguridad en el Centro Histórico junto a la Jefa de Gobierno.,"{""tono"":""celebratorio"",""target"":""gobierno"",""sentimiento"":""positivo"",""razon"":""Celebración de la inauguración de luminarias y mejoras de seguridad en el Centro Histórico junto a la Jefa de Gobierno.""}",42.34
+4840,6,César Cravioto Romero,celebratorio,gobierno,positivo,Celebración de la inauguración de luminarias y mejora de seguridad en el Centro Histórico junto a la Jefa de Gobierno.,"{""tono"":""celebratorio"",""target"":""gobierno"",""sentimiento"":""positivo"",""razon"":""Celebración de la inauguración de luminarias y mejora de seguridad en el Centro Histórico junto a la Jefa de Gobierno.""}",18.47
+4834,6,César Cravioto Romero,celebratorio,gobierno,positivo,Celebra la aprobación de la reforma del Sistema Público de Cuidados y el diálogo institucional.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Celebra la aprobación de la reforma del Sistema Público de Cuidados y el diálogo institucional.""
+}",14.36
+4841,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Celebra la aprobación de la reforma del Sistema de Cuidados y destaca su acompañamiento institucional.,"{
+""tono"": ""celebratorio"",
+""target"": ""autopromocion"",
+""sentimiento"": ""positivo"",
+""razon"": ""Celebra la aprobación de la reforma del Sistema de Cuidados y destaca su acompañamiento institucional.""
+}",13.97
+4810,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Celebra la visita de BTS y el recibimiento de la presidenta en Palacio Nacional.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Celebra la visita de BTS y el recibimiento de la presidenta en Palacio Nacional.""}",11.95
+4842,6,César Cravioto Romero,celebratorio,gobierno,positivo,Celebra el impacto positivo y la alegría por el evento de BTS con la presidenta Sheinbaum.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Celebra el impacto positivo y la alegría por el evento de BTS con la presidenta Sheinbaum.""
+}",11.54
+4843,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Celebra la iluminación del Centro Histórico y destaca su acompañamiento a la Jefa de Gobierno en un acto positivo.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Celebra la iluminación del Centro Histórico y destaca su acompañamiento a la Jefa de Gobierno en un acto positivo.""}",13.15
+4809,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Destaca la recuperación de espacios públicos y el desempeño institucional.,"{
+""tono"":""celebratorio"",
+""target"":""autopromocion"",
+""sentimiento"":""positivo"",
+""razon"":""Destaca la recuperación de espacios públicos y el desempeño institucional.""
+}",16.30
+4844,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Destaca la recuperación de la Plaza Pino Suárez como logro de la gestión gubernamental.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Destaca la recuperación de la Plaza Pino Suárez como logro de la gestión gubernamental.""}",14.15
+4805,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Celebra el éxito y la alta participación ciudadana en el simulacro nacional resaltando la eficiencia gubernamental.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Celebra el éxito y la alta participación ciudadana en el simulacro nacional resaltando la eficiencia gubernamental.""}",11.76
+4813,6,César Cravioto Romero,celebratorio,tema_especifico,positivo,Entusiasmo y celebración por evento cultural en el Zócalo y Palacio Nacional.,"{
+""tono"": ""celebratorio"",
+""target"": ""tema_especifico"",
+""sentimiento"": ""positivo"",
+""razon"": ""Entusiasmo y celebración por evento cultural en el Zócalo y Palacio Nacional.""
+}",13.94
+4847,6,César Cravioto Romero,celebratorio,autopromocion,positivo,Anuncio de encuentro entre grupo popular BTS y la Presidenta,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Anuncio de encuentro entre grupo popular BTS y la Presidenta""}",23.83
+4811,6,César Cravioto Romero,celebratorio,ciudadania,positivo,Anuncio entusiasta de un encuentro entre el grupo BTS y la presidenta en Palacio Nacional.,"{""tono"":""celebratorio"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Anuncio entusiasta de un encuentro entre el grupo BTS y la presidenta en Palacio Nacional.""}",12.38
+4806,6,César Cravioto Romero,informativo,ciudadania,positivo,Informa sobre el éxito del Simulacro Nacional y resalta la preparación y conciencia de la ciudadanía.,"{
+""tono"": ""informativo"",
+""target"": ""ciudadania"",
+""sentimiento"": ""positivo"",
+""razon"": ""Informa sobre el éxito del Simulacro Nacional y resalta la preparación y conciencia de la ciudadanía.""
+}",16.12

@@ -10,6 +10,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+import { formatNumber } from "@/lib/utils";
+
 interface EngagementBarChartProps {
   data: { name: string; value: number; fill?: string }[];
   layout?: "horizontal" | "vertical";
@@ -37,6 +39,7 @@ export function EngagementBarChart({
             tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
             tickLine={false}
             axisLine={false}
+            tickFormatter={(v: number) => formatNumber(v)}
           />
           <YAxis
             type="category"
@@ -54,6 +57,7 @@ export function EngagementBarChart({
               color: "hsl(var(--popover-foreground))",
               fontSize: 12,
             }}
+            formatter={(v: number) => formatNumber(v)}
           />
           <Bar
             dataKey="value"
@@ -84,7 +88,8 @@ export function EngagementBarChart({
           tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
           tickLine={false}
           axisLine={false}
-          width={40}
+          width={48}
+          tickFormatter={(v: number) => formatNumber(v)}
         />
         <Tooltip
           contentStyle={{
@@ -94,6 +99,7 @@ export function EngagementBarChart({
             color: "hsl(var(--popover-foreground))",
             fontSize: 12,
           }}
+          formatter={(v: number) => formatNumber(v)}
         />
         <Bar
           dataKey="value"

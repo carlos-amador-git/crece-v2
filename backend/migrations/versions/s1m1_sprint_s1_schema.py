@@ -32,10 +32,9 @@ NOTA: migration hand-written (NO autogenerate) porque existen tablas pre-S1 sin 
 SQLAlchemy (encuestas_publicas, social_comments, resultados_electorales_seccion) que un
 autogenerate borraría. Se respeta ese drift intencionalmente.
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
-
 
 # revision identifiers, used by Alembic.
 revision = 's1m1_sprint_s1_schema'

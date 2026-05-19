@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import asyncio
 import re
-from typing import Optional
 
 from sqlalchemy import text
 
 from app.core.database import async_session_factory
 from app.nlp.analyzer import NLPAnalyzer
-
 
 TONO_KEYWORDS = {
     "celebratorio": [r"\b(felicid|bravo|excelente|gracias|bien hecho|grande)\b"],

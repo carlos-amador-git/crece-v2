@@ -198,6 +198,17 @@ def build_foda(d: dict) -> dict:
             f"YouTube con solo {yt_profile['followers']} subs — espacio para crecer con contenido educativo tipo columna-vídeo."
         )
 
+    # Oportunidades — redes mainstream AUSENTES (no tiene perfil registrado)
+    plataformas_propias = {p["platform"] for p in d["profiles"]}
+    redes_estandar = {
+        "TIKTOK": "TikTok ausente — canal con mayor potencial de viralización en audiencia <35 años. Bajo costo de producción (reels de 15-60s).",
+        "YOUTUBE": "YouTube ausente — formato largo para contenido reflexivo / educativo (entrevistas, foros, columna-vídeo).",
+        "TWITTER": "X/Twitter ausente — espacio político natural para construir posicionamiento en debate público.",
+    }
+    for red, mensaje in redes_estandar.items():
+        if red not in plataformas_propias:
+            oportunidades.append(mensaje)
+
     # Amenazas — riesgo INE oficialismo
     if d["rol_politico"] == "oficialismo":
         target_gob = d["target_mix"].get("gobierno", 0)
@@ -236,7 +247,7 @@ def build_markdown(d: dict, foda: dict) -> str:
         f"**Partido:** {d['partido']} · **Rol político:** {d['rol_politico']}",
         f"**Entidad:** {d['estado']}",
         f"**Fecha diagnóstico:** {datetime.now(UTC).strftime('%Y-%m-%d')}",
-        f"**Versión:** v1-automated-data-driven",
+        "**Versión:** v1-automated-data-driven",
         "",
         "---",
         "",
@@ -256,7 +267,7 @@ def build_markdown(d: dict, foda: dict) -> str:
         "|---|---|---|---|---|",
     ]
     for p in d["profiles"]:
-        src_note = f" ⚠️ manual" if p["data_source"] == "manual_host_ingest" else ""
+        src_note = " ⚠️ manual" if p["data_source"] == "manual_host_ingest" else ""
         lines.append(f"| {p['platform']} | {p['handle']} | {p['followers']:,} | {p['posts']} | {p['data_source']}{src_note} |")
 
     lines.extend([
@@ -313,7 +324,18 @@ async def main():
             text("SELECT id FROM users WHERE role='ADMIN' LIMIT 1")
         )).scalar_one()
 
-        for did in range(1, 7):
+        import sys
+        # CLI: --dirigente N (REQUERIDO).
+        # NOTA: este script hace DELETE+INSERT sobre planes_ia. Correrlo sin
+        # --dirigente borraba los DIAGNOSTICOs ricos del 2026-05-10 (claude-2way
+        # / gemini-cli-2way). Ahora exige flag explícito para evitar pérdida.
+        if "--dirigente" not in sys.argv:
+            print("ERROR: --dirigente N es requerido (sobrescribe DIAGNOSTICO existente)")
+            sys.exit(1)
+        idx = sys.argv.index("--dirigente")
+        target_ids = [int(sys.argv[idx + 1])]
+
+        for did in target_ids:
             data = await collect_data(session, did)
             if not data:
                 continue
@@ -355,7 +377,7 @@ async def main():
             print(f"✅ DIAGNOSTICO generado para {data['full_name']} (dirigente_id={did})")
 
         await session.commit()
-        print(f"\n🎯 6 DIAGNOSTICOS creados en planes_ia")
+        print("\n🎯 6 DIAGNOSTICOS creados en planes_ia")
 
 
 if __name__ == "__main__":

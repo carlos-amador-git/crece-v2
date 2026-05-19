@@ -1,0 +1,83 @@
+{
+  "dirigente": {
+    "nombre": "Alejandro Piña Medina",
+    "cargo": "Coordinador Comisión Operativa Estatal",
+    "partido": "MC",
+    "estado": "Ciudad de México",
+    "municipio": "CDMX"
+  },
+  "ipd": {
+    "score": 2.76,
+    "scale": "0-10 (10 = presencia digital óptima)",
+    "platform_scores": {
+      "twitter": 1.02,
+      "instagram": 3.0,
+      "tiktok": 0.39,
+      "youtube": 0.0,
+      "facebook": 4.05
+    },
+    "platform_coverage": "56%",
+    "posting_frequency_per_day": 2.47,
+    "interpretation": "CRITICO"
+  },
+  "social_profiles": [
+    {
+      "platform": "TWITTER",
+      "handle": "alejandro_pinha",
+      "followers": 3678,
+      "posts_30d": 6,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.7065
+    },
+    {
+      "platform": "INSTAGRAM",
+      "handle": "alejandro.pinha",
+      "followers": 3373,
+      "posts_30d": 21,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.4261
+    },
+    {
+      "platform": "TIKTOK",
+      "handle": "@alejandro.pinha",
+      "followers": 3949,
+      "posts_30d": 0,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": null
+    },
+    {
+      "platform": "YOUTUBE",
+      "handle": "alejandropinamedina",
+      "followers": 29,
+      "posts_30d": 0,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": null
+    },
+    {
+      "platform": "FACEBOOK",
+      "handle": "alejandropinamedina",
+      "followers": 1800,
+      "posts_30d": 47,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.1247
+    }
+  ],
+  "sentiment_30d": {
+    "POSITIVE": 13,
+    "NEGATIVE": 6,
+    "NEUTRAL": 20
+  },
+  "top_competitors": [
+    {
+      "nombre": "Santiago Taboada Cortina",
+      "partido": "PAN",
+      "total_followers": 354000
+    },
+    {
+      "nombre": "Martí Batres Guadarrama",
+      "partido": "MORENA",
+      "total_followers": 285000
+    }
+  ],
+  "analysis_date": "2026-05-10T06:09:34.329216+00:00"
+}

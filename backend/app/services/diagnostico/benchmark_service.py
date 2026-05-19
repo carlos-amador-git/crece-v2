@@ -39,7 +39,6 @@ from statistics import mean
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.dirigente import Dirigente
 from app.models.social import SocialPost, SocialProfile
 from app.services.diagnostico._common import (
     build_dirigente_not_found,
@@ -89,7 +88,12 @@ async def _stats_dirigente(
     n_posts = len(posts)
     posts_semana = round(n_posts / 4.0, 2)
     er_values = [p.engagement_rate for p in posts if p.engagement_rate is not None]
-    er_avg_pct = round(mean(er_values) * 100.0, 3) if er_values else None
+    # social_posts.engagement_rate ya viene en escala % (0-100) desde los scrapers.
+    # Antes (pre 2026-05-12) este código hacía `* 100.0` asumiendo fracción → resultados
+    # inflados ×100 cuando el dato venía en %. Convención unificada: escala %.
+    # Caveat: Twitter histórico (pre piloto) algunos posts en escala fracción → quedarán
+    # subestimados ×100 hasta normalización de pipeline (blocker B-ER-SCALE-1).
+    er_avg_pct = round(mean(er_values), 3) if er_values else None
     sentiments = [p.sentiment_score for p in posts if p.sentiment_score is not None]
     sentiment_avg = round(mean(sentiments), 3) if sentiments else None
 
@@ -145,8 +149,11 @@ async def compute(
     rivales: list[dict] = []
     rivales_con_data = 0
     for rid in rivales_ids:
-        # verificar existencia y scoping (no queremos cruzar orgs)
-        rd = await load_dirigente_scoped(db, rid, org_id)
+        # Rivales declarados explícitamente en `competidor_directo_ids` son
+        # referencias informativas (nombre, métricas públicas agregadas) — no
+        # acceso a data sensible interna. Por eso se cargan SIN scoping por
+        # org_id (D-BENCHMARK-CROSS-ORG-1, 2026-05-12).
+        rd = await load_dirigente_scoped(db, rid, None)
         if rd is None:
             rivales.append({"dirigente_id": rid, "status": "no_encontrado"})
             continue

@@ -6,8 +6,7 @@ al mismo schema. Cualquier divergencia se atribuye al modelo, no al formato.
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -60,8 +59,8 @@ class ClassificationRow(BaseModel):
     classified_at: str = Field(..., description="ISO-8601 UTC")
 
     # Campos opcionales mantenidos para trazabilidad (no usados en comparación):
-    handle_dirigente: Optional[str] = None
-    plataforma: Optional[str] = None
+    handle_dirigente: str | None = None
+    plataforma: str | None = None
 
     @field_validator("classified_at")
     @classmethod
@@ -82,8 +81,8 @@ class SampleRow(BaseModel):
     handle_dirigente: str
     comment_text: str
     post_text: str
-    author: Optional[str] = None
-    likes: Optional[int] = 0
+    author: str | None = None
+    likes: int | None = 0
 
 
 # ---------------------------------------------------------------------------

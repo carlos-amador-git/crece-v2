@@ -90,6 +90,16 @@ class InstagramScraper(BaseScraper):
         for i, post in enumerate(guest.posts(handle, count=limit)):
             if i >= limit:
                 break
+            # ensta: image/video URLs · spm_media1
+            media_urls: list[str] = []
+            for attr in ("display_url", "thumbnail_url", "image_url"):
+                val = getattr(post, attr, None)
+                if val:
+                    media_urls.append(val)
+                    break
+            video_url = getattr(post, "video_url", None)
+            if video_url and video_url not in media_urls:
+                media_urls.append(video_url)
             raw_posts.append(
                 {
                     "shortcode": post.code or "",
@@ -97,6 +107,7 @@ class InstagramScraper(BaseScraper):
                     "likes": post.like_count or 0,
                     "comments": post.comment_count or 0,
                     "taken_at": post.taken_at,  # unix timestamp
+                    "media_urls": media_urls or None,
                 }
             )
 
@@ -158,6 +169,14 @@ class InstagramScraper(BaseScraper):
         for i, post in enumerate(ig_profile.get_posts()):
             if i >= limit:
                 break
+            # instaloader: post.url (imagen) y post.video_url (si video) · spm_media1
+            media_urls: list[str] = []
+            url_attr = getattr(post, "url", None)
+            if url_attr:
+                media_urls.append(url_attr)
+            video_url = getattr(post, "video_url", None)
+            if video_url and video_url not in media_urls:
+                media_urls.append(video_url)
             raw_posts.append(
                 {
                     "shortcode": post.shortcode or "",
@@ -165,6 +184,7 @@ class InstagramScraper(BaseScraper):
                     "likes": post.likes or 0,
                     "comments": post.comments or 0,
                     "taken_at": (int(post.date_utc.timestamp()) if post.date_utc else None),
+                    "media_urls": media_urls or None,
                 }
             )
 
@@ -259,6 +279,7 @@ class InstagramScraper(BaseScraper):
             "comments": int(comments),
             "shares": 0,  # Instagram does not expose share counts publicly
             "views": 0,
+            "media_urls": raw_data.get("media_urls") or None,
             "raw_data": raw_data,
         }
 
@@ -372,6 +393,7 @@ class InstagramScraper(BaseScraper):
                                 comments=parsed["comments"],
                                 shares=parsed["shares"],
                                 views=parsed["views"],
+                                media_urls=parsed.get("media_urls"),
                                 raw_data=parsed["raw_data"],
                                 scraped_at=datetime.now(UTC),
                             )

@@ -10,9 +10,14 @@ Heurística léxica sobre ``social_posts.content`` (últimos 90d) con 4 factores
     4. institucional_pct      — "gobierno/institucional/comunicado/oficial/..."
                                 (factor negativo)
 
-Score final:
-    score = 100 * (0.30*p1 + 0.20*p2 + 0.30*p3 - 0.20*p4)
+Score final (D-HUMANIZ-NORM-1, 2026-05-12):
+    raw = 0.30*p1 + 0.20*p2 + 0.30*p3 - 0.20*p4    # rango raw [-0.20, 0.80]
+    score = 100 * raw / 0.80                        # normalizado a rango pleno [0, 100]
     clamp [0, 100]
+
+    Antes (pre 2026-05-12) la fórmula NO normalizaba por la suma de pesos positivos
+    (0.80), entonces el techo era 80 y la UI mostraba "/100" mintiendo. Ahora un
+    dirigente con 100% en los 3 factores positivos y 0% institucional alcanza 100.
 
 Returns:
     {
@@ -88,9 +93,11 @@ def _count_matches(text: str, keywords: list[str]) -> int:
 
 
 def _interpretar(score: float) -> str:
-    if score >= 60:
+    # Thresholds escalados proporcionalmente al techo 100 (antes 60→75, 35→44).
+    # D-HUMANIZ-NORM-1.
+    if score >= 75:
         return "Humanizado"
-    if score >= 35:
+    if score >= 44:
         return "Equilibrado"
     return "Institucional"
 
@@ -106,7 +113,7 @@ def _score_post(content: str) -> tuple[float, list[str]]:
     has_personal = 1 if _count_matches(content, KEYWORDS_PERSONALES) > 0 else 0
     has_institucional = 1 if _count_matches(content, KEYWORDS_INSTITUCIONALES) > 0 else 0
 
-    raw = 100.0 * (0.30 * has_primera + 0.20 * has_emoji + 0.30 * has_personal - 0.20 * has_institucional)
+    raw = 100.0 * (0.30 * has_primera + 0.20 * has_emoji + 0.30 * has_personal - 0.20 * has_institucional) / 0.80
     score = max(0.0, min(raw, 100.0))
 
     factores: list[str] = []
@@ -165,13 +172,27 @@ async def compute(
     n_institucional = sum(
         1 for p in posts if _count_matches(p.content or "", KEYWORDS_INSTITUCIONALES) > 0
     )
+    # D-HUMANIZ-NEUTRO-1 (2026-05-12): posts sin NINGUNA señal detectable son "neutros"
+    # (anuncios cortos, frases poéticas, descripciones), NO institucionales. Calcular
+    # score sobre el subconjunto con marcador detectable evita penalizar al dirigente
+    # por posts no clasificables.
+    n_sin_marcador = sum(
+        1 for p in posts
+        if not PRIMERA_PERSONA_RX.search(p.content or "")
+        and not EMOJI_RX.search(p.content or "")
+        and _count_matches(p.content or "", KEYWORDS_PERSONALES) == 0
+        and _count_matches(p.content or "", KEYWORDS_INSTITUCIONALES) == 0
+    )
+    n_con_marcador = n - n_sin_marcador
 
-    p1 = n_primera / n
-    p2 = n_emoji / n
-    p3 = n_personal / n
-    p4 = n_institucional / n
+    # Cálculo sobre los posts con marcador detectable (los neutros se excluyen del denominador)
+    denominador = n_con_marcador if n_con_marcador > 0 else n
+    p1 = n_primera / denominador
+    p2 = n_emoji / denominador
+    p3 = n_personal / denominador
+    p4 = n_institucional / denominador
 
-    raw = 100.0 * (0.30 * p1 + 0.20 * p2 + 0.30 * p3 - 0.20 * p4)
+    raw = 100.0 * (0.30 * p1 + 0.20 * p2 + 0.30 * p3 - 0.20 * p4) / 0.80
     score = max(0.0, min(raw, 100.0))
 
     return build_ok(
@@ -186,6 +207,8 @@ async def compute(
             },
             "interpretacion": _interpretar(score),
             "n_posts": n,
+            "n_posts_con_marcador": n_con_marcador,
+            "n_posts_sin_marcador": n_sin_marcador,
             "ventana_dias": VENTANA_DIAS,
             "pesos_formula": {"p1": 0.30, "p2": 0.20, "p3": 0.30, "p4_negativo": -0.20},
         },

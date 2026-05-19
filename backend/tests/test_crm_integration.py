@@ -16,7 +16,6 @@ from app.models.user import User
 from app.models.voter_score_integration import VoterScoreIntegration
 from tests.conftest import auth_headers
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

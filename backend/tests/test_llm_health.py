@@ -19,7 +19,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.llm_health_log import LLMHealthLog
 from app.ops import llm_health as svc
 
-
 # ---------------------------------------------------------------------------
 # Redis mock fixture — avoid real Redis dependency in unit tests
 # ---------------------------------------------------------------------------

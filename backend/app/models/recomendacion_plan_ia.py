@@ -84,6 +84,9 @@ class RecomendacionPlanIA(Base):
     criterio_exito: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     principio_conductual: Mapped[str | None] = mapped_column(String(100), nullable=True)
     evidencia_respaldo: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Array de plataformas destino: ["INSTAGRAM", "FACEBOOK", "TIKTOK", "YOUTUBE", "TWITTER"]
+    # Reemplaza la detección regex frágil sobre accion_texto en el frontend.
+    plataformas_destino: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
 
     estado: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default="propuesta", default="propuesta"

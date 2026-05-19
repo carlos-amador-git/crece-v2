@@ -29,7 +29,6 @@ from app.models.social import (
 from app.nlp.topic_extractor import EMOTION_SEED, TOPIC_SEED, TopicExtractor
 from tests.conftest import auth_headers
 
-
 # ---------------------------------------------------------------------------
 # Unit tests — TopicExtractor con Ollama mockeado
 # ---------------------------------------------------------------------------

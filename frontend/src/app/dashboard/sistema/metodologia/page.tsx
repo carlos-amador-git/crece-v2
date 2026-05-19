@@ -51,13 +51,13 @@ export default function MetodologiaPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="er-mx" className="scroll-mt-20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Gauge className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             Engagement Rate (ER) y rangos empíricos
           </CardTitle>
-          <CardDescription>Aplicado en B01 "Engagement vs. tu estrato", B04 Benchmark, y derivados.</CardDescription>
+          <CardDescription>Aplicado en B01 "Conexión con tu audiencia", B04 "Frente a la competencia", y derivados.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
           <p>
@@ -89,51 +89,136 @@ export default function MetodologiaPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Database className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            Fuentes académicas utilizadas
+            Detalle de cada bloque del diagnóstico
           </CardTitle>
-          <CardDescription>Referencias para los bloques específicos del diagnóstico.</CardDescription>
+          <CardDescription>
+            Cada card del dashboard tiene un icono ℹ️ que enlaza directo al bloque correspondiente aquí abajo.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm leading-relaxed text-muted-foreground">
-          <div className="flex gap-3">
+        <CardContent className="space-y-5 text-sm leading-relaxed text-muted-foreground">
+          <div id="b01" className="scroll-mt-20 flex gap-3">
+            <Badge variant="outline" className="shrink-0">B01</Badge>
+            <div>
+              <p className="font-medium text-foreground">Conexión con tu audiencia</p>
+              <p className="text-xs">
+                Mide qué tanto interactúa tu gente con tus publicaciones (likes, comentarios, compartidos ÷ seguidores
+                o alcance, según plataforma). Tu Engagement Rate se compara contra el rango empírico de política
+                mexicana (0.01%–1.1%), no contra benchmarks de Influencer Marketing (que sobre-estiman ~100×).
+                Ver sección "Engagement Rate (ER) y rangos empíricos" arriba para fuente y metodología completa.
+              </p>
+            </div>
+          </div>
+          <div id="b02" className="scroll-mt-20 flex gap-3">
             <Badge variant="outline" className="shrink-0">B02</Badge>
             <div>
-              <p className="font-medium text-foreground">Escalón de viralidad (Brookings Breakout Scale)</p>
+              <p className="font-medium text-foreground">Alcance fuera de tu red (Brookings Breakout Scale)</p>
               <p className="text-xs">
-                Escala 1–6 de Brookings Institution para medir viralidad. La escala clasifica contenido desde
-                "micro-viral" (Cat 1: cientos de vistas) hasta "viralidad institucional" (Cat 6: millones + cobertura de
-                medios). CRECE aplica el mismo criterio adaptado al estrato mexicano.
+                Escala 1–6 de Brookings Institution adaptada al estrato mexicano. Mide si tu contenido cruza
+                fronteras algorítmicas: del "Base" (cientos de vistas, solo seguidores) al "Global" (millones +
+                cobertura de medios). Cada nivel representa un orden de magnitud distinto de alcance no-pagado.
               </p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div id="b03" className="scroll-mt-20 flex gap-3">
+            <Badge variant="outline" className="shrink-0">B03</Badge>
+            <div>
+              <p className="font-medium text-foreground">Salud de tus publicaciones (matriz 2×2)</p>
+              <p className="text-xs">
+                Cada post se clasifica por dos ejes: <span className="font-medium">engagement</span> (% interacción) y
+                <span className="font-medium"> sentimiento</span> (positivo/negativo). Cuatro cuadrantes resultantes:
+                <span className="font-medium"> Éxitos</span> (alto engagement + positivo),
+                <span className="font-medium"> Riesgos</span> (alto engagement + negativo · estás amplificando crítica),
+                <span className="font-medium"> Neutros</span> (alto engagement sin polarizar),
+                <span className="font-medium"> Sin Eco</span> (bajo engagement · esfuerzo desperdiciado).
+              </p>
+            </div>
+          </div>
+          <div id="b04" className="scroll-mt-20 flex gap-3">
+            <Badge variant="outline" className="shrink-0">B04</Badge>
+            <div>
+              <p className="font-medium text-foreground">Frente a la competencia</p>
+              <p className="text-xs">
+                Comparativa directa de tu engagement contra los competidores configurados para tu org. Ranking ordenado
+                por ER promedio del periodo. Los competidores se cargan desde "Configuración → Benchmark"
+                (admin) y se actualizan vía scrapers de la plataforma. Si todos los rivales aparecen con datos demo,
+                el banner amarillo lo indica explícitamente.
+              </p>
+            </div>
+          </div>
+          <div id="b05" className="scroll-mt-20 flex gap-3">
             <Badge variant="outline" className="shrink-0">B05</Badge>
             <div>
-              <p className="font-medium text-foreground">Emociones (Rueda de Plutchik)</p>
+              <p className="font-medium text-foreground">Sentimiento de la audiencia (Rueda de Plutchik)</p>
               <p className="text-xs">
-                Las 6 emociones base provienen del modelo Plutchik (1980): alegría, tristeza, confianza, miedo, enojo,
-                anticipación. Se clasifica qué emociones dominantes provoca tu contenido en la audiencia.
+                Las 6 emociones base provienen del modelo Plutchik (1980): Alegría, Tristeza, Confianza, Miedo, Enojo,
+                Anticipación. Se clasifica qué emociones predominan en los comentarios de tu audiencia. El KPI
+                principal "Confianza vs Enojo" es la proporción entre ambas — ratio alto = comunidad leal; ratio
+                bajo = polarización u hostilidad organizada.
               </p>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Badge variant="outline" className="shrink-0">B12</Badge>
-            <div>
-              <p className="font-medium text-foreground">Detector de coordinación artificial (CIB · ITESO/DFRLab)</p>
-              <p className="text-xs">
-                Metodología CIB (Coordinated Inauthentic Behaviour) del DFRLab (Atlantic Council) adaptada por el
-                ITESO para el contexto mexicano. Detecta patrones de publicación sincronizada y amplificación
-                coordinada que sugieren cuentas no orgánicas.
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
+          <div id="b06" className="scroll-mt-20 flex gap-3">
             <Badge variant="outline" className="shrink-0">B06</Badge>
             <div>
-              <p className="font-medium text-foreground">Detector de crisis (spike detection)</p>
+              <p className="font-medium text-foreground">Semáforo de crisis (detección de spikes)</p>
               <p className="text-xs">
-                Detección estadística de outliers sobre el rate de posts tóxicos por hora. Baseline = media móvil de 24h;
-                crisis se declara cuando el rate actual supera 3 desviaciones estándar del baseline.
+                Detección estadística de outliers sobre el rate de posts/comentarios tóxicos por hora. Baseline = media
+                móvil de 24h; alerta se declara cuando el rate actual supera 3 desviaciones estándar del baseline. No
+                detecta crítica "normal" — solo picos anómalos que sugieren ataque coordinado o evento de crisis.
               </p>
+            </div>
+          </div>
+          <div id="b07" className="scroll-mt-20 flex gap-3">
+            <Badge variant="outline" className="shrink-0">B07</Badge>
+            <div>
+              <p className="font-medium text-foreground">Nuevos seguidores (atribución)</p>
+              <p className="text-xs">
+                Delta de seguidores en los últimos 14 días, descompuesto por publicación que más contribuyó al
+                crecimiento. La atribución usa correlación temporal post→follow + boost de viralidad observado. No es
+                causalidad directa, es la mejor aproximación disponible sin acceso a APIs internas de las plataformas.
+              </p>
+            </div>
+          </div>
+          <div id="b08" className="scroll-mt-20 flex gap-3">
+            <Badge variant="outline" className="shrink-0">B08</Badge>
+            <div>
+              <p className="font-medium text-foreground">Tu peso en la conversación (Share of Voice)</p>
+              <p className="text-xs">
+                Porcentaje de la conversación pública sobre tu tema principal que te pertenece. Numerador = menciones
+                que te citan o respondes. Denominador = total de menciones del tema en el periodo. Útil para detectar
+                si dominas o pierdes terreno en temas que defines como propios.
+              </p>
+            </div>
+          </div>
+          <div id="b09" className="scroll-mt-20 flex gap-3">
+            <Badge variant="outline" className="shrink-0">B09</Badge>
+            <div>
+              <p className="font-medium text-foreground">Poder Viral (ratio shares/likes normalizado)</p>
+              <p className="text-xs">
+                Mide si tu gente solo da "like" pasivo o realmente comparte tu contenido. Ratio = compartidos ÷ likes,
+                normalizado por estrato. Escala cualitativa (1–10) derivada del ratio: alto significa contenido que
+                cruza redes orgánicamente, bajo significa audiencia pasiva sin amplificación natural.
+              </p>
+            </div>
+          </div>
+          <div id="b10" className="scroll-mt-20 flex gap-3">
+            <Badge variant="outline" className="shrink-0">B10</Badge>
+            <div>
+              <p className="font-medium text-foreground">Tu toque humano (humanización score)</p>
+              <p className="text-xs mb-2">
+                Score 0–100 que mide qué tan "persona real" vs "comunicación institucional acartonada" se percibe tu
+                cuenta. Variables: uso de primera persona, emojis, fotos personales, lenguaje coloquial, narrativa propia.
+                Estudios de comunicación política consistentemente muestran que perfiles más humanos generan más
+                conexión emocional y engagement orgánico.
+              </p>
+              <p className="text-xs font-medium text-foreground">Acciones que aumentan el score:</p>
+              <ul className="text-xs list-disc list-inside space-y-0.5 pl-1">
+                <li>Usar primera persona ("Yo creo...", "Visité...")</li>
+                <li>Emojis selectivos (no en exceso)</li>
+                <li>Narrativa propia y anécdotas</li>
+                <li>Fotos personales (no solo institucionales/eventos)</li>
+                <li>Lenguaje coloquial, contracciones, regionalismos</li>
+              </ul>
             </div>
           </div>
         </CardContent>

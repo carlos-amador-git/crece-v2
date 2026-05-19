@@ -140,11 +140,11 @@ def main():
     """)
     stats = cur.fetchall()
 
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  Updated: {updated} rows")
     print(f"  Enriched: {enriched} / {enriched + missing} secciones")
     print(f"  Missing (no match in CSV): {missing}")
-    print(f"\nPer alcaldía:")
+    print("\nPer alcaldía:")
     print(f"  {'Alcaldía':<25} {'Secciones':>10} {'Avg Vol':>10} {'Avg LN':>10}")
     print(f"  {'-'*55}")
     for row in stats:

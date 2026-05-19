@@ -68,6 +68,7 @@ export interface Recomendacion {
   criterio_exito: CriterioExito | null;
   principio_conductual: string | null;
   evidencia_respaldo: EvidenciaRespaldo | null;
+  plataformas_destino?: string[] | null;
   metadatos_llm?: MetadatosLLM | null;
   estado: EstadoRecomendacion;
   post_ejecutor_id: number | null;

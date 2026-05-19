@@ -6,6 +6,7 @@ Seed the political framework:
 3. dirigentes.rol_politico — derive from partido vs contexto
 """
 import os
+
 import psycopg2
 
 DB_URL = os.environ.get("DATABASE_URL_SYNC", "postgresql://crece:crece_dev@localhost:5438/crece")

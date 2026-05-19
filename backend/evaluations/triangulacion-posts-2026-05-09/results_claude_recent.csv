@@ -1,0 +1,53 @@
+post_id,dirigente_id,dirigente_nombre,tono_claude,target_claude,sentimiento_claude,razon_claude
+4500,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Presentación tipo ficha de jugador del propio dirigente como Coordinador Fuerza Naranja
+4498,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Idéntico a 4500 (IG) — autopresentación motivacional Director Técnico
+4490,1,Alejandro Piña Medina,critico,gobierno,negativo,Crítica a la simulación gubernamental de vaciar calles para mostrar ciudad perfecta
+4501,1,Alejandro Piña Medina,personal,tema_especifico,neutro,Cita Yoda May the 4th con guiño identitario sin atacar a nadie en particular
+4489,1,Alejandro Piña Medina,personal,tema_especifico,neutro,Idéntico a 4501 (IG) — cita Yoda para Star Wars Day
+4502,1,Alejandro Piña Medina,propositivo,tema_especifico,positivo,Programa Infancias en Movimiento — derecho infantil al juego en la calle
+4483,1,Alejandro Piña Medina,critico,gobierno,negativo,Contraste entre inauguraciones gubernamentales y violencia real en Azcapotzalco
+4503,1,Alejandro Piña Medina,critico,gobierno,negativo,Idéntico a 4483 (FB) — propaganda vs violencia en Azcapotzalco
+4482,1,Alejandro Piña Medina,propositivo,tema_especifico,positivo,Propuesta jornada 40 horas y dos días de descanso en Día del Trabajo
+4504,1,Alejandro Piña Medina,propositivo,tema_especifico,positivo,Idéntico a 4482 (FB) — propuesta 40 horas más completa
+4485,1,Alejandro Piña Medina,personal,tema_especifico,positivo,Mensaje familiar Día de la Niña y el Niño
+4506,1,Alejandro Piña Medina,critico,gobierno,negativo,Crítica al gobierno por estado deplorable Línea 2 del Metro mientras maquillan ciudad para Mundial
+4492,1,Alejandro Piña Medina,critico,gobierno,negativo,Idéntico a 4506 (IG) — Línea 2 deteriorada por priorizar Mundial
+4481,1,Alejandro Piña Medina,critico,gobierno,negativo,Exigencia de justicia ante homicidio familia Azcapotzalco por extorsión
+4507,1,Alejandro Piña Medina,critico,gobierno,negativo,Idéntico a 4481 (FB) — extorsión Azcapotzalco más extenso exigiendo justicia
+4508,1,Alejandro Piña Medina,critico,gobierno,negativo,Crítica al gobierno por colapso del Metro CDMX vinculada a su columna en Publimetro
+4522,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Saludo y deseo de éxito a una persona mencionada (lrubin)
+4521,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Análisis crítico al fenómeno Mamdani por margen estrecho 9% — anticipa administración complicada
+4520,2,Rafael Solano Pérez,personal,medios,neutro,Anécdota personal University Club Trump vs Hillary criticando análisis de comentocracia
+4519,2,Rafael Solano Pérez,informativo,tema_especifico,neutro,Comentario breve genérico sobre buen ejemplo aplicable a organizaciones
+4518,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Saludo y elogio a foto compartida por terceros
+4517,2,Rafael Solano Pérez,celebratorio,autopromocion,positivo,Promoción de su propia columna semanal De Libertad y Responsabilidad
+4514,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Crítica a empresas privadas que asignan valores sociales — debate democracia y tecnología
+4512,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Elogio a respuesta de María Corina ante restos de Maduro en España
+4513,2,Rafael Solano Pérez,personal,tema_especifico,positivo,Recuerdo de narración épica de Peter Drury sobre Messi 2022
+4525,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Análisis crítico panorama político 2027 — Morena fisurada, oposición sin contrapeso, MC en dilema
+4526,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Idéntico a 4525 (FB) — análisis 2027 ya empezó
+832,2,Rafael Solano Pérez,informativo,medios,neutro,Retweet de CNN sobre derrota electoral de Orbán en Hungría
+834,2,Rafael Solano Pérez,informativo,tema_especifico,neutro,Retweet de datos demográficos Censo 2020 sobre adultos mayores
+4527,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Análisis 2027 ya comenzó FB extendido — Morena fisuras oposición sin reconstruirse MC dilema
+4524,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Idéntico a 4527 (IG) — análisis 2027 panorama político con autopromoción de columna
+586,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Idéntico a 4527 (IG segundo) — mismo análisis 2027
+4432,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Ataque a Morena por proteger políticos corruptos y narco — pacto de impunidad
+4407,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Idéntico a 4432 (IG) — Morena patrón de proteger corruptos
+4433,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Estreno de su propio noticiero Pase de Lista en YouTube
+4405,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Idéntico a 4433 (IG) — promoción estreno noticiero
+4454,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Acusación Narco Washing al gobierno por proceso Rocha Moya — contraste con desaparecidos
+4434,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Idéntico a 4454 (FB) — Narco Washing y comparación con presos sin sentencia
+4409,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Idéntico a 4454 (IG) — Narco Washing impunidad Rocha Moya
+4435,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Insulto huevones a legisladores Morena por aplazar 40 horas — más autopromocion noticiero
+4406,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Idéntico a 4435 (IG) — huevones legisladores Morena 40 horas
+4455,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Mensaje motivacional Derecho al Futuro defensa diaria — autopromocion identidad
+4436,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Idéntico a 4455 (FB) — defendiendo Derecho al Futuro
+4408,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Idéntico a 4455 (IG) — defendiendo Derecho al Futuro
+4456,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Crítica a CDMX por no invertir en transporte público para Mundial vs Nuevo León y Jalisco
+4437,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Idéntico a 4456 (FB) — CDMX debe transporte y Mundial
+4410,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Idéntico a 4456 (IG) — Mundial y movilidad CDMX
+4438,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Lanzamiento de su noticiero Pase de Lista en YouTube
+4423,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Idéntico a 4438 (IG) — lanzamiento noticiero
+4439,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Idéntico a 4438 (FB) — lanzamiento noticiero
+4457,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Ataque al gobierno por encubrimiento desastre Pemex 900 km Golfo y minimización
+4440,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Idéntico a 4457 (FB) — Veracruz Pemex Morena negaba encubrimiento

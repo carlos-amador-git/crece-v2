@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
-from app.services.news_ingest import RSS_SOURCES, RssFeed, _parse_feed, _platform_post_id
-
+from app.services.news_ingest import RSS_SOURCES, _parse_feed, _platform_post_id
 
 SAMPLE_RSS = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -25,7 +22,7 @@ SAMPLE_RSS = """<?xml version="1.0" encoding="UTF-8"?>
 </item>
 </channel>
 </rss>
-""".encode("utf-8")
+""".encode()
 
 
 def test_parse_feed_extracts_two_items() -> None:

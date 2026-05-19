@@ -1,0 +1,41 @@
+post_id,dirigente_id,dirigente_nombre,tono_claude,target_claude,sentimiento_claude,razon_claude
+4774,5,Gabriela Jiménez Godoy,solidario,gobierno,positivo,Mensaje de respaldo emocional a la Presidenta Sheinbaum
+4778,5,Gabriela Jiménez Godoy,celebratorio,gobierno,positivo,Resalta reunión con la Presidenta en Palacio Nacional como momento positivo
+4761,5,Gabriela Jiménez Godoy,celebratorio,tema_especifico,positivo,Logro histórico CIME primera mujer presidenta de la organización con guiño legislativo propio
+4747,5,Gabriela Jiménez Godoy,celebratorio,tema_especifico,positivo,Idéntico a 4761 (IG) — primera mujer en la presidencia del CIME y Ley de Infraestructura
+4777,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Recibimiento de niñas y niños de Azcapotzalco en la Cámara — autopromoción de su trabajo legislativo
+4750,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Foro Sembrando el Futuro escuchando voces de niñas y niños
+4762,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Idéntico a 4777 (FB) — recibimiento niñas y niños con cartilla SIPINNA
+4737,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Idéntico a 4777 (IG) — recibimiento niñas y niños Cámara
+4779,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Visita a colonia Santa Inés en Día del Niño con mensaje motivacional
+4763,5,Gabriela Jiménez Godoy,celebratorio,autopromocion,positivo,Promoción de su columna en El Heraldo de México sobre Unidad y Transformación
+4764,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Idéntico a 4779 (FB) — Santa Inés Día del Niño
+4736,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Idéntico a 4779 (IG) — Santa Inés Día del Niño
+4765,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Madrina de Paletería ZUVA — emprendimiento de mujeres en La Preciosa
+4759,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Idéntico a 4765 (IG) — Paletería ZUVA emprendimiento de mujeres
+4780,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Idéntico a 4765 (TikTok) — Paletería ZUVA emprendimiento de mujeres
+4766,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Día de la Niña y del Niño en San Juan Tlilhuac celebración comunitaria
+4760,5,Gabriela Jiménez Godoy,celebratorio,ciudadania,positivo,Idéntico a 4766 (IG) — San Juan Tlilhuac Día de la Niñez
+4767,5,Gabriela Jiménez Godoy,propositivo,ciudadania,positivo,Llamado a alzar la voz contra la violencia hacia las mujeres con propuesta institucional
+4734,5,Gabriela Jiménez Godoy,propositivo,ciudadania,positivo,Idéntico a 4767 (IG) — llamado contra violencia hacia mujeres
+4781,5,Gabriela Jiménez Godoy,propositivo,ciudadania,positivo,Idéntico a 4767 (TikTok) — llamado contra violencia hacia mujeres
+4808,6,César Cravioto Romero,celebratorio,gobierno,positivo,Reunión con locatarios sobre Cablebús — elogio al proyecto de Brugada
+4835,6,César Cravioto Romero,celebratorio,gobierno,positivo,Idéntico a 4808 (FB) — Cablebús con alcaldesa Osorio y Brugada
+4836,6,César Cravioto Romero,informativo,medios,neutro,Entrevista en El Universal Online sobre relación con grupos parlamentarios
+4822,6,César Cravioto Romero,celebratorio,gobierno,positivo,Inauguración 17° Congreso Internacional de Transporte elogiando liderazgo de Brugada
+4837,6,César Cravioto Romero,celebratorio,gobierno,positivo,Idéntico a 4822 (FB) — Congreso Transporte elogio Brugada
+4839,6,César Cravioto Romero,celebratorio,gobierno,positivo,Columna El Heraldo defendiendo principios de la 4T y la unidad para consolidar transformación
+4812,6,César Cravioto Romero,celebratorio,gobierno,positivo,Inauguración nuevo sistema de iluminación Centro Histórico con Brugada — 6 mil luminarias
+4840,6,César Cravioto Romero,celebratorio,gobierno,positivo,Idéntico a 4812 (FB) — iluminación Centro Histórico
+4834,6,César Cravioto Romero,celebratorio,gobierno,positivo,Reforma constitucional Sistema Público de Cuidados con Brugada — primera ciudad LATAM
+4841,6,César Cravioto Romero,celebratorio,gobierno,positivo,Idéntico a 4834 (FB) — reforma cuidados con Brugada
+4810,6,César Cravioto Romero,celebratorio,gobierno,positivo,Visita BTS al Zócalo con Sheinbaum — logro de gestión cultural del gobierno
+4842,6,César Cravioto Romero,celebratorio,gobierno,positivo,Idéntico a 4810 (FB) — BTS Zócalo Sheinbaum
+4843,6,César Cravioto Romero,celebratorio,gobierno,positivo,Iluminación Centro Histórico — acompaña a Brugada
+4809,6,César Cravioto Romero,celebratorio,gobierno,positivo,Plaza Pino Suárez sin comercio ambulante — autopromoción gestión SPARVP
+4844,6,César Cravioto Romero,celebratorio,gobierno,positivo,Idéntico a 4809 (FB) — Plaza Pino Suárez gestión SPARVP
+4805,6,César Cravioto Romero,celebratorio,gobierno,positivo,Primer Simulacro Nacional 2026 — Brugada con 8 millones de participantes y 98.75% eficiencia
+4813,6,César Cravioto Romero,celebratorio,tema_especifico,positivo,Llegada de BTS al Zócalo — emoción del evento cultural
+4847,6,César Cravioto Romero,celebratorio,tema_especifico,positivo,Anuncio sorpresa de BTS saludando desde balcón Palacio Nacional con Sheinbaum
+4811,6,César Cravioto Romero,celebratorio,tema_especifico,positivo,Idéntico a 4847 (IG) — BTS Palacio Nacional
+4806,6,César Cravioto Romero,celebratorio,gobierno,positivo,Servidores SECGOB evacuan en Primer Simulacro Nacional 2026 — autopromoción de la gestión

@@ -10,32 +10,33 @@ from app.api.v1.endpoints import (
     alerts_integration,
     api_keys,
     auth,
-    benchmark,
     blindaje,
     bot_detection,
+    calendario,
     campaigns_integration,
     campanas,
     canvassing,
     ciudadanos,
     ciudadanos_legacy,
     contenido,
+    content,
     content_factory_integration,
     crm_integration,
     dashboard,
-    diagnostico as diagnostico_tier1,
     diagnostico_tier2,
     dirigentes,
     electoral,
     encuestas,
     eventos,
+    followers,
     geo,
     health,
+    hitl_evaluation,
     indice_aceptacion,
     metricas_sociales,
     onboarding,
     ops,
     organizaciones,
-    privacy_arco,
     osint,
     participacion,
     plan_ia,
@@ -43,11 +44,18 @@ from app.api.v1.endpoints import (
     planes,
     political_framework,
     posts,
+    privacy_arco,
     programas,
     social,
     trends,
+    competitors,
+    reels,
     voter_scoring,
+    watched_profiles,
     webhooks_integration,
+)
+from app.api.v1.endpoints import (
+    diagnostico as diagnostico_tier1,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -55,10 +63,10 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router, prefix="/health", tags=["health"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(dirigentes.router, prefix="/dirigentes", tags=["dirigentes"])
+api_router.include_router(followers.router, prefix="/dirigentes", tags=["followers"])
 api_router.include_router(social.router, prefix="/social", tags=["social"])
 api_router.include_router(posts.router, prefix="/posts", tags=["posts"])
 api_router.include_router(electoral.router, prefix="/electoral", tags=["electoral"])
-api_router.include_router(benchmark.router, prefix="/benchmark", tags=["benchmark"])
 api_router.include_router(planes.router, prefix="/planes", tags=["planes"])
 api_router.include_router(plan_ia.router, prefix="/plan-ia", tags=["plan-ia"])
 api_router.include_router(plan_ia_ciclo.router, prefix="/plan-ia", tags=["plan-ia-ciclo"])
@@ -78,6 +86,7 @@ api_router.include_router(
 api_router.include_router(geo.router, prefix="/geo", tags=["geo"])
 api_router.include_router(voter_scoring.router, prefix="/voter-scoring", tags=["voter-scoring"])
 api_router.include_router(contenido.router, prefix="/contenido", tags=["contenido"])
+api_router.include_router(calendario.router, prefix="/calendario", tags=["calendario"])
 api_router.include_router(blindaje.router, prefix="/blindaje", tags=["blindaje"])
 api_router.include_router(campanas.router, prefix="/campanas", tags=["campanas"])
 api_router.include_router(canvassing.router, prefix="/canvassing", tags=["canvassing"])
@@ -86,6 +95,7 @@ api_router.include_router(campaigns_integration.router, prefix="/campaigns", tag
 api_router.include_router(
     content_factory_integration.router, prefix="/content", tags=["content-factory"]
 )
+api_router.include_router(content.router, prefix="/content", tags=["content-intel"])
 api_router.include_router(alerts_integration.router, prefix="/alerts", tags=["alerts"])
 api_router.include_router(crm_integration.router, prefix="/crm", tags=["crm"])
 api_router.include_router(webhooks_integration.router, prefix="/webhooks", tags=["webhooks"])
@@ -104,6 +114,7 @@ api_router.include_router(privacy_arco.router, prefix="", tags=["privacy-arco"])
 api_router.include_router(ops.router, prefix="/ops", tags=["ops"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(onboarding.oauth_router, prefix="/oauth", tags=["oauth"])
+api_router.include_router(hitl_evaluation.router, prefix="/hitl", tags=["hitl-evaluation"])
 api_router.include_router(
     diagnostico_tier1.router, prefix="/diagnostico", tags=["diagnostico-tier1"]
 )
@@ -112,3 +123,14 @@ api_router.include_router(
     prefix="/diagnostico_tier2",
     tags=["diagnostico-tier2"],
 )
+api_router.include_router(
+    watched_profiles.router,
+    prefix="/aceptacion/watched-profiles",
+    tags=["watched-profiles"],
+)
+api_router.include_router(
+    competitors.router,
+    prefix="/aceptacion/competitors",
+    tags=["competitors"],
+)
+api_router.include_router(reels.router, prefix="/reels", tags=["reels"])

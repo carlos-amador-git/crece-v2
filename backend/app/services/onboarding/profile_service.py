@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.dirigente import Dirigente
 
-
 PERFILES_VALIDOS: frozenset[str] = frozenset(
     {
         "politico_activo",

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.scope import assert_dirigente_access
 from app.core.security import get_current_user
 from app.models.dirigente import Dirigente
 from app.models.social import SocialPost, SocialProfile
@@ -30,7 +31,7 @@ def _health_level(score: float) -> str:
 async def analyze_dirigente_profiles(
     dirigente_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     limit: int = Query(50, ge=1, le=200),
 ) -> dict:
     """Analyze authenticity & engagement health of a dirigente's social profiles.
@@ -43,6 +44,7 @@ async def analyze_dirigente_profiles(
     - Health score 0-100 with traffic light classification
     - Anomalous posts (high shares but low likes)
     """
+    await assert_dirigente_access(db, current_user, dirigente_id)
     result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:

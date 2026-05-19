@@ -28,16 +28,16 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 # Permite ejecutar desde scripts/ sin instalar el package
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from sqlalchemy import create_engine, text  # noqa: E402
+from sqlalchemy import create_engine, text
 
-from app.nlp.target_politico_prompt import (  # noqa: E402
+from app.nlp.target_politico_prompt import (
     VALID_TARGETS,
     build_prompt,
     parse_response,
@@ -52,13 +52,27 @@ DEFAULT_DB_URL = os.getenv(
     "postgresql://crece:crece_dev@localhost:5438/crece",
 ).replace("+asyncpg", "")
 
-# Comando Gemini CLI · usa wrapper instalado en host
-GEMINI_BIN = os.getenv("GEMINI_BIN", "gemini")
+# Comando Gemini CLI · usa wrapper instalado en host.
+# Allowlist explícita de basenames aceptables para defeat env-injection.
+_ALLOWED_BIN_BASENAMES = {"gemini", "gemini-clean"}
+
+
+def _resolve_gemini_bin() -> str:
+    raw = os.getenv("GEMINI_BIN", "gemini")
+    base = os.path.basename(raw)
+    if base not in _ALLOWED_BIN_BASENAMES:
+        raise RuntimeError(
+            f"GEMINI_BIN basename {base!r} no está en allowlist {_ALLOWED_BIN_BASENAMES}"
+        )
+    return raw
+
+
+GEMINI_BIN = _resolve_gemini_bin()
 
 
 def call_gemini(prompt: str, timeout: int = 90) -> str:
     """Invoca Gemini CLI con prompt y retorna stdout."""
-    r = subprocess.run(
+    r = subprocess.run(  # nosec B603  # allowlisted basename, no shell=True
         [GEMINI_BIN, "-p", prompt],
         capture_output=True,
         text=True,
@@ -90,7 +104,7 @@ def classify_post(post: dict[str, Any], retries: int = 1) -> dict[str, Any] | No
                 return parsed
         except subprocess.TimeoutExpired:
             sys.stderr.write(f"  timeout post={post['id']} attempt={attempt}\n")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             sys.stderr.write(f"  err {type(e).__name__} post={post['id']}: {e}\n")
         if attempt < retries:
             time.sleep(2 ** attempt)
@@ -157,7 +171,7 @@ def update_post(engine, post_id: int, target: str, razon: str) -> None:
                 "target": target,
                 "model_v": MODEL_VERSION,
                 "razon": razon,
-                "ts": datetime.now(timezone.utc).isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "post_id": post_id,
             },
         )
@@ -210,7 +224,7 @@ def main() -> int:
 
         if not result:
             failed += 1
-            print(f"  → FAIL", file=sys.stderr)
+            print("  → FAIL", file=sys.stderr)
             continue
 
         target = result["target"]

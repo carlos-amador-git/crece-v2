@@ -14,9 +14,8 @@ from app.core.database import Base
 from app.models import (  # noqa: F401
     alerta_crisis,
     api_key,
-    benchmark,
-    campana,
     campaign_integration,
+    campana,
     canvassing,
     ciudadano,
     contenido,

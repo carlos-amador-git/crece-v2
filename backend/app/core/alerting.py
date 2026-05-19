@@ -176,7 +176,7 @@ async def send_discord_alert(
     except httpx.HTTPError as e:
         logger.warning("Discord webhook failed: %s", e)
         return False
-    except Exception:  # noqa: BLE001 — fire-and-forget must never raise
+    except Exception:
         logger.exception("Unexpected error sending Discord alert")
         return False
 

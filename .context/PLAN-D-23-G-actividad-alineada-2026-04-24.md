@@ -219,6 +219,24 @@ Falsos positivos en clasificación binaria 4-cat (post genuinamente mixto · ej.
 - **D-OPS-10** · code-reviewer subagent (auditor independiente) lee diff completo · CEO firma diff antes de aplicar
 - **Karpathy 2-3** · solo se tocan archivos necesarios · cero refactor adyacente
 
+## Observación post-merge revisor §9.8 · Claude IA 2026-04-25
+
+**Riesgo semántico fórmula oficialismo (producto, no código)** — `NUMERATOR_BY_ROL["oficialismo"] = {propio, oposicion}` premia ataques a la oposición. Es defendible si la lectura es estrictamente combativa, pero un dirigente oficialista que dedica 60% de sus posts a criticar oposición y 0% a defender logros propios saldrá con KPI alto, lo cual puede no ser la narrativa que quieras premiar.
+
+**Lectura del KPI por rol (versión explícita para clientes oficialistas):**
+
+| Rol | Numerador | Lectura honesta |
+|-----|-----------|-----------------|
+| Oposición | `oficialismo + propio` | "% de actividad construyendo narrativa de oposición" · ataques al oficialismo + agenda propia ambos cuentan porque ambos construyen narrativa de oposición. |
+| **Oficialismo** | **`propio + oposicion`** | **"% de actividad defendiendo gobierno o respondiendo a oposición"** · NO premia ataques per se · interpreta posts sobre la oposición como "responder a la oposición" (postura defensiva), no como "atacar para sumar". El KPI alto = activo en frente político (construyendo o respondiendo). KPI bajo = silencioso o disperso en personal. |
+| Independiente | `propio` | "% de actividad construyendo agenda propia" |
+
+**Si un cliente oficialista pregunta:** "¿por qué mi KPI sube cuando ataco a la oposición?" → respuesta: el KPI mide *actividad política frente al adversario*, no contenido. Si te ataques son sustantivos (refutar política específica) cuenta como respuesta defensiva = construcción de narrativa. Si los ataques son hueros (insulto sin contenido), la respuesta es ajustar contenido, no quitar el KPI.
+
+**Phase B (Panel Editable):** dirigente oficialista que considera que su rol es 80% defensa y 20% respuesta puede ajustar pesos a `propio:1.5, oposicion:0.5` y obtener KPI ajustado que penaliza ataques. La doble métrica permite la conversación sin sesgar el numerador IA.
+
+---
+
 ## Trazabilidad
 
 - Plan supersedido: `SPRINT-23E-INVESTIGACION.md` (motor sentimiento 4-fases con disenso CEO)

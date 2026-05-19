@@ -22,10 +22,9 @@ más filas ``competidores`` si no existen.
 """
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
-
 
 revision = "s5m1_onboarding_tables"
 down_revision = "s3m1_promesas_dirigente"

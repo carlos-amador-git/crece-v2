@@ -1,0 +1,188 @@
+post_id,dirigente_id,dirigente_nombre,tono_gemini,target_gemini,sentimiento_gemini,razon_gemini,raw_response,elapsed_s
+4505,1,Alejandro Piña Medina,personal,autopromocion,positivo,Mensaje emocional centrado en la motivación personal del dirigente con motivo del Día del Niño.,"{
+  ""tono"": ""personal"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Mensaje emocional centrado en la motivación personal del dirigente con motivo del Día del Niño.""
+}
+(node:10139) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",37.79
+741,1,Alejandro Piña Medina,critico,gobierno,negativo,Señala una deuda u omisión del Estado respecto a los derechos y el tiempo de las mujeres.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Señala una deuda u omisión del Estado respecto a los derechos y el tiempo de las mujeres.""}",12.89
+4499,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Uso de una metáfora relajada para resaltar la identidad del movimiento y su compromiso ciudadano.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Uso de una metáfora relajada para resaltar la identidad del movimiento y su compromiso ciudadano.""}",11.37
+744,1,Alejandro Piña Medina,celebratorio,ciudadania,positivo,Celebra el éxito de la presión ciudadana tras el anuncio de nuevos lineamientos de PROFECO para boleteras.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""ciudadania"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Celebra el éxito de la presión ciudadana tras el anuncio de nuevos lineamientos de PROFECO para boleteras.""
+}",12.32
+4487,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Reafirma la identidad del movimiento con una metáfora positiva y enfoque en causas.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Reafirma la identidad del movimiento con una metáfora positiva y enfoque en causas.""}",15.26
+3726,1,Alejandro Piña Medina,propositivo,autopromocion,positivo,Promueve la capacitación y el fortalecimiento de la identidad política y los valores democráticos.,"{""tono"":""propositivo"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Promueve la capacitación y el fortalecimiento de la identidad política y los valores democráticos.""}",12.98
+561,1,Alejandro Piña Medina,critico,gobierno,negativo,Crítica a la simulación legislativa y al aplazamiento de la reforma de las 40 horas por parte del oficialismo.,"{
+  ""tono"": ""critico"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Crítica a la simulación legislativa y al aplazamiento de la reforma de las 40 horas por parte del oficialismo.""
+}",19.16
+3736,1,Alejandro Piña Medina,propositivo,ciudadania,positivo,Agradece la confianza ciudadana y propone una alternativa de construcción colectiva.,"{""tono"":""propositivo"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Agradece la confianza ciudadana y propone una alternativa de construcción colectiva.""}
+(node:11511) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",36.00
+3758,1,Alejandro Piña Medina,propositivo,autopromocion,positivo,Presentación de propuesta de reforma electoral enfocada en democracia y participación ciudadana.,"{""tono"":""propositivo"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Presentación de propuesta de reforma electoral enfocada en democracia y participación ciudadana.""}",11.03
+557,1,Alejandro Piña Medina,ataque,gobierno,negativo,"Critica agresivamente a Morena por postergar la jornada de 40 horas, calificándolos de traidores e incongruentes frente al esfuerzo de los trabajadores.","{""tono"":""ataque"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Critica agresivamente a Morena por postergar la jornada de 40 horas, calificándolos de traidores e incongruentes frente al esfuerzo de los trabajadores.""}
+(node:11961) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",45.46
+3733,1,Alejandro Piña Medina,critico,gobierno,negativo,Crítica al aumento del 221% en extorsiones en la CDMX y la inseguridad pública.,"{
+""tono"": ""critico"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Crítica al aumento del 221% en extorsiones en la CDMX y la inseguridad pública.""
+}",29.48
+3742,1,Alejandro Piña Medina,propositivo,ciudadania,positivo,Discurso centrado en la construcción de comunidad y el valor de los cuidados colectivos.,"{""tono"":""propositivo"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Discurso centrado en la construcción de comunidad y el valor de los cuidados colectivos.""}",13.17
+733,1,Alejandro Piña Medina,propositivo,tema_especifico,positivo,Propone la democratización del deporte e invita a leer su columna de opinión.,"{""tono"":""propositivo"",""target"":""tema_especifico"",""sentimiento"":""positivo"",""razon"":""Propone la democratización del deporte e invita a leer su columna de opinión.""}",11.63
+4340,1,Alejandro Piña Medina,solidario,ciudadania,positivo,"Promueve la cohesión social, el apoyo mutuo y la construcción de lazos comunitarios.","{
+""tono"": ""solidario"",
+""target"": ""ciudadania"",
+""sentimiento"": ""positivo"",
+""razon"": ""Promueve la cohesión social, el apoyo mutuo y la construcción de lazos comunitarios.""
+}",13.68
+3720,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Anticipación de contenido promocional de marca personal con enfoque local y tono optimista.,"{
+  ""tono"": ""celebratorio"",
+  ""target"": ""autopromocion"",
+  ""sentimiento"": ""positivo"",
+  ""razon"": ""Anticipación de contenido promocional de marca personal con enfoque local y tono optimista.""
+}
+(node:13088) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",24.89
+545,1,Alejandro Piña Medina,propositivo,ciudadania,positivo,Invitación a diálogo universitario enfocado en la propuesta de 'México Nuevo',"{""tono"":""propositivo"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Invitación a diálogo universitario enfocado en la propuesta de 'México Nuevo'""}",10.53
+3740,1,Alejandro Piña Medina,critico,gobierno,negativo,Señala la disparidad en supervivencia del cáncer infantil y exige mayor presupuesto.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Señala la disparidad en supervivencia del cáncer infantil y exige mayor presupuesto.""}",12.02
+4488,1,Alejandro Piña Medina,critico,gobierno,negativo,"Crítica a la gestión, falta de inversión y decisiones en el Metro de la CDMX.","{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Crítica a la gestión, falta de inversión y decisiones en el Metro de la CDMX.""}",11.57
+3948,1,Alejandro Piña Medina,critico,gobierno,negativo,Denuncia la impunidad y la falla del Estado frente a la extorsión.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Denuncia la impunidad y la falla del Estado frente a la extorsión.""}",11.67
+4484,1,Alejandro Piña Medina,celebratorio,autopromocion,positivo,Resalta la cohesión interna y la identidad política del partido tras su reunión.,"{""tono"":""celebratorio"",""target"":""autopromocion"",""sentimiento"":""positivo"",""razon"":""Resalta la cohesión interna y la identidad política del partido tras su reunión.""}",15.99
+890,2,Rafael Solano Pérez,personal,autopromocion,neutro,Publicación de carácter personal compartiendo un lugar geográfico sin carga política.,"{""tono"":""personal"",""target"":""autopromocion"",""sentimiento"":""neutro"",""razon"":""Publicación de carácter personal compartiendo un lugar geográfico sin carga política.""}
+(node:13953) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",55.66
+4515,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Señala una preocupación o deficiencia en materia de seguridad ante el Mundial.,"{""tono"":""critico"",""target"":""tema_especifico"",""sentimiento"":""negativo"",""razon"":""Señala una preocupación o deficiencia en materia de seguridad ante el Mundial.""}",10.86
+875,2,Rafael Solano Pérez,critico,gobierno,negativo,Señala una crítica al proceso presidencial y un reclamo sobre la autoría de consensos previos.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Señala una crítica al proceso presidencial y un reclamo sobre la autoría de consensos previos.""}",13.51
+889,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Avistamiento de ballena albina poco común en costas mexicanas.,"{
+""tono"": ""celebratorio"",
+""target"": ""tema_especifico"",
+""sentimiento"": ""positivo"",
+""razon"": ""Avistamiento de ballena albina poco común en costas mexicanas.""
+}",10.36
+918,2,Rafael Solano Pérez,propositivo,tema_especifico,negativo,Propuesta de blindaje electoral y crítica a la normalización de la violencia contra candidatos.,"{""tono"":""propositivo"",""target"":""tema_especifico"",""sentimiento"":""negativo"",""razon"":""Propuesta de blindaje electoral y crítica a la normalización de la violencia contra candidatos.""}",12.45
+892,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Celebración de récords y logros deportivos en la Liga MX.,"{
+""tono"": ""celebratorio"",
+""target"": ""tema_especifico"",
+""sentimiento"": ""positivo"",
+""razon"": ""Celebración de récords y logros deportivos en la Liga MX.""
+}",9.41
+891,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Expresa agrado por el diseño del uniforme de la selección nacional.,"{""tono"":""celebratorio"",""target"":""tema_especifico"",""sentimiento"":""positivo"",""razon"":""Expresa agrado por el diseño del uniforme de la selección nacional.""}",10.42
+4523,2,Rafael Solano Pérez,solidario,ciudadania,positivo,Muestra empatía ante condiciones difíciles y expresa buenos deseos.,"{""tono"":""solidario"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Muestra empatía ante condiciones difíciles y expresa buenos deseos.""}",9.26
+898,2,Rafael Solano Pérez,celebratorio,tema_especifico,positivo,Reconocimiento y elogio a la trayectoria y logro deportivo del futbolista André-Pierre Gignac.,"{
+""tono"": ""celebratorio"",
+""target"": ""tema_especifico"",
+""sentimiento"": ""positivo"",
+""razon"": ""Reconocimiento y elogio a la trayectoria y logro deportivo del futbolista André-Pierre Gignac.""
+}",12.11
+882,2,Rafael Solano Pérez,solidario,tema_especifico,positivo,Expresa apoyo y reconocimiento a colectivos de mujeres y familias en su exigencia de justicia.,"{""tono"":""solidario"",""target"":""tema_especifico"",""sentimiento"":""positivo"",""razon"":""Expresa apoyo y reconocimiento a colectivos de mujeres y familias en su exigencia de justicia.""}",10.99
+903,2,Rafael Solano Pérez,critico,tema_especifico,negativo,Reporte sobre la persistencia de la pobreza laboral y falta de movilidad social en estados críticos.,"{""tono"":""critico"",""target"":""tema_especifico"",""sentimiento"":""negativo"",""razon"":""Reporte sobre la persistencia de la pobreza laboral y falta de movilidad social en estados críticos.""}",12.50
+833,2,Rafael Solano Pérez,informativo,tema_especifico,neutro,Difusión de noticia internacional sobre la alternancia política en Hungría tras un mandato prolongado.,"{
+""tono"": ""informativo"",
+""target"": ""tema_especifico"",
+""sentimiento"": ""neutro"",
+""razon"": ""Difusión de noticia internacional sobre la alternancia política en Hungría tras un mandato prolongado.""
+}",19.42
+856,2,Rafael Solano Pérez,critico,gobierno,negativo,Denuncia crisis socioambiental y falta de transparencia y rendición de cuentas ante derrame petrolero.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Denuncia crisis socioambiental y falta de transparencia y rendición de cuentas ante derrame petrolero.""}",14.06
+878,2,Rafael Solano Pérez,informativo,tema_especifico,neutro,Reporte técnico del sentido de la votación sobre la reforma electoral y mención de votos disidentes.,"{""tono"":""informativo"",""target"":""tema_especifico"",""sentimiento"":""neutro"",""razon"":""Reporte técnico del sentido de la votación sobre la reforma electoral y mención de votos disidentes.""}",11.32
+919,2,Rafael Solano Pérez,critico,oposicion,negativo,Señala con ironía el largo tiempo que le tomó al PAN entender las bases del sistema electoral.,"{""tono"":""critico"",""target"":""oposicion"",""sentimiento"":""negativo"",""razon"":""Señala con ironía el largo tiempo que le tomó al PAN entender las bases del sistema electoral.""}",11.64
+852,2,Rafael Solano Pérez,celebratorio,ciudadania,positivo,Reconoce positivamente a los mexicanos como excelentes anfitriones.,"{""tono"":""celebratorio"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Reconoce positivamente a los mexicanos como excelentes anfitriones.""}",11.36
+868,2,Rafael Solano Pérez,critico,gobierno,negativo,Denuncia la degradación de la democracia mexicana calificándola de autocracia competitiva.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Denuncia la degradación de la democracia mexicana calificándola de autocracia competitiva.""}",11.92
+912,2,Rafael Solano Pérez,critico,ciudadania,negativo,Crítica a la inacción de los partidos políticos y llamado a la exigencia ciudadana.,"{""tono"":""critico"",""target"":""ciudadania"",""sentimiento"":""negativo"",""razon"":""Crítica a la inacción de los partidos políticos y llamado a la exigencia ciudadana.""}",11.59
+4516,2,Rafael Solano Pérez,critico,gobierno,negativo,Advierte de una elección complicada para la autoridad si no se actúa con razonabilidad.,"{
+  ""tono"": ""critico"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Advierte de una elección complicada para la autoridad si no se actúa con razonabilidad.""
+}",17.95
+883,2,Rafael Solano Pérez,critico,gobierno,negativo,Critica el inicio anticipado de campañas de Morena y el uso de eufemismos para evadir tiempos electorales.,"{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Critica el inicio anticipado de campañas de Morena y el uso de eufemismos para evadir tiempos electorales.""}",11.71
+4459,8,Laura Ballesteros Mancilla,ataque,gobierno,negativo,Crítica agresiva a legisladores de Morena por supuesta falta de ética laboral y resultados.,"{
+  ""tono"": ""ataque"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Crítica agresiva a legisladores de Morena por supuesta falta de ética laboral y resultados.""
+}",20.86
+4427,8,Laura Ballesteros Mancilla,celebratorio,ciudadania,positivo,Mensaje de felicitación por el Día de la Niñez con un enfoque personal y afectivo.,"{""tono"":""celebratorio"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Mensaje de felicitación por el Día de la Niñez con un enfoque personal y afectivo.""}",10.06
+4204,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Crítica a la negligencia del Estado y la CNDH ante la situación de las familias buscadoras.,"{
+  ""tono"": ""critico"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Crítica a la negligencia del Estado y la CNDH ante la situación de las familias buscadoras.""
+}
+(node:17334) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",22.86
+4242,8,Laura Ballesteros Mancilla,celebratorio,gobierno,positivo,Celebra la aprobación de la Ley Eugenito y destaca el éxito de la comunidad ante la inacción gubernamental.,"{""tono"":""celebratorio"",""target"":""gobierno"",""sentimiento"":""positivo"",""razon"":""Celebra la aprobación de la Ley Eugenito y destaca el éxito de la comunidad ante la inacción gubernamental.""}",31.29
+4385,8,Laura Ballesteros Mancilla,critico,dirigente,negativo,Exigencia de renuncia por crisis de desapariciones y falta de resultados.,"{
+""tono"": ""critico"",
+""target"": ""dirigente"",
+""sentimiento"": ""negativo"",
+""razon"": ""Exigencia de renuncia por crisis de desapariciones y falta de resultados.""
+}",12.56
+4395,8,Laura Ballesteros Mancilla,propositivo,ciudadania,positivo,Compromiso de trabajo legislativo y atención al transporte público.,"{""tono"":""propositivo"",""target"":""ciudadania"",""sentimiento"":""positivo"",""razon"":""Compromiso de trabajo legislativo y atención al transporte público.""}",12.36
+4452,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Crítica al desempeño legislativo y omisiones en seguridad y derechos humanos.,"{
+  ""tono"": ""critico"",
+  ""target"": ""gobierno"",
+  ""sentimiento"": ""negativo"",
+  ""razon"": ""Crítica al desempeño legislativo y omisiones en seguridad y derechos humanos.""
+}",28.12
+4243,8,Laura Ballesteros Mancilla,critico,dirigente,negativo,Solicitud de juicio político contra titular de la CNDH por presunta omisión ante crisis de desaparecidos,"{""tono"":""critico"",""target"":""dirigente"",""sentimiento"":""negativo"",""razon"":""Solicitud de juicio político contra titular de la CNDH por presunta omisión ante crisis de desaparecidos""}",11.36
+4227,8,Laura Ballesteros Mancilla,celebratorio,autopromocion,positivo,Promueve la cohesión interna y la metodología de trabajo alegre del partido.,"{
+""tono"":""celebratorio"",
+""target"":""autopromocion"",
+""sentimiento"":""positivo"",
+""razon"":""Promueve la cohesión interna y la metodología de trabajo alegre del partido.""
+}",10.36
+4255,8,Laura Ballesteros Mancilla,ERROR,ERROR,ERROR,timeout,TIMEOUT,120.01
+4888,8,Laura Ballesteros Mancilla,ataque,dirigente,negativo,Denuncia de ausentismo legislativo mediante lenguaje peyorativo y sarcasmo contra otros diputados.,"{""tono"":""ataque"",""target"":""dirigente"",""sentimiento"":""negativo"",""razon"":""Denuncia de ausentismo legislativo mediante lenguaje peyorativo y sarcasmo contra otros diputados.""}",17.30
+4228,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Crítica a la gestión de la Alcaldía BJ por la tala de un árbol sano y llamado a la movilización vecinal.,"{
+""tono"": ""critico"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Crítica a la gestión de la Alcaldía BJ por la tala de un árbol sano y llamado a la movilización vecinal.""
+}",9.75
+4474,8,Laura Ballesteros Mancilla,propositivo,tema_especifico,negativo,Exige la reducción de la jornada laboral a 40 horas criticando el cansancio histórico y la falta de descanso del trabajador mexicano.,"{
+""tono"": ""propositivo"",
+""target"": ""tema_especifico"",
+""sentimiento"": ""negativo"",
+""razon"": ""Exige la reducción de la jornada laboral a 40 horas criticando el cansancio histórico y la falta de descanso del trabajador mexicano.""
+}",15.68
+4304,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,"Critica el cambio de postura de la Presidenta sobre el fracking, señalando un incumplimiento de promesa de campaña.","{""tono"":""critico"",""target"":""gobierno"",""sentimiento"":""negativo"",""razon"":""Critica el cambio de postura de la Presidenta sobre el fracking, señalando un incumplimiento de promesa de campaña.""}",10.98
+4305,8,Laura Ballesteros Mancilla,ataque,dirigente,negativo,Crítica severa a la CNDH y exigencia de juicio político contra su titular por omisión ante víctimas.,"{""tono"":""ataque"",""target"":""dirigente"",""sentimiento"":""negativo"",""razon"":""Crítica severa a la CNDH y exigencia de juicio político contra su titular por omisión ante víctimas.""}
+(node:19815) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",49.70
+4426,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,"Denuncia de fallas graves, corrupción sistémica y falta de resultados en las fiscalías.","{
+""tono"": ""critico"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Denuncia de fallas graves, corrupción sistémica y falta de resultados en las fiscalías.""
+}",10.00
+4301,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Crítica al gobierno por incumplir la transición energética y promover el fracking frente a las renovables.,"{
+""tono"": ""critico"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Crítica al gobierno por incumplir la transición energética y promover el fracking frente a las renovables.""
+}",26.51
+4041,8,Laura Ballesteros Mancilla,propositivo,tema_especifico,negativo,Critica la precariedad laboral actual para impulsar la reforma de 40 horas.,"{""tono"":""propositivo"",""target"":""tema_especifico"",""sentimiento"":""negativo"",""razon"":""Critica la precariedad laboral actual para impulsar la reforma de 40 horas.""}
+Error executing tool read_file: File not found.",67.03
+4225,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Crítica a la crisis de mantenimiento e inversión en el Metro de la CDMX.,"{
+""tono"": ""critico"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Crítica a la crisis de mantenimiento e inversión en el Metro de la CDMX.""
+}
+(node:20981) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)",21.36
+4077,8,Laura Ballesteros Mancilla,critico,gobierno,negativo,Cuestiona la veracidad del respaldo popular invocado para justificar una reforma.,"{
+""tono"": ""critico"",
+""target"": ""gobierno"",
+""sentimiento"": ""negativo"",
+""razon"": ""Cuestiona la veracidad del respaldo popular invocado para justificar una reforma.""
+}",13.72

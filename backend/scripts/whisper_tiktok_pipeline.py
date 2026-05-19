@@ -12,12 +12,9 @@ Usage:
     python backend/scripts/whisper_tiktok_pipeline.py [--limit N] [--dry-run]
 """
 import argparse
-import json
 import os
 import re
 import subprocess
-import sys
-import tempfile
 from pathlib import Path
 
 import psycopg2
@@ -241,7 +238,7 @@ def main():
 
     conn.close()
 
-    print(f"\n=== Results ===")
+    print("\n=== Results ===")
     print(f"  Success:        {stats['success']}")
     print(f"  Download fail:  {stats['download_fail']}")
     print(f"  No speech:      {stats['no_speech']}")

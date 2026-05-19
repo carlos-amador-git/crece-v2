@@ -301,6 +301,12 @@ p {
   animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* ── Shimmer · barra de progreso indeterminada ─────────────── */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
 /* ── Stat card smooth transitions ─────────────────────────── */
 
 .stat-card-transition {

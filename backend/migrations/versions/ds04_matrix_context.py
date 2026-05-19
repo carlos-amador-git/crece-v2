@@ -17,15 +17,15 @@ Valores permitidos en ``contexto``:
 
 Seed de las 20 reglas nuevas en ``backend/scripts/seed_matrix_v2.py`` (idempotente).
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "ds04_matrix_context"
-down_revision: Union[str, None] = "ds03_sc_data_source"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "ds03_sc_data_source"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

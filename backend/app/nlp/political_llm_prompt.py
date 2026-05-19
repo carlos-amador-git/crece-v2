@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 PROMPT_V2 = """Analiza este post de {plataforma} y clasifícalo. Responde SOLO JSON válido.
 
 Post: "{texto}"

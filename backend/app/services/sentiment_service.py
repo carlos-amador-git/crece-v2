@@ -4,7 +4,6 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -160,7 +159,7 @@ class SentimentService:
             sent_output = self._sentiment_analyzer.predict(text)
             probas = sent_output.probas
             # Map to score: POS=+1, NEU=0, NEG=-1
-            sentiment_score = probas.get("POS", 0.0) - probas.get("NEG", 0.0)
+            sentiment_score = float(probas.get("POS", 0.0)) - float(probas.get("NEG", 0.0))
             sentiment_label = sent_output.output.lower()
             # Normalize labels
             label_map = {"pos": "positive", "neg": "negative", "neu": "neutral"}
@@ -170,16 +169,16 @@ class SentimentService:
         emotions: dict[str, float] = {}
         if self._emotion_analyzer is not None:
             emo_output = self._emotion_analyzer.predict(text)
-            emotions = {k.lower(): round(v, 4) for k, v in emo_output.probas.items()}
+            emotions = {k.lower(): round(float(v), 4) for k, v in emo_output.probas.items()}
 
         # Hate / toxicity detection
         is_toxic = False
         toxicity_score = 0.0
         if self._hate_analyzer is not None:
             hate_output = self._hate_analyzer.predict(text)
-            hateful_prob = hate_output.probas.get("hateful", 0.0)
-            targeted_prob = hate_output.probas.get("targeted", 0.0)
-            aggressive_prob = hate_output.probas.get("aggressive", 0.0)
+            hateful_prob = float(hate_output.probas.get("hateful", 0.0))
+            targeted_prob = float(hate_output.probas.get("targeted", 0.0))
+            aggressive_prob = float(hate_output.probas.get("aggressive", 0.0))
             toxicity_score = max(hateful_prob, targeted_prob, aggressive_prob)
             is_toxic = toxicity_score > 0.5
 
@@ -274,7 +273,7 @@ class SentimentService:
                 last_err = f"http[{attempt}]: {e.__class__.__name__}: {e}"
                 logger.warning("Gemma Plutchik %s", last_err)
                 continue
-            except Exception as e:  # noqa: BLE001 — fallback intencional
+            except Exception as e:
                 last_err = f"unexpected[{attempt}]: {e.__class__.__name__}: {e}"
                 logger.warning("Gemma Plutchik %s", last_err)
                 continue
@@ -342,7 +341,7 @@ class SentimentService:
 
         try:
             # sentiment() returns float in [0, 1]: 0 = negative, 1 = positive
-            raw = self._sentiment_spanish.sentiment(text[:10_000])
+            raw = float(self._sentiment_spanish.sentiment(text[:10_000]))
             # Remap [0, 1] -> [-1, 1] for consistency with pysentimiento
             bipolar_score = round((raw * 2.0) - 1.0, 4)
 

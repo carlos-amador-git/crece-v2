@@ -177,8 +177,9 @@ async def admin_overview(
 
     redis_status = "OK"
     try:
-        from app.core.config import settings
         import redis.asyncio as aioredis
+
+        from app.core.config import settings
         r = aioredis.from_url(settings.REDIS_URL, socket_connect_timeout=2)
         await r.ping()
         await r.aclose()

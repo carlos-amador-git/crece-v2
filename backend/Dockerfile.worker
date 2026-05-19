@@ -13,19 +13,22 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /build
 
 # Install build dependencies
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
         libgeos-dev \
         libproj-dev \
         gdal-bin \
-        libgdal-dev \
-    && rm -rf /var/lib/apt/lists/*
+        libgdal-dev
 
-# Install base + NLP dependencies
+# Install base + NLP heavy dependencies (torch + transformers + pysentimiento + spaCy).
+# BuildKit cache mount: pip cache persiste fuera de la layer, no infla el image.
 COPY pyproject.toml ./
-RUN pip install --prefix=/install ".[nlp]"
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --prefix=/install ".[ml,nlp-heavy]"
 
 # Download spaCy Spanish models
 RUN /install/bin/python -m spacy download es_core_news_lg || \
@@ -45,14 +48,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install runtime libraries
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         libpq5 \
         libgeos-c1v5 \
         libproj25 \
         gdal-bin \
-        curl \
-    && rm -rf /var/lib/apt/lists/*
+        curl
 
 # Copy installed packages from builder
 COPY --from=builder /install /install

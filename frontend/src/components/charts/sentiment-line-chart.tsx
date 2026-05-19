@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import type { SentimentTrend } from "@/lib/api/types";
 
-type ChartType = "line" | "bar";
+type ChartType = "line" | "bar" | "area";
 type ChartMode = "pct" | "abs";
 
 interface SentimentLineChartProps {
@@ -21,6 +21,7 @@ interface SentimentLineChartProps {
 const CHART_TYPES: { value: ChartType; label: string }[] = [
   { value: "line", label: "Línea" },
   { value: "bar", label: "Barras" },
+  { value: "area", label: "Área apilada" },
 ];
 
 const CHART_MODES: { value: ChartMode; label: string }[] = [
@@ -41,9 +42,21 @@ const SERIES_ABS = [
 ];
 
 export function SentimentLineChart({ data, onIncludeRtsChange, showRtsToggle = false }: SentimentLineChartProps) {
-  const [chartType, setChartType] = useState<ChartType>("line");
+  // Persistir preferencia en localStorage (cross-audit Gemini · stacked area opcional)
+  const [chartType, setChartType] = useState<ChartType>(() => {
+    if (typeof window === "undefined") return "line";
+    const saved = window.localStorage.getItem("sentiment-chart-kind");
+    return (saved === "bar" || saved === "area" || saved === "line") ? saved : "line";
+  });
   const [chartMode, setChartMode] = useState<ChartMode>("pct");
   const [includeRts, setIncludeRts] = useState(false);
+
+  const handleChartTypeChange = (t: ChartType) => {
+    setChartType(t);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("sentiment-chart-kind", t);
+    }
+  };
 
   const series = chartMode === "pct" ? SERIES_PCT : SERIES_ABS;
 
@@ -66,7 +79,7 @@ export function SentimentLineChart({ data, onIncludeRtsChange, showRtsToggle = f
             <button
               key={ct.value}
               type="button"
-              onClick={() => setChartType(ct.value)}
+              onClick={() => handleChartTypeChange(ct.value)}
               className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 chartType === ct.value
                   ? "bg-primary text-primary-foreground"
@@ -126,6 +139,35 @@ export function SentimentLineChart({ data, onIncludeRtsChange, showRtsToggle = f
               <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} stackId="a" radius={[2, 2, 0, 0]} />
             ))}
           </BarChart>
+        ) : chartType === "area" ? (
+          <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+            <defs>
+              {series.map((s) => (
+                <linearGradient key={`grad-${s.key}`} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={s.color} stopOpacity={0.85} />
+                  <stop offset="95%" stopColor={s.color} stopOpacity={0.35} />
+                </linearGradient>
+              ))}
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis dataKey="date" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} tickFormatter={(v) => { const d = new Date(v); return `${d.getDate()}/${d.getMonth()+1}`; }} />
+            <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} width={40} />
+            <Tooltip contentStyle={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)", color: "hsl(var(--popover-foreground))", fontSize: 12 }} labelFormatter={(l) => new Date(l).toLocaleDateString("es-MX", { month: "short", day: "numeric" })} />
+            <Legend wrapperStyle={{ fontSize: 12 }} iconType="square" iconSize={10} />
+            {series.map((s) => (
+              <Area
+                key={s.key}
+                type="monotone"
+                dataKey={s.key}
+                name={s.name}
+                stroke={s.color}
+                strokeWidth={1.5}
+                fill={`url(#grad-${s.key})`}
+                stackId="a"
+                fillOpacity={1}
+              />
+            ))}
+          </AreaChart>
         ) : (
           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />

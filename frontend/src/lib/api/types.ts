@@ -57,7 +57,13 @@ export interface DirigenteStats {
   sentiment_avg_7d: number;
   follower_growth_30d: number;
   // D-23-G' · 2026-04-24 · KPI hero reformulado · ver actividad-alineada-card.tsx
+  // Backward compat: `actividad_alineada` = default (Phase A consumers).
   actividad_alineada?: ActividadAlineada;
+  // D-23-H · Phase B · doble métrica + pesos editables
+  actividad_alineada_default?: ActividadAlineada;
+  actividad_alineada_ajustada?: ActividadAlineada;
+  pesos_target_politico?: PesosTargetPolitico;
+  pesos_last_modified_at?: string | null;
 }
 
 // D-23-G' · KPI Actividad Política Alineada
@@ -78,7 +84,26 @@ export interface ActividadAlineada {
   total_posts_window: number;
   rol_politico: "oficialismo" | "oposicion" | "independiente" | string;
   days: number;
+  modo?: "default" | "ajustado";
+  pesos?: PesosTargetPolitico;
   empty_state: "no_classified" | null;
+}
+
+// D-23-H · Phase B · pesos editables target_politico (Palanca 1)
+// Cap [0.5, 1.5] enforced en CHECK BD + UI. 1.0 = neutro (sin ajuste).
+export interface PesosTargetPolitico {
+  oficialismo: number;
+  oposicion: number;
+  propio: number;
+  personal: number;
+}
+
+export interface PesosUpdateResponse {
+  pesos_target_politico: PesosTargetPolitico;
+  pesos_last_modified_at: string;
+  pesos_last_modified_by: number;
+  actividad_alineada_default: ActividadAlineada;
+  actividad_alineada_ajustada: ActividadAlineada;
 }
 
 export interface SocialAccount {
@@ -115,6 +140,7 @@ export interface SocialPost {
   views?: number;
   published_at: string;
   collected_at: string;
+  media_urls?: string[] | null;
 }
 
 export type SentimentType = "positive" | "negative" | "neutral";
@@ -220,6 +246,7 @@ export interface KpiOverview {
   alerts_change: number;
   // political KPIs
   total_audiencia: number;
+  audiencia_change: number | null;
   contactos_periodo: number;
   tema_urgente: string | null;
 }

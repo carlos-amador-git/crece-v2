@@ -20,11 +20,13 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.scope import assert_dirigente_access
 from app.core.security import Role, RoleChecker, get_current_user
 from app.models.user import User
 from app.services.onboarding import (
@@ -37,6 +39,7 @@ from app.services.onboarding import (
     promesas_service,
     serp_service,
     validator_service,
+    youtube_oauth_real,
 )
 
 router = APIRouter()
@@ -225,10 +228,86 @@ async def oauth_init(
     dirigente_id: int,
     _user: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, Any]:
+    # Bifurcación: si YouTube y OAUTH_YOUTUBE_ENABLED + creds GCP → flow real.
+    # Otras plataformas (IG/FB/TT) siguen stub hasta Meta App Review.
+    if platform.lower() == "youtube" and youtube_oauth_real.is_enabled():
+        try:
+            return youtube_oauth_real.build_init_url_real(dirigente_id)
+        except youtube_oauth_real.YouTubeOAuthError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
     try:
         return oauth_service.build_init_url(platform, dirigente_id)
     except oauth_service.OAuthPlatformInvalidaError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# GET callback que Google llama tras consent.
+# Google envía code+state vía query params en un GET; el handler hace exchange
+# y redirige al frontend con success/error. Sin auth porque el flow llega
+# desde Google (sin JWT) — la validación legítima es la firma HMAC del `state`
+# (B-OAUTH-YT-STATE-1 cerrado vía app.services.oauth_state).
+@oauth_router.get("/callback/youtube")
+async def oauth_callback_youtube_real(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    code: str | None = Query(None),
+    state: str | None = Query(None),
+    error: str | None = Query(None),
+    dirigente_id: int | None = Query(None),
+) -> RedirectResponse:
+    # Frontend al que el callback redirige tras exchange. Vercel mientras Coolify
+    # se actualiza con el código de PLAN-2026-05-13 (`/dashboard/seguidores`,
+    # `/dashboard/onboarding?oauth_success=...`). Cambiar a `crece.mdconsultoria-ti.org`
+    # post-deploy de Carlos. Overridable via env `OAUTH_FE_REDIRECT_BASE`.
+    import os as _os
+    fe_base = _os.environ.get(
+        "OAUTH_FE_REDIRECT_BASE",
+        "https://frontend-zeta-sepia-46.vercel.app",
+    )
+    if error:
+        return RedirectResponse(
+            f"{fe_base}/dashboard/onboarding?oauth_error={error}", status_code=302
+        )
+    if not code:
+        return RedirectResponse(
+            f"{fe_base}/dashboard/onboarding?oauth_error=missing_code", status_code=302
+        )
+    if not youtube_oauth_real.is_enabled():
+        raise HTTPException(
+            status_code=503, detail="OAuth real YouTube no habilitado"
+        )
+    # State HMAC-signed (B-OAUTH-YT-STATE-1). Verifica firma + extrae
+    # dirigente_id del payload firmado. Wire dirigente_id (Query) NO se usa
+    # cuando hay state — eso permitía secuestrar oauth para otro dirigente.
+    from app.services.oauth_state import OAuthStateError, verify_state
+    if state:
+        try:
+            dirigente_id = verify_state(state)
+        except OAuthStateError as exc:
+            return RedirectResponse(
+                f"{fe_base}/dashboard/onboarding?oauth_error=invalid_state:{exc}",
+                status_code=302,
+            )
+    if dirigente_id is None:
+        return RedirectResponse(
+            f"{fe_base}/dashboard/onboarding?oauth_error=missing_dirigente",
+            status_code=302,
+        )
+    try:
+        tokens = await youtube_oauth_real.exchange_code_for_tokens(code=code)
+        await youtube_oauth_real.persist_callback_real(
+            db, dirigente_id=dirigente_id, tokens=tokens
+        )
+    except youtube_oauth_real.YouTubeOAuthError as exc:
+        return RedirectResponse(
+            f"{fe_base}/dashboard/onboarding?oauth_error={exc}", status_code=302
+        )
+    except LookupError as exc:
+        return RedirectResponse(
+            f"{fe_base}/dashboard/onboarding?oauth_error={exc}", status_code=302
+        )
+    return RedirectResponse(
+        f"{fe_base}/dashboard?oauth_success=youtube", status_code=302
+    )
 
 
 class OAuthCallbackRequest(BaseModel):
@@ -390,3 +469,152 @@ async def post_activate(
             status_code=status.HTTP_409_CONFLICT, detail=result
         )
     return result
+
+
+# ──────────────────────────────────────────────────────────────
+# §10 · Path-scoped aliases (B-ONBOARDING-FE-BE-MISMATCH-1, 2026-05-16)
+#
+# El frontend espera `dirigente_id` en URL (más RESTful + multi-tenant scope
+# claro). Estos endpoints son los nuevos canónicos. Los legacy quedan
+# disponibles como deprecated para retrocompat de sesiones piloto activas
+# (recomendación Gemini cross-audit · evita 404 en pestañas cacheadas).
+#
+# Diferencia clave: aplica `assert_dirigente_access` con el path param,
+# bloqueando cross-tenant aunque el body diga otro `dirigente_id`.
+# ──────────────────────────────────────────────────────────────
+
+
+class ProfilePathBody(BaseModel):
+    perfil: str = Field(..., min_length=3, max_length=30)
+
+
+@router.post(
+    "/{dirigente_id}/profile",
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
+)
+async def post_profile_scoped(
+    dirigente_id: int,
+    body: ProfilePathBody,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    await assert_dirigente_access(db, user, dirigente_id)
+    try:
+        dirigente = await profile_service.set_perfil(
+            db, dirigente_id=dirigente_id, perfil=body.perfil
+        )
+    except profile_service.PerfilInvalidoError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {
+        "dirigente_id": dirigente.id,
+        "perfil_1_5": dirigente.perfil_1_5,
+        "full_name": dirigente.full_name,
+    }
+
+
+class ManualAccountsPathBody(BaseModel):
+    accounts: list[ManualAccount]
+
+
+@router.post(
+    "/{dirigente_id}/accounts-manual",
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
+)
+async def post_accounts_manual_scoped(
+    dirigente_id: int,
+    body: ManualAccountsPathBody,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    await assert_dirigente_access(db, user, dirigente_id)
+    try:
+        return await accounts_service.persist_manual_accounts(
+            db,
+            dirigente_id=dirigente_id,
+            accounts=[a.model_dump() for a in body.accounts],
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class ConfirmAccountsPathBody(BaseModel):
+    confirmed: list[ConfirmAccount]
+
+
+@router.post(
+    "/{dirigente_id}/confirm-accounts",
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
+)
+async def post_confirm_accounts_scoped(
+    dirigente_id: int,
+    body: ConfirmAccountsPathBody,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    await assert_dirigente_access(db, user, dirigente_id)
+    try:
+        return await confirmations_service.confirmar_cuentas(
+            db,
+            dirigente_id=dirigente_id,
+            confirmed=[c.model_dump() for c in body.confirmed],
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class CompetidoresPathBody(BaseModel):
+    competidores: list[CompetidorItem]
+
+
+@router.post(
+    "/{dirigente_id}/competidores",
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
+)
+async def post_competidores_scoped(
+    dirigente_id: int,
+    body: CompetidoresPathBody,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    await assert_dirigente_access(db, user, dirigente_id)
+    try:
+        return await competidores_service.seed_competidores(
+            db,
+            dirigente_id=dirigente_id,
+            competidores=[c.model_dump() for c in body.competidores],
+        )
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(
+            status_code=(404 if isinstance(exc, LookupError) else 422),
+            detail=str(exc),
+        ) from exc
+
+
+class PromesasPathBody(BaseModel):
+    promesas: list[PromesaItem]
+
+
+@router.post(
+    "/{dirigente_id}/promesas",
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
+)
+async def post_promesas_scoped(
+    dirigente_id: int,
+    body: PromesasPathBody,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    await assert_dirigente_access(db, user, dirigente_id)
+    try:
+        return await promesas_service.bulk_seed_promesas(
+            db,
+            dirigente_id=dirigente_id,
+            promesas=[p.model_dump() for p in body.promesas],
+        )
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(
+            status_code=(404 if isinstance(exc, LookupError) else 422),
+            detail=str(exc),
+        ) from exc

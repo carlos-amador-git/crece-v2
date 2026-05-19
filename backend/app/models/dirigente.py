@@ -3,9 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -77,6 +76,28 @@ class Dirigente(Base):
     # rol_politico deriva del partido (federal context · piloto CDMX).
     # CHECK en BD: ('oficialismo','oposicion','independiente').
     rol_politico: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # D-23-H · Phase B · Panel Editable de Evaluación (migración phb1).
+    # pesos por categoría target_politico. Default neutro {1,1,1,1} = KPI sin ajuste.
+    # CHECK en BD: shape 4-keys + cada valor en [0.5, 1.5] + jsonb_typeof='number'.
+    # last_modified_* es audit · NULL hasta primera edición · stamp vs tabla history (MVP).
+    pesos_target_politico: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default='{"oficialismo":1.0,"oposicion":1.0,"propio":1.0,"personal":1.0}',
+        default=lambda: {
+            "oficialismo": 1.0,
+            "oposicion": 1.0,
+            "propio": 1.0,
+            "personal": 1.0,
+        },
+    )
+    pesos_last_modified_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    pesos_last_modified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

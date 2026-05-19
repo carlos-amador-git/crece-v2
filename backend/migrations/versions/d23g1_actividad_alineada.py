@@ -73,15 +73,15 @@ Reversibilidad
 drop columns. Sin pérdida de datos crudos en ``social_posts`` o ``dirigentes``
 porque las columnas son aditivas (todas NULL o con default seguro).
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "d23g1_actividad_alineada"
-down_revision: Union[str, None] = "s5m1_onboarding_tables"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "s5m1_onboarding_tables"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

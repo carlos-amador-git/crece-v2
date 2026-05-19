@@ -39,12 +39,21 @@ NUMERATOR_BY_ROL: dict[str, set[str]] = {
     "independiente": {"propio"},
 }
 
+# Pesos neutros · KPI default (sin ajuste del dirigente).
+DEFAULT_PESOS: dict[str, float] = {
+    "oficialismo": 1.0,
+    "oposicion": 1.0,
+    "propio": 1.0,
+    "personal": 1.0,
+}
+
 
 async def compute_actividad_alineada(
     db: AsyncSession,
     dirigente: Dirigente,
     *,
     days: int = 7,
+    modo: str = "default",
 ) -> dict[str, Any]:
     """Computa KPI Actividad Política Alineada para un dirigente.
 
@@ -52,6 +61,8 @@ async def compute_actividad_alineada(
         db: sesión async SQLAlchemy
         dirigente: instancia ya cargada de ``Dirigente`` (no consulta extra)
         days: ventana en días (default 7)
+        modo: "default" (pesos=1.0 · KPI IA pura · usado en comparativas) o
+              "ajustado" (usa ``dirigente.pesos_target_politico`` · vista personal)
 
     Returns:
         dict con campos:
@@ -62,6 +73,8 @@ async def compute_actividad_alineada(
         - total_posts_window: int · todos los posts en la ventana (incluye sin clasificar)
         - rol_politico: str · rol del dirigente (oficialismo|oposicion|independiente)
         - days: int · ventana usada
+        - modo: str · "default" o "ajustado"
+        - pesos: dict · pesos efectivamente usados en el cálculo
         - empty_state: str | None · 'no_classified' si no hay datos · None si OK
     """
     cutoff = datetime.now(UTC) - timedelta(days=days)
@@ -102,6 +115,15 @@ async def compute_actividad_alineada(
             breakdown[tgt] = int(cnt)
             total_classified += int(cnt)
 
+    # Pesos efectivos según modo. modo="default" mantiene la fórmula original
+    # (KPI IA pura · usada en comparativas inter-dirigentes). modo="ajustado"
+    # aplica los pesos personales del dirigente · vista personal.
+    if modo == "ajustado":
+        raw = dirigente.pesos_target_politico or DEFAULT_PESOS
+        pesos = {k: float(raw.get(k, 1.0)) for k in DEFAULT_PESOS}
+    else:
+        pesos = dict(DEFAULT_PESOS)
+
     # Empty state: sin posts clasificados productivos en la ventana
     if total_classified == 0:
         return {
@@ -112,13 +134,19 @@ async def compute_actividad_alineada(
             "total_posts_window": total_posts_window,
             "rol_politico": rol,
             "days": days,
+            "modo": modo,
+            "pesos": pesos,
             "empty_state": "no_classified",
         }
 
-    # Computar score: proporción de targets en numerador / total clasificado
+    # Computar score ponderado:
+    #   numerador = sum(pesos[t] * count[t]) para t en NUMERATOR_BY_ROL[rol]
+    #   denominador = sum(pesos[t] * count[t]) para t en PRODUCTIVE_TARGETS
+    #   score = numerador / denominador
     numerator_targets = NUMERATOR_BY_ROL.get(rol, NUMERATOR_BY_ROL["independiente"])
-    numerator = sum(breakdown[t] for t in numerator_targets)
-    score = numerator / total_classified if total_classified > 0 else 0.0
+    weighted_num = sum(pesos[t] * breakdown[t] for t in numerator_targets)
+    weighted_den = sum(pesos[t] * breakdown[t] for t in PRODUCTIVE_TARGETS)
+    score = weighted_num / weighted_den if weighted_den > 0 else 0.0
 
     return {
         "score": round(score, 4),
@@ -128,5 +156,7 @@ async def compute_actividad_alineada(
         "total_posts_window": total_posts_window,
         "rol_politico": rol,
         "days": days,
+        "modo": modo,
+        "pesos": pesos,
         "empty_state": None,
     }

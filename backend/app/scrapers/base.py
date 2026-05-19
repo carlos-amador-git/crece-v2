@@ -91,7 +91,7 @@ def get_scraper(platform: str) -> BaseScraper:
         "telegram": TelegramScraper,
     }
 
-    scraper_class = scrapers.get(platform)
+    scraper_class = scrapers.get(platform.lower())
     if scraper_class is None:
         raise ValueError(f"No scraper available for platform: {platform}")
 

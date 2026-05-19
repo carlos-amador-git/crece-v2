@@ -13,15 +13,15 @@ original (categoria P1..P5, volatilidad 0-100, estrato socioeconómico).
 """
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "c3d4e5f6a7b8"
-down_revision: Union[str, None] = "b2c3d4e5f6a7"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "b2c3d4e5f6a7"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

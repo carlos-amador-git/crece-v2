@@ -36,7 +36,7 @@ BACKEND_ROOT = Path(__file__).resolve().parent.parent
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from sqlalchemy import and_, select, text  # noqa: E402
+from sqlalchemy import select, text  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 
 from app.core.database import async_session_factory  # noqa: E402
@@ -45,7 +45,6 @@ from app.models.social import (  # noqa: E402
     SentimentAnalysis,
     SentimentLabel,
     SocialPost,
-    SocialProfile,
 )
 from app.services.sentiment_service import classify_plutchik_6  # noqa: E402
 

@@ -7,13 +7,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import text
 
 from app.core.database import async_session_factory
-
 
 DATA_FILE = Path(__file__).parent.parent / "data" / "planes-deliberados" / "pina-consolidacion-v2.json"
 

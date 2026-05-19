@@ -20,7 +20,6 @@ from typing import Any
 
 import httpx
 
-
 APIFY_TOKEN = os.environ.get("APIFY_TOKEN", "")
 APIFY_BASE = "https://api.apify.com/v2"
 ACTOR_SERP = "sovereigntaylor~google-search-scraper"

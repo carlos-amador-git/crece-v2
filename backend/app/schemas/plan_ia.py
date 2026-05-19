@@ -16,18 +16,28 @@ class PlanGenerateRequest(BaseModel):
 
 
 class PlanIAResponse(BaseModel):
+    """Public-facing plan response · 2026-04-25 audit IA H-02 · prompt_usado y
+    datos_entrada NO se exponen al cliente · solo accesibles vía DB para audit
+    interno o un futuro endpoint admin-only.
+    """
+
     id: int
     dirigente_id: int
     tipo: TipoPlan
     contenido: str
     modelo_ia: str
-    prompt_usado: str
-    datos_entrada: dict[str, Any] | None
     generado_por_id: int
     aprobado: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class PlanIAAdminResponse(PlanIAResponse):
+    """Admin-only response · incluye prompt y datos_entrada para auditoría."""
+
+    prompt_usado: str
+    datos_entrada: dict[str, Any] | None
 
 
 class PlanApproveRequest(BaseModel):

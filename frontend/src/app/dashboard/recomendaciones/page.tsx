@@ -6,7 +6,7 @@ import {
   Inbox,
   Loader2,
   RefreshCcw,
-  Sparkles,
+  Wand2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -30,6 +30,7 @@ import {
 } from "@/components/plan-ia/modificar-dialog";
 import { PostEjecutorDialog } from "@/components/plan-ia/post-ejecutor-dialog";
 import { SeguimientoCard } from "@/components/plan-ia/seguimiento-card";
+import { ProximasFechasStrip } from "@/components/plan-ia/proximas-fechas-strip";
 
 function useCurrentDirigenteId(): number | null {
   try {
@@ -41,8 +42,19 @@ function useCurrentDirigenteId(): number | null {
   }
 }
 
+function useIsAdmin(): boolean {
+  try {
+    const { user } = useAuth();
+    const u = user as { role?: string } | null;
+    return u?.role === "admin" || u?.role === "analyst" || u?.role === "editor";
+  } catch {
+    return false;
+  }
+}
+
 export default function RecomendacionesClientePage() {
   const dirigenteId = useCurrentDirigenteId();
+  const isAdmin = useIsAdmin();
   const { data: dirigentesData } = useDirigentes({ per_page: 50 });
   const dirigenteNombre =
     dirigentesData?.items.find((d) => d.id === dirigenteId)?.full_name;
@@ -136,7 +148,7 @@ export default function RecomendacionesClientePage() {
             <span>Recomendaciones</span>
           </div>
           <h1 className="flex items-center gap-2 font-heading text-2xl font-bold tracking-tight sm:text-3xl">
-            <Sparkles className="h-6 w-6 text-accent" />
+            <Wand2 className="h-6 w-6 text-accent" />
             Recomendaciones Plan IA
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -191,6 +203,13 @@ export default function RecomendacionesClientePage() {
         </div>
       )}
 
+      <ProximasFechasStrip
+        dirigenteId={dirigenteId}
+        isAdmin={isAdmin}
+        days={60}
+        onConverted={() => refetch()}
+      />
+
       <Tabs defaultValue="pendientes" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pendientes" data-testid="tab-pendientes">
@@ -217,7 +236,7 @@ export default function RecomendacionesClientePage() {
           {!isLoading && aprobadasList.length === 0 && (
             <Card data-testid="empty-pendientes">
               <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-                <Sparkles className="h-10 w-10 text-muted-foreground/50" />
+                <Wand2 className="h-10 w-10 text-muted-foreground/50" />
                 <p className="font-medium">Sin recomendaciones por ahora</p>
                 <p className="text-sm text-muted-foreground">
                   Tu equipo MD está preparando la siguiente tanda de acciones. Te

@@ -1,3 +1,24 @@
+"""⚠️ DEAD MODULE · feature pausada 2026-05-15 ⚠️
+
+Este módulo (`_generate_claude` con Anthropic SDK + `_generate_ollama` con
+HTTP a Ollama remoto) NO es invocado por ningún endpoint activo. El pipeline
+real corre vía Celery → `app/services/plan_ia/llm_pipeline.py` (que también
+está pausado por la misma razón).
+
+Decisión CEO 2026-05-15: migrar a subprocess Claude Code CLI (`claude`) +
+Gemini CLI wrapper (`~/.claude/bin/gemini-clean`) — ZERO API. Ollama queda
+dormant hasta mejora del VPS o ejecución programada en madrugada.
+
+NO BORRAR — preservado para refactor futuro. El endpoint que llamaría
+estas funciones retorna HTTP 503 desde 2026-05-15.
+
+Refactor pendiente:
+- Reemplazar `_generate_claude` con `_generate_cc_subprocess` (sin Anthropic API)
+- Reemplazar `_generate_ollama` con `_generate_gemini_cli_subprocess` (default)
+- Mantener `_generate_ollama` como fallback dormant (VPS futuro)
+
+Ver DECISIONS.md D-PLAN-IA-CC-GEMINI-CLI-1.
+"""
 from __future__ import annotations
 
 import json
@@ -6,11 +27,11 @@ from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 
 import httpx
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.benchmark import Competidor, CompetidorSocialProfile
+from app.models.competitor_profile import CompetitorProfile
 from app.models.dirigente import Dirigente
 from app.models.plan_ia import PlanIA, TipoPlan
 from app.models.social import SocialPost, SocialProfile
@@ -71,22 +92,38 @@ async def _gather_context(db: AsyncSession, dirigente: Dirigente) -> dict:
     )
     sentiment_dist = {row[0].value: int(row[1]) for row in sent_result.all()}
 
-    # Top competitors
-    comp_result = await db.execute(
-        select(Competidor, func.sum(CompetidorSocialProfile.followers_count))
-        .join(CompetidorSocialProfile)
-        .where(Competidor.es_rival.is_(True))
-        .group_by(Competidor.id)
-        .order_by(func.sum(CompetidorSocialProfile.followers_count).desc())
-        .limit(5)
-    )
+    # Top competitors (referentes ligeros declarados para este dirigente · D-MODEL-WAR-ROOM-1).
+    # Followers totales vienen de competitor_metrics_monthly último mes via LEFT JOIN LATERAL.
+    comp_rows = (
+        await db.execute(
+            text(
+                """
+                SELECT cp.display_name AS nombre,
+                       cp.partido,
+                       COALESCE(m.followers_total, 0) AS total_followers
+                FROM competitor_profiles cp
+                LEFT JOIN LATERAL (
+                    SELECT followers_total
+                    FROM competitor_metrics_monthly
+                    WHERE competitor_id = cp.id
+                    ORDER BY month_start DESC
+                    LIMIT 1
+                ) m ON true
+                WHERE cp.dirigente_objetivo_id = :did AND cp.is_active = TRUE
+                ORDER BY COALESCE(m.followers_total, 0) DESC
+                LIMIT 5
+                """
+            ),
+            {"did": dirigente.id},
+        )
+    ).mappings().all()
     competitors = [
         {
-            "nombre": row[0].nombre,
-            "partido": row[0].partido,
-            "total_followers": int(row[1]) if row[1] else 0,
+            "nombre": row["nombre"],
+            "partido": row["partido"] or "",
+            "total_followers": int(row["total_followers"]),
         }
-        for row in comp_result.all()
+        for row in comp_rows
     ]
 
     # Calculate IPD score from diagnostico engine
@@ -342,22 +379,13 @@ async def _stream_claude(prompt: str) -> AsyncGenerator[str, None]:
 
 
 async def _generate_ollama(prompt: str) -> str:
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        resp = await client.post(
-            f"{settings.OLLAMA_BASE_URL}/api/generate",
-            json={
-                "model": settings.OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False,
-            },
-        )
-        resp.raise_for_status()
-        return resp.json()["response"]
-
-
-async def _stream_ollama(prompt: str) -> AsyncGenerator[str, None]:
+    # 2026-04-25 · stream:True + keep_alive 30m + num_predict 4096
+    # Coolify CPU-only puede tardar hasta 1h en plan completo · stream:False
+    # acumulaba todo en server y cliente no veía progreso (timeout 30m).
+    # stream:True consume tokens conforme llegan · más resiliente.
+    chunks: list[str] = []
     async with (
-        httpx.AsyncClient(timeout=300.0) as client,
+        httpx.AsyncClient(timeout=httpx.Timeout(3600.0, connect=30.0)) as client,
         client.stream(
             "POST",
             f"{settings.OLLAMA_BASE_URL}/api/generate",
@@ -365,6 +393,35 @@ async def _stream_ollama(prompt: str) -> AsyncGenerator[str, None]:
                 "model": settings.OLLAMA_MODEL,
                 "prompt": prompt,
                 "stream": True,
+                "keep_alive": "30m",
+                "options": {"num_predict": 4096},
+            },
+        ) as resp,
+    ):
+        resp.raise_for_status()
+        async for line in resp.aiter_lines():
+            if not line:
+                continue
+            data = json.loads(line)
+            if data.get("response"):
+                chunks.append(data["response"])
+            if data.get("done"):
+                break
+    return "".join(chunks)
+
+
+async def _stream_ollama(prompt: str) -> AsyncGenerator[str, None]:
+    async with (
+        httpx.AsyncClient(timeout=httpx.Timeout(3600.0, connect=30.0)) as client,
+        client.stream(
+            "POST",
+            f"{settings.OLLAMA_BASE_URL}/api/generate",
+            json={
+                "model": settings.OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": True,
+                "keep_alive": "30m",
+                "options": {"num_predict": 4096},
             },
         ) as resp,
     ):

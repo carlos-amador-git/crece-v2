@@ -87,8 +87,8 @@ async def compute(
         return build_insufficient(
             BLOQUE,
             missing=[
-                f"0 comments con afiliación inferible en {total} comments analizados",
-                "Keywords de partidos no encontraron match — considerar extender AFILIACION_KEYWORDS",
+                f"De {total} comentarios analizados, cero mencionan partidos tradicionales (MORENA, MC, PAN, PRI, PVEM, PT).",
+                "La audiencia no se identifica con el sistema bipartidista — el bloque no aplica al perfil.",
             ],
             extra={
                 "comments_por_partido": dict(conteo),

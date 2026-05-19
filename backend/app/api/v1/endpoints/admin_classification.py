@@ -13,13 +13,13 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import Role, RoleChecker, get_current_user
+from app.core.security import get_current_user
 from app.models.user import User
 from app.services.political_framework import get_effective_matrix
 
@@ -278,6 +278,25 @@ async def batch_classify(
                     ia_fuente=cls.ia_fuente,
                     post_id=cls.post_id,
                 )
+            )
+            # S8 audit log · UPDATE manual de clasificación
+            from app.core.audit_listeners import log_destructive_op
+            await log_destructive_op(
+                db,
+                action="UPDATE",
+                model="social_posts",
+                record_id=cls.post_id,
+                changes_summary={
+                    "changed_columns": [
+                        "tono_discurso",
+                        "target_politico",
+                        "sentimiento_politico_ajustado",
+                        "llm_razon",
+                        "llm_modelo",
+                        "llm_processed_at",
+                    ],
+                    "source": "admin_classification.batch_classify",
+                },
             )
             processed += 1
 

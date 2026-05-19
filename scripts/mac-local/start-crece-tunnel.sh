@@ -70,10 +70,17 @@ if [ -n "$RUNNING_PIDS" ]; then
 fi
 
 # 4. Levantar nuevo tunnel en background
+# CRITICAL: usar nohup + disown para que cloudflared SOBREVIVA al exit del script.
+# Bug 2026-05-07: launchd mata todo el process group cuando el script termina,
+# matando también al cloudflared hijo y dejando el tunnel muerto inmediatamente
+# después del redeploy de Vercel. Ningún recovery post-apagón funciona si el
+# hijo muere con el padre. nohup ignora SIGHUP, disown lo saca del job table del
+# shell. macOS no tiene setsid; nohup es el equivalente portable.
 log "levantando tunnel nuevo..."
-cloudflared tunnel --url "$BACKEND_URL" --no-autoupdate > "$CF_LOG" 2>&1 &
+nohup cloudflared tunnel --url "$BACKEND_URL" --no-autoupdate > "$CF_LOG" 2>&1 < /dev/null &
 TUNNEL_PID=$!
-log "tunnel PID=$TUNNEL_PID"
+disown $TUNNEL_PID 2>/dev/null || true
+log "tunnel PID=$TUNNEL_PID (detached con nohup+disown)"
 
 # 4. Esperar hasta que cloudflared imprima el URL (máx 45s)
 NEW_URL=""
@@ -92,12 +99,29 @@ if [ -z "$NEW_URL" ]; then
 fi
 log "tunnel URL: $NEW_URL"
 
-# 5. Smoke test de que el tunnel public responde
-sleep 3
-TUNNEL_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "$NEW_URL/api/v1/health/" --max-time 15 || echo "000")
+# 5. Smoke test del tunnel: HARD-FAIL si no responde 200 tras retries.
+# DNS de quick tunnels tarda 5-30s en propagar al edge global; un solo probe
+# genera falso negativo (caso 2026-05-04: persistió URL muerta a Vercel).
+# Si tras ~30s sigue sin responder → tunnel realmente roto, NO actualizar Vercel.
+TUNNEL_STATUS="000"
+HOST_ONLY="${NEW_URL#https://}"
+for i in $(seq 1 10); do
+  IP=$(dig @1.1.1.1 "$HOST_ONLY" +short 2>/dev/null | head -1)
+  if [ -n "$IP" ]; then
+    TUNNEL_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+      --resolve "${HOST_ONLY}:443:$IP" \
+      "$NEW_URL/api/v1/health/" --max-time 10 2>/dev/null || echo "000")
+    [ "$TUNNEL_STATUS" = "200" ] && break
+  fi
+  sleep 3
+done
+
 if [ "$TUNNEL_STATUS" != "200" ]; then
-  log "WARN: tunnel responde $TUNNEL_STATUS (no 200). Puede ser transitorio."
+  log "ERROR: tunnel $NEW_URL no respondió 200 tras 10 intentos (último: $TUNNEL_STATUS). NO actualizando Vercel."
+  kill "$TUNNEL_PID" 2>/dev/null || true
+  exit 5
 fi
+log "tunnel verificado healthy ($TUNNEL_STATUS)"
 
 # 6. Comparar con URL previa
 OLD_URL=""
@@ -110,19 +134,25 @@ fi
 
 log "URL cambió: $OLD_URL → $NEW_URL"
 
-# 7. Actualizar Vercel env + redeploy
+# 7. Actualizar Vercel env BACKEND_TUNNEL_URL (server-only, leído por
+# el proxy en frontend/src/app/api/v1/[...path]/route.ts).
+# NEXT_PUBLIC_API_URL queda fijo en "/api/v1" (mismo origen) · no requiere
+# rebuild del frontend cuando rota el tunnel.
 cd "$FRONTEND_DIR" || { log "ERROR cd frontend"; exit 3; }
 
-NEW_API_URL="${NEW_URL}/api/v1"
-log "actualizando Vercel env NEXT_PUBLIC_API_URL=$NEW_API_URL"
+log "actualizando Vercel env BACKEND_TUNNEL_URL=$NEW_URL"
 
-# Remove + add (Vercel CLI no soporta update in-place)
-printf 'y\n' | vercel env rm NEXT_PUBLIC_API_URL production 2>>"$LOG" || true
-printf '%s\n' "$NEW_API_URL" | vercel env add NEXT_PUBLIC_API_URL production 2>>"$LOG" || {
+# Remove + add. NO usar printf '%s\n' — el \n entra literal y rompe fetch.
+printf 'y\n' | vercel env rm BACKEND_TUNNEL_URL production 2>>"$LOG" || true
+printf '%s' "$NEW_URL" | vercel env add BACKEND_TUNNEL_URL production 2>>"$LOG" || {
   log "ERROR: vercel env add falló"
   exit 4
 }
 
+# El cambio de env server-only requiere redeploy para que las nuevas
+# invocaciones de la API route lo lean. Vercel hace el rebuild en ~50s
+# pero el frontend HTML/JS ya cacheado en CDN sigue válido (mismo dominio,
+# misma URL pública). Los dirigentes no ven downtime.
 log "disparando redeploy Vercel prod..."
 DEPLOY_OUT=$(vercel --prod --yes 2>&1 | tail -5)
 log "deploy output: $DEPLOY_OUT"

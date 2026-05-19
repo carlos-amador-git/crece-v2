@@ -56,6 +56,7 @@ class SocialPostResponse(BaseModel):
     platform: str | None = None
     url: str | None = None
     dirigente_nombre: str | None = None
+    media_urls: list[str] | None = None
 
     model_config = {"from_attributes": True}
 

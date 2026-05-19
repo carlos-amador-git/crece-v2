@@ -50,6 +50,32 @@ export function useSentimentTrend(
   });
 }
 
+export interface SentimentCoverage {
+  dirigente_id: number;
+  days: number;
+  total_posts: number;
+  classified: number;
+  passed_filters: number;
+  coverage_pct: number;
+}
+
+export function useSentimentCoverage(
+  dirigenteId: number | undefined,
+  days: number = 30,
+  includeRts: boolean = false,
+) {
+  const params = new URLSearchParams();
+  if (dirigenteId) params.set("dirigente_id", String(dirigenteId));
+  params.set("days", String(days));
+  if (includeRts) params.set("include_rts", "true");
+
+  return useQuery({
+    queryKey: ["sentiment-coverage", dirigenteId, days, includeRts],
+    queryFn: () => api.get<SentimentCoverage>(`/social/sentiment-coverage?${params}`),
+    enabled: dirigenteId != null,
+  });
+}
+
 export function useSentimentDistribution(dirigenteId?: number) {
   // Distribution endpoint not yet implemented — return empty data
   return useQuery({

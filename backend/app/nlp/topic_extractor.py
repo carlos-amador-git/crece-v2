@@ -260,7 +260,7 @@ class TopicExtractor:
                 "extracted_at": now(),
                 "_err": f"http_error: {e.__class__.__name__}: {e}",
             }
-        except Exception as e:  # noqa: BLE001 — fallback intencional
+        except Exception as e:
             logger.warning("Gemma unexpected error: %s", e)
             return {
                 "emocion": None,

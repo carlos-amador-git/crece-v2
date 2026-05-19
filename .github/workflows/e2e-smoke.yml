@@ -12,25 +12,40 @@ name: E2E Smoke (Vercel Preview)
 # Trigger manual disponible via workflow_dispatch para pruebas ad-hoc.
 
 on:
-  # deployment_status trigger deshabilitado temporalmente · 2026-04-24.
-  # Razón: los tests Playwright hacen apiRequestContext.post("http://localhost:8002/...")
-  # hardcoded para seed/setup · GitHub Actions runner no tiene backend Crece levantado
-  # → ECONNREFUSED → tests always-red (ruido, no signal).
-  # Re-habilitar cuando B-CI-01 setup backend-in-CI (postgres docker + seed + uvicorn
-  # ephemeral) esté resuelto.
+  # Trigger automático en push a main y PRs target main · habilitado 2026-05-08
+  # como pre-requisito de Fase 3 branches recovery (auditoría 2026-05-09 detectó
+  # 0 runs históricos automáticos del workflow).
+  #
+  # Nota B-CI-01 (sigue abierto): los tests Playwright contra BASE_URL hardcoded
+  # localhost:8002 fallan en runner GH Actions (ECONNREFUSED · sin backend Crece
+  # levantado). Hasta que B-CI-01 (postgres docker + seed + uvicorn ephemeral)
+  # esté resuelto, el job lint/build sí corre, pero los specs Playwright contra
+  # rutas con backend fallarán de forma esperada en push/pull_request.
+  #
+  # En workflow_dispatch + deployment_status (Vercel Preview) sí pasan porque el
+  # BASE_URL apunta a un deployment con backend real.
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  deployment_status:
   workflow_dispatch:
     inputs:
       base_url:
         description: "BASE_URL para Playwright (URL preview Vercel o equivalente con backend accesible)"
-        required: true
+        required: false
         type: string
 
 jobs:
   smoke:
-    # Corre solo en Preview deployments exitosos de Vercel · skip production para no tumbar el piloto
-    # En workflow_dispatch manual, corre siempre
+    # Corre en:
+    # - workflow_dispatch (manual con BASE_URL)
+    # - deployment_status Preview success (Vercel Preview con backend real)
+    # - push a main / pull_request a main (modo lint+build, skip Playwright contra backend)
     if: |
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      github.event_name == 'pull_request' ||
       (github.event.deployment_status.state == 'success' &&
        github.event.deployment_status.environment == 'Preview')
     runs-on: ubuntu-latest
@@ -50,24 +65,59 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
       - name: Resolve BASE_URL
         id: base
+        env:
+          INPUT_BASE_URL: ${{ inputs.base_url }}
+          DEPLOYMENT_TARGET_URL: ${{ github.event.deployment_status.target_url }}
         run: |
-          if [ -n "${{ inputs.base_url }}" ]; then
-            echo "base_url=${{ inputs.base_url }}" >> "$GITHUB_OUTPUT"
+          if [ -n "$INPUT_BASE_URL" ]; then
+            echo "base_url=$INPUT_BASE_URL" >> "$GITHUB_OUTPUT"
             echo "source=manual_input" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ github.event.deployment_status.target_url }}" ]; then
-            echo "base_url=${{ github.event.deployment_status.target_url }}" >> "$GITHUB_OUTPUT"
+            echo "playwright_enabled=true" >> "$GITHUB_OUTPUT"
+          elif [ -n "$DEPLOYMENT_TARGET_URL" ]; then
+            echo "base_url=$DEPLOYMENT_TARGET_URL" >> "$GITHUB_OUTPUT"
             echo "source=deployment_status" >> "$GITHUB_OUTPUT"
+            echo "playwright_enabled=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::No BASE_URL available from deployment_status or workflow_dispatch input"
-            exit 1
+            # push/pull_request sin BASE_URL · modo lint+build, skip Playwright
+            echo "base_url=" >> "$GITHUB_OUTPUT"
+            echo "source=lint_build_only" >> "$GITHUB_OUTPUT"
+            echo "playwright_enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::push/pull_request sin BASE_URL · ejecutando lint+build only (B-CI-01 abierto)"
           fi
 
+      - name: Frontend lint (non-blocking · B-LINT-01)
+        # `next lint` requiere setup interactivo (no hay .eslintrc · ningún
+        # eslint dep en package.json). Marcado non-blocking hasta que B-LINT-01
+        # configure ESLint propiamente. Bloquear el CI por lint impediría que
+        # typecheck+build verifiquen cambios reales.
+        continue-on-error: true
+        run: npm run lint --if-present
+
+      - name: Anti-mock-data guardrail (D-ANTI-MOCK-1)
+        # Falla el CI si alguien re-introduce hardcoded fallback con métricas
+        # numéricas visibles al usuario. Origen: incidente 2026-05-11
+        # CompetitorSnapshotCard mostraba 8.8K mock vs 89.8K real.
+        # Tres patrones: _FALLBACK con metrics, DEMO_/MOCK_/FAKE_ arrays,
+        # comentarios TODO replace-with-API. Convención de excepción legítima:
+        # marcar línea con /* allow-mock: razón */.
+        run: npm run check:no-mocks
+
+      - name: Frontend typecheck
+        run: npx tsc --noEmit
+
+      - name: Frontend build (smoke)
+        run: npm run build --if-present
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8002
+
+      - name: Install Playwright Chromium
+        if: steps.base.outputs.playwright_enabled == 'true'
+        run: npx playwright install --with-deps chromium
+
       - name: Run piloto smoke specs
+        if: steps.base.outputs.playwright_enabled == 'true'
         env:
           BASE_URL: ${{ steps.base.outputs.base_url }}
           CI: "true"
@@ -87,7 +137,7 @@ jobs:
             diagnostico-tier2.spec.ts
 
       - name: Upload Playwright report on failure
-        if: failure()
+        if: failure() && steps.base.outputs.playwright_enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ github.run_id }}
@@ -99,9 +149,15 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          echo "## E2E Smoke · Vercel Preview" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **BASE_URL:** ${{ steps.base.outputs.base_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "## E2E Smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Event:** ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **BASE_URL:** ${{ steps.base.outputs.base_url || '(none · lint+build only)' }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Source:** ${{ steps.base.outputs.source }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Specs:** pages, diagnostico, diagnostico-tier2" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Playwright:** ${{ steps.base.outputs.playwright_enabled }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Known failures esperadas post-F1.1: /aceptacion, /admin/overview" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.base.outputs.playwright_enabled }}" = "true" ]; then
+            echo "**Specs:** pages, diagnostico, diagnostico-tier2" >> "$GITHUB_STEP_SUMMARY"
+            echo "Known failures esperadas post-F1.1: /aceptacion, /admin/overview" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**Modo lint+build only** · B-CI-01 abierto (backend en CI pendiente)" >> "$GITHUB_STEP_SUMMARY"
+          fi

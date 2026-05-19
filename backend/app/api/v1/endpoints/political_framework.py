@@ -181,6 +181,22 @@ async def reset_to_defaults(
         .bindparams(org_id=org_id)
     )
 
+    # S8 audit log centralizado · trazabilidad reset framework override
+    if existing:
+        from app.core.audit_listeners import log_destructive_op
+        await log_destructive_op(
+            db,
+            action="DELETE",
+            model="framework_overrides_org",
+            record_id=None,
+            changes_summary={
+                "rows_deleted": len(existing),
+                "source": "political_framework.reset_org_overrides",
+                "org_id": org_id,
+                "razon": razon,
+            },
+        )
+
     # Audit each reversal
     for row in existing:
         default_row = (await db.execute(

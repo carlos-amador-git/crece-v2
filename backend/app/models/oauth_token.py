@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, LargeBinary, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -52,8 +52,17 @@ class OAuthTokenByPlatform(Base):
         index=True,
     )
     platform: Mapped[str] = mapped_column(String(20), nullable=False)
+    # token_hash / refresh_token_hash: legacy plain-text (nombre histórico ≠ hash).
+    # B-OAUTH-YT-CRYPTO-1 (2026-05-16): nuevas inserciones cifradas en *_enc.
+    # Filas viejas migran vía scripts/encrypt_existing_oauth_tokens.py
     token_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     refresh_token_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    token_enc: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    refresh_token_enc: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    crypto_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    encrypted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     platform_user_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     platform_username: Mapped[str | None] = mapped_column(String(100), nullable=True)
     scopes: Mapped[list | None] = mapped_column(JSONB, nullable=False, default=list)

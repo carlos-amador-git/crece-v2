@@ -12,10 +12,10 @@ import pytest
 
 from app.core import alerting
 from app.core.alerting import (
-    _RATE_LIMIT,
     _COLOR_ORANGE,
     _COLOR_RED,
     _COLOR_YELLOW,
+    _RATE_LIMIT,
     _build_embed,
     _color_for,
     _is_rate_limited,

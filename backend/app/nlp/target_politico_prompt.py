@@ -19,7 +19,6 @@ import json
 import re
 from typing import Any
 
-
 VALID_TARGETS = {"oficialismo", "oposicion", "propio", "personal", "no_determinado"}
 
 

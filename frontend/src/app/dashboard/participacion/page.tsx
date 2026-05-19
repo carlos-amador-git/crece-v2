@@ -37,7 +37,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StatCard } from "@/components/dashboard/stat-card";
+import { StatCard, StatCardSkeleton } from "@/components/dashboard/stat-card";
 import { FadeUp } from "@/components/motion/fade-up";
 
 // ── Config maps ───────────────────────────────────────────────────
@@ -97,10 +97,6 @@ function formatHours(hours: number): string {
 }
 
 // ── Components ────────────────────────────────────────────────────
-
-function StatCardSkeleton() {
-  return <Skeleton className="h-[72px] rounded-lg" />;
-}
 
 function SolicitudCard({ solicitud }: { solicitud: Solicitud }) {
   const tipo = TIPO_CONFIG[solicitud.tipo];

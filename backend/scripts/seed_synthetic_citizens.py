@@ -23,15 +23,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import async_session_factory
 from app.models.ciudadano import (
-    Ciudadano,
     Escolaridad,
     Genero,
     IntencionVotoCiudadano,
     NivelInteres,
     RangoEdad,
 )
-from app.models.encuesta import Encuesta, NivelCerteza
-from app.models.voter_score import VoterScore
+from app.models.encuesta import NivelCerteza
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

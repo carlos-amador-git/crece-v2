@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.scope import assert_dirigente_access
 from app.core.security import Role, RoleChecker, get_current_user, hash_password
 from app.models.dirigente import Dirigente, DirigenteSyncStatus
 from app.models.social import DataSource, Platform, SocialPost, SocialProfile, SocialProfileSnapshot
@@ -23,7 +26,9 @@ from app.schemas.dirigente import (
     OnboardingResponse,
     SocialSummary,
 )
-from app.services.actividad_alineada import compute_actividad_alineada
+from app.services.actividad_alineada import (
+    compute_actividad_alineada,
+)
 from app.services.diagnostico import calculate_ipd
 
 router = APIRouter()
@@ -31,7 +36,7 @@ router = APIRouter()
 
 @router.get("/")
 async def list_dirigentes(
-    request: "Request",
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
@@ -80,6 +85,21 @@ async def list_dirigentes(
     result = await db.execute(query)
     items = list(result.scalars().all())
 
+    # F-PERF-01 fix (audit 2026-05-15): batched query para platform_count.
+    # Antes hacíamos 1 query por dirigente dentro del loop (N+1). Ahora 1 sola
+    # query agregada para los IDs paginados. calculate_ipd internamente sigue
+    # con queries por dirigente — refactor anidado queda para sprint dedicado
+    # si el throughput lo justifica (medible vía /api/v1/dirigentes/ EXPLAIN).
+    dirigente_ids = [d.id for d in items]
+    platform_counts: dict[int, int] = {}
+    if dirigente_ids:
+        counts_result = await db.execute(
+            select(SocialProfile.dirigente_id, func.count(SocialProfile.id))
+            .where(SocialProfile.dirigente_id.in_(dirigente_ids))
+            .group_by(SocialProfile.dirigente_id)
+        )
+        platform_counts = {row[0]: row[1] for row in counts_result.all()}
+
     # Enrich each dirigente with IPD and platform count
     enriched = []
     for d in items:
@@ -92,11 +112,7 @@ async def list_dirigentes(
             base["ipd_score"] = 0.0
             base["platform_coverage"] = 0.0
 
-        # Platform count
-        prof_r = await db.execute(
-            select(func.count(SocialProfile.id)).where(SocialProfile.dirigente_id == d.id)
-        )
-        base["platform_count"] = prof_r.scalar_one()
+        base["platform_count"] = platform_counts.get(d.id, 0)
         enriched.append(base)
 
     return {
@@ -179,10 +195,20 @@ async def get_dirigente(
     sentiment_sum = 0.0
 
     if profile_ids:
+        # Fix S2 (audit 2026-05-15 · Gemini A1.4): la columna engagement_rate
+        # quedaba en 0 porque los scrapers no la pueblan (engagement_rate
+        # típicamente = interacciones / followers, requiere followers_at_post_time
+        # que no capturamos). El UI trata total_engagement_7d como TOTAL de
+        # interacciones (compara contra 5000 como threshold), no como rate. Por
+        # eso sumamos likes+comments+shares directos. Saymi tenía 30 posts con
+        # 8086 interacciones reales mostrando "0" antes de este fix.
         stats_r = await db.execute(
             select(
                 func.count(SocialPost.id),
-                func.avg(SocialPost.engagement_rate),
+                func.coalesce(
+                    func.sum(SocialPost.likes + SocialPost.comments + SocialPost.shares),
+                    0,
+                ),
                 func.avg(SocialPost.sentiment_score),
             ).where(
                 SocialPost.profile_id.in_(profile_ids),
@@ -193,19 +219,30 @@ async def get_dirigente(
         total_posts_7d = int(row[0])
         total_engagement_7d = float(row[1]) if row[1] else 0.0
         sentiment_sum = float(row[2]) if row[2] else 0.5
-        int(row[0])
 
     sum(p.followers_count for p in profiles)
 
     # D-23-G' · KPI Actividad Política Alineada (reemplaza flip de sentimiento)
-    actividad = await compute_actividad_alineada(db, dirigente, days=7)
+    # D-23-H · Phase B · doble métrica (default + ajustado) · vista personal vs comparativa
+    actividad_default = await compute_actividad_alineada(db, dirigente, days=7, modo="default")
+    actividad_ajustada = await compute_actividad_alineada(db, dirigente, days=7, modo="ajustado")
 
     base["stats"] = {
         "total_posts_7d": total_posts_7d,
         "total_engagement_7d": round(total_engagement_7d, 4),
         "sentiment_avg_7d": round(sentiment_sum, 2),  # se preserva como subline informacional · sin flip
         "follower_growth_30d": 0,  # Would need historical data
-        "actividad_alineada": actividad,  # KPI hero nuevo · plan D-23-G' 2026-04-24
+        # Backward compat · clientes Phase A leen `actividad_alineada` (= default)
+        "actividad_alineada": actividad_default,
+        # Phase B · doble métrica explícita
+        "actividad_alineada_default": actividad_default,
+        "actividad_alineada_ajustada": actividad_ajustada,
+        "pesos_target_politico": dirigente.pesos_target_politico,
+        "pesos_last_modified_at": (
+            dirigente.pesos_last_modified_at.isoformat()
+            if dirigente.pesos_last_modified_at
+            else None
+        ),
     }
 
     # Enrich: social_accounts (what frontend expects)
@@ -243,6 +280,12 @@ async def get_dirigente(
                 "engagement_rate": post.engagement_rate,
                 "sentiment_score": post.sentiment_score,
                 "sentiment_label": post.sentiment_label.value if post.sentiment_label else None,
+                "media_urls": post.media_urls,
+                "url": (
+                    (post.raw_data or {}).get("url")
+                    or (post.raw_data or {}).get("post_url")
+                    or (post.raw_data or {}).get("topLevelUrl")
+                ),
             }
             for post in posts
         ]
@@ -297,6 +340,83 @@ async def update_dirigente(
     return dirigente
 
 
+class PesosUpdate(BaseModel):
+    """D-23-H · Phase B · pesos editables target_politico.
+
+    Cap 0.5-1.5 enforced en CHECK constraint BD + aquí en validación
+    aplicación. Default neutro = 1.0 (sin ajuste).
+    """
+
+    oficialismo: float = Field(..., ge=0.5, le=1.5)
+    oposicion: float = Field(..., ge=0.5, le=1.5)
+    propio: float = Field(..., ge=0.5, le=1.5)
+    personal: float = Field(..., ge=0.5, le=1.5)
+
+    @field_validator("oficialismo", "oposicion", "propio", "personal")
+    @classmethod
+    def _round_to_2(cls, v: float) -> float:
+        # Reduce ruido de floats. UI usa 5 puntos discretos
+        # (0.5, 0.75, 1.0, 1.25, 1.5) pero aceptamos cualquier float en rango.
+        return round(float(v), 2)
+
+
+@router.patch(
+    "/{dirigente_id}/pesos",
+    dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST, Role.VIEWER]))],
+)
+async def update_dirigente_pesos(
+    dirigente_id: int,
+    payload: PesosUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    """Actualiza los pesos por categoría target_politico de un dirigente.
+
+    D-23-H · Phase B · Panel Editable de Evaluación · Palanca 1.
+
+    Permisos: ADMIN/ANALYST puede editar cualquier dirigente · VIEWER solo
+    si su `dirigente_id == dirigente_id` (vista personal).
+
+    Audit: actualiza ``pesos_last_modified_by`` y ``pesos_last_modified_at``.
+
+    Retorna ambos KPIs recalculados (default + ajustado) para que el cliente
+    refresque la doble métrica sin un GET adicional.
+    """
+    result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
+    dirigente = result.scalar_one_or_none()
+    if dirigente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+
+    # VIEWER solo puede editar sus propios pesos.
+    if current_user.role == Role.VIEWER and current_user.dirigente_id != dirigente_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para editar pesos de otro dirigente",
+        )
+
+    dirigente.pesos_target_politico = payload.model_dump()
+    dirigente.pesos_last_modified_by = current_user.id
+    dirigente.pesos_last_modified_at = datetime.now(UTC)
+
+    await db.flush()
+    await db.refresh(dirigente)
+
+    actividad_default = await compute_actividad_alineada(
+        db, dirigente, days=7, modo="default"
+    )
+    actividad_ajustada = await compute_actividad_alineada(
+        db, dirigente, days=7, modo="ajustado"
+    )
+
+    return {
+        "pesos_target_politico": dirigente.pesos_target_politico,
+        "pesos_last_modified_at": dirigente.pesos_last_modified_at.isoformat(),
+        "pesos_last_modified_by": dirigente.pesos_last_modified_by,
+        "actividad_alineada_default": actividad_default,
+        "actividad_alineada_ajustada": actividad_ajustada,
+    }
+
+
 @router.delete(
     "/{dirigente_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -318,9 +438,10 @@ async def delete_dirigente(
 async def get_diagnostico(
     dirigente_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> DiagnosticoResponse:
     """Get the aggregated digital penetration index (IPD) for a dirigente."""
+    await assert_dirigente_access(db, current_user, dirigente_id)
     result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:
@@ -470,9 +591,10 @@ async def get_flash_analysis(
 async def get_social_summary(
     dirigente_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> SocialSummary:
     """Get a social media summary for a dirigente across all platforms."""
+    await assert_dirigente_access(db, current_user, dirigente_id)
     result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:

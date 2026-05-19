@@ -379,6 +379,28 @@ def analyze_account(
     )
 
 
+BOT_THRESHOLD = 0.70  # bot_probability >= → is_real=False (matches _classify("likely_bot"))
+
+
+def score_follower(
+    handle: str,
+    platform: str,
+    profile: dict | None = None,
+) -> tuple[float, bool]:
+    """Convenience helper for `social_followers` hook (B-FOLLOWERS-BOT-1).
+
+    Devuelve ``(bot_score, is_real)`` listo para asignar al row del modelo
+    `SocialFollower`. Para subs YT que solo traen handle+title, el análisis
+    cae a `_analyze_username` (suficiente para flag handles claramente bot).
+
+    is_real = bot_probability < BOT_THRESHOLD (0.70).
+    """
+    if not handle:
+        return 0.05, True  # baseline
+    result = analyze_account(handle=handle, platform=platform, profile=profile)
+    return result.bot_probability, result.bot_probability < BOT_THRESHOLD
+
+
 def analyze_followers_batch(
     followers: list[dict],
     platform: str,

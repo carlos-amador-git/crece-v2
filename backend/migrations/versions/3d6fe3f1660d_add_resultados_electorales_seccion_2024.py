@@ -6,18 +6,18 @@ Create Date: 2026-04-15 16:12:52.373133
 """
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
-import sqlalchemy as sa
 import geoalchemy2
+import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '3d6fe3f1660d'
-down_revision: Union[str, None] = 'ds04_matrix_context'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'ds04_matrix_context'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

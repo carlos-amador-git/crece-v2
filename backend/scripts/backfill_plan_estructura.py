@@ -172,7 +172,7 @@ def _parse_markdown_to_estructura(contenido: str) -> dict:
         idx = len(tareas) + 1
         tareas.append({
             "titulo": f"Tarea pendiente de definir #{idx}",
-            "descripcion": f"Tarea extraida del plan original pendiente de detalle. Revisar contenido markdown para completar.",
+            "descripcion": "Tarea extraida del plan original pendiente de detalle. Revisar contenido markdown para completar.",
             "orden": len(tareas),
         })
 

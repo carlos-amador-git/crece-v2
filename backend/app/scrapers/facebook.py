@@ -19,9 +19,17 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import logging
+import os
 import re
 from datetime import UTC, datetime
 from typing import Any
+
+# Path al binario Chromium del sistema dentro del contenedor.
+# El Dockerfile instala chromium via apt y exporta CHROME_BIN=/usr/bin/chromium.
+# Pasamos executable_path explícito a Playwright para evitar instalar
+# su propio Chromium (ahorra ~973MB en la imagen). Si CHROME_BIN no está
+# definido (dev local sin docker), Playwright usa su default download path.
+_CHROMIUM_BIN = os.environ.get("CHROME_BIN")
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -159,7 +167,10 @@ class FacebookScraper(BaseScraper):
         url = f"https://www.facebook.com/{handle}"
         try:
             with sync_playwright() as pw:
-                browser = pw.chromium.launch(headless=True)
+                launch_kwargs: dict[str, Any] = {"headless": True}
+                if _CHROMIUM_BIN:
+                    launch_kwargs["executable_path"] = _CHROMIUM_BIN
+                browser = pw.chromium.launch(**launch_kwargs)
                 try:
                     context = browser.new_context(
                         user_agent=_USER_AGENT,
@@ -213,6 +224,7 @@ class FacebookScraper(BaseScraper):
             "comments": _safe_int(raw_data.get("comments", 0)),
             "shares": _safe_int(raw_data.get("shares", 0)),
             "views": 0,
+            "media_urls": raw_data.get("media_urls") or None,
             "raw_data": {
                 "source": "playwright",
                 "handle": raw_data.get("handle", ""),
@@ -286,6 +298,7 @@ class FacebookScraper(BaseScraper):
                     comments=parsed["comments"],
                     shares=parsed["shares"],
                     views=parsed["views"],
+                    media_urls=parsed.get("media_urls"),
                     raw_data=parsed["raw_data"],
                     scraped_at=datetime.now(UTC),
                 )
@@ -457,7 +470,10 @@ class FacebookScraper(BaseScraper):
 
         try:
             with sync_playwright() as pw:
-                browser = pw.chromium.launch(headless=True)
+                launch_kwargs: dict[str, Any] = {"headless": True}
+                if _CHROMIUM_BIN:
+                    launch_kwargs["executable_path"] = _CHROMIUM_BIN
+                browser = pw.chromium.launch(**launch_kwargs)
                 try:
                     context = browser.new_context(
                         user_agent=_USER_AGENT,

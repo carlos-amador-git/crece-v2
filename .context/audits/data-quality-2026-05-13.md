@@ -1,0 +1,452 @@
+# Data Quality Audit · 2026-05-13
+
+## Resumen
+
+- critical: 5
+- high: 110
+- medium: 13
+- low: 19
+- info: 286
+- total findings: 433
+
+## Layer: api_contract
+
+- **[CRITICAL]** FE llama POST /onboarding/{var}/profile (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE
+- **[CRITICAL]** FE llama POST /onboarding/{var}/accounts-manual (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE
+- **[CRITICAL]** FE llama POST /onboarding/{var}/confirm-accounts (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE
+- **[CRITICAL]** FE llama POST /onboarding/{var}/competidores (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE
+- **[CRITICAL]** FE llama POST /onboarding/{var}/promesas (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE
+- **[INFO]** BE POST /admin/classification/batch no es llamado desde FE hooks
+- **[INFO]** BE POST /admin/compliance/purge-hash no es llamado desde FE hooks
+- **[INFO]** BE POST /admin/promesas no es llamado desde FE hooks
+- **[INFO]** BE POST /api-keys no es llamado desde FE hooks
+- **[INFO]** BE POST /arco/exercise no es llamado desde FE hooks
+- **[INFO]** BE POST /auth/forgot-password no es llamado desde FE hooks
+- **[INFO]** BE POST /auth/impersonate/{var} no es llamado desde FE hooks
+- **[INFO]** BE POST /auth/login no es llamado desde FE hooks
+- **[INFO]** BE POST /auth/register no es llamado desde FE hooks
+- **[INFO]** BE POST /benchmark/competidores no es llamado desde FE hooks
+- **[INFO]** BE POST /blindaje/audit no es llamado desde FE hooks
+- **[INFO]** BE POST /blindaje/bot-check/{var} no es llamado desde FE hooks
+- **[INFO]** BE POST /blindaje/gastos no es llamado desde FE hooks
+- **[INFO]** BE POST /blindaje/gastos/import no es llamado desde FE hooks
+- **[INFO]** BE POST /calendario/efemerides/{var}/convertir-recomendacion no es llamado desde FE hooks
+- **[INFO]** BE POST /calendario/sugerir-post no es llamado desde FE hooks
+- **[INFO]** BE POST /campaigns no es llamado desde FE hooks
+- **[INFO]** BE POST /campaigns/segment no es llamado desde FE hooks
+- **[INFO]** BE POST /campanas no es llamado desde FE hooks
+- **[INFO]** BE POST /campanas/webhook/delivery no es llamado desde FE hooks
+- **[INFO]** BE POST /campanas/{var}/enviar no es llamado desde FE hooks
+- **[INFO]** BE POST /campanas/{var}/preparar no es llamado desde FE hooks
+- **[INFO]** BE POST /campanas/{var}/segmentos no es llamado desde FE hooks
+- **[INFO]** BE POST /canvassing/optimize no es llamado desde FE hooks
+- **[INFO]** BE POST /ciudadanos no es llamado desde FE hooks
+- **[INFO]** BE POST /contenido/generate no es llamado desde FE hooks
+- **[INFO]** BE POST /contenido/generate/stream no es llamado desde FE hooks
+- **[INFO]** BE POST /content/generate no es llamado desde FE hooks
+- **[INFO]** BE POST /content/generate/stream no es llamado desde FE hooks
+- **[INFO]** BE POST /content/pieces/{var}/approve no es llamado desde FE hooks
+- **[INFO]** BE POST /crm/interactions no es llamado desde FE hooks
+- **[INFO]** BE POST /dirigentes no es llamado desde FE hooks
+- **[INFO]** BE POST /dirigentes/onboard no es llamado desde FE hooks
+- **[INFO]** BE POST /electoral/intencion-voto no es llamado desde FE hooks
+- **[INFO]** BE POST /encuestas no es llamado desde FE hooks
+- **[INFO]** BE POST /eventos no es llamado desde FE hooks
+- **[INFO]** BE POST /eventos/{var}/asistentes no es llamado desde FE hooks
+- **[INFO]** BE POST /framework/matrix/reset no es llamado desde FE hooks
+- **[INFO]** BE POST /hitl/comments/{var}/confirm no es llamado desde FE hooks
+- **[INFO]** BE POST /hitl/posts/{var}/confirm no es llamado desde FE hooks
+- **[INFO]** BE POST /metricas-sociales no es llamado desde FE hooks
+- **[INFO]** BE POST /oauth/callback/{var} no es llamado desde FE hooks
+- **[INFO]** BE POST /onboarding/accounts/manual no es llamado desde FE hooks
+- **[INFO]** BE POST /onboarding/activate/{var} no es llamado desde FE hooks
+- **[INFO]** BE POST /onboarding/competidores no es llamado desde FE hooks
+- **[INFO]** BE POST /onboarding/confirm-accounts no es llamado desde FE hooks
+- **[INFO]** BE POST /onboarding/profile no es llamado desde FE hooks
+- **[INFO]** BE POST /onboarding/promesas no es llamado desde FE hooks
+- **[INFO]** BE POST /onboarding/search no es llamado desde FE hooks
+- **[INFO]** BE POST /onboarding/validate-account no es llamado desde FE hooks
+- **[INFO]** BE POST /organizaciones no es llamado desde FE hooks
+- **[INFO]** BE POST /osint/sherlock no es llamado desde FE hooks
+- **[INFO]** BE POST /participacion no es llamado desde FE hooks
+- **[INFO]** BE POST /participacion/webhook/chatwoot no es llamado desde FE hooks
+- **[INFO]** BE POST /participacion/{var}/asignar no es llamado desde FE hooks
+- **[INFO]** BE POST /participacion/{var}/responder no es llamado desde FE hooks
+- **[INFO]** BE POST /plan-ia/generate/{var} no es llamado desde FE hooks
+- **[INFO]** BE POST /planes/generar no es llamado desde FE hooks
+- **[INFO]** BE POST /planes/generar/stream no es llamado desde FE hooks
+- **[INFO]** BE POST /planes/{var}/tareas/{var}/complete no es llamado desde FE hooks
+- **[INFO]** BE POST /programas no es llamado desde FE hooks
+- **[INFO]** BE POST /programas/{var}/beneficiarios no es llamado desde FE hooks
+- **[INFO]** BE POST /social/scrape/{var} no es llamado desde FE hooks
+- **[INFO]** BE POST /voter-scoring/run no es llamado desde FE hooks
+- **[INFO]** BE POST /voter-scoring/train no es llamado desde FE hooks
+- **[INFO]** BE POST /webhooks/chatwoot no es llamado desde FE hooks
+- **[INFO]** BE GET /admin/classification/pending no es llamado desde FE hooks
+- **[INFO]** BE GET /admin/classification/prompt no es llamado desde FE hooks
+- **[INFO]** BE GET /admin/classification/stats no es llamado desde FE hooks
+- **[INFO]** BE GET /admin/compliance/purge-audit no es llamado desde FE hooks
+- **[INFO]** BE GET /admin/overview no es llamado desde FE hooks
+- **[INFO]** BE GET /admin/promesas/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /alerts no es llamado desde FE hooks
+- **[INFO]** BE GET /api-keys no es llamado desde FE hooks
+- **[INFO]** BE GET /auth/me no es llamado desde FE hooks
+- **[INFO]** BE GET /benchmark/competidores no es llamado desde FE hooks
+- **[INFO]** BE GET /benchmark/competidores/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /benchmark/ranking no es llamado desde FE hooks
+- **[INFO]** BE GET /blindaje/alertas no es llamado desde FE hooks
+- **[INFO]** BE GET /blindaje/gastos no es llamado desde FE hooks
+- **[INFO]** BE GET /blindaje/reporte/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /bot-detection/analyze/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /calendario/proximas no es llamado desde FE hooks
+- **[INFO]** BE GET /campaigns no es llamado desde FE hooks
+- **[INFO]** BE GET /campaigns/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /campanas no es llamado desde FE hooks
+- **[INFO]** BE GET /campanas/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /campanas/{var}/analytics no es llamado desde FE hooks
+- **[INFO]** BE GET /canvassing/geo no es llamado desde FE hooks
+- **[INFO]** BE GET /canvassing/geo-stats no es llamado desde FE hooks
+- **[INFO]** BE GET /canvassing/nearby no es llamado desde FE hooks
+- **[INFO]** BE GET /canvassing/routes no es llamado desde FE hooks
+- **[INFO]** BE GET /canvassing/routes/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /canvassing/routes/{var}/progress no es llamado desde FE hooks
+- **[INFO]** BE GET /ciudadanos no es llamado desde FE hooks
+- **[INFO]** BE GET /ciudadanos-legacy no es llamado desde FE hooks
+- **[INFO]** BE GET /ciudadanos-legacy/{var}/pii no es llamado desde FE hooks
+- **[INFO]** BE GET /ciudadanos/by-seccion/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /ciudadanos/promotores no es llamado desde FE hooks
+- **[INFO]** BE GET /ciudadanos/stats/by-seccion/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /ciudadanos/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /contenido no es llamado desde FE hooks
+- **[INFO]** BE GET /contenido/temas-sugeridos/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /contenido/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /content/pieces no es llamado desde FE hooks
+- **[INFO]** BE GET /content/pieces/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /crm/interactions no es llamado desde FE hooks
+- **[INFO]** BE GET /crm/scores no es llamado desde FE hooks
+- **[INFO]** BE GET /crm/scores/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /dashboard/overview no es llamado desde FE hooks
+- **[INFO]** BE GET /dashboard/status no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/foda/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/benchmark no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/breakout_scale no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/crisis_spike no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/er_normalizado no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/growth_attribution no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/humanizacion no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/humanizacion/examples no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/matriz_2x2 no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/sentiment_plutchik no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/share_like_ratio no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico/{var}/sov no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico_tier2/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico_tier2/{var}/cib_detector no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico_tier2/{var}/cross_partisan no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico_tier2/{var}/filtro_realidad no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico_tier2/{var}/promesas no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico_tier2/{var}/rage_click no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico_tier2/{var}/topic_drift no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico_tier2/{var}/veda_compliance no es llamado desde FE hooks
+- **[INFO]** BE GET /diagnostico_tier2/{var}/violencia_politica no es llamado desde FE hooks
+- **[INFO]** BE GET /dirigentes no es llamado desde FE hooks
+- **[INFO]** BE GET /dirigentes/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /dirigentes/{var}/crecimiento no es llamado desde FE hooks
+- **[INFO]** BE GET /dirigentes/{var}/diagnostico no es llamado desde FE hooks
+- **[INFO]** BE GET /dirigentes/{var}/flash-analysis no es llamado desde FE hooks
+- **[INFO]** BE GET /dirigentes/{var}/followers no es llamado desde FE hooks
+- **[INFO]** BE GET /dirigentes/{var}/onboarding-progress no es llamado desde FE hooks
+- **[INFO]** BE GET /dirigentes/{var}/social-summary no es llamado desde FE hooks
+- **[INFO]** BE GET /electoral/mapa/mvt/{var}/{var}/{var}.pbf no es llamado desde FE hooks
+- **[INFO]** BE GET /electoral/secciones no es llamado desde FE hooks
+- **[INFO]** BE GET /electoral/secciones/{var}/intencion-voto no es llamado desde FE hooks
+- **[INFO]** BE GET /encuestas no es llamado desde FE hooks
+- **[INFO]** BE GET /encuestas/resumen/by-periodo/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /encuestas/resumen/by-seccion/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /encuestas/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /eventos no es llamado desde FE hooks
+- **[INFO]** BE GET /eventos/by-dirigente/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /eventos/stats/roi no es llamado desde FE hooks
+- **[INFO]** BE GET /eventos/upcoming no es llamado desde FE hooks
+- **[INFO]** BE GET /eventos/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /eventos/{var}/asistentes no es llamado desde FE hooks
+- **[INFO]** BE GET /framework/audit no es llamado desde FE hooks
+- **[INFO]** BE GET /framework/matrix no es llamado desde FE hooks
+- **[INFO]** BE GET /geo/tiles/{var}/{var}/{var}.mvt no es llamado desde FE hooks
+- **[INFO]** BE GET /health/db no es llamado desde FE hooks
+- **[INFO]** BE GET /health/redis no es llamado desde FE hooks
+- **[INFO]** BE GET /hitl/audit/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /hitl/sample no es llamado desde FE hooks
+- **[INFO]** BE GET /legal/privacidad no es llamado desde FE hooks
+- **[INFO]** BE GET /metricas-sociales/by-profile/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /metricas-sociales/trends/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /oauth/init/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /oauth/status/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /onboarding/profile/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /ops/llm/health no es llamado desde FE hooks
+- **[INFO]** BE GET /organizaciones no es llamado desde FE hooks
+- **[INFO]** BE GET /organizaciones/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /participacion no es llamado desde FE hooks
+- **[INFO]** BE GET /participacion/dashboard no es llamado desde FE hooks
+- **[INFO]** BE GET /participacion/heatmap no es llamado desde FE hooks
+- **[INFO]** BE GET /participacion/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /plan-ia/generate/status/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /plan-ia/memoria/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /plan-ia/recomendaciones no es llamado desde FE hooks
+- **[INFO]** BE GET /plan-ia/reporte/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /plan-ia/{var}/seguimiento no es llamado desde FE hooks
+- **[INFO]** BE GET /planes no es llamado desde FE hooks
+- **[INFO]** BE GET /planes/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /planes/{var}/progreso no es llamado desde FE hooks
+- **[INFO]** BE GET /planes/{var}/tareas no es llamado desde FE hooks
+- **[INFO]** BE GET /posts/{var}/topics no es llamado desde FE hooks
+- **[INFO]** BE GET /programas no es llamado desde FE hooks
+- **[INFO]** BE GET /programas/by-seccion/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /programas/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /programas/{var}/beneficiarios no es llamado desde FE hooks
+- **[INFO]** BE GET /social/aceptacion/fantasmas-por-plataforma no es llamado desde FE hooks
+- **[INFO]** BE GET /social/aceptacion/overview no es llamado desde FE hooks
+- **[INFO]** BE GET /social/clima-politico no es llamado desde FE hooks
+- **[INFO]** BE GET /social/comments no es llamado desde FE hooks
+- **[INFO]** BE GET /social/dirigentes/{var}/ia-summary no es llamado desde FE hooks
+- **[INFO]** BE GET /social/posts no es llamado desde FE hooks
+- **[INFO]** BE GET /social/posts/{var}/ia no es llamado desde FE hooks
+- **[INFO]** BE GET /social/sentiment-coverage no es llamado desde FE hooks
+- **[INFO]** BE GET /social/sentiment-timeline no es llamado desde FE hooks
+- **[INFO]** BE GET /trends/alcaldias no es llamado desde FE hooks
+- **[INFO]** BE GET /trends/geo no es llamado desde FE hooks
+- **[INFO]** BE GET /voter-scoring/by-seccion no es llamado desde FE hooks
+- **[INFO]** BE GET /voter-scoring/by-seccion/{var} no es llamado desde FE hooks
+- **[INFO]** BE GET /voter-scoring/segments no es llamado desde FE hooks
+- **[INFO]** BE GET /voter-scoring/{var} no es llamado desde FE hooks
+- **[INFO]** BE DELETE /api-keys/{var} no es llamado desde FE hooks
+- **[INFO]** BE DELETE /benchmark/competidores/{var} no es llamado desde FE hooks
+- **[INFO]** BE DELETE /campanas/{var} no es llamado desde FE hooks
+- **[INFO]** BE DELETE /ciudadanos-legacy/{var}/erase no es llamado desde FE hooks
+- **[INFO]** BE DELETE /ciudadanos/{var} no es llamado desde FE hooks
+- **[INFO]** BE DELETE /contenido/{var} no es llamado desde FE hooks
+- **[INFO]** BE DELETE /eventos/{var} no es llamado desde FE hooks
+- **[INFO]** BE DELETE /organizaciones/{var} no es llamado desde FE hooks
+- **[INFO]** BE DELETE /programas/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /alerts/{var}/status no es llamado desde FE hooks
+- **[INFO]** BE PATCH /benchmark/competidores/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /blindaje/alertas/{var}/resolver no es llamado desde FE hooks
+- **[INFO]** BE PATCH /blindaje/gastos/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /blindaje/gastos/{var}/aprobar no es llamado desde FE hooks
+- **[INFO]** BE PATCH /campanas/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /canvassing/routes/{var}/punto/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /ciudadanos/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /contenido/{var}/estado no es llamado desde FE hooks
+- **[INFO]** BE PATCH /dirigentes/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /dirigentes/{var}/pesos no es llamado desde FE hooks
+- **[INFO]** BE PATCH /encuestas/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /eventos/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /eventos/{var}/completar no es llamado desde FE hooks
+- **[INFO]** BE PATCH /framework/matrix/cell no es llamado desde FE hooks
+- **[INFO]** BE PATCH /hitl/comments/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /hitl/posts/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /organizaciones/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /participacion/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /planes/{var}/aprobar no es llamado desde FE hooks
+- **[INFO]** BE PATCH /planes/{var}/tareas/{var} no es llamado desde FE hooks
+- **[INFO]** BE PATCH /programas/{var} no es llamado desde FE hooks
+- **[INFO]** BE PUT /content/pieces/{var}/variant/{var} no es llamado desde FE hooks
+- **[INFO]** BE PUT /plan-ia/{var}/estado no es llamado desde FE hooks
+- **[INFO]** BE PUT /plan-ia/{var}/post-ejecutor no es llamado desde FE hooks
+- **[INFO]** BE PUT /plan-ia/{var}/veredicto no es llamado desde FE hooks
+
+## Layer: coverage
+
+- **[HIGH]** campanas.fecha_envio: 100.0% NULL (1/1)
+- **[HIGH]** campanas.fecha_completada: 100.0% NULL (1/1)
+- **[HIGH]** campanas.dirigente_id: 100.0% NULL (1/1)
+- **[HIGH]** ciudadanos.direccion: 99.0% NULL (203/205)
+- **[HIGH]** ciudadanos.notas: 100.0% NULL (205/205)
+- **[HIGH]** ciudadanos.intencion_voto: 100.0% NULL (205/205)
+- **[HIGH]** ciudadanos.programas_sociales: 100.0% NULL (205/205)
+- **[HIGH]** ciudadanos.ubicacion: 100.0% NULL (205/205)
+- **[HIGH]** ciudadanos.codigo_postal: 100.0% NULL (205/205)
+- **[HIGH]** ciudadanos.foto_ine_url: 100.0% NULL (205/205)
+- **[HIGH]** ciudadanos.org_id: 100.0% NULL (205/205)
+- **[HIGH]** ciudadanos_legacy.alcaldia_id: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.identidad_de_genero: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.direccion_libre: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.manzana: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.latitud: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.longitud: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.nivel_educativo: 85.2% NULL (8283/9723)
+- **[HIGH]** ciudadanos_legacy.nivel_participacion: 93.8% NULL (9121/9723)
+- **[HIGH]** ciudadanos_legacy.disposicion_tiempo: 93.7% NULL (9106/9723)
+- **[HIGH]** ciudadanos_legacy.temas_de_interes: 97.0% NULL (9436/9723)
+- **[HIGH]** ciudadanos_legacy.red_social_descripcion: 97.4% NULL (9466/9723)
+- **[HIGH]** ciudadanos_legacy.residencia_si_no: 84.6% NULL (8229/9723)
+- **[HIGH]** ciudadanos_legacy.contactado: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.respuesta: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.lista: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.aprobado: 95.6% NULL (9299/9723)
+- **[HIGH]** ciudadanos_legacy.procesado: 89.0% NULL (8650/9723)
+- **[HIGH]** ciudadanos_legacy.observaciones: 88.3% NULL (8588/9723)
+- **[HIGH]** ciudadanos_legacy.raw_data: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.deleted_at: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.email_hmac: 100.0% NULL (9723/9723)
+- **[HIGH]** ciudadanos_legacy.clave_electoral_hmac: 100.0% NULL (9723/9723)
+- **[HIGH]** contexto_politico.vigente_hasta: 100.0% NULL (5/5)
+- **[HIGH]** dirigentes.sync_task_id: 100.0% NULL (10/10)
+- **[HIGH]** dirigentes.sync_error: 100.0% NULL (10/10)
+- **[HIGH]** dirigentes.sync_updated_at: 90.0% NULL (9/10)
+- **[HIGH]** dirigentes.perfil_1_5: 90.0% NULL (9/10)
+- **[HIGH]** dirigentes.pesos_last_modified_by: 90.0% NULL (9/10)
+- **[HIGH]** dirigentes.pesos_last_modified_at: 90.0% NULL (9/10)
+- **[HIGH]** efemerides.descripcion: 100.0% NULL (70/70)
+- **[HIGH]** encuestas.problematicas_detectadas: 100.0% NULL (139/139)
+- **[HIGH]** encuestas.ubicacion_captura: 100.0% NULL (139/139)
+- **[HIGH]** encuestas.duracion_minutos: 100.0% NULL (139/139)
+- **[HIGH]** encuestas.notas: 100.0% NULL (139/139)
+- **[HIGH]** encuestas_publicas.valor_delta_vs_anterior: 100.0% NULL (19419/19419)
+- **[HIGH]** encuestas_publicas.tamanyo_muestra: 100.0% NULL (19419/19419)
+- **[HIGH]** encuestas_publicas.margen_error: 96.2% NULL (18683/19419)
+- **[HIGH]** eventos.recursos: 100.0% NULL (4/4)
+- **[HIGH]** eventos.nuevos_simpatizantes: 100.0% NULL (4/4)
+- **[HIGH]** eventos.costo_total: 100.0% NULL (4/4)
+- **[HIGH]** eventos.costo_por_adquisicion: 100.0% NULL (4/4)
+- **[HIGH]** eventos.org_id: 100.0% NULL (4/4)
+- **[HIGH]** eventos.notas: 100.0% NULL (4/4)
+- **[HIGH]** hitl_edits_log.from_tono: 100.0% NULL (1/1)
+- **[HIGH]** hitl_edits_log.to_tono: 100.0% NULL (1/1)
+- **[HIGH]** hitl_edits_log.reason: 100.0% NULL (1/1)
+- **[HIGH]** oauth_tokens_by_platform.refresh_token_hash: 100.0% NULL (1/1)
+- **[HIGH]** oauth_tokens_by_platform.last_refreshed_at: 100.0% NULL (1/1)
+- **[HIGH]** organizaciones.logo_url: 100.0% NULL (4/4)
+- **[HIGH]** plan_tareas.metrica_valor_real: 100.0% NULL (83/83)
+- **[HIGH]** plan_tareas.completado_at: 100.0% NULL (83/83)
+- **[HIGH]** programas_sociales.presupuesto_anual: 100.0% NULL (3/3)
+- **[HIGH]** promesas_dirigente.fecha_realizada: 100.0% NULL (12/12)
+- **[HIGH]** promesas_dirigente.evidencia_url: 100.0% NULL (12/12)
+- **[HIGH]** promotores_legacy.alcaldia_id: 100.0% NULL (45/45)
+- **[HIGH]** promotores_legacy.enabled: 100.0% NULL (45/45)
+- **[HIGH]** promotores_legacy.mega_promotor: 100.0% NULL (45/45)
+- **[HIGH]** promotores_legacy.distrito_federal: 100.0% NULL (45/45)
+- **[HIGH]** promotores_legacy.distritos: 100.0% NULL (45/45)
+- **[HIGH]** promotores_legacy.distrito_local: 100.0% NULL (45/45)
+- **[HIGH]** recomendaciones_plan_ia.post_ejecutor_id: 97.0% NULL (64/66)
+- **[HIGH]** recomendaciones_plan_ia.metricas_predichas: 97.0% NULL (64/66)
+- **[HIGH]** recomendaciones_plan_ia.metricas_observadas: 97.0% NULL (64/66)
+- **[HIGH]** recomendaciones_plan_ia.veredicto: 97.0% NULL (64/66)
+- **[HIGH]** recomendaciones_plan_ia.veredicto_original: 97.0% NULL (64/66)
+- **[HIGH]** resultados_electorales_seccion.municipio: 100.0% NULL (8103/8103)
+- **[HIGH]** sentiment_analyses.propaganda_labels: 100.0% NULL (859/859)
+- **[HIGH]** social_comments.parent_comment_id: 100.0% NULL (2830/2830)
+- **[HIGH]** social_comments.es_follower: 100.0% NULL (2830/2830)
+- **[HIGH]** social_comments.last_reviewed_by: 100.0% NULL (2830/2830)
+- **[HIGH]** social_comments.last_reviewed_at: 100.0% NULL (2830/2830)
+- **[HIGH]** social_posts.topics_extracted: 98.6% NULL (4791/4859)
+- **[HIGH]** social_posts.nlp_model_version: 87.8% NULL (4265/4859)
+- **[HIGH]** social_posts.sentimiento_politico_ajustado: 100.0% NULL (4859/4859)
+- **[HIGH]** social_posts.controversy_score: 100.0% NULL (4859/4859)
+- **[HIGH]** social_posts.toxicity_score: 100.0% NULL (4859/4859)
+- **[HIGH]** social_posts.topics_jsonb: 100.0% NULL (4859/4859)
+- **[HIGH]** social_posts.platform_adjusted_sentiment: 100.0% NULL (4859/4859)
+- **[HIGH]** social_posts.llm_razon: 96.9% NULL (4707/4859)
+- **[HIGH]** social_posts.llm_modelo: 100.0% NULL (4859/4859)
+- **[HIGH]** social_posts.llm_processed_at: 100.0% NULL (4859/4859)
+- **[HIGH]** social_posts.last_reviewed_by: 100.0% NULL (4858/4859)
+- **[HIGH]** social_posts.last_reviewed_at: 100.0% NULL (4858/4859)
+- **[HIGH]** social_posts.media_urls: 99.5% NULL (4833/4859)
+- **[HIGH]** social_profile_snapshots.data_origin_checkpoint: 100.0% NULL (31/31)
+- **[HIGH]** solicitudes_ciudadanas.ciudadano_id: 100.0% NULL (10/10)
+- **[HIGH]** solicitudes_ciudadanas.seccion_id: 100.0% NULL (10/10)
+- **[HIGH]** solicitudes_ciudadanas.ubicacion: 100.0% NULL (10/10)
+- **[HIGH]** solicitudes_ciudadanas.direccion: 100.0% NULL (10/10)
+- **[HIGH]** solicitudes_ciudadanas.asignado_a_id: 100.0% NULL (10/10)
+- **[HIGH]** solicitudes_ciudadanas.dirigente_responsable_id: 100.0% NULL (10/10)
+- **[HIGH]** solicitudes_ciudadanas.respuesta: 100.0% NULL (10/10)
+- **[HIGH]** solicitudes_ciudadanas.fecha_respuesta: 100.0% NULL (10/10)
+- **[HIGH]** solicitudes_ciudadanas.chatwoot_conversation_id: 100.0% NULL (10/10)
+- **[HIGH]** topic_trends.growth_rate_24h: 100.0% NULL (6/6)
+- **[HIGH]** topic_trends.topic_embedding: 100.0% NULL (6/6)
+- **[HIGH]** unidades_territoriales.alcaldia_id: 100.0% NULL (5552/5552)
+- **[HIGH]** unidades_territoriales.nivel_socioeconomico_resumen: 100.0% NULL (5552/5552)
+- **[HIGH]** unidades_territoriales.grado_promedio_estudios: 100.0% NULL (5552/5552)
+- **[MEDIUM]** ciudadanos.email: 50.7% NULL (104/205)
+- **[MEDIUM]** ciudadanos_legacy.edad: 59.3% NULL (5761/9723)
+- **[MEDIUM]** ciudadanos_legacy.numero_interior: 55.9% NULL (5440/9723)
+- **[MEDIUM]** ciudadanos_legacy.origen_ciudadano: 76.7% NULL (7460/9723)
+- **[MEDIUM]** ciudadanos_legacy.ocupacion: 79.4% NULL (7721/9723)
+- **[MEDIUM]** dirigentes.seccion_electoral: 80.0% NULL (8/10)
+- **[MEDIUM]** encuestas_publicas.url_fuente: 76.7% NULL (14897/19419)
+- **[MEDIUM]** eventos.asistentes_reales: 75.0% NULL (3/4)
+- **[MEDIUM]** planes_ia.datos_entrada: 58.5% NULL (24/41)
+- **[MEDIUM]** promotores_legacy.super_promotor_cdmx: 71.1% NULL (32/45)
+- **[MEDIUM]** recomendaciones_plan_ia.notas_cliente: 72.7% NULL (48/66)
+- **[MEDIUM]** social_posts.raw_data: 53.6% NULL (2606/4859)
+- **[MEDIUM]** social_profiles.last_manual_update: 72.3% NULL (34/47)
+- **[LOW]** Tabla 'alertas_compliance' está vacía (0 rows)
+- **[LOW]** Tabla 'api_keys' está vacía (0 rows)
+- **[LOW]** Tabla 'campaigns' está vacía (0 rows)
+- **[LOW]** Tabla 'campana_mensajes' está vacía (0 rows)
+- **[LOW]** Tabla 'campana_segmentos' está vacía (0 rows)
+- **[LOW]** Tabla 'contenido_piezas' está vacía (0 rows)
+- **[LOW]** Tabla 'contenidos_generados' está vacía (0 rows)
+- **[LOW]** Tabla 'crm_interacciones' está vacía (0 rows)
+- **[LOW]** Tabla 'follower_engagement' está vacía (0 rows)
+- **[LOW]** Tabla 'framework_audit_log' está vacía (0 rows)
+- **[LOW]** Tabla 'framework_overrides_org' está vacía (0 rows)
+- **[LOW]** Tabla 'gastos_electorales' está vacía (0 rows)
+- **[LOW]** Tabla 'ia_content_registry' está vacía (0 rows)
+- **[LOW]** Tabla 'metricas_sociales' está vacía (0 rows)
+- **[LOW]** Tabla 'puntos_ruta' está vacía (0 rows)
+- **[LOW]** Tabla 'rutas_canvassing' está vacía (0 rows)
+- **[LOW]** Tabla 'seguimiento_solicitudes' está vacía (0 rows)
+- **[LOW]** Tabla 'social_followers' está vacía (0 rows)
+- **[LOW]** Tabla 'voter_scores_integration' está vacía (0 rows)
+- **[INFO]** alcaldias_cdmx: 16 rows
+- **[INFO]** alembic_version: 1 rows
+- **[INFO]** alertas_crisis: 14 rows
+- **[INFO]** campanas: 1 rows
+- **[INFO]** ciudadanos: 205 rows
+- **[INFO]** ciudadanos_legacy: 9723 rows
+- **[INFO]** competidor_social_profiles: 3 rows
+- **[INFO]** competidores: 5 rows
+- **[INFO]** compliance_purge_audit: 1 rows
+- **[INFO]** contexto_politico: 5 rows
+- **[INFO]** dirigentes: 10 rows
+- **[INFO]** efemerides: 70 rows
+- **[INFO]** encuestas: 139 rows
+- **[INFO]** encuestas_publicas: 19419 rows
+- **[INFO]** evento_asistentes: 4 rows
+- **[INFO]** eventos: 4 rows
+- **[INFO]** framework_matrix_defaults: 60 rows
+- **[INFO]** hitl_edits_log: 1 rows
+- **[INFO]** intencion_voto: 5 rows
+- **[INFO]** llm_health_log: 4 rows
+- **[INFO]** oauth_tokens_by_platform: 1 rows
+- **[INFO]** organizaciones: 4 rows
+- **[INFO]** plan_tareas: 83 rows
+- **[INFO]** planes_ia: 41 rows
+- **[INFO]** programa_beneficiarios: 7 rows
+- **[INFO]** programas_sociales: 3 rows
+- **[INFO]** promesas_dirigente: 12 rows
+- **[INFO]** promotores_legacy: 45 rows
+- **[INFO]** recomendaciones_plan_ia: 66 rows
+- **[INFO]** resultados_electorales_seccion: 8103 rows
+- **[INFO]** secciones_electorales: 8169 rows
+- **[INFO]** sentiment_analyses: 859 rows
+- **[INFO]** social_comments: 2830 rows
+- **[INFO]** social_posts: 4859 rows
+- **[INFO]** social_profile_snapshots: 31 rows
+- **[INFO]** social_profiles: 47 rows
+- **[INFO]** solicitudes_ciudadanas: 10 rows
+- **[INFO]** spatial_ref_sys: 8500 rows
+- **[INFO]** topic_trends: 6 rows
+- **[INFO]** unidades_territoriales: 5552 rows
+- **[INFO]** users: 11 rows
+- **[INFO]** voter_scores: 205 rows
+
+## Layer: referential
+
+- **[INFO]** social_comments.parent_post_id → social_posts.id: 0 huérfanos ✓
+- **[INFO]** social_profiles.dirigente_id → dirigentes.id: 0 huérfanos ✓
+- **[INFO]** social_posts.profile_id → social_profiles.id: 0 huérfanos ✓
+- **[INFO]** oauth_tokens_by_platform.dirigente_id → dirigentes.id: 0 huérfanos ✓
+- **[INFO]** follower_engagement.follower_id → social_followers.id: 0 huérfanos ✓
+- **[INFO]** follower_engagement.post_id → social_posts.id: 0 huérfanos ✓
