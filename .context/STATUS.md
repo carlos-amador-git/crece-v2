@@ -1,6 +1,29 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-19 noche · Content Hub F4 cerrado · /dashboard/hub consolidado + redirects 308
+**Ultimo update:** 2026-05-19 noche · /audit-full ejecutado · score 73.25/100 · tríada crítica activa pre-cliente
+
+## 2026-05-19 noche · /audit-full · score 73.25/100
+
+8 audits paralelos + cross-audit Gemini. Reporte completo en `.context/AUDIT-FULL-2026-05-19.md`.
+
+**Scores por dimensión:**
+- Smoke 100 · Funcional 86 · Seguridad 44 · Calidad 79 · Diseño 74 · Responsive 76 · Hardening IA 70 · Accessibility 68
+
+**Veredicto Gemini:** score 73.25/100 sobre-estimado · 🔴 NO listo para cliente.
+
+**Tríada crítica pre-cliente:**
+1. `.env.scraping-keys` tracked git (rotar + purgar historia) · TASK #47 PENDIENTE CEO
+2. Rate limit ausente `/posts/unified`
+3. Sin filtros en `/hub` (regresión vs /social viejo)
+4. (extra alto) UnifiedPostCard no apila vertical mobile
+
+**Pendiente CEO:**
+- Decidir si frenar cliente hasta cerrar tríada o liberar con caveats
+- Autorización para rotar credentials + git filter-repo
+
+---
+
+## 2026-05-19 noche tarde · Content Hub F4 cerrado · /dashboard/hub consolidado + redirects 308
 
 ## 2026-05-19 noche tarde · Content Hub F4 CLOSED (~3h)
 
