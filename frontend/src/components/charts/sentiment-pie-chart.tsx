@@ -23,14 +23,24 @@ const COLORS = {
 export function SentimentPieChart({ data }: SentimentPieChartProps) {
   // D-23-G scope: distribución por categoría se mantiene cruda · el flip
   // aplica solo a KPI agregado "Sentimiento Prom." (no a charts de conteo).
-  const total = data.total || (data.positive + data.negative + data.neutral);
+  //
+  // P0 #2+#7 (2026-05-19): el donut usa SOLO posts clasificados (positive +
+  // negative + neutral real). Posts con sentiment_label NULL viven en
+  // data.unclassified y se reportan en el Alert encima del donut, no como
+  // un slice neutral falso.
+  const classifiedTotal = data.positive + data.negative + data.neutral;
+  const unclassified = data.unclassified ?? 0;
 
-  if (!total) {
+  if (!classifiedTotal) {
     return (
       <div className="flex h-[260px] flex-col items-center justify-center text-center">
         <div className="mb-2 text-3xl">📊</div>
-        <p className="text-sm font-medium text-muted-foreground">Sin datos de sentimiento</p>
-        <p className="mt-1 text-xs text-muted-foreground/70">Los datos se calculan al ejecutar el pipeline NLP</p>
+        <p className="text-sm font-medium text-muted-foreground">Sin datos clasificados</p>
+        <p className="mt-1 text-xs text-muted-foreground/70">
+          {unclassified > 0
+            ? `${unclassified} posts sin clasificación NLP`
+            : "Los datos se calculan al ejecutar el pipeline NLP"}
+        </p>
       </div>
     );
   }
@@ -67,7 +77,7 @@ export function SentimentPieChart({ data }: SentimentPieChartProps) {
             fontSize: 12,
           }}
           formatter={(value: number) => [
-            `${value} (${((value / total) * 100).toFixed(1)}%)`,
+            `${value} (${((value / classifiedTotal) * 100).toFixed(1)}%)`,
           ]}
         />
         <Legend

@@ -161,6 +161,9 @@ export interface SentimentDistribution {
   positive: number;
   negative: number;
   neutral: number;
+  /** P0 #2 (2026-05-19): posts con `sentiment_label IS NULL` cuentan aquí,
+   *  no en `neutral`. Permite mostrar caveat real al usuario. */
+  unclassified: number;
   total: number;
 }
 

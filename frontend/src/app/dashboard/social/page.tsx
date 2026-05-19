@@ -32,14 +32,23 @@ function isRetweet(post: SocialPost): boolean {
 }
 
 function computeDistribution(posts: SocialPost[]): SentimentDistribution {
-  let positive = 0, negative = 0, neutral = 0;
+  // P0 #2 (2026-05-19): distinguir NULL (sin clasificar) de "neutral"
+  // (clasificado como neutral). Cuenta separada → permite caveat honesto
+  // en el donut + Alert. NO inventar fallback Neutral cuando faltan datos.
+  let positive = 0, negative = 0, neutral = 0, unclassified = 0;
   for (const p of posts) {
-    const s = (p.sentiment_label ?? "").toLowerCase();
+    const raw = p.sentiment_label;
+    if (raw == null || raw === "") {
+      unclassified++;
+      continue;
+    }
+    const s = raw.toLowerCase();
     if (s === "positive") positive++;
     else if (s === "negative") negative++;
-    else neutral++;
+    else if (s === "neutral") neutral++;
+    else unclassified++;
   }
-  return { positive, negative, neutral, total: posts.length };
+  return { positive, negative, neutral, unclassified, total: posts.length };
 }
 
 export default function SocialPage() {
@@ -216,12 +225,21 @@ export default function SocialPage() {
       <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-3">
         {/* Post feed */}
         <section className="space-y-3 md:col-span-2 lg:col-span-2" aria-label="Feed de publicaciones">
-          <h2 className="font-heading text-lg font-semibold">
-            Feed de Publicaciones
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({displayPosts.length} {hideRetweets ? "originales" : "total"})
-            </span>
-          </h2>
+          <div className="space-y-1">
+            <h2 className="font-heading text-lg font-semibold">
+              Feed de Publicaciones
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                ({displayPosts.length} {hideRetweets ? "originales" : "total"})
+              </span>
+            </h2>
+            {/* P0 #6 (2026-05-19): caveat explícito de ventana + dedup.
+                El hook usa per_page=50 sin filtro window; backend default
+                retorna recientes. Frontend dedupe por content+platform. */}
+            <p className="text-xs text-muted-foreground" title="El feed muestra los posts más recientes del backend (paginación per_page=50) deduplicados por contenido + plataforma. Para vista histórica completa usar Diagnóstico o Top Posts.">
+              Posts recientes · deduplicados por contenido similar. Para vista
+              histórica completa ir a Diagnóstico o Top Posts.
+            </p>
+          </div>
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-32 w-full" />
@@ -248,7 +266,22 @@ export default function SocialPage() {
             <CardHeader>
               <CardTitle>Distribucion de Sentimiento</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              {/* P0 #2+#7 (2026-05-19): caveat sobre cobertura NLP encima del
+                  donut · Gemini cross-audit recomendó no inflar el SVG con
+                  texto largo · usamos un callout limpio. */}
+              {distribution.unclassified > 0 && distribution.total > 0 && (
+                <div
+                  role="status"
+                  className="rounded-md border border-dashed border-amber-500/40 bg-amber-50/50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-200"
+                >
+                  <strong className="font-semibold">
+                    {distribution.total - distribution.unclassified} de {distribution.total} clasificados
+                  </strong>{" "}
+                  con NLP de sentimiento. Posts sin clasificar excluidos del
+                  donut (no son "neutral").
+                </div>
+              )}
               <SentimentPieChart data={distribution} />
             </CardContent>
           </Card>

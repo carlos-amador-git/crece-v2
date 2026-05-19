@@ -228,7 +228,11 @@ export default function TopPostsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <PlatformIcon platform={item.platform} className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">@{item.handle ?? "—"}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {item.handle
+                          ? (item.handle.startsWith("@") ? item.handle : `@${item.handle}`)
+                          : "—"}
+                      </span>
                     </div>
                     <Badge variant="secondary" className="font-mono text-[10px]">
                       #{idx + 1}
