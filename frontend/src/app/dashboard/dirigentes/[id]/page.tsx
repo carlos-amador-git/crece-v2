@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 // import dynamic from "next/dynamic";
 import { useDirigente, useDirigenteCrecimiento } from "@/lib/api/hooks/use-dirigentes";
-import { useSentimentTrend } from "@/lib/api/hooks/use-social";
+import { useTonoDiscursoTrend } from "@/lib/api/hooks/use-social";
 import { usePlanes } from "@/lib/api/hooks/use-planes";
 import { TendenciaPorRedWidget } from "@/components/charts/tendencia-por-red-widget";
 import { SemaforoCrecimiento } from "@/components/dashboard/semaforo-crecimiento";
@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProfileHeader } from "@/components/dirigentes/profile-header";
 import { CompetitorsSection } from "@/components/dirigentes/competitors-section";
 import { IpdRadarChart } from "@/components/charts/ipd-radar-chart";
-import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
+import { TonoDiscursoChart } from "@/components/charts/tono-discurso-chart";
 import { EngagementBarChart } from "@/components/charts/engagement-bar-chart";
 import { PostCard } from "@/components/social/post-card";
 // SentimentBadge ya no se usa en ficha dirigente · D-23-G' KPI hero ahora es ActividadAlineadaCard.
@@ -37,11 +37,12 @@ export default function DirigenteDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { data: dirigente, isLoading, isError } = useDirigente(id);
-  const { data: sentimentTrendData } = useSentimentTrend(30, dirigente?.id);
+  // P1 #1 (2026-05-19): migración tono_discurso. Hook legacy queda en backend pero ya no consumido aquí.
+  const { data: tonoTrendData } = useTonoDiscursoTrend(30, dirigente?.id);
   const { data: planesData } = usePlanes(undefined, 1);
   const { data: crecimiento } = useDirigenteCrecimiento(id);
 
-  const sentimentTrend = sentimentTrendData ?? [];
+  const sentimentTrend = tonoTrendData ?? [];
   // Filter plans for this dirigente
   const dirigentePlans = (planesData?.items ?? []).filter(
     (p) => p.dirigente_id === Number(id)
@@ -256,7 +257,7 @@ export default function DirigenteDetailPage() {
                 <CardTitle>Sentimiento en el Tiempo</CardTitle>
               </CardHeader>
               <CardContent>
-                <SentimentLineChart data={sentimentTrend} />
+                <TonoDiscursoChart data={sentimentTrend} />
               </CardContent>
             </Card>
             <Card>

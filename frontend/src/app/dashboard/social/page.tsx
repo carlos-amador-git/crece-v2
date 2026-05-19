@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PostCard } from "@/components/social/post-card";
+import { UnifiedPostCard } from "@/components/posts/unified-post-card";
+import { adaptSocialPost } from "@/components/posts/adapters";
 import { SentimentPieChart } from "@/components/charts/sentiment-pie-chart";
 import { SentimentBadge } from "@/components/social/sentiment-badge";
 import { TrendingAlcaldiaCard } from "@/components/social/trending-alcaldia-card";
@@ -256,7 +258,12 @@ export default function SocialPage() {
               </CardContent>
             </Card>
           ) : (
-            displayPosts.map((post) => <PostCard key={post.id} post={post} />)
+            /* F2 (2026-05-19): refactor a UnifiedPostCard via adapter.
+               PostCard original queda en codebase para compat (otros consumers
+               pueden existir · cleanup en sprint posterior). */
+            displayPosts.map((post) => (
+              <UnifiedPostCard key={post.id} post={adaptSocialPost(post)} variant="feed" />
+            ))
           )}
         </section>
 

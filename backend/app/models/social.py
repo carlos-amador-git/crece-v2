@@ -189,6 +189,12 @@ class SocialPost(Base):
     # target_politico: clasificación 4-cat IA + 'no_determinado' fallback.
     # CHECK en BD: ('oficialismo','oposicion','propio','personal','no_determinado').
     target_politico: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # tono_discurso: clasificación matriz polaridad v2 (cerrada 2026-04-13).
+    # Hoy en BD solo 'positivo'/'neutral' sobre posts del dirigente. La
+    # granularidad 5-cat (celebratorio/solidario/propositivo/critico/personal)
+    # vive en `social_comments.nlp_tono` (audiencia, no posts).
+    # Endpoint /tono-discurso-timeline (2026-05-19) consume este campo.
+    tono_discurso: Mapped[str | None] = mapped_column(String(30), nullable=True)
     nlp_model_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # clasificacion_origen: 'ai_suggested' (default · IA) · 'human_*' reservado Phase B.
     # CHECK en BD: ('ai_suggested','human_dirigente','human_admin','human_consultor').

@@ -290,6 +290,171 @@ async def sentiment_coverage(
     )
 
 
+# ─────────────────────────────────────────────────────────────────────
+# Tono Discursivo · matriz polaridad v2 (2026-05-19)
+#
+# Lee del campo `social_posts.tono_discurso` (no del legacy sentiment_label).
+# Hoy en BD el campo solo tiene 2 valores reales ('positivo', 'neutral') sobre
+# 81.6% de posts Saymi. La granularidad de 5 valores (celebratorio/solidario/
+# propositivo/critico/personal) llegará cuando el pipeline NLP se aplique a
+# POSTS del dirigente con el framework v2 (hoy aplicado solo a COMMENTS de
+# audiencia · `social_comments.nlp_tono`).
+#
+# Endpoint paralelo al legacy /sentiment-timeline · NO reemplaza · permite
+# migración sin romper consumers existentes. Cleanup del legacy en sprint
+# posterior cuando todos los frontends consuman este.
+# ─────────────────────────────────────────────────────────────────────
+
+
+class TonoDiscursoTimelinePoint(BaseModel):
+    """Punto de la serie temporal de tono discursivo en posts del dirigente.
+
+    El array `tonos` contiene la distribución por categoría tono_discurso
+    presente ese día. Frontend renderiza solo los tonos no-cero.
+    """
+
+    date: str
+    post_count: int
+    tonos: dict[str, int]  # ej. {"positivo": 3, "neutral": 12}
+
+
+@router.get("/tono-discurso-timeline", response_model=list[TonoDiscursoTimelinePoint])
+async def tono_discurso_timeline(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    dirigente_id: int,
+    platform: Platform | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    include_rts: bool = False,
+) -> list[TonoDiscursoTimelinePoint]:
+    """Serie temporal de tono discursivo (matriz polaridad v2) por día.
+
+    Lee `social_posts.tono_discurso` en lugar de `sentiment_label` legacy.
+    Filtros de calidad iguales a /sentiment-timeline pero usando tono_discurso
+    en vez de sentiment_score.
+    """
+    await assert_dirigente_access(db, current_user, dirigente_id)
+    day_col = cast(SocialPost.published_at, Date)
+
+    quality_filters = [
+        SocialProfile.dirigente_id == dirigente_id,
+        SocialPost.tono_discurso.is_not(None),
+        func.length(SocialPost.content) >= 20,
+    ]
+    if not include_rts:
+        quality_filters.append(~SocialPost.content.like("RT @%"))
+
+    base_query = (
+        select(
+            day_col.label("day"),
+            SocialPost.tono_discurso.label("tono"),
+            func.count(SocialPost.id).label("n"),
+        )
+        .join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
+        .where(*quality_filters)
+    )
+
+    if platform is not None:
+        base_query = base_query.where(SocialProfile.platform == platform)
+    if date_from is not None:
+        base_query = base_query.where(SocialPost.published_at >= date_from)
+    if date_to is not None:
+        base_query = base_query.where(SocialPost.published_at <= date_to)
+
+    base_query = base_query.group_by(day_col, SocialPost.tono_discurso).order_by(day_col)
+
+    result = await db.execute(base_query)
+    rows = result.all()
+
+    # Agregar por día: {day: {tono: count, post_count: total}}
+    timeline_by_day: dict[date, dict[str, int]] = {}
+    for row in rows:
+        day = row.day
+        if day not in timeline_by_day:
+            timeline_by_day[day] = {}
+        if row.tono:
+            timeline_by_day[day][row.tono] = row.n
+
+    return [
+        TonoDiscursoTimelinePoint(
+            date=day.isoformat(),
+            post_count=sum(tonos.values()),
+            tonos=tonos,
+        )
+        for day, tonos in sorted(timeline_by_day.items())
+    ]
+
+
+class TonoDiscursoCoverageResponse(BaseModel):
+    """Coverage del campo tono_discurso vs total de posts del dirigente."""
+
+    dirigente_id: int
+    days: int
+    total_posts: int
+    classified: int  # posts con tono_discurso IS NOT NULL
+    passed_filters: int  # classified + length>=20 + no RT
+    coverage_pct: float
+    tonos_distribution: dict[str, int]  # agregado global del período
+
+
+@router.get("/tono-discurso-coverage", response_model=TonoDiscursoCoverageResponse)
+async def tono_discurso_coverage(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    dirigente_id: int,
+    days: int = 30,
+    include_rts: bool = False,
+) -> TonoDiscursoCoverageResponse:
+    """Cobertura de tono_discurso · análogo a /sentiment-coverage para el v2."""
+    await assert_dirigente_access(db, current_user, dirigente_id)
+    since = func.now() - text(f"INTERVAL '{int(days)} days'")
+    base = (
+        select(func.count(SocialPost.id))
+        .join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
+        .where(
+            SocialProfile.dirigente_id == dirigente_id,
+            SocialPost.published_at >= since,
+        )
+    )
+    total = (await db.execute(base)).scalar_one() or 0
+    classified = (
+        await db.execute(base.where(SocialPost.tono_discurso.is_not(None)))
+    ).scalar_one() or 0
+    filtered_q = base.where(
+        SocialPost.tono_discurso.is_not(None),
+        func.length(SocialPost.content) >= 20,
+    )
+    if not include_rts:
+        filtered_q = filtered_q.where(~SocialPost.content.like("RT @%"))
+    passed = (await db.execute(filtered_q)).scalar_one() or 0
+    coverage_pct = round(100 * classified / total, 1) if total else 0.0
+
+    # Distribución agregada de tonos en el período
+    dist_q = (
+        select(SocialPost.tono_discurso, func.count(SocialPost.id))
+        .join(SocialProfile, SocialPost.profile_id == SocialProfile.id)
+        .where(
+            SocialProfile.dirigente_id == dirigente_id,
+            SocialPost.published_at >= since,
+            SocialPost.tono_discurso.is_not(None),
+        )
+        .group_by(SocialPost.tono_discurso)
+    )
+    dist_rows = (await db.execute(dist_q)).all()
+    tonos_distribution = {tono: int(n) for tono, n in dist_rows if tono}
+
+    return TonoDiscursoCoverageResponse(
+        dirigente_id=dirigente_id,
+        days=days,
+        total_posts=total,
+        classified=classified,
+        passed_filters=passed,
+        coverage_pct=coverage_pct,
+        tonos_distribution=tonos_distribution,
+    )
+
+
 class ClimaPoliticoPoint(BaseModel):
     fecha: date
     valor_pct: float

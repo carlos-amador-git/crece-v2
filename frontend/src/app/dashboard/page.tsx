@@ -8,9 +8,10 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
+import { TonoDiscursoChart } from "@/components/charts/tono-discurso-chart";
 import { PostCard } from "@/components/social/post-card";
 import { useKpiOverview, useTopDirigentes, useSystemStatus } from "@/lib/api/hooks/use-overview";
-import { useSentimentTrend, useSocialPosts, useSentimentCoverage } from "@/lib/api/hooks/use-social";
+import { useSentimentTrend, useSocialPosts, useSentimentCoverage, useTonoDiscursoTrend, useTonoDiscursoCoverage } from "@/lib/api/hooks/use-social";
 import { formatNumber, formatRelativeTime, cn } from "@/lib/utils";
 import { CrisisAlertList } from "@/components/alerts/crisis-alert-list";
 import {
@@ -145,19 +146,22 @@ export default function OverviewPage() {
   // Use first dirigente's ID for sentiment trend (backend requires dirigente_id)
   const firstDirigenteId = topDirigentes?.[0]?.id;
   const filterDays: Record<typeof activeFilter, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
-  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(
+  // P1 #1 (2026-05-19): migración a tono_discurso (matriz polaridad v2).
+  // useSentimentTrend legacy queda disponible para compat pero NO se usa
+  // aquí. Cleanup endpoint legacy en sprint posterior.
+  const { data: tonoData, isLoading: tonoLoading } = useTonoDiscursoTrend(
     filterDays[activeFilter],
     firstDirigenteId,
     { platform: platformFilter || undefined, includeRts },
   );
-  const { data: coverageData } = useSentimentCoverage(
+  const { data: coverageData } = useTonoDiscursoCoverage(
     firstDirigenteId,
     filterDays[activeFilter],
     includeRts,
   );
 
   const kpiData = kpi ?? DEFAULT_KPI;
-  const trendData = sentimentData ?? [];
+  const tonoTimeline = tonoData ?? [];
   const posts = postsData?.items ?? [];
 
   // Aggregate followers by platform across all visible dirigentes
@@ -597,36 +601,28 @@ export default function OverviewPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {sentimentLoading ? (
-            <Skeleton className="h-[300px] w-full" aria-label="Cargando datos de sentimiento" />
-          ) : coverageData && coverageData.passed_filters === 0 ? (
-            /* P1 #11 (2026-05-19): empty state real cuando 0 clasificados.
-               Antes mostraba bar al 100% (engañoso · parecía "100% neutral").
-               Ahora callout textual explica el estado real. */
+          {tonoLoading ? (
+            <Skeleton className="h-[300px] w-full" aria-label="Cargando datos de tono discursivo" />
+          ) : tonoTimeline.length === 0 ? (
+            /* P1 #1 (2026-05-19): empty state explica matriz polaridad v2.
+               El chart usa tono_discurso (no sentiment_label legacy). */
             <div
               className="flex h-[300px] flex-col items-center justify-center gap-2 px-6 text-center"
               role="status"
             >
               <div className="text-3xl">📊</div>
               <p className="text-sm font-medium text-foreground">
-                Sin posts clasificados con sentiment_label
+                Sin posts clasificados con tono_discurso
               </p>
               <p className="max-w-md text-xs text-muted-foreground">
-                {coverageData.total_posts} posts en el período, ninguno clasificado por
-                el pipeline NLP de sentimiento legacy. La clasificación política
-                actual usa <strong>matriz polaridad v2</strong> (campos
-                <code className="mx-1 rounded bg-muted px-1 py-0.5">tono_discurso</code>
-                +
-                <code className="mx-1 rounded bg-muted px-1 py-0.5">target_politico</code>);
-                ver <em>Diagnóstico</em> para vista completa.
+                {coverageData?.total_posts ?? 0} posts en el período.
+                {coverageData && coverageData.classified > 0
+                  ? ` ${coverageData.classified} clasificados pero no superaron filtros de calidad (>20 chars, no RT).`
+                  : " El pipeline NLP de matriz polaridad v2 aún no ha procesado posts en este período."}
               </p>
             </div>
-          ) : trendData.length === 0 ? (
-            <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground" role="status">
-              Sin datos de sentimiento disponibles
-            </div>
           ) : (
-            <SentimentLineChart data={trendData} />
+            <TonoDiscursoChart data={tonoTimeline} />
           )}
         </CardContent>
       </Card>
