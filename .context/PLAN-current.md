@@ -1,4 +1,6 @@
-ACTIVE: PLAN-2026-05-16-pendientes-consolidado.md (22 items · 5 cerrados 2026-05-16 vía /sprint-implement · 17 pendientes · ~38-48h Linda restante · ~75 min CEO)
+ACTIVE: PLAN-2026-05-19-deuda-tests-y-fixes.md v2 (3 bloques A/B/C · 6 items · 6.5-8h · multi-sesión · cross-audit Gemini integrado)
+NEXT: PLAN-2026-05-19-content-hub.md v2 (post-piloto · 4 fases F0-F3 · 9.5-12.75h · F4 backlog)
+PREV: PLAN-2026-05-16-pendientes-consolidado.md (22 items · 5 cerrados 2026-05-16 vía /sprint-implement · 17 pendientes · ~38-48h Linda restante · ~75 min CEO)
 RECENT-CLOSED 2026-05-19: PLAN-2026-05-17-fans-dashboard.md · 6/6 sprints cerrados (Sprints A/B/C/E pre-apagón 2026-05-17 commits f449262/7e34fdf/923c034/2a1b13b/3a412eb + Sprints D/F post-apagón 2026-05-19 commits 0c75a85/0b0e4b1/ae20ef0/177f768 + nuevo regen_plan_dirigente.py)
 PARALLEL-CLOSED: PLAN-2026-05-16-sprint-implement-sesion.md (Q-1..Q-5 · 5 blockers cerrados · 42 tests verdes · cross-audit Gemini integrado)
 PREV-CLOSED: PLAN-2026-05-15-sprints-dedicados.md (6/7 sprints CERRADOS · S1 diferido honestamente · Gemini cross-audit integrado)

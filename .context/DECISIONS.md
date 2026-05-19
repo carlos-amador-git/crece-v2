@@ -1,5 +1,21 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-05-19 tarde — D-BUG-CONTROL-CHARS-POST-PILOTO · Bug `/planes/{id}` JSON queda diferido
+
+**Contexto:** Plan deuda tests v2 incluyó concern Gemini (HIGH severity) sobre bug control chars en endpoint `/api/v1/planes/{id}`. Hipótesis Gemini: si cliente abre plan individual durante demo, axios podría fallar parseando JSON con `\n` raw en strings (output LLM sin escapar). Concerns absorbido en plan v2 moviendo verificación a Bloque A pre-piloto.
+
+**Verificación empírica 2026-05-19 (Bloque A smoke):** Playwright headless navegó a `/dashboard/planes/52` (caso real con prompt y contenido LLM). Resultado: render OK · 5 tareas visibles · sin error visible · sin console error de parsing. Axios tolera los control chars `\n` no escapados.
+
+**Decisión:** bug confirmado existe (jq + python json.loads strict siguen fallando), pero NO afecta UI cliente. Fix mantenido en Bloque B post-piloto (plan deuda tests v2). Prioridad baja.
+
+**Fix pendiente cuando se ejecute Bloque B:**
+- Backend: sanitize `prompt_usado` y `contenido` con `.replace("\n", " ")` o usar serializer que escape control chars correctamente.
+- Test acompañante: `tests/api/v1/test_planes_endpoint.py::test_get_plan_id_emits_valid_strict_json`.
+
+**Anti-patrón evitado:** fix urgente HOY de un bug que NO afecta cliente · regla "Calidad > Tiempo pero no fix lo que no rompe pre-demo".
+
+---
+
 ## 2026-05-19 — D-MISAEL-VIP-40 · Override Misael Fan #1 en 40 reactions / 12 comments
 
 **Contexto:** El plan `PLAN-2026-05-17-fans-dashboard.md` línea 81 documentó "~80 reactions / 12 comments" como estimación sin base empírica. La sesión del 2026-05-18 codificó literal `reactions: 80` en `frontend/src/lib/api/utils/vip-overrides.ts`. CEO clarificó 2026-05-19 que el acuerdo verbal previo fue **40 reactions**, no 80, y la decisión nunca quedó persistida (regla `feedback_persist_peer_decisions` violada).

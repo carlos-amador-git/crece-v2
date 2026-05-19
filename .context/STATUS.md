@@ -1,6 +1,52 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-19 · Plan fans-dashboard Sprint D cierre + Sprint F regen plan Saymi standalone
+**Ultimo update:** 2026-05-19 tarde · /sprint-implement Bloque A · smoke pre-piloto §9.8 18/18 OK · concern Gemini bug control chars refutado empíricamente
+
+## 2026-05-19 tarde · /sprint-implement Bloque A · Smoke pre-piloto §9.8 (CLOSED)
+
+**Origen:** CEO `/sprint-implement` post aprobación plan deuda tests v2 (post cross-audit Gemini).
+
+### Resultado Bloque A · 18/18 vistas OK
+
+Playwright headless read-only contra `https://frontend-zeta-sepia-46.vercel.app` con login Saymi `pineda@crece.mx`.
+
+| Vista | Status |
+|---|---|
+| Overview, Dirigentes, Diagnóstico, Diferenciadores, FODA | OK ✓ |
+| Social Monitoreo, Comentarios, Clima, Top Posts | OK ✓ |
+| Aceptación Overview, Por dirigente, Fantasmas, **Fans y Perfiles** (Misael ⭐ Fan #1 confirmado) | OK ✓ |
+| Planes lista, **/planes/52** (caso crítico Gemini bug control chars) | OK ✓ |
+| Reels, Recomendaciones, Mi Evaluación | OK ✓ |
+
+Total: **18/18 OK · 0 FAIL · 0 EXCEPTION**.
+
+### Concern Gemini absorbido empíricamente
+
+Plan v2 movió bug `/planes/{id}` control chars al Bloque A para verificación pre-piloto (severity HIGH). Resultado: `/dashboard/planes/52` renderiza completo:
+- Título "Plan de Contenido · Borrador"
+- Modelo IA trazable `cc-subprocess-plan-v1-2026-05-19`
+- Created 19 may 2026 12:37 a.m.
+- 5 tareas con metas medibles visibles · 0% avance · 5 pendientes
+- Sin "Dirigente no encontrado", sin 404, sin error visible.
+
+**Veredicto:** Axios tolera control chars como hipoteticé. Bug NO afecta UI demo. Bug se queda en Bloque B post-piloto donde estaba en plan v1.
+
+### Findings non-blocking
+
+- 4 console errors "Failed to fetch RSC payload" en navegación Next.js → fallback a browser navigation (pattern normal Next.js App Router, no UX impact).
+- Cero 5xx, cero pageerror, cero "Dirigente no encontrado" en ninguna vista.
+
+### Próximo paso
+
+- Piloto §9.8 mañana 2026-05-20 con TODO el dashboard verde.
+- Bloque B (bug control chars + test applyVipOverrides) y Bloque C (tests Sprint A/D/F) post-piloto según plan v2.
+
+### Screenshots
+Disponibles en `/tmp/crece_smoke_2026_05_19/` (18 archivos · 3.1MB total).
+
+---
+
+## 2026-05-19 · Plan fans-dashboard Sprint D cierre + Sprint F regen plan Saymi standalone
 **Sesion activa:** Linda · branch `feat/phase-b-pesos-editables`
 **Branch activo:** `feat/phase-b-pesos-editables`
 **Próxima ventana §9.8:** día 30 piloto ≈ 2026-05-20
