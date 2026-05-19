@@ -1,6 +1,73 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-19 noche · Plan deuda 16 fallos · P0+P1+P2 cerrados · 14 fixes en prod · 1 diferido post-piloto
+**Ultimo update:** 2026-05-19 noche · Content Hub F4 cerrado · /dashboard/hub consolidado + redirects 308
+
+## 2026-05-19 noche tarde · Content Hub F4 CLOSED (~3h)
+
+CEO autorizó ejecución F4 al confirmar que cliente NO ha visto la app (mi diagnóstico de "no romper modelo mental" era erróneo · sin modelo mental existente).
+
+### Entregado
+
+**Backend** (commit `b2f9ba67`):
+- Schema `PostUnifiedItem` Pydantic con discriminator `view`
+- Endpoint `GET /api/v1/posts/unified` BFF · 4 view handlers separados
+- Smoke: feed=1681 · top=1532 · comentarios=1222 · fans=42
+
+**Frontend:**
+- `/dashboard/hub` workspace unificado (D13.2 ajustado · /contenido ya estaba tomado por Content Factory)
+- Hook `useUnifiedPosts` + adapter
+- Tabs internos `?tab=feed|comentarios|top|fans` con deep-linking + Suspense boundaries
+- Reusa UnifiedPostCard (F1)
+
+**Sidebar consolidación (D13.5=A):**
+- Removidas 4 entradas: Monitoreo, Comentarios, Top Posts, Fans y Perfiles
+- Single ítem "Contenido" → /hub
+
+**Redirects 308:**
+- /dashboard/social → /hub?tab=feed
+- /dashboard/social/comentarios → /hub?tab=comentarios
+- /dashboard/content/top → /hub?tab=top
+- /dashboard/aceptacion/fans → /hub?tab=fans
+- Rollback: remover bloque async redirects · rutas viejas no se eliminaron del codebase
+
+### Validación Playwright global · 100% verde
+
+| Check | Resultado |
+|---|---|
+| Hub default (feed) | ✓ tabs visibles · workspace title |
+| Deep-link ?tab=top | ✓ URL preserva tab |
+| Deep-link ?tab=fans | ✓ posts con reactors cargan |
+| Redirect /social → /hub?tab=feed | ✓ |
+| Redirect /aceptacion/fans → /hub?tab=fans | ✓ |
+| Sidebar: "Contenido" presente · no Monitoreo/Top Posts | ✓ |
+| Plan 52 (regresión) | ✓ |
+| Errores 5xx | 0 |
+
+### Cross-audit Gemini integrado
+
+- `approve_with_changes`
+- Blocking concern "timing piloto activo" → DESCARTADO por CEO (cliente no ha visto)
+- Non-blocking #1 polimorfismo discriminator → APLICADO en PostUnifiedItem
+- Non-blocking #2 Suspense boundaries → APLICADO en grid central
+
+### URLs
+
+- Prod: https://frontend-zeta-sepia-46.vercel.app/dashboard/hub
+- Deploy: `frontend-prb2qni9a` aliased
+- PR: #54 merged commit `b2f9ba67`
+
+### Pendientes diferidos (de toda la sesión)
+
+- Cleanup endpoint `/sentiment-timeline` legacy backend (cuando 100% consumers migrados)
+- Backfill NLP enriquecido sobre POSTS (granularidad 5 colores tono_discurso)
+- Tests pytest Sprint D y F scripts (LLM mocks complejos)
+- Test Vitest applyVipOverrides (requiere setup Vitest primero)
+- Cleanup BD S-8.1 154 auto_suggested + 320 events (esperando orden CEO)
+- Hugo D3 IG burner ya cerrado en RADAR ✓ · Threads activación cuenta pendiente sprint 10
+
+---
+
+## 2026-05-19 noche · Plan deuda 16 fallos · P0+P1+P2 cerrados · 14 fixes en prod · 1 diferido post-piloto
 
 ## 2026-05-19 noche · Plan deuda 16 fallos · P0+P1+P2 CLOSED (~3h total)
 
