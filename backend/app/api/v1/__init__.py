@@ -44,6 +44,7 @@ from app.api.v1.endpoints import (
     planes,
     political_framework,
     posts,
+    posts_unified,
     privacy_arco,
     programas,
     social,
@@ -66,6 +67,8 @@ api_router.include_router(dirigentes.router, prefix="/dirigentes", tags=["dirige
 api_router.include_router(followers.router, prefix="/dirigentes", tags=["followers"])
 api_router.include_router(social.router, prefix="/social", tags=["social"])
 api_router.include_router(posts.router, prefix="/posts", tags=["posts"])
+# F4 Content Hub (2026-05-19) · endpoint BFF consolidado
+api_router.include_router(posts_unified.router, prefix="/posts", tags=["posts-unified"])
 api_router.include_router(electoral.router, prefix="/electoral", tags=["electoral"])
 api_router.include_router(planes.router, prefix="/planes", tags=["planes"])
 api_router.include_router(plan_ia.router, prefix="/plan-ia", tags=["plan-ia"])

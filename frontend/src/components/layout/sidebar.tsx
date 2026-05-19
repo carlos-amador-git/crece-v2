@@ -103,17 +103,15 @@ const sections: Section[] = [
       leaf("/dashboard/diagnostico", "Diagnostico", Stethoscope),
       leaf("/dashboard/diagnostico-tier2", "Diferenciadores", Sparkles),
       leaf("/dashboard/diagnostico/foda", "FODA", Shield),
-      group("social", "Social", MessageSquare, [
-        leaf("/dashboard/social", "Monitoreo", Activity),
-        leaf("/dashboard/social/comentarios", "Comentarios", MessageSquare),
-        leaf("/dashboard/social/clima", "Clima Político", Activity),
-        leaf("/dashboard/content/top", "Top Posts", Trophy),
-      ]),
+      // F4 Content Hub (2026-05-19) · D13.5=A single ítem reemplaza las 4
+      // entradas viejas (Monitoreo, Comentarios, Top Posts, Fans y Perfiles).
+      // Rutas viejas siguen funcionando vía redirects 308 (rollback friendly).
+      leaf("/dashboard/hub", "Contenido", MessageSquare),
+      leaf("/dashboard/social/clima", "Clima Político", Activity),
       group("aceptacion", "Indice Aceptacion", Gauge, [
         leaf("/dashboard/aceptacion", "Overview", LayoutDashboard),
         leaf("/dashboard/aceptacion/dirigentes", "Por dirigente", UserSquare2),
         leaf("/dashboard/aceptacion/fantasmas", "Fantasmas", Ghost),
-        leaf("/dashboard/aceptacion/fans", "Fans y Perfiles", Star),
       ]),
       leaf("/dashboard/planes", "Planes IA", Brain),
       leaf("/dashboard/reels", "Reels (guiones)", Film),
