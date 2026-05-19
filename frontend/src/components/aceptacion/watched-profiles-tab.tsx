@@ -55,6 +55,7 @@ import { InteractionsKPIs } from "@/components/aceptacion/interactions-kpis";
 import { TimelineChart } from "@/components/aceptacion/timeline-chart";
 import { TopPostsCards } from "@/components/aceptacion/top-posts-cards";
 import { TopFansRanking } from "@/components/aceptacion/top-fans-ranking";
+import { CuratedSeedList } from "@/components/aceptacion/curated-seed-list";
 
 const PLATFORM_LABEL: Record<string, string> = {
   FACEBOOK: "FB",
@@ -508,7 +509,15 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
       <InteractionsKPIs dirigenteId={dirigenteId} days={44} />
       <TimelineChart dirigenteId={dirigenteId} days={44} />
       <TopPostsCards dirigenteId={dirigenteId} days={30} limit={3} />
-      <TopFansRanking dirigenteId={dirigenteId} limit={20} />
+
+      {/* P1 #8 (2026-05-19) · split-view per Gemini approve_split_view (OBS-7).
+          Izquierda: ranking dinámico (incluye Misael VIP override).
+          Derecha: lista cliente_seed siempre visible con reactions reales.
+          Apila vertical en mobile/tablet, 2 columnas en xl+. */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <TopFansRanking dirigenteId={dirigenteId} limit={20} />
+        <CuratedSeedList dirigenteId={dirigenteId} />
+      </div>
 
       {/* KPI cards */}
       {summaryLoading ? (

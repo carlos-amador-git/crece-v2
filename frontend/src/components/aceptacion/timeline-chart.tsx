@@ -122,8 +122,11 @@ export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
       <CardHeader className="pb-3">
         <div className="flex items-baseline justify-between">
           <CardTitle className="text-base font-semibold">Engagement diario</CardTitle>
-          <span className="text-xs text-muted-foreground">
-            últimos {days}d · banda gris = posts aún acumulando reactions
+          <span
+            className="text-xs text-muted-foreground"
+            title="Banda gris derecha (últimos 3d): posts publicados recientemente que aún están acumulando reactions. Zonas vacías a la izquierda: días fuera de la cobertura RADAR (sin reactors individuales capturados aunque haya posts publicados con likes públicos en BD)."
+          >
+            últimos {days}d · banda gris = acumulando · zonas vacías = sin cobertura RADAR
           </span>
         </div>
       </CardHeader>

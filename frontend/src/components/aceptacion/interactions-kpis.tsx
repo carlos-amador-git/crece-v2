@@ -50,18 +50,30 @@ export function InteractionsKPIs({ dirigenteId, days = 44 }: InteractionsKPIsPro
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard
-          label={`Reacciones · ${data.window_days}d`}
-          value={formatNumber(data.total_reactions)}
-          icon={Heart}
-          variant="compact"
-        />
-        <StatCard
-          label={`Comments · ${data.window_days}d`}
-          value={formatNumber(data.total_comments)}
-          icon={MessageSquare}
-          variant="compact"
-        />
+        {/* P2 #5 (2026-05-19) · glosario disonancia: el KPI cuenta reactors
+            INDIVIDUALES capturados por RADAR (watched_like_events), NO los
+            likes públicos del post (que sí están en social_posts.likes pero
+            son snapshot Apify). Tooltip aclara la diferencia. */}
+        <div
+          title="Reactors individuales capturados por RADAR (1 evento = 1 persona reaccionó). Diferente a 'likes públicos' del post que muestran las cards (snapshot Apify). El delta entre ambos es cobertura RADAR vs visibilidad pública FB."
+        >
+          <StatCard
+            label={`Reacciones · ${data.window_days}d`}
+            value={formatNumber(data.total_reactions)}
+            icon={Heart}
+            variant="compact"
+          />
+        </div>
+        <div
+          title="Comments en posts del dirigente en la ventana. Cuenta total de comments en BD."
+        >
+          <StatCard
+            label={`Comments · ${data.window_days}d`}
+            value={formatNumber(data.total_comments)}
+            icon={MessageSquare}
+            variant="compact"
+          />
+        </div>
         <StatCard
           label="% Clasificados NLP"
           value={`${data.comments_classified_pct.toFixed(1)}%`}

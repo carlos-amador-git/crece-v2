@@ -544,7 +544,11 @@ export default function OverviewPage() {
             <div>
               <CardTitle>Tono Discursivo</CardTitle>
               <CardDescription>
-                Clasificación del contenido publicado · últimos 30 días{includeRts ? "" : " · sin RTs"} · &gt;20 chars
+                {/* P2 #14 (2026-05-19): "sin RTs" solo aplica a Twitter/X.
+                    Ocultar caveat si plataforma seleccionada es FB/IG/TT/YT. */}
+                Clasificación del contenido publicado · últimos 30 días
+                {!includeRts && (platformFilter === "" || platformFilter === "twitter") && " · sin RTs"}
+                {" "}· &gt;20 chars
               </CardDescription>
               {coverageData && coverageData.total_posts > 0 && (
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -595,6 +599,28 @@ export default function OverviewPage() {
         <CardContent>
           {sentimentLoading ? (
             <Skeleton className="h-[300px] w-full" aria-label="Cargando datos de sentimiento" />
+          ) : coverageData && coverageData.passed_filters === 0 ? (
+            /* P1 #11 (2026-05-19): empty state real cuando 0 clasificados.
+               Antes mostraba bar al 100% (engañoso · parecía "100% neutral").
+               Ahora callout textual explica el estado real. */
+            <div
+              className="flex h-[300px] flex-col items-center justify-center gap-2 px-6 text-center"
+              role="status"
+            >
+              <div className="text-3xl">📊</div>
+              <p className="text-sm font-medium text-foreground">
+                Sin posts clasificados con sentiment_label
+              </p>
+              <p className="max-w-md text-xs text-muted-foreground">
+                {coverageData.total_posts} posts en el período, ninguno clasificado por
+                el pipeline NLP de sentimiento legacy. La clasificación política
+                actual usa <strong>matriz polaridad v2</strong> (campos
+                <code className="mx-1 rounded bg-muted px-1 py-0.5">tono_discurso</code>
+                +
+                <code className="mx-1 rounded bg-muted px-1 py-0.5">target_politico</code>);
+                ver <em>Diagnóstico</em> para vista completa.
+              </p>
+            </div>
           ) : trendData.length === 0 ? (
             <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground" role="status">
               Sin datos de sentimiento disponibles

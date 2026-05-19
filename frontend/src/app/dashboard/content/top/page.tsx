@@ -185,7 +185,10 @@ export default function TopPostsPage() {
           </div>
 
           {data && (
-            <div className="ml-auto text-xs text-muted-foreground">
+            <div
+              className="ml-auto text-xs text-muted-foreground"
+              title="Elegibles: posts del dirigente dentro de la ventana seleccionada, con contenido válido (>20 chars), excluyendo retweets/reposts y posts duplicados por contenido."
+            >
               Mostrando {data.items.length} de {data.total_candidates} posts elegibles
               {dirigenteName && ` · ${dirigenteName}`}
             </div>
@@ -227,7 +230,14 @@ export default function TopPostsPage() {
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <PlatformIcon platform={item.platform} className="h-4 w-4 text-muted-foreground" />
+                      {/* P1 #9 (2026-05-19): badge prominente de plataforma
+                          + handle. El PlatformIcon ya estaba pero usuario no
+                          identificaba red social al vistazo. Badge añade
+                          label textual con icon. */}
+                      <Badge variant="outline" className="gap-1 px-1.5 py-0 text-[10px] font-medium">
+                        <PlatformIcon platform={item.platform} className="h-3 w-3" />
+                        {item.platform.charAt(0) + item.platform.slice(1).toLowerCase()}
+                      </Badge>
                       <span className="text-xs text-muted-foreground">
                         {item.handle
                           ? (item.handle.startsWith("@") ? item.handle : `@${item.handle}`)
@@ -238,6 +248,25 @@ export default function TopPostsPage() {
                       #{idx + 1}
                     </Badge>
                   </div>
+                  {/* P2 #4+#10 (2026-05-19): warning sutil si las interacciones
+                      absolutas son bajas. Posts con Engagement % alto pero
+                      pocas interacciones tienen % inflado por bajo denominador.
+                      No cambiamos el algoritmo de ranking (decisión producto
+                      separada), solo damos contexto al usuario. */}
+                  {(() => {
+                    const absoluteInteractions = item.likes + item.comments + item.shares;
+                    if (absoluteInteractions < 10) {
+                      return (
+                        <div
+                          className="mt-1 inline-flex items-center gap-1 rounded border border-dashed border-amber-500/40 bg-amber-50/50 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                          title="Pocas interacciones absolutas: likes + comments + shares < 10. El Engagement % puede estar inflado por bajo denominador de views."
+                        >
+                          ⚠ {absoluteInteractions} interacciones absolutas
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   <CardTitle className="text-base font-semibold leading-snug">
                     {formatScore(metric, item.score)}
                     <span className="ml-2 text-xs font-normal text-muted-foreground">
