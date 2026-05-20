@@ -21,6 +21,18 @@
 
 **Distribución tono posts (vocabulario legacy):** 1,231 neutral · 133 positivo. _(Backfill matriz polaridad v2 sobre Saymi 595 posts pendiente — sprint dedicado post-cliente.)_
 
+**Distribución por plataforma (reconciliación con Hugo RADAR):**
+
+| Plataforma | Posts CRECE | Fuente |
+|---|---|---|
+| TIKTOK | 1,157 | automated_scraper Apify |
+| FACEBOOK | 573 | automated_scraper (Apify + RADAR Hugo ~467 unique) |
+| TWITTER | 119 | automated_scraper |
+| INSTAGRAM | 80 | automated_scraper Apify |
+| YOUTUBE | 30 | manual_host_ingest |
+
+RADAR Hugo cubre solo Facebook (~467 unique posts entity_id). Los 106 posts FB adicionales en CRECE vienen de Apify FB scraper + extension dump pre-RADAR. Los 1,386 posts no-FB no son responsabilidad de RADAR.
+
 ---
 
 ## 2. Top 5 fans destacados
