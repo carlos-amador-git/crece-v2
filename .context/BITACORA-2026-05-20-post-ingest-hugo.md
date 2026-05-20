@@ -123,3 +123,19 @@
 - **D-MISAEL-VIP-250** (commit 458f44a) ya en DECISIONS.md
 - **TARGET_ALIASES otro→no_determinado** en `backend/scripts/backfill_nlp_posts.py` — minor (script-level, no necesita DECISIONS.md)
 - **F4b sin endpoint dedicado** — documentado en plan + bitácora como scope futuro
+
+---
+
+## Deploy + handoff Carlos Amador
+
+**Vercel prod (Saymi/Pepe demo cliente):**
+- URL: `https://frontend-zeta-sepia-46.vercel.app` (alias) → último build `frontend-c1i7yrgjk-marxs-projects-bb530f2b` (40s build, 2026-05-20 08:30am).
+- Deploy ejecutado: `vercel deploy --prod --yes` desde `/Users/marxchavez/Projects/crece-v2/frontend/`.
+
+**Carlos Amador (deploy paralelo via GH):**
+- Memoria `reference_vercel_deploy_url.md`: `crece-v2.vercel.app` es de Carlos para Coolify, separado de mi deploy.
+- Branch `feat/post-ingest-hugo-2026-05-20` empujado a `origin`. PR #56 abierto.
+- Carlos puede actualizar su deploy al merge de PR #56 a main, o cuando active sesión y vea esta bitácora.
+
+**Reconciliación con Hugo (RADAR):**
+- Hugo confirmó reconciliación 14:33: 467 RADAR FB-unique ≠ 1959 CRECE multi-plataforma. Cuadra. Sin bloqueo.
