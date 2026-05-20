@@ -510,11 +510,13 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
       <TimelineChart dirigenteId={dirigenteId} days={44} />
       <div>
         <h3 className="font-heading text-sm font-semibold mb-1">
-          Posts mejor y peor recibidos por sentimiento de comentarios
+          Recepción del público según comentarios
         </h3>
         <p className="text-xs text-muted-foreground mb-2">
-          Ranking por polaridad NLP promedio (no por engagement). Últimos 30 días, Facebook.
-          Para ver el ranking por engagement absoluto: <span className="font-medium">Contenido → Más populares</span>.
+          Posts con más audiencia favorable y con más rechazo en comentarios · ranking
+          por polaridad NLP promedio de los comments (no por likes ni engagement).
+          Últimos 30 días, Facebook. Para ranking por engagement absoluto del post:
+          <span className="font-medium"> Contenido → Más populares</span>.
         </p>
         <TopPostsCards dirigenteId={dirigenteId} days={30} limit={3} />
       </div>

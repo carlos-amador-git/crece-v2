@@ -144,7 +144,7 @@ function Column({
               winner ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
             }`}
           />
-          {winner ? "Ganadores" : "Negativos"}
+          {winner ? "Más audiencia favorable" : "Más rechazo en comments"}
           <Badge variant="outline" className="ml-auto font-normal">
             {items.length}
           </Badge>

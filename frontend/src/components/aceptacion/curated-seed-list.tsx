@@ -14,18 +14,19 @@
  * - Misma fuente de datos que TopFansRanking (useWatchedProfiles), pero
  *   filtrada en render a source='cliente_seed' (NO se modifican los hooks).
  *
- * Política R-3 D-3: BD jamás se toca aquí. Override VIP Misael (D-MISAEL-VIP-40)
- * se mantiene SOLO en TopFansRanking → en CuratedSeedList Misael aparece con
- * sus reactions reales (10), no con el override 40.
+ * Política R-3 D-3: BD jamás se toca aquí. Override VIP aplica también AQUÍ
+ * post-2026-05-20 (CEO 3a corrección): Misael debe verse #1 con 250 reactions
+ * en AMBAS listas (TopFansRanking + Audiencia Objetivo) para consistencia
+ * visual. Antes solo TopFansRanking aplicaba override → Misael salía #1 ahí
+ * pero en Audiencia Objetivo aparecía con sus 87 reactions reales en #2. CEO
+ * marcó la inconsistencia 3 veces.
  */
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useWatchedProfiles,
-  type WatchedProfile,
-} from "@/lib/api/hooks/use-watched-profiles";
+import { useWatchedProfiles } from "@/lib/api/hooks/use-watched-profiles";
+import { applyVipOverrides } from "@/lib/api/utils/vip-overrides";
 import { formatNumber } from "@/lib/utils";
 import { MessageSquare, ThumbsUp, Users } from "lucide-react";
 
@@ -47,12 +48,25 @@ export function CuratedSeedList({ dirigenteId }: CuratedSeedListProps) {
     source: "cliente_seed",
   });
 
-  const sorted: WatchedProfile[] = (profiles ?? [])
-    .slice()
-    .sort((a, b) => (b.n_likes ?? 0) - (a.n_likes ?? 0));
+  // Aplicar VIP override (Misael Fan #1 con 250 per CEO 2026-05-20).
+  // applyVipOverrides matchea por external_id · si Misael cliente_seed
+  // (61578398601244) está en la lista, lo REEMPLAZA con override 250r/12c
+  // y fuerza posición 1.
+  const ranked = applyVipOverrides(
+    dirigenteId,
+    (profiles ?? []).map((p) => ({
+      external_id: p.profile_external_id,
+      display_name: p.display_name,
+      handle: p.profile_handle,
+      platform: p.platform,
+      source: p.source,
+      reactions: p.n_likes ?? 0,
+      comments: p.n_comments ?? 0,
+    })),
+  );
 
-  const activos = sorted.filter((p) => (p.n_likes ?? 0) > 0).length;
-  const total = sorted.length;
+  const activos = ranked.filter((p) => p.reactions > 0).length;
+  const total = ranked.length;
 
   return (
     <Card>
@@ -68,8 +82,7 @@ export function CuratedSeedList({ dirigenteId }: CuratedSeedListProps) {
           </Badge>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Perfiles curados por el cliente · ordenados por reacciones reales en
-          BD.
+          Perfiles curados por el cliente · perfiles VIP destacados al inicio.
           {total > 0 && (
             <>
               {" "}
@@ -101,19 +114,22 @@ export function CuratedSeedList({ dirigenteId }: CuratedSeedListProps) {
           </div>
         ) : (
           <ol className="space-y-1.5">
-            {sorted.map((entry, idx) => {
+            {ranked.map((entry, idx) => {
               const platColor =
                 PLATFORM_DOT[entry.platform] ?? "bg-muted-foreground";
-              const reactions = entry.n_likes ?? 0;
-              const comments = entry.n_comments ?? 0;
+              const reactions = entry.reactions;
+              const comments = entry.comments;
               const isInactive = reactions === 0 && comments === 0;
+              const isVip = entry.isVip;
               return (
                 <li
-                  key={entry.profile_external_id}
+                  key={entry.external_id}
                   className={`flex items-center gap-3 rounded-md px-2.5 py-2 transition-colors ${
                     isInactive
                       ? "opacity-60"
-                      : "hover:bg-muted/50"
+                      : isVip
+                        ? "bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                        : "hover:bg-muted/50"
                   }`}
                 >
                   <span className="w-7 shrink-0 text-center text-xs font-semibold tabular-nums text-muted-foreground">
@@ -126,10 +142,17 @@ export function CuratedSeedList({ dirigenteId }: CuratedSeedListProps) {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 text-sm font-medium leading-tight">
                       <span className="truncate">
-                        {entry.display_name ||
-                          entry.profile_handle ||
-                          entry.profile_external_id}
+                        {entry.display_name || entry.handle || entry.external_id}
                       </span>
+                      {isVip && entry.badge && (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-500/40 text-[10px] text-amber-700 dark:text-amber-300"
+                          title="Perfil VIP destacado por decisión de cliente"
+                        >
+                          {entry.badge}
+                        </Badge>
+                      )}
                       {isInactive && (
                         <Badge
                           variant="outline"
@@ -141,13 +164,13 @@ export function CuratedSeedList({ dirigenteId }: CuratedSeedListProps) {
                       )}
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Cliente · {entry.profile_handle ?? entry.profile_external_id}
+                      Cliente · {entry.handle ?? entry.external_id}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
                     <span
                       className="inline-flex items-center gap-1"
-                      title="Reactions capturadas en BD (reales · sin override VIP)"
+                      title={isVip ? "Reactions destacadas (override cliente)" : "Reactions capturadas en BD"}
                     >
                       <ThumbsUp className="h-3 w-3" />
                       {formatNumber(reactions)}
