@@ -26,6 +26,16 @@ import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   UnifiedPostCard,
   UnifiedPostCardSkeleton,
@@ -35,7 +45,16 @@ import {
   unifiedItemToPostUnified,
   type UnifiedView,
 } from "@/lib/api/hooks/use-unified-posts";
-import { MessageSquare, Newspaper, Trophy, Users } from "lucide-react";
+import { MessageSquare, Newspaper, Trophy, Users, X } from "lucide-react";
+
+const PLATFORM_OPTIONS = [
+  { value: "all", label: "Todas las plataformas" },
+  { value: "FACEBOOK", label: "Facebook" },
+  { value: "INSTAGRAM", label: "Instagram" },
+  { value: "TWITTER", label: "X (Twitter)" },
+  { value: "TIKTOK", label: "TikTok" },
+  { value: "YOUTUBE", label: "YouTube" },
+] as const;
 
 const TAB_CONFIG: Array<{
   value: UnifiedView;
@@ -69,16 +88,27 @@ const TAB_CONFIG: Array<{
   },
 ];
 
+interface HubFilters {
+  platform?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
 function ContenidoGrid({
   dirigenteId,
   view,
+  filters,
 }: {
   dirigenteId: number;
   view: UnifiedView;
+  filters: HubFilters;
 }) {
   const { data, isLoading, isError } = useUnifiedPosts({
     dirigente_id: dirigenteId,
     view,
+    platform: filters.platform,
+    date_from: filters.date_from,
+    date_to: filters.date_to,
     per_page: 20,
   });
 
@@ -147,6 +177,23 @@ function HubInner() {
       : "feed"
   );
 
+  // B3 Filtros · platform + date range
+  const [platform, setPlatform] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const filters: HubFilters = {
+    platform: platform === "all" ? undefined : platform,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  };
+  const filtersActive =
+    platform !== "all" || Boolean(dateFrom) || Boolean(dateTo);
+  const clearFilters = () => {
+    setPlatform("all");
+    setDateFrom("");
+    setDateTo("");
+  };
+
   const handleTabChange = (next: string) => {
     const v = next as UnifiedView;
     setInternalTab(v);
@@ -179,6 +226,69 @@ function HubInner() {
         </p>
       </div>
 
+      {/* B3 Filtros · platform + date range */}
+      <Card>
+        <CardContent className="p-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="hub-platform" className="text-xs">
+                Plataforma
+              </Label>
+              <Select value={platform} onValueChange={setPlatform}>
+                <SelectTrigger id="hub-platform" className="h-9 w-full md:w-48 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLATFORM_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="hub-date-from" className="text-xs">
+                Desde
+              </Label>
+              <Input
+                id="hub-date-from"
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-9 w-full md:w-40 text-sm"
+                max={dateTo || undefined}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="hub-date-to" className="text-xs">
+                Hasta
+              </Label>
+              <Input
+                id="hub-date-to"
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-9 w-full md:w-40 text-sm"
+                min={dateFrom || undefined}
+              />
+            </div>
+            {filtersActive && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="gap-1.5 text-xs"
+              >
+                <X className="h-3.5 w-3.5" />
+                Limpiar
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs value={internalTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-4">
           {TAB_CONFIG.map((tab) => (
@@ -201,7 +311,11 @@ function HubInner() {
                 </div>
               }
             >
-              <ContenidoGrid dirigenteId={dirigenteId} view={tab.value} />
+              <ContenidoGrid
+                dirigenteId={dirigenteId}
+                view={tab.value}
+                filters={filters}
+              />
             </Suspense>
           </TabsContent>
         ))}
