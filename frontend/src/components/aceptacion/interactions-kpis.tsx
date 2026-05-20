@@ -22,10 +22,17 @@ import { formatNumber } from "@/lib/utils";
 interface InteractionsKPIsProps {
   dirigenteId: number;
   days?: number;
+  /** Si true, ignora la ventana de días y muestra el histórico completo.
+   * Default true desde 2026-05-20 (CEO: "ponerlas todas, sin filtro de fecha"). */
+  allTime?: boolean;
 }
 
-export function InteractionsKPIs({ dirigenteId, days = 44 }: InteractionsKPIsProps) {
-  const { data, isLoading, isError } = useWatchedInteractionsSummary(dirigenteId, days);
+export function InteractionsKPIs({
+  dirigenteId,
+  days = 44,
+  allTime = true,
+}: InteractionsKPIsProps) {
+  const { data, isLoading, isError } = useWatchedInteractionsSummary(dirigenteId, days, allTime);
 
   if (isLoading) {
     return (
@@ -47,6 +54,12 @@ export function InteractionsKPIs({ dirigenteId, days = 44 }: InteractionsKPIsPro
 
   const showPlaceholderBanner = data.reaction_type_quality === "placeholder_like_only";
 
+  // window_days = null → all_time (CEO 2026-05-20: "ponerlas todas, sin filtro de fecha")
+  const windowSuffix = data.window_days != null ? `${data.window_days}d` : "histórico";
+  const windowTooltipSuffix = data.window_days != null
+    ? `en los últimos ${data.window_days} días`
+    : "en todo el histórico de captura RADAR (sin filtro de fecha)";
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -55,20 +68,20 @@ export function InteractionsKPIs({ dirigenteId, days = 44 }: InteractionsKPIsPro
             likes públicos del post (que sí están en social_posts.likes pero
             son snapshot Apify). Tooltip aclara la diferencia. */}
         <div
-          title="Reactors individuales capturados por RADAR (1 evento = 1 persona reaccionó). Diferente a 'likes públicos' del post que muestran las cards (snapshot Apify). El delta entre ambos es cobertura RADAR vs visibilidad pública FB."
+          title={`Reactors individuales capturados por RADAR ${windowTooltipSuffix} (1 evento = 1 persona reaccionó). Diferente a 'likes públicos' del post que muestran las cards (snapshot Apify).`}
         >
           <StatCard
-            label={`Reacciones · ${data.window_days}d`}
+            label={`Reacciones · ${windowSuffix}`}
             value={formatNumber(data.total_reactions)}
             icon={Heart}
             variant="compact"
           />
         </div>
         <div
-          title="Comments en posts del dirigente en la ventana. Cuenta total de comments en BD."
+          title={`Comments en posts del dirigente ${windowTooltipSuffix}. Cuenta total de comments en BD.`}
         >
           <StatCard
-            label={`Comments · ${data.window_days}d`}
+            label={`Comments · ${windowSuffix}`}
             value={formatNumber(data.total_comments)}
             icon={MessageSquare}
             variant="compact"
@@ -89,7 +102,7 @@ export function InteractionsKPIs({ dirigenteId, days = 44 }: InteractionsKPIsPro
           }
         />
         <StatCard
-          label="Posts en ventana"
+          label={data.window_days != null ? "Posts en ventana" : "Posts (histórico)"}
           value={formatNumber(data.posts_in_window)}
           icon={Newspaper}
           variant="compact"

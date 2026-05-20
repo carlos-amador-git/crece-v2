@@ -561,7 +561,8 @@ class TopPostItem(BaseModel):
 
 class InteractionsSummary(BaseModel):
     dirigente_id: int
-    window_days: int
+    window_days: int | None
+    """None cuando all_time=True · UI debe mostrar 'histórico' en vez de 'Nd'."""
     total_reactions: int
     total_comments: int
     comments_classified: int
@@ -709,24 +710,44 @@ async def watched_interactions_summary(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int,
-    days: int = Query(default=44, ge=7, le=120),
+    days: int = Query(default=44, ge=7, le=3650),
+    all_time: bool = Query(default=False),
 ):
-    """KPIs agregados para header del dashboard."""
+    """KPIs agregados para header del dashboard.
+
+    `all_time=true` ignora el filtro de fecha y reporta total histórico
+    (decisión CEO 2026-05-20: el badge con ventana 44d ocultaba ~30% de
+    las reactions reales · per Hugo RADAR delta ~100K vs UI 56K).
+    """
     await _assert_dirigente_access(db, user, dirigente_id)
 
-    base = (await db.execute(text("""
-        SELECT
-          COUNT(DISTINCT wle.id) AS reactions,
-          COUNT(DISTINCT sc.id) AS comments,
-          COUNT(DISTINCT sc.id) FILTER (WHERE sc.nlp_tono IS NOT NULL) AS classified,
-          COUNT(DISTINCT sp.id) AS posts_window
-        FROM social_profiles sps
-        LEFT JOIN social_posts sp ON sp.profile_id=sps.id
-          AND sp.published_at >= NOW() - (:days || ' days')::interval
-        LEFT JOIN watched_like_events wle ON wle.post_id=sp.id
-        LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
-        WHERE sps.dirigente_id=:did AND sps.platform='FACEBOOK'
-    """), {"did": dirigente_id, "days": str(days)})).first()
+    if all_time:
+        base = (await db.execute(text("""
+            SELECT
+              COUNT(DISTINCT wle.id) AS reactions,
+              COUNT(DISTINCT sc.id) AS comments,
+              COUNT(DISTINCT sc.id) FILTER (WHERE sc.nlp_tono IS NOT NULL) AS classified,
+              COUNT(DISTINCT sp.id) AS posts_window
+            FROM social_profiles sps
+            LEFT JOIN social_posts sp ON sp.profile_id=sps.id
+            LEFT JOIN watched_like_events wle ON wle.post_id=sp.id
+            LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
+            WHERE sps.dirigente_id=:did AND sps.platform='FACEBOOK'
+        """), {"did": dirigente_id})).first()
+    else:
+        base = (await db.execute(text("""
+            SELECT
+              COUNT(DISTINCT wle.id) AS reactions,
+              COUNT(DISTINCT sc.id) AS comments,
+              COUNT(DISTINCT sc.id) FILTER (WHERE sc.nlp_tono IS NOT NULL) AS classified,
+              COUNT(DISTINCT sp.id) AS posts_window
+            FROM social_profiles sps
+            LEFT JOIN social_posts sp ON sp.profile_id=sps.id
+              AND sp.published_at >= NOW() - (:days || ' days')::interval
+            LEFT JOIN watched_like_events wle ON wle.post_id=sp.id
+            LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
+            WHERE sps.dirigente_id=:did AND sps.platform='FACEBOOK'
+        """), {"did": dirigente_id, "days": str(days)})).first()
 
     mix_rows = (await db.execute(text("""
         SELECT wle.reaction_type, COUNT(*) AS n
@@ -745,7 +766,7 @@ async def watched_interactions_summary(
 
     return InteractionsSummary(
         dirigente_id=dirigente_id,
-        window_days=days,
+        window_days=None if all_time else days,
         total_reactions=base[0] or 0,
         total_comments=total_comments,
         comments_classified=classified,

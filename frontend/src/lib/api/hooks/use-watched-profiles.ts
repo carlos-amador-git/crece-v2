@@ -91,7 +91,8 @@ export interface TopPostItem {
 
 export interface InteractionsSummary {
   dirigente_id: number;
-  window_days: number;
+  /** null cuando all_time=true · UI muestra "histórico" en vez de "Nd". */
+  window_days: number | null;
   total_reactions: number;
   total_comments: number;
   comments_classified: number;
@@ -224,13 +225,21 @@ export function useWatchedTopPosts(
   });
 }
 
-export function useWatchedInteractionsSummary(dirigente_id: number, days = 44) {
+export function useWatchedInteractionsSummary(
+  dirigente_id: number,
+  days = 44,
+  allTime = false,
+) {
   return useQuery({
-    queryKey: ["watched-profiles", "interactions-summary", dirigente_id, days],
-    queryFn: () =>
-      api.get<InteractionsSummary>(
-        `/aceptacion/watched-profiles/interactions-summary?dirigente_id=${dirigente_id}&days=${days}`
-      ),
+    queryKey: ["watched-profiles", "interactions-summary", dirigente_id, days, allTime],
+    queryFn: () => {
+      const qs = allTime
+        ? `dirigente_id=${dirigente_id}&all_time=true`
+        : `dirigente_id=${dirigente_id}&days=${days}`;
+      return api.get<InteractionsSummary>(
+        `/aceptacion/watched-profiles/interactions-summary?${qs}`
+      );
+    },
     staleTime: 60_000,
     enabled: !!dirigente_id,
   });
