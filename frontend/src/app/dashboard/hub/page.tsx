@@ -77,9 +77,9 @@ const TAB_CONFIG: Array<{
   },
   {
     value: "top",
-    label: "Top",
+    label: "Más populares",
     icon: Trophy,
-    description: "Ranking por engagement",
+    description: "Ranking por engagement (likes + comments + shares vs followers)",
   },
   {
     value: "fans",

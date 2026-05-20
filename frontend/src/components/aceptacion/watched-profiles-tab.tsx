@@ -508,7 +508,16 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
       {/* Sprint B+C (PLAN-2026-05-17-fans-dashboard) · KPIs + Timeline + Top Posts + Top Fans */}
       <InteractionsKPIs dirigenteId={dirigenteId} days={44} />
       <TimelineChart dirigenteId={dirigenteId} days={44} />
-      <TopPostsCards dirigenteId={dirigenteId} days={30} limit={3} />
+      <div>
+        <h3 className="font-heading text-sm font-semibold mb-1">
+          Posts mejor y peor recibidos por sentimiento de comentarios
+        </h3>
+        <p className="text-xs text-muted-foreground mb-2">
+          Ranking por polaridad NLP promedio (no por engagement). Últimos 30 días, Facebook.
+          Para ver el ranking por engagement absoluto: <span className="font-medium">Contenido → Más populares</span>.
+        </p>
+        <TopPostsCards dirigenteId={dirigenteId} days={30} limit={3} />
+      </div>
 
       {/* P1 #8 (2026-05-19) · split-view per Gemini approve_split_view (OBS-7).
           Izquierda: ranking dinámico (incluye Misael VIP override).
