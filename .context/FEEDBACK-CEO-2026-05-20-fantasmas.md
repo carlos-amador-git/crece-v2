@@ -22,10 +22,14 @@
 
 **Propuesta para review (cuando CEO regrese):**
 
-| Actual | Propuesto opción A | Propuesto opción B | Opción C |
+| Actual | Propuesto opción A | Propuesto opción B | Opción C ✅ ELEGIDA CEO 2026-05-20 |
 |---|---|---|---|
-| Ganadores | Mejor recibidos | Bien recibidos | Más audiencia favorable |
-| Negativos | Peor recibidos | Menos audiencia | Más rechazo en comments |
+| Ganadores | Mejor recibidos | Bien recibidos | **Más audiencia favorable** |
+| Negativos | Peor recibidos | Menos audiencia | **Más rechazo en comments** |
+
+**Decisión CEO 2026-05-20:** "Yo creo que la opción C para el naming. Esta largo pero es mas claro."
+
+Sub-acción cuando se implemente: ajustar también copy del subtítulo (issue #2) para coincidir con la nueva semántica.
 
 **Sub-acción:** ambos headers (Ganadores/Negativos) y la línea explicativa deben coincidir en mensaje. Header columna NO puede contradecir al subtítulo.
 
