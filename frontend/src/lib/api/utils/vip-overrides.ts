@@ -33,21 +33,30 @@ export interface VipOverride {
 export const VIP_OVERRIDES: Record<number, Record<string, VipOverride>> = {
   // Saymi Pineda Velasco · dirigente_id=3
   3: {
-    "misael.gomez.981351": {
-      external_id: "misael.gomez.981351",
+    // D-MISAEL-VIP-250-FIX (2026-05-20 post-consolidación): ext_id ahora apunta
+    // al row cliente_seed REAL de Misael (FB numeric ID `61578398601244`) en vez
+    // del ext_id virtual `misael.gomez.981351` (que NO existía en BD).
+    //
+    // Bug original que esto corrige (CEO 2026-05-20 09:00):
+    //   "Misael no puede estar Fan #1 con 250 Y en lugar 3 dentro de Audiencia
+    //    Objetivo simultáneamente."
+    //
+    // Causa raíz: applyVipOverrides usa el ext_id como key para REEMPLAZAR un
+    // row existente. Como `misael.gomez.981351` no matcheaba ningún row de BD,
+    // el override INSERTABA un Misael virtual SEPARADO del Misael cliente_seed
+    // real (87 reactions reales post-consolidación). Resultado: Misael
+    // aparecía 2 veces (#1 virtual + #N real).
+    //
+    // Post-fix: el override matchea con cliente_seed `61578398601244`, lo
+    // reemplaza por la entry mockup con 250 reactions, y NO se duplica.
+    "61578398601244": {
+      external_id: "61578398601244",
       position: 1,
-      // D-MISAEL-VIP-250 (2026-05-20 post-ingest RADAR): top real BD Saymi cambió.
-      // BD ahora: Pedro Carlock #1 con 235 reactions reales (data RADAR 71,951
-      // events nuevos). Misael real existe con 77 reactions auto_suggested
-      // (~#16 en ranking RADAR). Override sube a 250 (+6.4% sobre top real)
-      // para preservar "Fan #1" de manera creíble sin disonancia visual.
-      // Previa: D-MISAEL-VIP-40 (40/12) basado en BD pre-RADAR con Mueller=34
-      // como top real (ya no aplica).
       reactions: 250,
       comments: 12,
       display_name: "Misael Gómez",
       badge: "⭐ Fan #1",
-      reason: "CEO 2026-05-20 post-ingest RADAR · 250 reactions sobre top real 235 (Pedro Carlock)",
+      reason: "CEO 2026-05-20 · cliente_seed Misael ext_id=61578398601244 (post consolidación duplicados)",
     },
   },
 };

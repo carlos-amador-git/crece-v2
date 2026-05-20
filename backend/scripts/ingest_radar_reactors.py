@@ -275,6 +275,10 @@ async def upsert_watched_profiles_and_events(
     # 3. Procesar reactors
     # First pass: dedup watched_profiles por reactor_hash
     reactor_hashes: dict[str, dict] = {}
+    # Override: si un reactor_hash sha256 fue redirigido a un canonical id (cliente_seed
+    # o fb_numerico) en lugar de insertar nuevo row, el mapping reactor_hash→wp_id
+    # debe apuntar al canonical.
+    hash_to_canonical_id_override: dict[str, int] = {}
     for r in reactors:
         rh = r.get("reactor_hash")
         if rh and rh not in reactor_hashes:
@@ -284,8 +288,43 @@ async def upsert_watched_profiles_and_events(
             }
 
     # Insert/upsert watched_profiles
+    # IDEMPOTENCIA POST-2026-05-20 (regla Hugo+Linda):
+    # Si el reactor_hash es sha256 (engine viejo) pero ya existe un row con
+    # mismo display_name + dirigente que tiene profile_external_id numérico
+    # (engine nuevo) o source=cliente_seed (manual), REUSAR ese row para evitar
+    # regenerar duplicados que tendrían que consolidarse después.
     if not dry_run:
         for rh, meta in reactor_hashes.items():
+            disp = meta.get("display_name")
+            disp_norm = (disp or "").strip().lower()
+
+            # 1. Si el reactor_hash es sha256 (engine viejo Hugo · 64 hex chars)
+            #    y ya tenemos un row "canónico" (cliente_seed o fb_numerico) con
+            #    el mismo display_name normalizado → REUSAR ese row.
+            is_sha = bool(disp_norm) and len(rh) == 64 and all(c in "0123456789abcdef" for c in rh)
+            if is_sha:
+                canonical = await conn.fetchrow(
+                    """
+                    SELECT id FROM watched_profiles
+                    WHERE dirigente_observador_id = $1
+                      AND platform = 'FACEBOOK'
+                      AND LOWER(TRIM(display_name)) = $2
+                      AND (source = 'cliente_seed'
+                           OR profile_external_id ~ '^[0-9]+$')
+                    ORDER BY (source = 'cliente_seed') DESC, id
+                    LIMIT 1
+                    """,
+                    dirigente_id,
+                    disp_norm,
+                )
+                if canonical:
+                    # Reusar canonical · no insertar sha256 nuevo.
+                    stats["watched_profiles_existed"] += 1
+                    # Update mapping para que reactor_hash → canonical.id en step 5.
+                    hash_to_canonical_id_override[rh] = canonical["id"]
+                    continue
+
+            # 2. Camino normal: UPSERT por (dirigente, platform, ext_id)
             result = await conn.fetchrow(
                 """
                 INSERT INTO watched_profiles (
@@ -326,6 +365,9 @@ async def upsert_watched_profiles_and_events(
         dirigente_id,
     )
     hash_to_wp_id = {r["profile_external_id"]: r["id"] for r in wp_rows}
+    # Aplicar overrides idempotencia (sha256 redirigido a canonical · 2026-05-20)
+    for sha_hash, canonical_id in hash_to_canonical_id_override.items():
+        hash_to_wp_id[sha_hash] = canonical_id
 
     # 5. Insert watched_like_events (con dedup por uq constraint)
     for r in reactors:
