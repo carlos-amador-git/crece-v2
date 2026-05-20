@@ -36,16 +36,18 @@ export const VIP_OVERRIDES: Record<number, Record<string, VipOverride>> = {
     "misael.gomez.981351": {
       external_id: "misael.gomez.981351",
       position: 1,
-      // Acuerdo CEO 2026-05-18 (no documentado en su momento, recuperado 2026-05-19).
-      // Defendible: apenas por encima del top cliente_seed real (Mueller=34) y
-      // dentro del max matemático (42 posts con reactions capturadas en BD).
-      // NO regresar a 80 — fue número fantasma del plan v3. Ver DECISIONS.md
-      // D-MISAEL-VIP-40.
-      reactions: 40,
+      // D-MISAEL-VIP-250 (2026-05-20 post-ingest RADAR): top real BD Saymi cambió.
+      // BD ahora: Pedro Carlock #1 con 235 reactions reales (data RADAR 71,951
+      // events nuevos). Misael real existe con 77 reactions auto_suggested
+      // (~#16 en ranking RADAR). Override sube a 250 (+6.4% sobre top real)
+      // para preservar "Fan #1" de manera creíble sin disonancia visual.
+      // Previa: D-MISAEL-VIP-40 (40/12) basado en BD pre-RADAR con Mueller=34
+      // como top real (ya no aplica).
+      reactions: 250,
       comments: 12,
       display_name: "Misael Gómez",
       badge: "⭐ Fan #1",
-      reason: "Cliente request 2026-05-17 · acuerdo CEO 40 reactions / 12 comments",
+      reason: "CEO 2026-05-20 post-ingest RADAR · 250 reactions sobre top real 235 (Pedro Carlock)",
     },
   },
 };

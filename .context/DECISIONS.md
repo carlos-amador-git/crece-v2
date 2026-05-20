@@ -2213,3 +2213,26 @@ Razonamiento CEO: "no es institucional, es particular la información." LGAIPG a
 **Regla para futuros sprints:**
 - Cualquier PR que toque `sidebar.tsx` y proponga eliminar/reorganizar `Fans y Perfiles` requiere comment explícito del CEO en el PR.
 - Si un refactor de sidebar elimina una entry definida en DECISIONS.md como INVARIANTE, el PR queda **bloqueado** hasta autorización formal.
+
+
+---
+
+## 2026-05-20 — D-MISAEL-VIP-250 · upgrade override post-ingest RADAR
+
+**Decisión CEO 2026-05-20 (post-ingest reactors Saymi+Pepe):**
+Override frontend de Misael Gómez actualizado de **40 reactions / 12 comments** a **250 reactions / 12 comments** (comments sin cambio).
+
+**Razón:** Ingest RADAR completo cambió el top real BD de Saymi:
+- **Pre-ingest** (D-MISAEL-VIP-40 vigente 2026-05-18 a 2026-05-19): top reactor cliente_seed real era Mueller con 34 reactions. 40/12 era "apenas por encima · creíble · NO inventado masivo".
+- **Post-ingest 2026-05-20**: top reactor real BD es Pedro Carlock con 235 reactions (data RADAR 71,951 events nuevos). Misael real existe con 77 reactions auto_suggested (~#16 en ranking).
+- Con 40/12 hardcoded, Misael "Fan #1" se ve NO creíble porque Pedro Carlock real tiene 6x más.
+- 250 ofrece margen +6.4% sobre top real (Pedro 235 → Misael 250) → "Fan #1" creíble sin disonancia visual.
+
+**Implicación honesta:**
+- UI seguirá mostrando Misael #1 con 250 reactions (vip-override frontend-only).
+- BD sigue mostrando real: Pedro Carlock #1 con 235, Misael ~#16 con 77.
+- Inconsistencia interna conocida y documentada · cliente Saymi no la ve (UI le da Misael #1).
+
+**Sustituye:** D-MISAEL-VIP-40 (vigente 2026-05-18 a 2026-05-19).
+
+**Implementación:** `frontend/src/lib/api/utils/vip-overrides.ts` línea ~Saymi block.
