@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ErrorBoundary } from "@/components/error-boundary";
 import {
   UnifiedPostCard,
   UnifiedPostCardSkeleton,
@@ -302,21 +303,25 @@ function HubInner() {
         {TAB_CONFIG.map((tab) => (
           <TabsContent key={tab.value} value={tab.value} className="space-y-4">
             <p className="text-xs text-muted-foreground">{tab.description}</p>
-            <Suspense
-              fallback={
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <UnifiedPostCardSkeleton key={i} variant="feed" />
-                  ))}
-                </div>
-              }
+            <ErrorBoundary
+              fallbackMessage={`No pudimos cargar la vista "${tab.label}". El resto del workspace sigue disponible.`}
             >
-              <ContenidoGrid
-                dirigenteId={dirigenteId}
-                view={tab.value}
-                filters={filters}
-              />
-            </Suspense>
+              <Suspense
+                fallback={
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <UnifiedPostCardSkeleton key={i} variant="feed" />
+                    ))}
+                  </div>
+                }
+              >
+                <ContenidoGrid
+                  dirigenteId={dirigenteId}
+                  view={tab.value}
+                  filters={filters}
+                />
+              </Suspense>
+            </ErrorBoundary>
           </TabsContent>
         ))}
       </Tabs>

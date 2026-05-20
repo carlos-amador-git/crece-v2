@@ -78,6 +78,19 @@ _INJECTION_PATTERNS = [
 # Caracteres de control no estándar (excluye \n \t \r) → reemplazar por espacio
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
+# D11 (2026-05-19) · PII patterns LFPDPPP MX
+_PII_PATTERNS = [
+    # Email RFC 5322 simplificado
+    (re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"), "[email]"),
+    # Teléfono MX (10 dígitos, varios formatos con espacios/guiones/paréntesis)
+    # Cubre: 999-123-4567 · 5512345678 · +52 55 1234 5678 · (999) 123-4567 · 55 1234 5678
+    (re.compile(r"(?:\+?52[\s-]?)?\(?\b\d{2,3}\)?[\s-]?\d{3,4}[\s-]?\d{4}\b"), "[tel]"),
+    # RFC personal MX (4 letras + 6 dígitos AAMMDD + 3 alfanum)
+    (re.compile(r"\b[A-Z]{4}\d{6}[A-Z0-9]{3}\b"), "[rfc]"),
+    # CURP MX (18 chars: 4 letras + 6 dígitos + H/M + 5 letras + 2 alfanum)
+    (re.compile(r"\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]{2}\b"), "[curp]"),
+]
+
 
 def _strip_patterns(text: str, *, source: str) -> tuple[str, list[str]]:
     """Aplica patterns y retorna (texto, list de patterns que matchearon)."""
@@ -121,13 +134,20 @@ def sanitize_user_input(text: str | None, *, max_length: int = 2000, field: str 
     return text.strip()
 
 
-def sanitize_data_field(text: str | None, *, max_length: int = 500) -> str:
+def sanitize_data_field(text: str | None, *, max_length: int = 500, strip_pii: bool = True) -> str:
     """Sanitiza campos de BD (posts content, comments quotes, etc).
 
     Estos vienen de scraping de redes sociales: el atacante NO es el user
     autenticado sino un author de post/comment que sabe que su contenido
     eventualmente llegará a un LLM. Defensa contra injection vía content
-    pasivo.
+    pasivo + PII stripping LFPDPPP.
+
+    Args:
+        text: texto a sanitizar
+        max_length: hard cap (default 500)
+        strip_pii: si True, reemplaza emails/teléfonos/RFC/CURP con tokens.
+            Default True para B4+D11. Solo desactivar si el texto YA pasó
+            por otro pipeline PII y se necesita preservar tokens originales.
 
     Returns string vacío si input None.
     """
@@ -136,6 +156,10 @@ def sanitize_data_field(text: str | None, *, max_length: int = 500) -> str:
 
     text = _CONTROL_CHARS.sub(" ", text)
     text, _matched = _strip_patterns(text, source="data")
+
+    if strip_pii:
+        for pii_pattern, replacement in _PII_PATTERNS:
+            text = pii_pattern.sub(replacement, text)
 
     if len(text) > max_length:
         text = text[:max_length] + "..."

@@ -35,6 +35,13 @@ const nextConfig = {
         destination: "/dashboard/hub?tab=fans",
         permanent: true,
       },
+      // D12 (2026-05-19) · colisión label "Contenido" sidebar (Content Factory
+      // vs Hub). Renombrado a /content-factory.
+      {
+        source: "/dashboard/contenido",
+        destination: "/dashboard/content-factory",
+        permanent: true,
+      },
     ];
   },
 };

@@ -7,11 +7,10 @@ import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
 import { TonoDiscursoChart } from "@/components/charts/tono-discurso-chart";
 import { PostCard } from "@/components/social/post-card";
 import { useKpiOverview, useTopDirigentes, useSystemStatus } from "@/lib/api/hooks/use-overview";
-import { useSentimentTrend, useSocialPosts, useSentimentCoverage, useTonoDiscursoTrend, useTonoDiscursoCoverage } from "@/lib/api/hooks/use-social";
+import { useSocialPosts, useTonoDiscursoTrend, useTonoDiscursoCoverage } from "@/lib/api/hooks/use-social";
 import { formatNumber, formatRelativeTime, cn } from "@/lib/utils";
 import { CrisisAlertList } from "@/components/alerts/crisis-alert-list";
 import {
@@ -147,8 +146,8 @@ export default function OverviewPage() {
   const firstDirigenteId = topDirigentes?.[0]?.id;
   const filterDays: Record<typeof activeFilter, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
   // P1 #1 (2026-05-19): migración a tono_discurso (matriz polaridad v2).
-  // useSentimentTrend legacy queda disponible para compat pero NO se usa
-  // aquí. Cleanup endpoint legacy en sprint posterior.
+  // D14 (2026-05-19): useSentimentTrend legacy hook ELIMINADO. Endpoint
+  // backend /social/sentiment-timeline pendiente cleanup confirm 0 consumers.
   const { data: tonoData, isLoading: tonoLoading } = useTonoDiscursoTrend(
     filterDays[activeFilter],
     firstDirigenteId,

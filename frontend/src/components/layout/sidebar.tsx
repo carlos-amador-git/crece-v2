@@ -137,7 +137,7 @@ const sections: Section[] = [
       group("territorio", "Territorio y campana", MapPin, [
         leaf("/dashboard/ciudadanos", "Ciudadanos", Users),
         leaf("/dashboard/scoring", "Scoring", BarChart3),
-        leaf("/dashboard/contenido", "Contenido", FileText),
+        leaf("/dashboard/content-factory", "Content Factory", FileText),
         leaf("/dashboard/campanas", "Campanas", Send),
         leaf("/dashboard/canvassing", "Canvassing", MapPin),
         leaf("/dashboard/participacion", "Participacion", Vote),
@@ -278,8 +278,9 @@ export function Sidebar() {
             : { borderLeft: "3px solid transparent" }
         }
         aria-current={active ? "page" : undefined}
+        aria-label={collapsed ? item.label : undefined}
       >
-        <item.icon className="h-4 w-4 shrink-0" />
+        <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
         {!collapsed && <span>{item.label}</span>}
       </Link>
     );

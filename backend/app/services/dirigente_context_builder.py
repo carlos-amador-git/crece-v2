@@ -23,6 +23,8 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from app.services.llm_sanitizer import sanitize_data_field
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -331,7 +333,10 @@ def format_context_for_prompt(ctx: dict[str, Any]) -> str:
         lines.append("- Posts recientes (muestra de estilo):")
         for p in ctx["posts_recientes_muestra"]:
             fecha = p["published_at"][:10] if p["published_at"] else "?"
-            snippet = p["content_snippet"].replace("\n", " ").strip()[:200]
+            # D11 (2026-05-19) · PII stripping LFPDPPP antes de LLM
+            snippet = sanitize_data_field(
+                p["content_snippet"].replace("\n", " "), max_length=200
+            )
             lines.append(f"  [{fecha}] \"{snippet}\"")
 
     # Promesas activas
@@ -358,25 +363,33 @@ def format_context_for_prompt(ctx: dict[str, Any]) -> str:
             lines.append("- Posts de mejor desempeño (alto engagement + polaridad positiva):")
             for w in perf["winners"]:
                 fecha = w["published_at"][:10] if w["published_at"] else "?"
-                snippet = w["snippet"].replace("\n", " ").strip()[:140]
+                snippet = sanitize_data_field(
+                    w["snippet"].replace("\n", " "), max_length=140
+                )
                 lines.append(
                     f"  [{fecha}] \"{snippet}\" → {w['likes']} likes, "
                     f"{w['n_comments']} comments, polaridad +{w['avg_polaridad']}"
                 )
                 if w.get("sample_quote_positive"):
-                    q = w["sample_quote_positive"].replace("\n", " ").strip()
+                    q = sanitize_data_field(
+                        w["sample_quote_positive"].replace("\n", " "), max_length=200
+                    )
                     lines.append(f"    Comentario representativo: \"{q}\"")
         if perf.get("losers"):
             lines.append("- Posts que generaron crítica (alto engagement pero polaridad negativa):")
             for loser in perf["losers"]:
                 fecha = loser["published_at"][:10] if loser["published_at"] else "?"
-                snippet = loser["snippet"].replace("\n", " ").strip()[:140]
+                snippet = sanitize_data_field(
+                    loser["snippet"].replace("\n", " "), max_length=140
+                )
                 lines.append(
                     f"  [{fecha}] \"{snippet}\" → {loser['likes']} likes, "
                     f"{loser['n_comments']} comments, polaridad {loser['avg_polaridad']}"
                 )
                 if loser.get("sample_quote_negative"):
-                    q = loser["sample_quote_negative"].replace("\n", " ").strip()
+                    q = sanitize_data_field(
+                        loser["sample_quote_negative"].replace("\n", " "), max_length=200
+                    )
                     lines.append(f"    Crítica representativa: \"{q}\"")
 
     return "\n".join(lines)
