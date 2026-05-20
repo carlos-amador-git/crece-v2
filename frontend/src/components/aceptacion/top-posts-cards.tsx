@@ -93,7 +93,7 @@ function PostCard({
       <p className="mt-2 line-clamp-3 text-sm leading-snug">
         {item.content_snippet || <span className="italic text-muted-foreground">Sin texto</span>}
       </p>
-      <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground tabular-nums">
         <span className="inline-flex items-center gap-1">
           <ThumbsUp className="h-3 w-3" />
           {formatNumber(item.likes)}
@@ -101,9 +101,21 @@ function PostCard({
         <span className="inline-flex items-center gap-1">
           <MessageSquare className="h-3 w-3" />
           {formatNumber(item.n_comments)}
-          {item.n_classified_comments !== item.n_comments && (
-            <span className="text-[10px]">({item.n_classified_comments} NLP)</span>
-          )}
+        </span>
+        <span
+          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
+            item.n_classified_comments < 5
+              ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+              : "bg-muted text-muted-foreground"
+          }`}
+          title={
+            item.n_classified_comments < 5
+              ? "Muestra pequeña: el promedio se calcula sobre pocos comments y puede no reflejar opinión generalizada"
+              : "Comments clasificados por NLP que entran al promedio"
+          }
+        >
+          Muestra: {item.n_classified_comments} {item.n_classified_comments === 1 ? "comment" : "comments"} NLP
+          {item.n_classified_comments < 5 && " · pequeña"}
         </span>
       </div>
     </button>
@@ -114,9 +126,9 @@ function EmptyState({ kind }: { kind: "winners" | "losers" }) {
   return (
     <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-center">
       <p className="text-xs text-muted-foreground">
-        Sin posts {kind === "winners" ? "ganadores" : "negativos"} en este periodo.
+        Sin posts con {kind === "winners" ? "recepción favorable" : "rechazo concentrado"} en este periodo.
         <br />
-        <span className="text-[10px]">Requiere ≥3 comments clasificados por NLP.</span>
+        <span className="text-[10px]">Requiere posts con likes ≥ 1 y ≥3 comments clasificados por NLP.</span>
       </p>
     </div>
   );

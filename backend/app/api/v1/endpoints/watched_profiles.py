@@ -653,6 +653,10 @@ async def watched_top_posts(
     order = "DESC" if kind == "winners" else "ASC"
     polarity_filter = "AVG(sc.nlp_polaridad) > 0" if kind == "winners" else "AVG(sc.nlp_polaridad) < 0"
 
+    # Salvaguarda 2026-05-20 (CEO Issue #3): excluir posts sin ninguna reacción
+    # pública (sp.likes >= 1). Defensa contra "posts huérfanos rankeados solo
+    # por polaridad NLP". En Saymi BD actual no afecta el ranking (mínimo
+    # observado 20 likes), pero protege otros dirigentes con corpus menor.
     rows = (await db.execute(text(f"""
         SELECT
           sp.id AS post_id,
@@ -669,6 +673,7 @@ async def watched_top_posts(
         WHERE sps.dirigente_id=:did
           AND sps.platform='FACEBOOK'
           AND sp.published_at >= NOW() - (:days || ' days')::interval
+          AND sp.likes >= 1
         GROUP BY sp.id
         HAVING COUNT(sc.id) FILTER (WHERE sc.nlp_polaridad IS NOT NULL) >= 3
           AND {polarity_filter}
