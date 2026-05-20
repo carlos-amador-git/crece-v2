@@ -50,6 +50,18 @@ const nextConfig = {
         destination: "/dashboard/aceptacion/fans-y-perfiles",
         permanent: true,
       },
+      // D-ACEPTACION-DEDUPE-2026-05-20 · rutas eliminadas porque eran 100%
+      // duplicadas de /aceptacion adaptive. Redirects 308 para back-compat.
+      {
+        source: "/dashboard/aceptacion/dirigentes",
+        destination: "/dashboard/aceptacion",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/aceptacion/fantasmas",
+        destination: "/dashboard/aceptacion",
+        permanent: true,
+      },
     ];
   },
 };

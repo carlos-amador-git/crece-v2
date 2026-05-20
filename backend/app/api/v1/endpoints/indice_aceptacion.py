@@ -48,6 +48,31 @@ def _require_tenant_access(user: User, post_org_id: int | None) -> None:
         )
 
 
+def _require_dirigente_access(
+    user: User, post_org_id: int | None, target_dirigente_id: int
+) -> None:
+    """Tenant access + restricción intra-tenant para roles individuales.
+
+    Reglas:
+      - admin/analyst: ven cualquier dirigente de su org (post_org_id).
+      - viewer/field_operator: si tienen user.dirigente_id asignado, solo
+        pueden ver SU dirigente_id. Cualquier otro id de la misma org → 403.
+      - viewer/field_operator sin user.dirigente_id (caso raro): solo
+        tenant access aplica (compatibilidad con cuentas viejas).
+
+    Agregado 2026-05-20 (D-VIEWER-SELF-ACCESS) tras CEO clarificó: viewer
+    solo ve lo suyo, "Por dirigente" como vista era admin-only. Cierra
+    scope leak intra-tenant detectado en sprint AUDIT-SECURITY-RBAC.
+    """
+    _require_tenant_access(user, post_org_id)
+    if user.role in ("viewer", "field_operator") and user.dirigente_id is not None:
+        if target_dirigente_id != user.dirigente_id:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "Sin acceso a otro dirigente de tu organización",
+            )
+
+
 @router.get("/posts/{post_id}/ia", response_model=IAScores)
 async def get_ia_por_post(
     post_id: int,
@@ -56,7 +81,7 @@ async def get_ia_por_post(
 ) -> IAScores:
     post_row = (await db.execute(
         text("""
-            SELECT p.id, p.platform_post_id, p.profile_id, d.org_id
+            SELECT p.id, p.platform_post_id, p.profile_id, d.org_id, sp.dirigente_id
             FROM social_posts p
             JOIN social_profiles sp ON sp.id = p.profile_id
             JOIN dirigentes d ON d.id = sp.dirigente_id
@@ -66,7 +91,7 @@ async def get_ia_por_post(
     )).first()
     if not post_row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Post no existe")
-    _require_tenant_access(current_user, post_row[3])
+    _require_dirigente_access(current_user, post_row[3], post_row[4])
 
     scores_sql = text("""
         SELECT
@@ -169,7 +194,7 @@ async def get_ia_summary_dirigente(
     )).first()
     if not d_row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Dirigente no existe")
-    _require_tenant_access(current_user, d_row[0])
+    _require_dirigente_access(current_user, d_row[0], dirigente_id)
 
     # KPI agregados: porcentaje sobre TODOS los comments analizados — paridad
     # con /aceptacion/overview (que también calcula así). El filtro HAVING >= 5

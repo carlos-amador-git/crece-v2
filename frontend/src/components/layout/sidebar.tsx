@@ -109,14 +109,17 @@ const sections: Section[] = [
       // Rutas viejas siguen funcionando vía redirects 308 (rollback friendly).
       leaf("/dashboard/hub", "Contenido", MessageSquare),
       leaf("/dashboard/social/clima", "Clima Político", Activity),
+      // D-ACEPTACION-DEDUPE-2026-05-20 · grupo reducido de 4 items a 2:
+      // - "Aceptación" (página adaptive según rol+N: perfil para viewer/N=1,
+      //   Battle Card comparativa para admin N>1)
+      // - "Fans y Perfiles" (D-FANS-PERFILES-INDEPENDENT-ROUTE)
+      //
+      // Eliminados: "Por dirigente" (sidebar admin-only que duplicaba grid de
+      // /aceptacion) y "Fantasmas" (duplicaba tabla; breakdown por plataforma
+      // se absorbió en DirigenteDetailContent). Redirects 308 en
+      // next.config.mjs para back-compat de links viejos.
       group("aceptacion", "Indice Aceptacion", Gauge, [
-        leaf("/dashboard/aceptacion", "Overview", LayoutDashboard),
-        leaf("/dashboard/aceptacion/dirigentes", "Por dirigente", UserSquare2),
-        leaf("/dashboard/aceptacion/fantasmas", "Fantasmas", Ghost),
-        // D-FANS-PERFILES-INDEPENDENT-ROUTE (2026-05-20) · CEO pidió varias veces
-        // que sea ruta propia, no tab dentro de Fantasmas. Página vive en
-        // /dashboard/aceptacion/fans-y-perfiles. Redirect 308 desde
-        // fantasmas?tab=observados en next.config.mjs para back-compat.
+        leaf("/dashboard/aceptacion", "Aceptación", LayoutDashboard),
         leaf("/dashboard/aceptacion/fans-y-perfiles", "Fans y Perfiles", Eye),
       ]),
       leaf("/dashboard/planes", "Planes IA", Brain),
