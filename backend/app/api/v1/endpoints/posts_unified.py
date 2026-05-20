@@ -178,6 +178,7 @@ async def _view_comentarios(
             SELECT
                 parent_post_id,
                 COUNT(*) FILTER (WHERE nlp_polaridad IS NOT NULL) AS classified,
+                COUNT(*) AS ingested,
                 AVG(nlp_polaridad)::float AS avg_pol
             FROM social_comments
             WHERE parent_post_id = ANY(:ids)
@@ -187,6 +188,7 @@ async def _view_comentarios(
         for row in stats:
             quotes_by_post[row.parent_post_id] = {
                 "classified": int(row.classified or 0),
+                "ingested": int(row.ingested or 0),
                 "avg_pol": row.avg_pol,
                 "samples": [],
             }
@@ -207,7 +209,7 @@ async def _view_comentarios(
         quote_rows = (await db.execute(quotes_q, {"ids": post_ids})).all()
         for qr in quote_rows:
             entry = quotes_by_post.setdefault(
-                qr.parent_post_id, {"classified": 0, "avg_pol": None, "samples": []}
+                qr.parent_post_id, {"classified": 0, "ingested": 0, "avg_pol": None, "samples": []}
             )
             entry["samples"].append(
                 QuoteSample(text=qr.content[:300], polaridad=float(qr.nlp_polaridad))
@@ -215,7 +217,7 @@ async def _view_comentarios(
 
     items = []
     for p, handle, plat in rows:
-        stats = quotes_by_post.get(p.id, {"classified": 0, "avg_pol": None, "samples": []})
+        stats = quotes_by_post.get(p.id, {"classified": 0, "ingested": 0, "avg_pol": None, "samples": []})
         items.append(
             PostComentariosItem(
                 id=p.id,
@@ -234,6 +236,7 @@ async def _view_comentarios(
                     if p.comments
                     else None
                 ),
+                comments_ingested_count=stats["ingested"],
                 avg_polaridad=stats["avg_pol"],
                 sample_quotes=stats["samples"],
             )

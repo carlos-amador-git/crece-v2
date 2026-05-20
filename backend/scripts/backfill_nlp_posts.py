@@ -188,7 +188,8 @@ def validate_item(item: dict, expected_id: int) -> dict | None:
     }
 
 
-def process_batch(conn, batch: list[dict], dirigente_nombre: str, rol: str, dry_run: bool) -> tuple[int, int]:
+def process_batch(conn, batch: list[dict], dirigente_nombre: str, rol: str,
+                  dry_run: bool, include_legacy: bool = False) -> tuple[int, int]:
     prompt = build_batch_prompt(batch, dirigente_nombre, rol)
     raw = call_cc_with_retry(prompt)
     if raw is None:
@@ -219,10 +220,11 @@ def process_batch(conn, batch: list[dict], dirigente_nombre: str, rol: str, dry_
         print(f"  [batch] dry-run, no UPDATE. Sample: {updates[:2]}")
         return len(updates), len(batch) - len(updates)
 
+    where_legacy = "OR nlp_model_version IS NULL" if include_legacy else ""
     with conn.cursor() as cur:
         for u in updates:
             cur.execute(
-                """
+                f"""
                 UPDATE social_posts
                 SET tono_discurso = %s,
                     target_politico = %s,
@@ -231,7 +233,7 @@ def process_batch(conn, batch: list[dict], dirigente_nombre: str, rol: str, dry_
                     llm_modelo = %s,
                     llm_processed_at = NOW(),
                     clasificacion_origen = 'ai_suggested'
-                WHERE id = %s AND tono_discurso IS NULL
+                WHERE id = %s AND (tono_discurso IS NULL {where_legacy})
                 """,
                 (u["tono"], u["target"], u["polaridad"], MODEL_VERSION_CC, MODEL_VERSION_CC, u["id"]),
             )
@@ -262,6 +264,9 @@ def main():
     parser.add_argument("--limit", type=int, default=200)
     parser.add_argument("--batch-size", type=int, default=5)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--include-legacy", action="store_true",
+                        help="También sobreescribir posts con vocabulario legacy "
+                             "(positivo/neutral/negativo · nlp_model_version IS NULL) con v2")
     args = parser.parse_args()
 
     with psycopg.connect(DB_URL) as conn:
@@ -269,14 +274,15 @@ def main():
         print(f"Backfill NLP posts — dirigente_id={args.dirigente_id} ({nombre}, {rol}), "
               f"limit={args.limit}, batch={args.batch_size}, dry_run={args.dry_run}")
 
+        where_legacy = "OR sp.nlp_model_version IS NULL" if args.include_legacy else ""
         with conn.cursor() as cur:
             cur.execute(
-                """
+                f"""
                 SELECT sp.id, COALESCE(sp.content,'') AS content, sprof.platform::text
                 FROM social_posts sp
                 JOIN social_profiles sprof ON sp.profile_id = sprof.id
                 WHERE sprof.dirigente_id = %s
-                  AND sp.tono_discurso IS NULL
+                  AND (sp.tono_discurso IS NULL {where_legacy})
                 ORDER BY sp.published_at DESC NULLS LAST, sp.id
                 LIMIT %s
                 """,
@@ -303,7 +309,7 @@ def main():
             eta = (total - i) / rate if rate > 0 else 0
             print(f"\n[batch {batch_num}/{n_batches}] ids={[p['id'] for p in batch]} · "
                   f"elapsed={elapsed:.0f}s · eta={eta:.0f}s")
-            n_u, n_f = process_batch(conn, batch, nombre, rol, args.dry_run)
+            n_u, n_f = process_batch(conn, batch, nombre, rol, args.dry_run, args.include_legacy)
             total_updated += n_u
             total_failed += n_f
             print(f"  → updated={n_u}, failed={n_f} (cum: {total_updated}/{total})")

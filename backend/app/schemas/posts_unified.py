@@ -50,6 +50,10 @@ class PostComentariosItem(PostUnifiedBase):
     data_source: Literal["mixed"] = "mixed"
     comments_classified: int = 0
     comments_classified_pct: float | None = None
+    comments_ingested_count: int = 0
+    """Total de comments en BD CRECE (independiente de si tienen NLP).
+    Para clarificar UX cuando social_posts.comments (counter scraper FB API) >
+    comments realmente ingestados via RADAR/Apify."""
     avg_polaridad: float | None = None
     sample_quotes: list[QuoteSample] = Field(default_factory=list)
 

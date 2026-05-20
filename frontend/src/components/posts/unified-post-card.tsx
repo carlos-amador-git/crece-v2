@@ -54,6 +54,8 @@ export interface PostUnified {
   cobertura_pct?: number | null;
   comments_total: number | null;
   comments_classified_pct?: number | null;
+  /** Total comments en BD CRECE (independiente de NLP) · si difiere de comments_total revela gap scraper-vs-real */
+  comments_ingested_count?: number | null;
   /** Polaridad promedio de comments con NLP (-1 a +1). */
   polaridad_avg?: number | null;
   polaridad_label?: "positivo" | "negativo" | "neutral" | "mixto" | null;
@@ -196,10 +198,28 @@ export function UnifiedPostCard({
             </span>
           )}
           {post.comments_total != null && (
-            <span className="flex items-center gap-1" title="Comments totales en el post.">
+            <span
+              className="flex items-center gap-1"
+              title={
+                post.comments_ingested_count != null && post.comments_ingested_count !== post.comments_total
+                  ? `${post.comments_total} comments publicados según el contador del scraper. ${post.comments_ingested_count} fueron ingestados en CRECE.`
+                  : "Comments totales en el post."
+              }
+            >
               <MessageCircle className="h-3.5 w-3.5" />
               <span className="font-medium">{formatNumber(post.comments_total)}</span>
-              <span className="text-[10px] text-muted-foreground/70">coment.</span>
+              {post.comments_ingested_count != null
+                && post.comments_ingested_count !== post.comments_total
+                && post.comments_total > 0 && (
+                <span className="text-[10px] text-muted-foreground/70">
+                  {" · "}
+                  <span className="font-medium">{formatNumber(post.comments_ingested_count)}</span> ingestados
+                </span>
+              )}
+              {(post.comments_ingested_count == null
+                || post.comments_ingested_count === post.comments_total) && (
+                <span className="text-[10px] text-muted-foreground/70">coment.</span>
+              )}
             </span>
           )}
           {post.shares != null && post.shares > 0 && !showCompact && (
