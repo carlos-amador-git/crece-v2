@@ -48,12 +48,17 @@ logger = logging.getLogger(__name__)
 
 # Patterns más comunes de prompt injection
 # El orden importa: más específico → más genérico
+# Role hijacking PRIMERO (Gemini cross-audit 2026-05-19) · antes del delim filter
+# para detectar "</context>system: ..." con tag de cierre intacto:
 _INJECTION_PATTERNS = [
+    #  (a) inicio de línea ESTRICTO multiline (corrige falso positivo "Estado del system: caído")
+    (re.compile(r"(?im)^\s*(?:system|assistant|user|tool|developer)\s*:\s*", re.MULTILINE), "[role] "),
+    #  (b) post cierre de tag XML (cubre </context>system: del ataque común)
+    (re.compile(r"(?i)</[a-z_]+>\s*(?:system|assistant|user|tool|developer)\s*:\s*"), "[role] "),
+    #  (c) tokens chatml conocidos
+    (re.compile(r"(?i)<\|im_(?:start|end)\|>(?:system|assistant|user|tool)?"), "[role]"),
     # Cierre de delimitadores estructurales que pudimos usar nosotros
     (re.compile(r"</?\s*(context|user_input|context_data|system|assistant|instructions|prompt|task)\s*>", re.IGNORECASE), "[delim]"),
-    # Role hijacking: inicio de línea, post-whitespace, o post-delimitador cerrado
-    # (cubre el ataque "</context>system: ..." donde el role no queda en inicio de línea)
-    (re.compile(r"(?i)(?:^|[\s>\]])\s*(system|assistant|user|tool|developer)\s*:\s*", re.MULTILINE), " [role] "),
     # Directivas anti-instrucción
     (
         re.compile(
