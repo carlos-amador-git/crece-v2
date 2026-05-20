@@ -47,6 +47,7 @@ import {
   Trophy,
   Film,
   Star,
+  Eye,
 } from "lucide-react";
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -112,6 +113,10 @@ const sections: Section[] = [
         leaf("/dashboard/aceptacion", "Overview", LayoutDashboard),
         leaf("/dashboard/aceptacion/dirigentes", "Por dirigente", UserSquare2),
         leaf("/dashboard/aceptacion/fantasmas", "Fantasmas", Ghost),
+        // D-FANS-PERFILES-SIDEBAR-INVARIANTE (2026-05-19) · CEO requirement
+        // restaurado tras rework F4 Content Hub → audit cierre. NO ELIMINAR
+        // sin autorización explícita CEO en sesión.
+        leaf("/dashboard/aceptacion/fantasmas?tab=observados", "Fans y Perfiles", Eye),
       ]),
       leaf("/dashboard/planes", "Planes IA", Brain),
       leaf("/dashboard/reels", "Reels (guiones)", Film),
@@ -137,7 +142,7 @@ const sections: Section[] = [
       group("territorio", "Territorio y campana", MapPin, [
         leaf("/dashboard/ciudadanos", "Ciudadanos", Users),
         leaf("/dashboard/scoring", "Scoring", BarChart3),
-        leaf("/dashboard/contenido", "Contenido", FileText),
+        leaf("/dashboard/content-factory", "Content Factory", FileText),
         leaf("/dashboard/campanas", "Campanas", Send),
         leaf("/dashboard/canvassing", "Canvassing", MapPin),
         leaf("/dashboard/participacion", "Participacion", Vote),
@@ -278,8 +283,9 @@ export function Sidebar() {
             : { borderLeft: "3px solid transparent" }
         }
         aria-current={active ? "page" : undefined}
+        aria-label={collapsed ? item.label : undefined}
       >
-        <item.icon className="h-4 w-4 shrink-0" />
+        <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
         {!collapsed && <span>{item.label}</span>}
       </Link>
     );

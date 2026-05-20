@@ -2190,3 +2190,26 @@ Razonamiento CEO: "no es institucional, es particular la información." LGAIPG a
 
 **Trabajo del endpoint ingest-monthly-snapshot queda listo para integrar cuando llegue el scraper.**
 
+
+
+---
+
+## 2026-05-19 — D-FANS-PERFILES-SIDEBAR-INVARIANTE · NO eliminar
+
+**Decisión CEO 2026-05-19:** La entrada de sidebar `"Fans y Perfiles" → /dashboard/aceptacion/fantasmas?tab=observados` es **INVARIANTE**. No se elimina en futuros refactors de sidebar sin autorización CEO explícita en sesión.
+
+**Razón:** Rework detectado. Histórico del PR-flow:
+- PR #50 (2026-05-18 follow-up D-MISAEL-VIP-40): CEO pidió entrada "Fans y Perfiles" como standalone en sidebar
+- PR #54 (2026-05-19 maratón F4 Content Hub): la entrada fue **eliminada** como parte de consolidación "Contenido" único. Sin CEO objetar explícitamente porque dijo "cliente no ha visto la app" — entendí como autorización tácita para reorganizar todo el sidebar
+- PR #55 (este audit cierre): CEO detectó la pérdida al revisar `/dashboard/aceptacion/fantasmas` y notar que la entrada YA NO está en sidebar. Texto verbatim CEO: "y no se supone qeu los perfiles observados eran parte del sidemenu, de hecho así los revise antes, y ahora los volviste a cambiar... esto ya lo habíamos hecho y es volverlo a hacer."
+
+**Aprendizaje:** "Cliente no ha visto la app" NO es autorización para eliminar features que el CEO ya pidió antes. Consolidación de sidebar requiere preservar lo que el CEO ya definió como necesario, incluso si reduce de 4 → 1 ítems "Contenido".
+
+**Implementación 2026-05-19:**
+- `sidebar.tsx`: leaf agregado en grupo "Indice Aceptacion" después de "Fantasmas". Icono Eye. Apunta a `/dashboard/aceptacion/fantasmas?tab=observados`.
+- `fantasmas/page.tsx`: deep-link via `useSearchParams` lee `?tab=` y setea `defaultValue` del Tabs component. Suspense wrapper agregado.
+- Tab values existentes preservados (`resumen`, `por-plataforma`, `observados`). NO se renombran.
+
+**Regla para futuros sprints:**
+- Cualquier PR que toque `sidebar.tsx` y proponga eliminar/reorganizar `Fans y Perfiles` requiere comment explícito del CEO en el PR.
+- Si un refactor de sidebar elimina una entry definida en DECISIONS.md como INVARIANTE, el PR queda **bloqueado** hasta autorización formal.

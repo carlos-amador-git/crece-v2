@@ -16,38 +16,40 @@ on:
   # como pre-requisito de Fase 3 branches recovery (auditoría 2026-05-09 detectó
   # 0 runs históricos automáticos del workflow).
   #
-  # Nota B-CI-01 (sigue abierto): los tests Playwright contra BASE_URL hardcoded
-  # localhost:8002 fallan en runner GH Actions (ECONNREFUSED · sin backend Crece
-  # levantado). Hasta que B-CI-01 (postgres docker + seed + uvicorn ephemeral)
-  # esté resuelto, el job lint/build sí corre, pero los specs Playwright contra
-  # rutas con backend fallarán de forma esperada en push/pull_request.
+  # Nota B-CI-01 (abierto · re-evaluar cuando se agregue backend a CI):
+  # los tests Playwright requieren backend real. En push/pull_request no hay
+  # backend en runner GH Actions → modo lint+typecheck+build only.
   #
-  # En workflow_dispatch + deployment_status (Vercel Preview) sí pasan porque el
-  # BASE_URL apunta a un deployment con backend real.
+  # 2026-05-19 (PR #55 audit cierre · D-FIX-CI-SMOKE-DEPLOYMENT-STATUS):
+  # Trigger `deployment_status` REMOVIDO porque el preview de Vercel del
+  # proyecto `crece-v2` tiene Vercel SSO Password Protection (HTTP 401) que
+  # bloquea Playwright. Cada PR desde 2026-05-08 falló este check generando
+  # ruido tóxico (~10+ overrides). Re-activar cuando: (a) backend en CI vía
+  # docker postgres + uvicorn ephemeral, o (b) Vercel SSO desactivado en el
+  # proyecto crece-v2 con un mecanismo de bypass para Playwright.
+  #
+  # Para correr playwright manualmente contra un BASE_URL real:
+  #   gh workflow run e2e-smoke.yml -f base_url=https://...
   push:
     branches: [main]
   pull_request:
     branches: [main]
-  deployment_status:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "BASE_URL para Playwright (URL preview Vercel o equivalente con backend accesible)"
+        description: "BASE_URL para Playwright (URL accesible con backend real, sin SSO wall)"
         required: false
         type: string
 
 jobs:
   smoke:
     # Corre en:
-    # - workflow_dispatch (manual con BASE_URL)
-    # - deployment_status Preview success (Vercel Preview con backend real)
-    # - push a main / pull_request a main (modo lint+build, skip Playwright contra backend)
+    # - workflow_dispatch (manual con BASE_URL · invoca playwright real)
+    # - push a main / pull_request a main (modo lint+typecheck+build, skip Playwright)
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' ||
-      github.event_name == 'pull_request' ||
-      (github.event.deployment_status.state == 'success' &&
-       github.event.deployment_status.environment == 'Preview')
+      github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     defaults:

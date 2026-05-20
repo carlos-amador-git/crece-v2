@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { Suspense, useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useAceptacionOverview, useFantasmasPorPlataforma } from "@/lib/api/hooks/use-aceptacion";
 import type { DirigentePlatformFantasmas } from "@/lib/api/hooks/use-aceptacion";
@@ -76,9 +77,17 @@ function PlatformBreakdown({ data }: { data: DirigentePlatformFantasmas }) {
   );
 }
 
-export default function FantasmasPage() {
+function FantasmasInner() {
   const { data: overview, isLoading: overviewLoading, error } = useAceptacionOverview();
   const { data: plataformas, isLoading: platLoading } = useFantasmasPorPlataforma();
+
+  // Deep-link desde sidebar · ?tab=observados activa tab "Perfiles Observados"
+  // (D-FANS-PERFILES-SIDEBAR-INVARIANTE · ver DECISIONS.md 2026-05-19)
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialTab = ["resumen", "por-plataforma", "observados"].includes(tabParam ?? "")
+    ? (tabParam as string)
+    : "resumen";
 
   // Default dirigente para tab "Perfiles Observados":
   // 1. Si el user logueado es un dirigente accesible → ese
@@ -154,7 +163,7 @@ export default function FantasmasPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="resumen" className="w-full">
+      <Tabs defaultValue={initialTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
           <TabsTrigger value="resumen">
             <Ghost className="mr-1.5 h-3.5 w-3.5" /> Resumen agregado
@@ -325,5 +334,13 @@ export default function FantasmasPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function FantasmasPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-[60vh] w-full" />}>
+      <FantasmasInner />
+    </Suspense>
   );
 }

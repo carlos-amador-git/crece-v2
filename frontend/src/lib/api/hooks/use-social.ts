@@ -3,7 +3,6 @@ import { api } from "../client";
 import type {
   SocialPost,
   SocialFilters,
-  SentimentTrend,
   SentimentDistribution,
   PaginatedResponse,
 } from "../types";
@@ -27,54 +26,9 @@ export function useSocialPosts(filters: SocialFilters = {}) {
   });
 }
 
-export interface SentimentTrendOptions {
-  platform?: string;
-  includeRts?: boolean;
-}
-
-export function useSentimentTrend(
-  days: number = 30,
-  dirigenteId?: number,
-  options: SentimentTrendOptions = {},
-) {
-  const params = new URLSearchParams();
-  if (dirigenteId) params.set("dirigente_id", String(dirigenteId));
-  if (options.platform) params.set("platform", options.platform.toUpperCase());
-  if (options.includeRts) params.set("include_rts", "true");
-
-  return useQuery({
-    queryKey: ["sentiment-trend", days, dirigenteId, options.platform ?? "", options.includeRts ?? false],
-    queryFn: () =>
-      api.get<SentimentTrend[]>(`/social/sentiment-timeline?${params}`),
-    enabled: dirigenteId != null,
-  });
-}
-
-export interface SentimentCoverage {
-  dirigente_id: number;
-  days: number;
-  total_posts: number;
-  classified: number;
-  passed_filters: number;
-  coverage_pct: number;
-}
-
-export function useSentimentCoverage(
-  dirigenteId: number | undefined,
-  days: number = 30,
-  includeRts: boolean = false,
-) {
-  const params = new URLSearchParams();
-  if (dirigenteId) params.set("dirigente_id", String(dirigenteId));
-  params.set("days", String(days));
-  if (includeRts) params.set("include_rts", "true");
-
-  return useQuery({
-    queryKey: ["sentiment-coverage", dirigenteId, days, includeRts],
-    queryFn: () => api.get<SentimentCoverage>(`/social/sentiment-coverage?${params}`),
-    enabled: dirigenteId != null,
-  });
-}
+// D14 (2026-05-19) · sentiment legacy hooks removidos · migrado 100% a
+// useTonoDiscursoTrend + useTonoDiscursoCoverage. Endpoint backend
+// /social/sentiment-timeline diferido hasta confirmar 0 consumers externos.
 
 // ──────────────────────────────────────────────────────────────
 // Tono Discursivo · matriz polaridad v2 (2026-05-19)
@@ -89,10 +43,15 @@ export interface TonoDiscursoTimelinePoint {
   tonos: Record<string, number>;
 }
 
+export interface TonoDiscursoTrendOptions {
+  platform?: string;
+  includeRts?: boolean;
+}
+
 export function useTonoDiscursoTrend(
   days: number = 30,
   dirigenteId?: number,
-  options: SentimentTrendOptions = {},
+  options: TonoDiscursoTrendOptions = {},
 ) {
   const params = new URLSearchParams();
   if (dirigenteId) params.set("dirigente_id", String(dirigenteId));

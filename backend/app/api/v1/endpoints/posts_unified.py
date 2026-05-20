@@ -15,11 +15,12 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import Date, cast, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.core.scope import assert_dirigente_access
 from app.core.security import get_current_user
 from app.models.social import SocialPost, SocialProfile
@@ -329,7 +330,9 @@ async def _view_fans(
 
 
 @router.get("/unified", response_model=PostsUnifiedResponse)
+@limiter.limit("60/minute")
 async def posts_unified(
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int,
