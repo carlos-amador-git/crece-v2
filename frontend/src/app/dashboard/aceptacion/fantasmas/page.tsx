@@ -1,25 +1,15 @@
 "use client";
 
-import { Suspense, useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { Suspense } from "react";
 import { useAceptacionOverview, useFantasmasPorPlataforma } from "@/lib/api/hooks/use-aceptacion";
 import type { DirigentePlatformFantasmas } from "@/lib/api/hooks/use-aceptacion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatNumber } from "@/lib/utils";
-import { Ghost, ChevronRight, Eye } from "lucide-react";
+import { Ghost, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import WatchedProfilesTab from "@/components/aceptacion/watched-profiles-tab";
 
 const PLATFORM_LABELS: Record<string, string> = {
   twitter: "Twitter",
@@ -81,46 +71,7 @@ function FantasmasInner() {
   const { data: overview, isLoading: overviewLoading, error } = useAceptacionOverview();
   const { data: plataformas, isLoading: platLoading } = useFantasmasPorPlataforma();
 
-  // Deep-link desde sidebar · ?tab=observados activa tab "Perfiles Observados"
-  // (D-FANS-PERFILES-SIDEBAR-INVARIANTE · ver DECISIONS.md 2026-05-19)
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const initialTab = ["resumen", "por-plataforma", "observados"].includes(tabParam ?? "")
-    ? (tabParam as string)
-    : "resumen";
-
-  // Default dirigente para tab "Perfiles Observados":
-  // 1. Si el user logueado es un dirigente accesible → ese
-  // 2. Si no, primer dirigente accesible
-  // 3. Si la lista está vacía → null (empty state explícito)
-  // Nunca hardcodeamos id por org-leak (era id=3 == Saymi).
-  const { user } = useAuth();
-  const [observedDirigenteId, setObservedDirigenteId] = useState<number | null>(null);
-  const [didAutoInit, setDidAutoInit] = useState(false);
-
   const isLoading = overviewLoading || platLoading;
-
-  const dirigentesList = useMemo(
-    () => overview?.dirigentes ?? [],
-    [overview],
-  );
-
-  useEffect(() => {
-    if (didAutoInit) return;
-    if (dirigentesList.length === 0) return;
-    const userDirigenteId = (user as { dirigente_id?: number } | null)?.dirigente_id;
-    const selfMatch = userDirigenteId
-      ? dirigentesList.find((d) => d.dirigente_id === userDirigenteId)
-      : undefined;
-    setObservedDirigenteId(selfMatch?.dirigente_id ?? dirigentesList[0].dirigente_id);
-    setDidAutoInit(true);
-  }, [user, dirigentesList, didAutoInit]);
-
-  const observedName = useMemo(() => {
-    if (observedDirigenteId === null) return "";
-    const d = dirigentesList.find((x) => x.dirigente_id === observedDirigenteId);
-    return d?.full_name ?? `Dirigente #${observedDirigenteId}`;
-  }, [observedDirigenteId, dirigentesList]);
 
   if (isLoading) {
     return (
@@ -154,25 +105,21 @@ function FantasmasInner() {
         <div className="flex items-center gap-2">
           <Ghost className="h-6 w-6 text-accent" />
           <h1 className="font-heading text-2xl font-bold tracking-tight">
-            Fantasmas y Perfiles Observados
+            Fantasmas
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Quien sigue al dirigente y quien interactúa con su contenido.
-          Combina vista agregada (fantasmas) y vista nominada (watchlist).
+          Vista agregada de followers que NO interactúan con el contenido del dirigente.
         </p>
       </div>
 
-      <Tabs defaultValue={initialTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+      <Tabs defaultValue="resumen" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
           <TabsTrigger value="resumen">
             <Ghost className="mr-1.5 h-3.5 w-3.5" /> Resumen agregado
           </TabsTrigger>
           <TabsTrigger value="por-plataforma">
             Por plataforma
-          </TabsTrigger>
-          <TabsTrigger value="observados">
-            <Eye className="mr-1.5 h-3.5 w-3.5" /> Perfiles Observados
           </TabsTrigger>
         </TabsList>
 
@@ -293,45 +240,6 @@ function FantasmasInner() {
           </div>
         </TabsContent>
 
-        {/* TAB 3 — Perfiles Observados */}
-        <TabsContent value="observados" className="mt-4 space-y-4">
-          {dirigentesList.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                Sin dirigentes accesibles en tu organización. Contacta al administrador.
-              </CardContent>
-            </Card>
-          ) : observedDirigenteId === null ? (
-            <Skeleton className="h-10 w-[280px]" />
-          ) : (
-            <>
-              {/* Selector de dirigente */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">Dirigente:</span>
-                <Select
-                  value={String(observedDirigenteId)}
-                  onValueChange={(v) => setObservedDirigenteId(Number(v))}
-                >
-                  <SelectTrigger className="w-[280px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dirigentesList.map((d) => (
-                      <SelectItem key={d.dirigente_id} value={String(d.dirigente_id)}>
-                        {d.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <WatchedProfilesTab
-                dirigenteId={observedDirigenteId}
-                dirigenteName={observedName}
-              />
-            </>
-          )}
-        </TabsContent>
       </Tabs>
     </div>
   );

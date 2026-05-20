@@ -42,6 +42,14 @@ const nextConfig = {
         destination: "/dashboard/content-factory",
         permanent: true,
       },
+      // D-FANS-PERFILES-INDEPENDENT-ROUTE (2026-05-20) · sacar Perfiles
+      // Observados del tab de Fantasmas a ruta propia.
+      {
+        source: "/dashboard/aceptacion/fantasmas",
+        has: [{ type: "query", key: "tab", value: "observados" }],
+        destination: "/dashboard/aceptacion/fans-y-perfiles",
+        permanent: true,
+      },
     ];
   },
 };

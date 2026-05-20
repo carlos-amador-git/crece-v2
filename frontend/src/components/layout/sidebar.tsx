@@ -113,10 +113,11 @@ const sections: Section[] = [
         leaf("/dashboard/aceptacion", "Overview", LayoutDashboard),
         leaf("/dashboard/aceptacion/dirigentes", "Por dirigente", UserSquare2),
         leaf("/dashboard/aceptacion/fantasmas", "Fantasmas", Ghost),
-        // D-FANS-PERFILES-SIDEBAR-INVARIANTE (2026-05-19) · CEO requirement
-        // restaurado tras rework F4 Content Hub → audit cierre. NO ELIMINAR
-        // sin autorización explícita CEO en sesión.
-        leaf("/dashboard/aceptacion/fantasmas?tab=observados", "Fans y Perfiles", Eye),
+        // D-FANS-PERFILES-INDEPENDENT-ROUTE (2026-05-20) · CEO pidió varias veces
+        // que sea ruta propia, no tab dentro de Fantasmas. Página vive en
+        // /dashboard/aceptacion/fans-y-perfiles. Redirect 308 desde
+        // fantasmas?tab=observados en next.config.mjs para back-compat.
+        leaf("/dashboard/aceptacion/fans-y-perfiles", "Fans y Perfiles", Eye),
       ]),
       leaf("/dashboard/planes", "Planes IA", Brain),
       leaf("/dashboard/reels", "Reels (guiones)", Film),
