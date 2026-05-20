@@ -47,6 +47,7 @@ import {
   Trophy,
   Film,
   Star,
+  Eye,
 } from "lucide-react";
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -112,6 +113,10 @@ const sections: Section[] = [
         leaf("/dashboard/aceptacion", "Overview", LayoutDashboard),
         leaf("/dashboard/aceptacion/dirigentes", "Por dirigente", UserSquare2),
         leaf("/dashboard/aceptacion/fantasmas", "Fantasmas", Ghost),
+        // D-FANS-PERFILES-SIDEBAR-INVARIANTE (2026-05-19) · CEO requirement
+        // restaurado tras rework F4 Content Hub → audit cierre. NO ELIMINAR
+        // sin autorización explícita CEO en sesión.
+        leaf("/dashboard/aceptacion/fantasmas?tab=observados", "Fans y Perfiles", Eye),
       ]),
       leaf("/dashboard/planes", "Planes IA", Brain),
       leaf("/dashboard/reels", "Reels (guiones)", Film),
