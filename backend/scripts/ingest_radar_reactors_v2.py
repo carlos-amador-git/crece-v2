@@ -30,7 +30,7 @@ import asyncpg
 
 DEFAULT_JSON = "/host/radar-reactors-saymi-fb-7days-2026-05-21.json"
 DIRIGENTE_ID = int(os.environ.get("DIRIGENTE_ID", "3"))  # default Saymi, override via env
-PLATFORM = "FACEBOOK"
+PLATFORM = os.environ.get("PLATFORM", "FACEBOOK")  # FB default · IG vía env
 
 
 async def main(json_path: Path, commit: bool) -> int:
@@ -38,7 +38,8 @@ async def main(json_path: Path, commit: bool) -> int:
         data = json.load(f)
 
     meta = data["export_meta"]
-    reactors = data["reactors"]
+    # Hugo v3 IG export usa "likers" en lugar de "reactors" · acepto ambos.
+    reactors = data.get("reactors") or data.get("likers") or []
     print(f"[meta] {meta.get('n_reactors')} reactors · {meta.get('unique_posts')} posts · {meta.get('unique_authors')} authors")
     print(f"[meta] generated_at={meta.get('generated_at_utc')} engine={meta.get('filter')}")
 
@@ -48,8 +49,15 @@ async def main(json_path: Path, commit: bool) -> int:
     )
     conn = await asyncpg.connect(dsn)
 
-    # 1) Mapear platform_post_id → post_id usando social_posts (Saymi FB only)
-    pp_ids = sorted({r["platform_post_id"] for r in reactors})
+    # 1) Mapear platform_post_id → post_id usando social_posts.
+    # Hugo v3 export (2026-05-21): si existe platform_post_id_base64, usarlo
+    # como primary (matchea con CRECE que insertó posts en base64). Fallback
+    # a platform_post_id_numeric o platform_post_id legacy. Fallback final a
+    # post_url match.
+    def _pp_key(r: dict) -> str:
+        return r.get("platform_post_id_base64") or r.get("platform_post_id") or r.get("platform_post_id_numeric") or ""
+
+    pp_ids = sorted({_pp_key(r) for r in reactors if _pp_key(r)})
     rows = await conn.fetch(
         """
         SELECT sp.platform_post_id, sp.id AS post_id, sps.dirigente_id
@@ -63,7 +71,27 @@ async def main(json_path: Path, commit: bool) -> int:
         pp_ids,
     )
     pp_to_post = {r["platform_post_id"]: r["post_id"] for r in rows}
-    print(f"[map] {len(pp_to_post)}/{len(pp_ids)} platform_post_ids resueltos a posts CRECE")
+    print(f"[map] {len(pp_to_post)}/{len(pp_ids)} platform_post_ids (base64) resueltos a posts CRECE")
+
+    # Fallback: para reactors con post_url pero pp_id no encontrado, buscar via URL substring.
+    urls_to_try = sorted({r.get("post_url", "") for r in reactors if r.get("post_url") and _pp_key(r) not in pp_to_post})
+    url_to_post: dict[str, int] = {}
+    if urls_to_try:
+        # Extrae pfbid del URL para hacer LIKE match en raw_data->>'url'
+        for u in urls_to_try[:500]:  # cap defensa N+1
+            row = await conn.fetchrow(
+                """
+                SELECT sp.id FROM social_posts sp
+                JOIN social_profiles sps ON sps.id = sp.profile_id
+                WHERE sps.dirigente_id = $1 AND sps.platform = $2
+                  AND (sp.raw_data->>'url' = $3 OR sp.raw_data->>'url' LIKE $4)
+                LIMIT 1
+                """,
+                DIRIGENTE_ID, PLATFORM, u, f"%{u[-30:]}%" if len(u) > 30 else u,
+            )
+            if row:
+                url_to_post[u] = row["id"]
+        print(f"[fallback url] {len(url_to_post)} reactors adicionales resueltos via post_url")
     missing = set(pp_ids) - set(pp_to_post.keys())
     if missing:
         print(f"[warn] {len(missing)} platform_post_ids no encontrados en CRECE social_posts")
@@ -125,8 +153,12 @@ async def main(json_path: Path, commit: bool) -> int:
         # 4) INSERT watched_like_events ON CONFLICT DO NOTHING
         events_batch: list[tuple[int, int, str, datetime, str]] = []
         for r in reactors:
-            pp = r["platform_post_id"]
+            pp = _pp_key(r)
             post_id = pp_to_post.get(pp)
+            if not post_id:
+                url = r.get("post_url")
+                if url:
+                    post_id = url_to_post.get(url)
             if not post_id:
                 counters["events_skipped_no_post"] += 1
                 continue

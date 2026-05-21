@@ -29,7 +29,7 @@ from pathlib import Path
 import asyncpg
 
 DIRIGENTE_ID = int(os.environ.get("DIRIGENTE_ID", "3"))
-PLATFORM = "FACEBOOK"
+PLATFORM = os.environ.get("PLATFORM", "FACEBOOK")
 DATA_SOURCE = "radar-fb-playwright-v1"  # value pre-existente en BD para consistency
 
 
@@ -102,7 +102,7 @@ async def main(json_path: Path, commit: bool) -> int:
         batch.append(
             (
                 post_id,
-                c["comment_id_surrogate"],
+                c.get("comment_id_surrogate") or c.get("comment_id") or "",
                 c.get("comment_text") or "",
                 c.get("author_hash") or "",
                 0,  # likes
