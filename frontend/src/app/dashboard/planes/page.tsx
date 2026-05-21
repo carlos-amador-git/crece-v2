@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { PlanIA, DiagnosticoEstructura } from "@/lib/api/types";
+import type { PlanIA, DiagnosticoEstructura, ConsolidacionEstructura, ContenidoEstructura } from "@/lib/api/types";
 import {
   Stethoscope,
   Target,
@@ -47,6 +47,10 @@ import {
   ShieldCheck,
   ArrowRight,
   Clock,
+  Users,
+  Megaphone,
+  Hash,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -150,19 +154,11 @@ function PlanesInner() {
         </TabsContent>
 
         <TabsContent value="estrategia" className="mt-6">
-          <EmptyTabState
-            icon={<Target className="h-12 w-12 text-muted-foreground/50" />}
-            titulo="Plan 90 días"
-            descripcion="Próximamente. La estrategia trimestral se generará a partir del diagnóstico vigente, los pilares editoriales y el contexto del corpus actualizado."
-          />
+          <EstrategiaTab dirigenteId={selectedDirigenteId} />
         </TabsContent>
 
         <TabsContent value="contenido" className="mt-6">
-          <EmptyTabState
-            icon={<Calendar className="h-12 w-12 text-muted-foreground/50" />}
-            titulo="Calendario Editorial"
-            descripcion="Próximamente. Cadencia recomendada, efemérides relevantes y posts sugeridos por plataforma con tono y hora óptima."
-          />
+          <ContenidoTab dirigenteId={selectedDirigenteId} />
         </TabsContent>
       </Tabs>
     </div>
@@ -485,6 +481,354 @@ function EmptyTabState({
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{descripcion}</p>
       </CardContent>
     </Card>
+  );
+}
+
+/* ─────── Tab Estrategia ─────── */
+
+function EstrategiaTab({ dirigenteId }: { dirigenteId: number }) {
+  const { data, isLoading } = usePlanes(undefined, 1);
+  const planes = useMemo(
+    () =>
+      (data?.items ?? [])
+        .filter((p) => p.tipo === "CONSOLIDACION" && p.dirigente_id === dirigenteId)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [data, dirigenteId],
+  );
+
+  if (isLoading) return <Skeleton className="h-[60vh]" />;
+  const vigente = planes[0];
+  if (!vigente) {
+    return (
+      <EmptyTabState
+        icon={<Target className="h-12 w-12 text-muted-foreground/50" />}
+        titulo="Plan 90 días"
+        descripcion="Aún no hay plan estratégico generado. La estrategia trimestral se construye a partir del Diagnóstico vigente."
+      />
+    );
+  }
+  const estr = vigente.estructura_json as ConsolidacionEstructura | undefined;
+  if (!estr?.resumen_ejecutivo) {
+    return (
+      <Card>
+        <CardContent className="p-5 text-sm text-muted-foreground">
+          Plan legacy sin estructura · {vigente.contenido?.slice(0, 200)}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Hero · resumen + objetivo */}
+      <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
+        <CardContent className="p-5">
+          <Badge variant="outline" className="mb-2 border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
+            Plan 90 días · Generado {new Date(vigente.created_at).toLocaleDateString("es-MX")}
+          </Badge>
+          <p className="font-heading text-lg font-medium leading-snug">{estr.resumen_ejecutivo}</p>
+          {estr.objetivo_90d?.narrativa && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              <span className="font-semibold">Objetivo:</span> {estr.objetivo_90d.narrativa}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* KPIs target */}
+      {estr.objetivo_90d?.kpis_target && estr.objetivo_90d.kpis_target.length > 0 && (
+        <div>
+          <h3 className="mb-3 font-heading text-base font-semibold">KPIs objetivo del trimestre</h3>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {estr.objetivo_90d.kpis_target.map((k, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">{k.metrica}</div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="font-heading text-2xl font-bold tabular-nums">
+                      {k.valor_target}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{k.unidad}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    de {k.valor_baseline} {k.unidad} baseline
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Narrativa central */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider">
+            <Megaphone className="h-4 w-4" /> Narrativa central
+          </h3>
+          <p className="text-base leading-snug">{estr.narrativa_central}</p>
+        </CardContent>
+      </Card>
+
+      {/* 3 Pilares */}
+      <div>
+        <h3 className="mb-3 font-heading text-base font-semibold">3 pilares estratégicos</h3>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {estr.pilares.map((p, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent">
+                    {i + 1}
+                  </span>
+                  <h4 className="font-semibold">{p.titulo}</h4>
+                </div>
+                <p className="text-sm text-muted-foreground">{p.descripcion}</p>
+                {p.tacticas && p.tacticas.length > 0 && (
+                  <ul className="mt-3 space-y-1">
+                    {p.tacticas.map((t, j) => (
+                      <li key={j} className="text-xs text-foreground/80">
+                        ▸ {t}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Roadmap 3 hitos */}
+      <div>
+        <h3 className="mb-3 font-heading text-base font-semibold">Roadmap trimestre</h3>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {estr.roadmap_3_hitos.map((h) => (
+            <Card key={h.mes} className="relative">
+              <CardContent className="p-4">
+                <Badge variant="outline" className="mb-2">
+                  Mes {h.mes}
+                </Badge>
+                <p className="text-sm font-medium">{h.hito}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  <span className="font-semibold">KPI:</span> {h.kpi_control}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Audiencias prioritarias */}
+      {estr.audiencias_prioritarias && estr.audiencias_prioritarias.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider">
+              <Users className="h-4 w-4" /> Audiencias prioritarias
+            </h3>
+            <ul className="space-y-2">
+              {estr.audiencias_prioritarias.map((a, i) => (
+                <li key={i} className="border-l-2 border-accent/30 pl-3">
+                  <span className="font-semibold">{a.nombre}</span> · {a.rationale}
+                  <p className="mt-1 text-xs text-muted-foreground">{a.tactica_clave}</p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Riesgos */}
+      {estr.riesgos && estr.riesgos.length > 0 && (
+        <Card className="border-rose-500/30">
+          <CardContent className="p-4">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-rose-500">
+              <AlertTriangle className="h-4 w-4" /> Riesgos del trimestre
+            </h3>
+            <ul className="space-y-2">
+              {estr.riesgos.map((r, i) => (
+                <li key={i} className="text-sm">
+                  <Badge variant="outline" className="mr-2 text-[10px] uppercase">
+                    {r.tipo}
+                  </Badge>
+                  {r.descripcion}
+                  <p className="mt-0.5 pl-1 text-xs text-muted-foreground">
+                    <span className="font-semibold">Mitigación:</span> {r.mitigacion}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ─────── Tab Contenido ─────── */
+
+const PLAT_COLOR: Record<string, string> = {
+  facebook: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  instagram: "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300",
+  twitter: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
+  tiktok: "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200",
+  youtube: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+};
+
+function ContenidoTab({ dirigenteId }: { dirigenteId: number }) {
+  const { data, isLoading } = usePlanes(undefined, 1);
+  const planes = useMemo(
+    () =>
+      (data?.items ?? [])
+        .filter((p) => p.tipo === "CONTENIDO" && p.dirigente_id === dirigenteId)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [data, dirigenteId],
+  );
+
+  if (isLoading) return <Skeleton className="h-[60vh]" />;
+  const vigente = planes[0];
+  if (!vigente) {
+    return (
+      <EmptyTabState
+        icon={<Calendar className="h-12 w-12 text-muted-foreground/50" />}
+        titulo="Calendario Editorial"
+        descripcion="Aún no hay calendario editorial generado. Próximas 4 semanas con cadencia, pilares, efemérides y posts sugeridos."
+      />
+    );
+  }
+  const estr = vigente.estructura_json as ContenidoEstructura | undefined;
+  if (!estr?.ventana) {
+    return (
+      <Card>
+        <CardContent className="p-5 text-sm text-muted-foreground">
+          Plan legacy · {vigente.contenido?.slice(0, 200)}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-l-4 border-l-amber-500 bg-amber-500/5">
+        <CardContent className="p-5">
+          <Badge variant="outline" className="mb-2 border-amber-500/40 text-amber-700 dark:text-amber-300">
+            Calendario Editorial
+          </Badge>
+          <p className="font-heading text-lg font-medium">
+            {estr.ventana.inicio} → {estr.ventana.fin} · {estr.ventana.semanas} semanas
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Generado {new Date(vigente.created_at).toLocaleDateString("es-MX")} · modelo{" "}
+            {vigente.modelo_ia}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Cadencia recomendada */}
+      <div>
+        <h3 className="mb-3 font-heading text-base font-semibold">Cadencia recomendada</h3>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          {Object.entries(estr.cadencia_recomendada).map(([plat, val]) => (
+            <Card key={plat}>
+              <CardContent className="p-3">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">{plat}</div>
+                <div className="mt-1 text-sm font-medium">{val}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Pilares editoriales */}
+      <div>
+        <h3 className="mb-3 font-heading text-base font-semibold">Pilares editoriales</h3>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {estr.pilares_editoriales.map((p, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="font-semibold">{p.titulo}</h4>
+                  <Badge variant="outline">{p.frecuencia_semanal_pct}%</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">{p.descripcion}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Posts sugeridos · grid */}
+      <div>
+        <h3 className="mb-3 font-heading text-base font-semibold">
+          {estr.posts_sugeridos.length} posts sugeridos
+        </h3>
+        <div className="space-y-3">
+          {estr.posts_sugeridos.map((p, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="font-mono text-[10px]">
+                    {p.fecha_sugerida} · {p.hora_optima}
+                  </Badge>
+                  <Badge className={PLAT_COLOR[p.plataforma] ?? "bg-muted"}>{p.plataforma}</Badge>
+                  <Badge variant="outline">{p.tipo}</Badge>
+                  <Badge variant="outline" className="text-[10px]">
+                    {p.tono}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Pilar: <span className="font-semibold">{p.pilar}</span>
+                  </span>
+                </div>
+                <p className="text-sm leading-snug">{p.copy}</p>
+                {p.hashtags && p.hashtags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {p.hashtags.map((h, j) => (
+                      <span key={j} className="text-xs text-accent">
+                        <Hash className="inline h-3 w-3" />
+                        {h.replace(/^#/, "")}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {p.rationale && (
+                  <p className="mt-2 text-xs italic text-muted-foreground">
+                    <Sparkles className="mr-1 inline h-3 w-3" />
+                    {p.rationale}
+                  </p>
+                )}
+                {p.cta_label && (
+                  <div className="mt-3">
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      {p.cta_label}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Veda warnings */}
+      {estr.veda_warnings && estr.veda_warnings.length > 0 && (
+        <Card className="border-rose-500/40 bg-rose-500/5">
+          <CardContent className="p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-rose-500">
+              <AlertTriangle className="h-4 w-4" /> Veda electoral
+            </h3>
+            {estr.veda_warnings.map((v, i) => (
+              <p key={i} className="text-sm">
+                <span className="font-semibold">
+                  {v.fecha_inicio} → {v.fecha_fin}:
+                </span>{" "}
+                {v.descripcion}
+              </p>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 
