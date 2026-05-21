@@ -29,6 +29,7 @@ class PlanIAResponse(BaseModel):
     generado_por_id: int
     aprobado: bool
     created_at: datetime
+    estructura_json: dict[str, Any] | None = None  # D-DIAGNOSTICO-V2-2026-05-21
 
     model_config = {"from_attributes": True}
 

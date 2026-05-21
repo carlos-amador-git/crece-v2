@@ -205,11 +205,30 @@ export interface PlanIA {
   tipo: string;
   contenido: string;
   modelo_ia: string;
-  prompt_usado: string;
-  datos_entrada: Record<string, unknown> | null;
+  prompt_usado?: string;
+  datos_entrada?: Record<string, unknown> | null;
   generado_por_id: number;
   aprobado: boolean;
   created_at: string;
+  estructura_json?: DiagnosticoEstructura | Record<string, unknown> | null;
+}
+
+/** D-DIAGNOSTICO-V2-2026-05-21 · shape generado por regen_diagnostico_v2.py */
+export interface DiagnosticoEstructura {
+  ipd_score: number;
+  ipd_bucket: "BAJO" | "MEDIO" | "ALTO";
+  delta_vs_anterior: number | null;
+  insight_bala: string;
+  fortalezas: { card: string; titulo: string; evidencia: string }[];
+  debilidades: { card: string; titulo: string; evidencia: string }[];
+  riesgos: { card: string; titulo: string; evidencia: string }[];
+  acciones_top3: {
+    orden: number;
+    texto: string;
+    card_origen: string;
+    cta_label: string;
+    cta_href: string;
+  }[];
 }
 
 export type PlanType = "DIAGNOSTICO" | "CONSOLIDACION" | "CRISIS" | "CONTENIDO";
