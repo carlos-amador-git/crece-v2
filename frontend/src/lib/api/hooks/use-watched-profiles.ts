@@ -196,13 +196,17 @@ export function useDeleteWatched() {
 
 // Sprint A hooks · dashboard fans
 
-export function useWatchedTimeline(dirigente_id: number, days = 44) {
+// D-PLATFORM-SELECTOR-2026-05-21 · platform filter opcional (default cross).
+
+export function useWatchedTimeline(dirigente_id: number, days = 44, platform?: string) {
   return useQuery({
-    queryKey: ["watched-profiles", "timeline", dirigente_id, days],
-    queryFn: () =>
-      api.get<TimelinePoint[]>(
-        `/aceptacion/watched-profiles/timeline?dirigente_id=${dirigente_id}&days=${days}`
-      ),
+    queryKey: ["watched-profiles", "timeline", dirigente_id, days, platform ?? "all"],
+    queryFn: () => {
+      const qs = platform
+        ? `dirigente_id=${dirigente_id}&days=${days}&platform=${platform}`
+        : `dirigente_id=${dirigente_id}&days=${days}`;
+      return api.get<TimelinePoint[]>(`/aceptacion/watched-profiles/timeline?${qs}`);
+    },
     staleTime: 60_000,
     enabled: !!dirigente_id,
   });
@@ -212,14 +216,17 @@ export function useWatchedTopPosts(
   dirigente_id: number,
   kind: "winners" | "losers" = "winners",
   limit = 3,
-  days = 30
+  days = 30,
+  platform?: string,
 ) {
   return useQuery({
-    queryKey: ["watched-profiles", "top-posts", dirigente_id, kind, limit, days],
-    queryFn: () =>
-      api.get<TopPostItem[]>(
-        `/aceptacion/watched-profiles/top-posts?dirigente_id=${dirigente_id}&kind=${kind}&limit=${limit}&days=${days}`
-      ),
+    queryKey: ["watched-profiles", "top-posts", dirigente_id, kind, limit, days, platform ?? "all"],
+    queryFn: () => {
+      const qs = platform
+        ? `dirigente_id=${dirigente_id}&kind=${kind}&limit=${limit}&days=${days}&platform=${platform}`
+        : `dirigente_id=${dirigente_id}&kind=${kind}&limit=${limit}&days=${days}`;
+      return api.get<TopPostItem[]>(`/aceptacion/watched-profiles/top-posts?${qs}`);
+    },
     staleTime: 60_000,
     enabled: !!dirigente_id,
   });
@@ -229,15 +236,24 @@ export function useWatchedInteractionsSummary(
   dirigente_id: number,
   days = 44,
   allTime = false,
+  platform?: string,
 ) {
   return useQuery({
-    queryKey: ["watched-profiles", "interactions-summary", dirigente_id, days, allTime],
+    queryKey: [
+      "watched-profiles",
+      "interactions-summary",
+      dirigente_id,
+      days,
+      allTime,
+      platform ?? "all",
+    ],
     queryFn: () => {
-      const qs = allTime
-        ? `dirigente_id=${dirigente_id}&all_time=true`
-        : `dirigente_id=${dirigente_id}&days=${days}`;
+      const parts = allTime
+        ? [`dirigente_id=${dirigente_id}`, `all_time=true`]
+        : [`dirigente_id=${dirigente_id}`, `days=${days}`];
+      if (platform) parts.push(`platform=${platform}`);
       return api.get<InteractionsSummary>(
-        `/aceptacion/watched-profiles/interactions-summary?${qs}`
+        `/aceptacion/watched-profiles/interactions-summary?${parts.join("&")}`
       );
     },
     staleTime: 60_000,

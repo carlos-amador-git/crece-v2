@@ -42,6 +42,8 @@ import { formatNumber } from "@/lib/utils";
 interface TimelineChartProps {
   dirigenteId: number;
   days?: number;
+  /** D-PLATFORM-SELECTOR-2026-05-21 · None=cross */
+  platform?: string;
 }
 
 function useIsMobile(breakpoint = 640) {
@@ -63,8 +65,8 @@ function formatTickDate(d: string) {
   return `${day}/${m}`;
 }
 
-export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
-  const { data, isLoading, isError } = useWatchedTimeline(dirigenteId, days);
+export function TimelineChart({ dirigenteId, days = 44, platform }: TimelineChartProps) {
+  const { data, isLoading, isError } = useWatchedTimeline(dirigenteId, days, platform);
   const isMobile = useIsMobile();
 
   const { points, partialBandStart, partialBandEnd, yCap, hasOutliers } = useMemo(() => {

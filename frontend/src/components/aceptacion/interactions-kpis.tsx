@@ -25,14 +25,17 @@ interface InteractionsKPIsProps {
   /** Si true, ignora la ventana de días y muestra el histórico completo.
    * Default true desde 2026-05-20 (CEO: "ponerlas todas, sin filtro de fecha"). */
   allTime?: boolean;
+  /** D-PLATFORM-SELECTOR-2026-05-21 · None=cross · 'FACEBOOK'/'INSTAGRAM'/etc */
+  platform?: string;
 }
 
 export function InteractionsKPIs({
   dirigenteId,
   days = 44,
   allTime = true,
+  platform,
 }: InteractionsKPIsProps) {
-  const { data, isLoading, isError } = useWatchedInteractionsSummary(dirigenteId, days, allTime);
+  const { data, isLoading, isError } = useWatchedInteractionsSummary(dirigenteId, days, allTime, platform);
 
   if (isLoading) {
     return (

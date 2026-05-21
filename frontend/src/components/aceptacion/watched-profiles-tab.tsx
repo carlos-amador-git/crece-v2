@@ -477,10 +477,16 @@ interface Props {
   dirigenteName: string;
 }
 
+type PlatformFilter = "all" | "FACEBOOK" | "INSTAGRAM" | "TWITTER" | "TIKTOK" | "YOUTUBE";
+
 export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props) {
   const [sourceFilter, setSourceFilter] = useState<WatchedSource | "all">("all");
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("all");
   const [selected, setSelected] = useState<WatchedProfile | null>(null);
+  // D-PLATFORM-SELECTOR-2026-05-21 · CEO autorizó autonomía total · filtro
+  // plataforma propagado a InteractionsKPIs, TimelineChart, TopPostsCards.
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
+  const platformParam = platformFilter === "all" ? undefined : platformFilter;
 
   const { data: summary, isLoading: summaryLoading } = useWatchedSummary(dirigenteId);
   const { data: profiles, isLoading: profilesLoading } = useWatchedProfiles({
@@ -505,9 +511,28 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
         de cuentas a monitorear. Engagement detectado automáticamente desde el scraping.
       </p>
 
+      {/* Selector de plataforma · D-PLATFORM-SELECTOR (2026-05-21) */}
+      <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/20 px-3 py-2">
+        <span className="text-xs font-medium text-muted-foreground">Plataforma:</span>
+        {(["all", "FACEBOOK", "INSTAGRAM", "TWITTER", "TIKTOK", "YOUTUBE"] as const).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPlatformFilter(p)}
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              platformFilter === p
+                ? "bg-orange-500/20 text-orange-700 dark:text-orange-300"
+                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            }`}
+          >
+            {p === "all" ? "Todas" : p === "FACEBOOK" ? "Facebook" : p === "INSTAGRAM" ? "Instagram" : p === "TWITTER" ? "Twitter" : p === "TIKTOK" ? "TikTok" : "YouTube"}
+          </button>
+        ))}
+      </div>
+
       {/* Sprint B+C (PLAN-2026-05-17-fans-dashboard) · KPIs + Timeline + Top Posts + Top Fans */}
-      <InteractionsKPIs dirigenteId={dirigenteId} days={44} />
-      <TimelineChart dirigenteId={dirigenteId} days={44} />
+      <InteractionsKPIs dirigenteId={dirigenteId} days={44} platform={platformParam} />
+      <TimelineChart dirigenteId={dirigenteId} days={44} platform={platformParam} />
       <div>
         <h3 className="font-heading text-sm font-semibold mb-1">
           Recepción del público según comentarios
@@ -515,10 +540,9 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
         <p className="text-xs text-muted-foreground mb-2">
           Posts con más audiencia favorable y con más rechazo en comentarios · ranking
           por polaridad NLP promedio de los comments (no por likes ni engagement).
-          Últimos 30 días, Facebook. Para ranking por engagement absoluto del post:
-          <span className="font-medium"> Contenido → Más populares</span>.
+          Últimos 30 días{platformFilter === "all" ? " · todas las plataformas" : ` · solo ${platformFilter}`}.
         </p>
-        <TopPostsCards dirigenteId={dirigenteId} days={30} limit={3} />
+        <TopPostsCards dirigenteId={dirigenteId} days={30} limit={3} platform={platformParam} />
       </div>
 
       {/* P1 #8 (2026-05-19) · split-view per Gemini approve_split_view (OBS-7).

@@ -578,6 +578,7 @@ async def watched_timeline(
     user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int,
     days: int = Query(default=44, ge=7, le=120),
+    platform: str | None = Query(default=None, description="FACEBOOK · INSTAGRAM · TWITTER · TIKTOK · YOUTUBE · None=todas"),
 ):
     """Series temporales agrupadas por DÍA DE PUBLICACIÓN del post (no detected_at).
 
@@ -587,16 +588,23 @@ async def watched_timeline(
     `window_quality`:
       - complete: bucket en ventana [now-days, now-3d]
       - partial:  bucket en últimos 3d (posts siguen acumulando reactions)
+
+    `platform`: None (default) = cross-platform agregado. Filter explícito
+    si quiere comparar plataformas individuales.
     """
     await _assert_dirigente_access(db, user, dirigente_id)
+    platform_clause = "AND sps.platform = :platform" if platform else ""
+    params: dict = {"did": dirigente_id, "days": str(days)}
+    if platform:
+        params["platform"] = platform
 
-    rows = (await db.execute(text("""
+    rows = (await db.execute(text(f"""
         WITH posts_in_range AS (
           SELECT sp.id, sp.published_at::date AS bucket
           FROM social_posts sp
           JOIN social_profiles sps ON sp.profile_id=sps.id
           WHERE sps.dirigente_id=:did
-            AND sps.platform='FACEBOOK'
+            {platform_clause}
             AND sp.published_at::date >= (NOW()::date - (:days || ' days')::interval)
         ),
         per_bucket_reactions AS (
@@ -615,7 +623,7 @@ async def watched_timeline(
         FROM per_bucket_reactions r
         LEFT JOIN per_bucket_comments c ON c.bucket=r.bucket
         ORDER BY r.bucket
-    """), {"did": dirigente_id, "days": str(days)})).all()
+    """), params)).all()
 
     out: list[TimelinePoint] = []
     cutoff_partial = datetime.now(UTC).date() - timedelta(days=3)
@@ -640,6 +648,7 @@ async def watched_top_posts(
     kind: Literal["winners", "losers"] = "winners",
     limit: int = Query(default=3, ge=1, le=10),
     days: int = Query(default=30, ge=7, le=120),
+    platform: str | None = Query(default=None, description="None=cross-platform · FACEBOOK · INSTAGRAM · etc"),
 ):
     """Top posts ranqueados por polaridad neta de comments + engagement.
 
@@ -657,6 +666,10 @@ async def watched_top_posts(
     # pública (sp.likes >= 1). Defensa contra "posts huérfanos rankeados solo
     # por polaridad NLP". En Saymi BD actual no afecta el ranking (mínimo
     # observado 20 likes), pero protege otros dirigentes con corpus menor.
+    platform_clause = "AND sps.platform = :platform" if platform else ""
+    params: dict = {"did": dirigente_id, "days": str(days), "limit": limit}
+    if platform:
+        params["platform"] = platform
     rows = (await db.execute(text(f"""
         SELECT
           sp.id AS post_id,
@@ -671,7 +684,7 @@ async def watched_top_posts(
         JOIN social_profiles sps ON sp.profile_id=sps.id
         LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
         WHERE sps.dirigente_id=:did
-          AND sps.platform='FACEBOOK'
+          {platform_clause}
           AND sp.published_at >= NOW() - (:days || ' days')::interval
           AND sp.likes >= 1
         GROUP BY sp.id
@@ -679,7 +692,7 @@ async def watched_top_posts(
           AND {polarity_filter}
         ORDER BY AVG(sc.nlp_polaridad) {order}, sp.likes DESC
         LIMIT :limit
-    """), {"did": dirigente_id, "days": str(days), "limit": limit})).all()
+    """), params)).all()
 
     out: list[TopPostItem] = []
     for r in rows:
@@ -717,17 +730,25 @@ async def watched_interactions_summary(
     dirigente_id: int,
     days: int = Query(default=44, ge=7, le=3650),
     all_time: bool = Query(default=False),
+    platform: str | None = Query(default=None, description="None=cross-platform · FACEBOOK · INSTAGRAM · etc"),
 ):
     """KPIs agregados para header del dashboard.
 
     `all_time=true` ignora el filtro de fecha y reporta total histórico
     (decisión CEO 2026-05-20: el badge con ventana 44d ocultaba ~30% de
     las reactions reales · per Hugo RADAR delta ~100K vs UI 56K).
+
+    `platform`: None default = cross-platform agregado (CEO 2026-05-21
+    D-PLATFORM-SELECTOR). Explícito para vista por red.
     """
     await _assert_dirigente_access(db, user, dirigente_id)
+    platform_clause = "AND sps.platform = :platform" if platform else ""
+    base_params: dict = {"did": dirigente_id}
+    if platform:
+        base_params["platform"] = platform
 
     if all_time:
-        base = (await db.execute(text("""
+        base = (await db.execute(text(f"""
             SELECT
               COUNT(DISTINCT wle.id) AS reactions,
               COUNT(DISTINCT sc.id) AS comments,
@@ -737,10 +758,11 @@ async def watched_interactions_summary(
             LEFT JOIN social_posts sp ON sp.profile_id=sps.id
             LEFT JOIN watched_like_events wle ON wle.post_id=sp.id
             LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
-            WHERE sps.dirigente_id=:did AND sps.platform='FACEBOOK'
-        """), {"did": dirigente_id})).first()
+            WHERE sps.dirigente_id=:did {platform_clause}
+        """), base_params)).first()
     else:
-        base = (await db.execute(text("""
+        window_params = {**base_params, "days": str(days)}
+        base = (await db.execute(text(f"""
             SELECT
               COUNT(DISTINCT wle.id) AS reactions,
               COUNT(DISTINCT sc.id) AS comments,
@@ -751,8 +773,8 @@ async def watched_interactions_summary(
               AND sp.published_at >= NOW() - (:days || ' days')::interval
             LEFT JOIN watched_like_events wle ON wle.post_id=sp.id
             LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
-            WHERE sps.dirigente_id=:did AND sps.platform='FACEBOOK'
-        """), {"did": dirigente_id, "days": str(days)})).first()
+            WHERE sps.dirigente_id=:did {platform_clause}
+        """), window_params)).first()
 
     mix_rows = (await db.execute(text("""
         SELECT wle.reaction_type, COUNT(*) AS n

@@ -44,6 +44,8 @@ interface TopPostsCardsProps {
   dirigenteId: number;
   days?: number;
   limit?: number;
+  /** D-PLATFORM-SELECTOR-2026-05-21 · None=cross */
+  platform?: string;
 }
 
 function fmtDate(iso: string) {
@@ -181,9 +183,9 @@ function Column({
   );
 }
 
-export function TopPostsCards({ dirigenteId, days = 30, limit = 3 }: TopPostsCardsProps) {
-  const winnersQ = useWatchedTopPosts(dirigenteId, "winners", limit, days);
-  const losersQ = useWatchedTopPosts(dirigenteId, "losers", limit, days);
+export function TopPostsCards({ dirigenteId, days = 30, limit = 3, platform }: TopPostsCardsProps) {
+  const winnersQ = useWatchedTopPosts(dirigenteId, "winners", limit, days, platform);
+  const losersQ = useWatchedTopPosts(dirigenteId, "losers", limit, days, platform);
   const [selected, setSelected] = useState<{ item: TopPostItem; kind: "winners" | "losers" } | null>(null);
 
   return (
