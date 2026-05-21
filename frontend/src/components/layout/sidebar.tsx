@@ -253,6 +253,19 @@ export function Sidebar() {
         pathname.startsWith("/dashboard/diagnostico-tier2/")
       );
     }
+    // Aceptación (href = /dashboard/aceptacion) NO debe activarse cuando el
+    // pathname es una sub-ruta hermana del grupo (e.g. /aceptacion/fans-y-perfiles
+    // tiene su propio item de sidebar). Match estricto + descendientes directos
+    // de detalle (e.g. /aceptacion/3) que no tienen item propio.
+    if (href === "/dashboard/aceptacion") {
+      return (
+        pathname === "/dashboard/aceptacion" ||
+        (pathname.startsWith("/dashboard/aceptacion/") &&
+          !pathname.startsWith("/dashboard/aceptacion/fans-y-perfiles") &&
+          !pathname.startsWith("/dashboard/aceptacion/dirigentes") &&
+          !pathname.startsWith("/dashboard/aceptacion/fantasmas"))
+      );
+    }
     return pathname.startsWith(href);
   };
 
