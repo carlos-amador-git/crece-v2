@@ -28,7 +28,7 @@ from pathlib import Path
 
 import asyncpg
 
-DIRIGENTE_ID = 3
+DIRIGENTE_ID = int(os.environ.get("DIRIGENTE_ID", "3"))
 PLATFORM = "FACEBOOK"
 DATA_SOURCE = "radar-fb-playwright-v1"  # value pre-existente en BD para consistency
 

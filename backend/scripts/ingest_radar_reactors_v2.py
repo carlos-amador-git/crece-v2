@@ -29,7 +29,7 @@ from typing import Any
 import asyncpg
 
 DEFAULT_JSON = "/host/radar-reactors-saymi-fb-7days-2026-05-21.json"
-DIRIGENTE_ID = 3  # Saymi
+DIRIGENTE_ID = int(os.environ.get("DIRIGENTE_ID", "3"))  # default Saymi, override via env
 PLATFORM = "FACEBOOK"
 
 
@@ -144,8 +144,16 @@ async def main(json_path: Path, commit: bool) -> int:
             # source debe ser uno de los permitidos por ck_watched_like_source:
             # apify_reactions | visual_evidence | oauth_api | other_scraper
             # RADAR CDP usa "other_scraper" como bucket compatible.
+            # Normalizar reaction_type: CRECE constraint solo acepta
+            # like/love/wow/haha/sad/angry/support/care. "unknown" del engine
+            # RADAR (6-7% de reactors cuando el DOM no permite categorizar)
+            # se mapea a 'like' como default conservador (es el ~64% del total
+            # por estructura · estimación razonable).
+            reaction = r["reaction_type"]
+            if reaction not in ("like", "love", "wow", "haha", "sad", "angry", "support", "care"):
+                reaction = "like"
             events_batch.append(
-                (wp_id, post_id, r["reaction_type"], detected_at, "other_scraper")
+                (wp_id, post_id, reaction, detected_at, "other_scraper")
             )
 
         # Batch insert
