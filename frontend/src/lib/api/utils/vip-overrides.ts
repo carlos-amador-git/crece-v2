@@ -52,11 +52,11 @@ export const VIP_OVERRIDES: Record<number, Record<string, VipOverride>> = {
     "61578398601244": {
       external_id: "61578398601244",
       position: 1,
-      reactions: 250,
-      comments: 12,
+      reactions: 320,
+      comments: 15,
       display_name: "Misael Gómez",
       badge: "⭐ Fan #1",
-      reason: "CEO 2026-05-20 · cliente_seed Misael ext_id=61578398601244 (post consolidación duplicados)",
+      reason: "CEO 2026-05-21 · Misael indisputable Fan #1 · score 357.5 (>Pedro Carlock 312 real post-ingest RADAR · margen +45.5)",
     },
   },
 };
