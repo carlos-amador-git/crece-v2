@@ -289,14 +289,14 @@ export function Sidebar() {
           "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           active
-            ? "bg-accent/10 text-accent"
+            ? "bg-orange-500/15 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300 font-semibold"
             : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
           collapsed && "justify-center px-2",
-          insideGroup && !collapsed && "pl-9",
+          insideGroup && !collapsed && "ml-4 pl-5 border-l border-border/60",
         )}
         style={
           active
-            ? { borderLeft: "3px solid hsl(var(--accent))" }
+            ? { borderLeft: "3px solid rgb(234 88 12)" } // orange-600 marca CRECE
             : { borderLeft: "3px solid transparent" }
         }
         aria-current={active ? "page" : undefined}
@@ -348,7 +348,7 @@ export function Sidebar() {
                 aria-label={`${g.label} — expandir`}
                 style={
                   active
-                    ? { borderLeft: "3px solid hsl(var(--accent))" }
+                    ? { borderLeft: "3px solid rgb(234 88 12)" } // orange-600 marca CRECE
                     : { borderLeft: "3px solid transparent" }
                 }
               >
@@ -377,7 +377,7 @@ export function Sidebar() {
             "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
             active && !expanded
-              ? "text-accent"
+              ? "text-orange-700 dark:text-orange-300 font-semibold"
               : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
           )}
           aria-expanded={expanded}
@@ -449,8 +449,8 @@ export function Sidebar() {
               .map((section) => (
                 <div key={section.label} className="mb-4">
                   {!collapsed && (
-                    <div className="mb-1 flex items-center gap-2 px-4">
-                      <p className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <div className="mb-1.5 flex items-center gap-2 px-4">
+                      <p className="shrink-0 text-[12px] font-semibold uppercase tracking-wider text-foreground/70">
                         {section.label}
                       </p>
                       <Separator className="flex-1" />
@@ -463,8 +463,10 @@ export function Sidebar() {
           </nav>
         </ScrollArea>
 
-        {/* ── User info — bottom ───────────────────────────── */}
-        <div className="border-t px-3 py-3">
+        {/* ── User info — bottom compact (CEO 2026-05-21 polish) ──────
+            Foto + nombre + chip rol · IPD/followers solo en tooltip al hover.
+            Antes ocupaba ~80px verticales con stack de chips · ahora ~48px. */}
+        <div className="border-t px-3 py-2">
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -480,48 +482,41 @@ export function Sidebar() {
               <TooltipContent side="right">
                 <p className="font-medium">{displayName}</p>
                 <p className="text-xs text-muted-foreground">{displayRole}</p>
+                {isDirigente && ipdLabel && <p className="text-xs">IPD {ipdLabel}/10</p>}
+                {isDirigente && audienciaLabel && <p className="text-xs">{audienciaLabel} seguidores</p>}
               </TooltipContent>
             </Tooltip>
           ) : (
-            <div className="flex items-center gap-3">
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
-                aria-hidden="true"
-              >
-                {initials}
-              </span>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-medium leading-tight">
-                  {displayName}
-                </span>
-                <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                  <span className="inline-flex w-fit rounded-sm bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
-                    {displayRole}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex cursor-default items-center gap-2 rounded-md px-1 py-1 hover:bg-muted/40">
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
+                    aria-hidden="true"
+                  >
+                    {initials}
                   </span>
-                  {isDirigente && ipdLabel && (
-                    <span
-                      className="inline-flex w-fit items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums"
-                      title="Indice de Penetracion Digital"
-                    >
-                      IPD {ipdLabel}/10
-                    </span>
-                  )}
-                  {isDirigente && audienciaLabel && (
-                    <span
-                      className="inline-flex w-fit items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums"
-                      title="Total de seguidores"
-                    >
-                      {audienciaLabel}
-                    </span>
-                  )}
+                  <div className="flex min-w-0 flex-1 flex-col leading-tight">
+                    <span className="truncate text-sm font-medium">{displayName}</span>
+                    <span className="text-[10px] text-muted-foreground">{displayRole}</span>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </TooltipTrigger>
+              {isDirigente && (ipdLabel || audienciaLabel) && (
+                <TooltipContent side="top" align="start">
+                  <p className="text-xs font-medium">{displayName}</p>
+                  {ipdLabel && <p className="text-xs text-muted-foreground">IPD: {ipdLabel}/10</p>}
+                  {audienciaLabel && (
+                    <p className="text-xs text-muted-foreground">{audienciaLabel} seguidores</p>
+                  )}
+                </TooltipContent>
+              )}
+            </Tooltip>
           )}
         </div>
 
-        {/* ── Collapse toggle — desktop only ───────────────── */}
-        <div className="hidden border-t p-2 lg:block">
+        {/* ── Collapse toggle — desktop only · sticky abajo siempre visible ── */}
+        <div className="hidden shrink-0 border-t p-1.5 lg:block">
           <Button
             variant="ghost"
             size="sm"
