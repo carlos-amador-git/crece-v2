@@ -349,7 +349,7 @@ function DiagnosticoVigente({
           titulo="Riesgos"
           icon={<AlertTriangle className="h-4 w-4 text-rose-500" />}
           accent="rose"
-          items={estructura.riesgos}
+          items={estructura.riesgos ?? (estructura as unknown as { amenazas?: { card?: string; titulo: string; evidencia: string }[] }).amenazas ?? []}
         />
       </div>
 
