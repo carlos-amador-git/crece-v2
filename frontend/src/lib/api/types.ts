@@ -214,28 +214,21 @@ export interface PlanIA {
 }
 
 /** D-DIAGNOSTICO-V2-2026-05-21 · shape generado por regen_diagnostico_v2.py */
-/** D-DIAGNOSTICO-ENRICHED-2026-05-21 · shape generado por
- *  regen_diagnostico_enriched_host.py · 4 cuadrantes FODA con implicación/táctica/riesgo/mitigación.
- *  Compat back: si plan viejo viene con `riesgos`, normalizar a `amenazas` en frontend. */
 export interface DiagnosticoEstructura {
   ipd_score: number;
-  ipd_bucket: "BAJO" | "MEDIO" | "ALTO" | "CRITICO" | "BUENO" | "EXCELENTE";
-  delta_vs_anterior?: number | null;
+  ipd_bucket: "BAJO" | "MEDIO" | "ALTO";
+  delta_vs_anterior: number | null;
   insight_bala: string;
-  fortalezas: { titulo: string; evidencia: string; implicacion?: string; card?: string }[];
-  oportunidades: { titulo: string; evidencia: string; tactica?: string; card?: string }[];
-  debilidades: { titulo: string; evidencia: string; riesgo?: string; card?: string }[];
-  amenazas: { titulo: string; evidencia: string; mitigacion?: string; card?: string }[];
+  fortalezas: { card: string; titulo: string; evidencia: string }[];
+  debilidades: { card: string; titulo: string; evidencia: string }[];
+  riesgos: { card: string; titulo: string; evidencia: string }[];
   acciones_top3: {
     orden: number;
     texto: string;
+    card_origen: string;
     cta_label: string;
     cta_href: string;
-    card_origen?: string;
   }[];
-  plataforma_prioritaria?: string;
-  /** @deprecated · compat con planes v2 antiguos (renombrado a amenazas) */
-  riesgos?: { card?: string; titulo: string; evidencia: string }[];
 }
 
 /** D-CONSOLIDACION-V2-2026-05-21 · shape generado por regen_consolidacion_v2.py */
