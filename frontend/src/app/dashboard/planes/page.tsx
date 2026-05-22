@@ -259,17 +259,15 @@ function DiagnosticoVigente({
   plan: PlanIA;
   estructura: DiagnosticoEstructura;
 }) {
-  const bucketColor = {
-    BAJO: "text-rose-500",
-    MEDIO: "text-amber-500",
-    ALTO: "text-emerald-500",
-  }[estructura.ipd_bucket];
-
-  const bucketBg = {
-    BAJO: "bg-rose-500",
-    MEDIO: "bg-amber-500",
-    ALTO: "bg-emerald-500",
-  }[estructura.ipd_bucket];
+  // bucket enriched soporta 5 niveles (CRITICO/BAJO/MEDIO/BUENO/EXCELENTE) y v2 (3 niveles).
+  const bucketColor: Record<string, string> = {
+    CRITICO: "text-rose-600", BAJO: "text-rose-500", MEDIO: "text-amber-500",
+    ALTO: "text-emerald-500", BUENO: "text-emerald-500", EXCELENTE: "text-emerald-600",
+  };
+  const bucketBg: Record<string, string> = {
+    CRITICO: "bg-rose-600", BAJO: "bg-rose-500", MEDIO: "bg-amber-500",
+    ALTO: "bg-emerald-500", BUENO: "bg-emerald-500", EXCELENTE: "bg-emerald-600",
+  };
 
   const scorePct = Math.min(100, (estructura.ipd_score / 10) * 100);
 
@@ -281,11 +279,11 @@ function DiagnosticoVigente({
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="flex items-baseline gap-3">
-                <span className={`font-heading text-6xl font-bold tabular-nums ${bucketColor}`}>
+                <span className={`font-heading text-6xl font-bold tabular-nums ${bucketColor[estructura.ipd_bucket] ?? "text-foreground"}`}>
                   {estructura.ipd_score.toFixed(1)}
                 </span>
                 <span className="text-sm text-muted-foreground">/ 10</span>
-                <Badge variant="outline" className={`uppercase ${bucketColor}`}>
+                <Badge variant="outline" className={`uppercase ${bucketColor[estructura.ipd_bucket] ?? "text-foreground"}`}>
                   {estructura.ipd_bucket}
                 </Badge>
                 {estructura.delta_vs_anterior != null && (
@@ -301,7 +299,7 @@ function DiagnosticoVigente({
               </div>
               <div className="mt-3 h-2 w-full max-w-md overflow-hidden rounded-full bg-muted">
                 <div
-                  className={`h-full transition-all ${bucketBg}`}
+                  className={`h-full transition-all ${bucketBg[estructura.ipd_bucket] ?? "bg-foreground"}`}
                   style={{ width: `${scorePct}%` }}
                 />
               </div>
@@ -331,27 +329,24 @@ function DiagnosticoVigente({
         </CardContent>
       </Card>
 
-      {/* Fortalezas · Debilidades · Riesgos · 3 columnas */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <FactorBlock
-          titulo="Fortalezas"
-          icon={<ShieldCheck className="h-4 w-4 text-emerald-500" />}
-          accent="emerald"
-          items={estructura.fortalezas}
-        />
-        <FactorBlock
-          titulo="Debilidades"
-          icon={<TrendingUp className="h-4 w-4 rotate-180 text-amber-500" />}
-          accent="amber"
-          items={estructura.debilidades}
-        />
-        <FactorBlock
-          titulo="Riesgos"
-          icon={<AlertTriangle className="h-4 w-4 text-rose-500" />}
-          accent="rose"
-          items={estructura.riesgos ?? (estructura as unknown as { amenazas?: { card?: string; titulo: string; evidencia: string }[] }).amenazas ?? []}
-        />
-      </div>
+      {/* FODA 2x2 widget · D-FODA-WIDGET-2026-05-21 (CEO autorizó enriched).
+          Filas: INTERNAS (Fortalezas+Debilidades) / EXTERNAS (Oportunidades+Amenazas).
+          Si el plan viejo no trae oportunidades/amenazas, fallback a riesgos→amenazas. */}
+      <FodaQuadrants estructura={estructura} />
+
+      {/* Plataforma prioritaria si está */}
+      {estructura.plataforma_prioritaria && (
+        <Card className="border-l-4 border-l-orange-500 bg-orange-500/5">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              Plataforma prioritaria · mejor ROI
+            </p>
+            <p className="mt-1 font-heading text-2xl font-bold text-orange-700 dark:text-orange-300">
+              {estructura.plataforma_prioritaria}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Top 3 acciones */}
       <div>
@@ -382,7 +377,152 @@ function DiagnosticoVigente({
           ))}
         </div>
       </div>
+
+      {/* Análisis profundo · markdown completo del consultor senior */}
+      <AnalisisProfundo contenido={plan.contenido ?? ""} />
     </div>
+  );
+}
+
+/** FODA 2x2 quadrant widget · D-FODA-WIDGET-2026-05-21
+ *  Layout: filas = INTERNA (F+D) vs EXTERNA (O+A) · cols = positivo / negativo. */
+function FodaQuadrants({ estructura }: { estructura: DiagnosticoEstructura }) {
+  // Compat plan v2 viejo: si no hay oportunidades/amenazas, usa riesgos como amenazas.
+  const amenazasFallback = estructura.amenazas ?? estructura.riesgos ?? [];
+  const oportunidadesFallback = estructura.oportunidades ?? [];
+
+  return (
+    <div>
+      <h3 className="mb-3 font-heading text-lg font-semibold flex items-center gap-2">
+        Análisis FODA
+        <Badge variant="outline" className="text-[10px] font-normal">
+          {estructura.fortalezas.length + estructura.debilidades.length + oportunidadesFallback.length + amenazasFallback.length} factores
+        </Badge>
+      </h3>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <FodaCell
+          titulo="Fortalezas"
+          subtitulo="Interna · positiva"
+          icon={<ShieldCheck className="h-4 w-4" />}
+          accent="emerald"
+          items={estructura.fortalezas.map((f) => ({
+            titulo: f.titulo, evidencia: f.evidencia, detalle: f.implicacion, detalleLabel: "Implicación",
+          }))}
+        />
+        <FodaCell
+          titulo="Oportunidades"
+          subtitulo="Externa · positiva"
+          icon={<TrendingUp className="h-4 w-4" />}
+          accent="sky"
+          items={oportunidadesFallback.map((o) => ({
+            titulo: o.titulo, evidencia: o.evidencia, detalle: o.tactica, detalleLabel: "Táctica",
+          }))}
+        />
+        <FodaCell
+          titulo="Debilidades"
+          subtitulo="Interna · negativa"
+          icon={<TrendingUp className="h-4 w-4 rotate-180" />}
+          accent="amber"
+          items={estructura.debilidades.map((d) => ({
+            titulo: d.titulo, evidencia: d.evidencia, detalle: d.riesgo, detalleLabel: "Riesgo",
+          }))}
+        />
+        <FodaCell
+          titulo="Amenazas"
+          subtitulo="Externa · negativa"
+          icon={<AlertTriangle className="h-4 w-4" />}
+          accent="rose"
+          items={amenazasFallback.map((a) => ({
+            titulo: a.titulo,
+            evidencia: a.evidencia,
+            detalle: (a as { mitigacion?: string }).mitigacion,
+            detalleLabel: "Mitigación",
+          }))}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface FodaItem {
+  titulo: string;
+  evidencia: string;
+  detalle?: string;
+  detalleLabel?: string;
+}
+
+function FodaCell({
+  titulo,
+  subtitulo,
+  icon,
+  accent,
+  items,
+}: {
+  titulo: string;
+  subtitulo: string;
+  icon: React.ReactNode;
+  accent: "emerald" | "sky" | "amber" | "rose";
+  items: FodaItem[];
+}) {
+  const accentMap = {
+    emerald: { border: "border-emerald-500/30", text: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-500/5" },
+    sky: { border: "border-sky-500/30", text: "text-sky-700 dark:text-sky-300", bg: "bg-sky-500/5" },
+    amber: { border: "border-amber-500/30", text: "text-amber-700 dark:text-amber-300", bg: "bg-amber-500/5" },
+    rose: { border: "border-rose-500/30", text: "text-rose-700 dark:text-rose-300", bg: "bg-rose-500/5" },
+  }[accent];
+
+  return (
+    <Card className={`border-l-4 ${accentMap.border} ${accentMap.bg}`}>
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className={accentMap.text}>{icon}</span>
+            <h4 className={`font-heading text-sm font-semibold uppercase tracking-wider ${accentMap.text}`}>
+              {titulo}
+            </h4>
+          </div>
+          <span className="text-[10px] text-muted-foreground">{subtitulo} · {items.length}</span>
+        </div>
+        <ul className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+          {items.length === 0 ? (
+            <li className="text-xs italic text-muted-foreground">Sin datos en este cuadrante.</li>
+          ) : (
+            items.map((it, idx) => (
+              <li key={idx} className="border-l-2 border-muted pl-3">
+                <p className="text-sm font-medium leading-tight">{it.titulo}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{it.evidencia}</p>
+                {it.detalle && (
+                  <p className="mt-1 text-xs leading-relaxed">
+                    <span className={`font-semibold ${accentMap.text}`}>{it.detalleLabel}:</span> {it.detalle}
+                  </p>
+                )}
+              </li>
+            ))
+          )}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AnalisisProfundo({ contenido }: { contenido: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!contenido || contenido.length < 1000) return null;
+  return (
+    <details
+      className="rounded-lg border bg-muted/10 p-4"
+      open={expanded}
+      onToggle={(e) => setExpanded((e.currentTarget as HTMLDetailsElement).open)}
+    >
+      <summary className="cursor-pointer font-heading text-sm font-semibold uppercase tracking-wider hover:text-accent">
+        Análisis profundo · informe completo {expanded ? "(ocultar)" : "(ver)"}
+      </summary>
+      <div className="mt-4 prose prose-sm max-w-none dark:prose-invert prose-headings:font-heading prose-headings:font-semibold prose-table:text-xs prose-table:overflow-x-auto">
+        <pre className="whitespace-pre-wrap break-words text-xs font-sans text-foreground/90 leading-relaxed">
+          {contenido}
+        </pre>
+      </div>
+    </details>
   );
 }
 
