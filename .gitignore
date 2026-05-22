@@ -162,3 +162,8 @@ backend/data/reportes_plan_ia/
 
 # Scratch outputs scrapers (testing — usar MinIO para archivar)
 backend/scripts/data/
+
+# Recovery 2026-05-22
+backups/
+.context/exports/
+e2e/screenshots/

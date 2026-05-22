@@ -57,9 +57,11 @@ async def ingest_posts(conn: asyncpg.Connection, handle: str) -> Counter:
         p = it.get("payload") or {}
         content = (p.get("text") or p.get("content") or p.get("caption") or "").strip()
         url = p.get("url") or p.get("post_url") or ""
-        likes = int(p.get("like_count") or p.get("reactions_count") or 0)
-        comments_n = int(p.get("comment_count") or 0)
-        shares = int(p.get("shares") or p.get("share_count") or 0)
+        # Hugo emite likes_count/comments_count/shares_count (plural con guión bajo)
+        # · NO like_count/comment_count/share_count (singular). Aceptar ambos.
+        likes = int(p.get("likes_count") or p.get("reaction_count") or p.get("like_count") or 0)
+        comments_n = int(p.get("comments_count") or p.get("comment_count") or 0)
+        shares = int(p.get("shares_count") or p.get("share_count") or p.get("shares") or 0)
         views = int(p.get("views") or p.get("view_count") or 0)
         time_iso = p.get("time_iso") or p.get("published_at") or p.get("timestamp")
         published_at = to_dt(time_iso) or to_dt(it.get("detected_at"))

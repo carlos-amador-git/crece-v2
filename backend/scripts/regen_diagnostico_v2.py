@@ -80,8 +80,11 @@ TU TAREA: producir un Diagnóstico Estratégico en JSON con la estructura EXACTA
   "debilidades": [
     {{"card": "B0X", "titulo": "Nombre corto", "evidencia": "Dato concreto"}}
   ],
-  "riesgos": [
-    {{"card": "B1X", "titulo": "Nombre corto", "evidencia": "Dato concreto"}}
+  "oportunidades": [
+    {{"card": "B1X o contextual", "titulo": "Nombre corto", "evidencia": "Factor EXTERNO que el dirigente puede aprovechar (ej. efeméride próxima, vacío de oposición en tema, tendencia favorable detectada)"}}
+  ],
+  "amenazas": [
+    {{"card": "B1X", "titulo": "Nombre corto", "evidencia": "Factor EXTERNO de riesgo (ej. veda activa B17, violencia política B18, crisis B06, coordinación artificial detectada B12)"}}
   ],
   "acciones_top3": [
     {{
@@ -95,7 +98,8 @@ TU TAREA: producir un Diagnóstico Estratégico en JSON con la estructura EXACTA
 }}
 
 REGLAS DURAS:
-- 2-4 fortalezas. 2-4 debilidades. 1-3 riesgos. EXACTAMENTE 3 acciones.
+- 2-4 fortalezas (INTERNA positiva). 2-4 debilidades (INTERNA negativa). 1-3 oportunidades (EXTERNA positiva). 1-3 amenazas (EXTERNA negativa). EXACTAMENTE 3 acciones.
+- Diferencia INTERNA vs EXTERNA: Fortalezas/Debilidades son sobre el dirigente y su contenido. Oportunidades/Amenazas son del CONTEXTO (calendario electoral, efemérides, oposición, regulación, audiencia). NO mezcles.
 - Cada item DEBE citar la card de origen (B01..B18). NUNCA inventes una card.
 - Insight_bala MÁXIMO 240 caracteres. Narrativa, no listado.
 - Acciones: PROHIBIDO genéricos ("aumentar engagement", "publicar más"). Cada acción debe ser específica + citar evidencia del contexto.
@@ -237,7 +241,7 @@ def parse_json(raw: str) -> dict | None:
 def validate(parsed: dict) -> tuple[bool, str]:
     if not isinstance(parsed, dict):
         return False, "no dict"
-    required = ["ipd_score", "ipd_bucket", "insight_bala", "fortalezas", "debilidades", "riesgos", "acciones_top3"]
+    required = ["ipd_score", "ipd_bucket", "insight_bala", "fortalezas", "debilidades", "oportunidades", "amenazas", "acciones_top3"]
     for k in required:
         if k not in parsed:
             return False, f"falta {k}"
@@ -245,6 +249,9 @@ def validate(parsed: dict) -> tuple[bool, str]:
         return False, "insight_bala inválido"
     if not isinstance(parsed["acciones_top3"], list) or len(parsed["acciones_top3"]) != 3:
         return False, "acciones_top3 debe ser exactly 3"
+    # FODA back-compat: el frontend viejo lee 'riesgos' · agregamos alias.
+    if "riesgos" not in parsed:
+        parsed["riesgos"] = parsed["amenazas"]
     return True, "ok"
 
 
