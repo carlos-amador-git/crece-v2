@@ -393,8 +393,17 @@ export default function DirigenteDetailPage() {
                 day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
               });
 
+              const targetHref =
+                plan.tipo === "CONSOLIDACION"
+                  ? `/dashboard/planes?dirigente=${dirigente.id}&tab=estrategia`
+                  : plan.tipo === "CONTENIDO"
+                  ? `/dashboard/planes?dirigente=${dirigente.id}&tab=contenido`
+                  : plan.tipo === "DIAGNOSTICO"
+                  ? `/dashboard/diagnostico/${dirigente.id}/foda`
+                  : `/dashboard/planes?dirigente=${dirigente.id}`;
+
               return (
-                <Link key={plan.id} href={`/dashboard/planes/${plan.id}`}>
+                <Link key={plan.id} href={targetHref}>
                   <Card className="cursor-pointer transition-shadow hover:shadow-md">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">

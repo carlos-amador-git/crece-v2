@@ -85,15 +85,23 @@ function PlanesInner() {
 
   const [selectedDirigenteId, setSelectedDirigenteId] = useState<number | null>(null);
 
-  // Inicialización: viewer → su dirigente · admin → primero de la lista
+  // Inicialización: query param → viewer → su dirigente · admin → primero de la lista
   useEffect(() => {
     if (selectedDirigenteId != null) return;
+    const urlDirigenteParam = searchParams.get("dirigente");
+    if (urlDirigenteParam) {
+      const parsedId = Number(urlDirigenteParam);
+      if (!isNaN(parsedId)) {
+        setSelectedDirigenteId(parsedId);
+        return;
+      }
+    }
     if (userDirigenteId) {
       setSelectedDirigenteId(userDirigenteId);
     } else if (dirigentesList.length > 0) {
       setSelectedDirigenteId(dirigentesList[0].id);
     }
-  }, [userDirigenteId, dirigentesList, selectedDirigenteId]);
+  }, [userDirigenteId, dirigentesList, selectedDirigenteId, searchParams]);
 
   const onTabChange = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -125,7 +133,13 @@ function PlanesInner() {
           <span className="text-sm text-muted-foreground">Dirigente:</span>
           <Select
             value={String(selectedDirigenteId)}
-            onValueChange={(v) => setSelectedDirigenteId(Number(v))}
+            onValueChange={(v) => {
+              const newId = Number(v);
+              setSelectedDirigenteId(newId);
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("dirigente", String(newId));
+              router.replace(`/dashboard/planes?${params.toString()}`);
+            }}
           >
             <SelectTrigger className="w-[280px]">
               <SelectValue />

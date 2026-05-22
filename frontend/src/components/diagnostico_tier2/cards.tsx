@@ -388,7 +388,7 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
     <CardShell
       code="B14"
       title="¿Tu audiencia habla de lo que publicas?"
-      pregunta="¿Mi caption habla de lo que los comments discuten?"
+      pregunta="¿El texto de mi publicación coincide con lo que la gente comenta?"
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
@@ -396,11 +396,11 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
       calibrating
       technicalNotes={
         <>
-          <span className="font-medium">Detector en calibración.</span> Jaccard
-          sobre captions cortos tiende a saturar cerca de{" "}
-          <span className="font-mono">1.0</span> — los scores individuales
+          <span className="font-medium">Detector en calibración.</span> El análisis
+          de coincidencia sobre textos cortos tiende a saturar cerca de{" "}
+          <span className="font-mono">1.0</span> — los resultados individuales
           todavía no son interpretables de manera confiable. Úsalo como señal
-          relativa entre posts, no como medida absoluta.
+          relativa entre publicaciones, no como medida absoluta.
         </>
       }
     >
@@ -409,11 +409,11 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
           {avg != null ? fmtNum(avg, 3) : <EmptyMetric />}
         </span>
         <span className="text-xs text-muted-foreground">
-          drift promedio · 0=alineado / 1=total
+          desvío promedio · 0=alineado / 1=total
         </span>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        {d?.n_posts_analizados ?? 0} posts analizados · {altos} con drift alto (&gt;
+        {d?.n_posts_analizados ?? 0} publicaciones analizadas · {altos} con desvío alto (&gt;
         {d?.umbral_drift_alto ?? 0.75})
       </p>
 
@@ -422,8 +422,8 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
         data-testid="b14-calibration-warning"
       >
         <p className="text-amber-800 dark:text-amber-300">
-          <span className="font-medium">⚠️ En calibración</span> · usa el grid
-          solo como señal relativa entre posts. Detalle técnico en el ⓘ.
+          <span className="font-medium">⚠️ En calibración</span> · usa el gráfico
+          solo como señal relativa entre publicaciones. Detalle técnico en el ⓘ.
         </p>
       </div>
 
@@ -435,13 +435,13 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
                 key={p.post_id}
                 className="aspect-square rounded-sm"
                 style={{ backgroundColor: driftColor(p.drift_score) }}
-                title={`Post #${p.post_id} · drift ${p.drift_score.toFixed(3)} · ${p.n_comments} comments`}
+                title={`Publicación #${p.post_id} · desvío ${p.drift_score.toFixed(3)} · ${p.n_comments} comentarios`}
                 data-testid="b14-heatmap-cell"
               />
             ))}
           </div>
           <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-            <span className="italic">1 cuadro = 1 post · más reciente →</span>
+            <span className="italic">1 cuadro = 1 publicación · más reciente →</span>
           </div>
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -454,7 +454,7 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
             </span>
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-sm bg-[hsl(var(--chart-negative))]" />
-              drift alto
+              desvío alto
             </span>
           </div>
         </div>
@@ -470,7 +470,7 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
                 aria-hidden="true"
               />
               <span className="flex-1 truncate text-muted-foreground">
-                #{p.post_id} · caption: {p.caption_tokens_top5.slice(0, 2).join(", ") || "—"}
+                #{p.post_id} · texto: {p.caption_tokens_top5.slice(0, 2).join(", ") || "—"}
               </span>
               <span className="font-medium tabular-nums">{fmtNum(p.drift_score, 2)}</span>
             </li>
@@ -496,7 +496,7 @@ export function CardB15({ bloque }: { bloque: BloqueBase & { data?: B15Data } })
       border: "border-[hsl(var(--chart-positive))]/40",
       text: "text-[hsl(var(--chart-positive))]",
       Icon: CheckCircle2,
-      label: "Engagement sano",
+      label: "Interacción sana",
     },
     amarillo: {
       bg: "bg-amber-500/10",

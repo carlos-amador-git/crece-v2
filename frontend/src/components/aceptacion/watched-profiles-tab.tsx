@@ -508,7 +508,7 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
       {/* Header info — el título lo da el tab; aquí solo contexto */}
       <p className="text-sm text-muted-foreground">
         <span className="font-medium text-foreground">{dirigenteName}</span> — lista nominada
-        de cuentas a monitorear. Engagement detectado automáticamente desde el scraping.
+        de cuentas a monitorear. Conexión detectada automáticamente desde el scraping.
       </p>
 
       {/* Selector de plataforma · D-PLATFORM-SELECTOR (2026-05-21) */}
@@ -539,7 +539,7 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
         </h3>
         <p className="text-xs text-muted-foreground mb-2">
           Posts con más audiencia favorable y con más rechazo en comentarios · ranking
-          por polaridad NLP promedio de los comments (no por likes ni engagement).
+          por sentimiento promedio de los comentarios (no por likes ni interacción).
           Últimos 30 días{platformFilter === "all" ? " · todas las plataformas" : ` · solo ${platformFilter}`}.
         </p>
         <TopPostsCards dirigenteId={dirigenteId} days={30} limit={3} platform={platformParam} />

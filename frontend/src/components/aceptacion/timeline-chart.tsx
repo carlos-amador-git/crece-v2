@@ -103,7 +103,7 @@ export function TimelineChart({ dirigenteId, days = 44, platform }: TimelineChar
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Engagement diario</CardTitle>
+          <CardTitle className="text-base font-semibold">Interacción diaria</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-72 w-full" />
@@ -116,7 +116,7 @@ export function TimelineChart({ dirigenteId, days = 44, platform }: TimelineChar
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Engagement diario</CardTitle>
+          <CardTitle className="text-base font-semibold">Interacción diaria</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-destructive">No se pudo cargar el timeline.</p>
@@ -129,7 +129,7 @@ export function TimelineChart({ dirigenteId, days = 44, platform }: TimelineChar
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Engagement diario</CardTitle>
+          <CardTitle className="text-base font-semibold">Interacción diaria</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
@@ -144,7 +144,7 @@ export function TimelineChart({ dirigenteId, days = 44, platform }: TimelineChar
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-baseline justify-between">
-          <CardTitle className="text-base font-semibold">Engagement diario</CardTitle>
+          <CardTitle className="text-base font-semibold">Interacción diaria</CardTitle>
           <span
             className="text-xs text-muted-foreground"
             title="Banda gris derecha (últimos 3d): posts publicados recientemente que aún están acumulando reactions. Zonas vacías a la izquierda: días fuera de la cobertura RADAR (sin reactors individuales capturados aunque haya posts publicados con likes públicos en BD). Barras ámbar: días con engagement excepcional (>p95) truncadas para mejorar legibilidad — el valor real aparece sobre la barra."

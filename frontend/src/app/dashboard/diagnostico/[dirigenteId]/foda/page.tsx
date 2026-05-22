@@ -173,7 +173,7 @@ export default function FodaPage() {
               </p>
             </div>
             <Button asChild size="sm">
-              <Link href={`/dashboard/planes/${data.plan_derivado_id}`} className="inline-flex items-center gap-2">
+              <Link href={`/dashboard/planes?dirigente=${did}&tab=estrategia`} className="inline-flex items-center gap-2">
                 Ver mi plan
                 <ArrowRight className="h-4 w-4" />
               </Link>

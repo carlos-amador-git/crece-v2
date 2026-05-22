@@ -251,7 +251,7 @@ export function TopPostsCards({ dirigenteId, days = 30, limit = 3, platform }: T
                       >
                         <p className="leading-snug">{q.text}</p>
                         <p className="mt-1 text-[10px] tabular-nums text-muted-foreground">
-                          polaridad {q.polaridad > 0 ? "+" : ""}
+                          sentimiento {q.polaridad > 0 ? "+" : ""}
                           {q.polaridad}
                         </p>
                       </li>

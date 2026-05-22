@@ -245,9 +245,9 @@ export function UnifiedPostCard({
                     ? "bg-rose-100 text-rose-700"
                     : "bg-slate-100 text-slate-700"
               }`}
-              title="Polaridad promedio de los comments clasificados con NLP (-1 a +1)."
+              title="Sentimiento promedio de los comentarios analizados (-1 a +1)."
             >
-              polaridad {post.polaridad_avg.toFixed(2)}
+              sentimiento {post.polaridad_avg.toFixed(2)}
             </span>
           )}
           {hasUrl && (
