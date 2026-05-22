@@ -20,6 +20,10 @@ import { cn } from "@/lib/utils";
 function translateMissing(raw: string): string {
   const map: { match: RegExp; pretty: string }[] = [
     {
+      match: /self sin social_profiles/i,
+      pretty: "Tu cuenta no tiene perfiles de redes sociales configurados para comparar",
+    },
+    {
       match: /competidor_directo_ids vac/i,
       pretty: "Aún no marcaste a tus competidores · configúralos en Onboarding",
     },
@@ -30,6 +34,26 @@ function translateMissing(raw: string): string {
     {
       match: /Competidores se declaran en Onboarding/i,
       pretty: "Configura tus rivales políticos desde el wizard",
+    },
+    {
+      match: /Todos los rivales sin datos en ventana/i,
+      pretty: "Tus competidores seleccionados no registran actividad reciente en los últimos 28 días",
+    },
+    {
+      match: /social_profiles=0/i,
+      pretty: "No se encontraron perfiles de redes sociales vinculados",
+    },
+    {
+      match: /social_posts\.emotions=NULL/i,
+      pretty: "Sin publicaciones con emociones analizadas en los últimos 90 días",
+    },
+    {
+      match: /sentiment_analyses\.emotions=NULL/i,
+      pretty: "Sin comentarios con emociones analizadas en los últimos 90 días",
+    },
+    {
+      match: /extensión NLP Plutchik pendiente/i,
+      pretty: "Procesamiento de análisis de emociones en cola para este dirigente",
     },
     {
       match: /topics_extracted en 28d/i,

@@ -262,6 +262,7 @@ def call_llm(prompt: str) -> str | None:
             r = subprocess.run(
                 [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, prompt],
                 capture_output=True, text=True, timeout=TIMEOUT_S,
+                stdin=subprocess.DEVNULL,
             )
             if r.returncode == 0 and r.stdout:
                 return r.stdout
@@ -271,8 +272,11 @@ def call_llm(prompt: str) -> str | None:
     if Path(GEMINI_BIN).exists():
         print("[+] Fallback gemini...", file=sys.stderr)
         try:
-            r = subprocess.run([GEMINI_BIN, "--mode", "plan", "-p", prompt],
-                               capture_output=True, text=True, timeout=900)
+            r = subprocess.run(
+                [GEMINI_BIN, "--mode", "plan", "--prompt", prompt],
+                capture_output=True, text=True, timeout=900,
+                stdin=subprocess.DEVNULL,
+            )
             if r.returncode == 0 and r.stdout:
                 return r.stdout
         except subprocess.TimeoutExpired:

@@ -166,6 +166,7 @@ def call_llm(prompt: str) -> tuple[str | None, str]:
             r = subprocess.run(
                 [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, prompt],
                 capture_output=True, text=True, timeout=DEFAULT_TIMEOUT_CC,
+                stdin=subprocess.DEVNULL,
             )
             if r.returncode == 0 and r.stdout:
                 return r.stdout, MODEL_VERSION
@@ -174,8 +175,9 @@ def call_llm(prompt: str) -> tuple[str | None, str]:
     if Path(GEMINI_BIN).exists():
         try:
             r = subprocess.run(
-                [GEMINI_BIN, "--mode", "plan", "-p", prompt],
+                [GEMINI_BIN, "--mode", "plan", "--prompt", prompt],
                 capture_output=True, text=True, timeout=600,
+                stdin=subprocess.DEVNULL,
             )
             if r.returncode == 0 and r.stdout:
                 return r.stdout, "gemini-cli-fallback-v1"
