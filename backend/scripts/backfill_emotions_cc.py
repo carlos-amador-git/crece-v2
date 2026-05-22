@@ -66,20 +66,29 @@ REGLAS:
 
 
 def call_llm(prompt: str) -> str | None:
+    # 1. Intentar Claude CLI (CC)
     if Path(CLAUDE_BIN).exists():
         try:
             r = subprocess.run(
                 [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, prompt],
                 capture_output=True, text=True, timeout=TIMEOUT_S,
+                stdin=subprocess.DEVNULL,
             )
             if r.returncode == 0 and r.stdout:
                 return r.stdout
         except subprocess.TimeoutExpired:
             pass
-    if Path(GEMINI_BIN).exists():
+
+    # 2. Fallback a Gemini CLI (headless)
+    GEMINI_CMD = "/opt/homebrew/bin/gemini"
+    if Path(GEMINI_CMD).exists():
         try:
-            r = subprocess.run([GEMINI_BIN, "--mode", "plan", "--prompt", prompt],
-                               capture_output=True, text=True, timeout=120)
+            # -p/--prompt es modo headless. --approval-mode plan asegura read-only.
+            r = subprocess.run(
+                [GEMINI_CMD, "--sandbox", "--approval-mode", "plan", "-p", prompt],
+                capture_output=True, text=True, timeout=180,
+                stdin=subprocess.DEVNULL,
+            )
             if r.returncode == 0 and r.stdout:
                 return r.stdout
         except subprocess.TimeoutExpired:

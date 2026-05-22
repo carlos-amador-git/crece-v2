@@ -75,6 +75,16 @@ export default function ReelsPage() {
     }
   }, [dirigenteId, dirigentes]);
 
+  const selectedDirigente = useMemo(
+    () => dirigentes.find((d) => d.id === dirigenteId),
+    [dirigentes, dirigenteId],
+  );
+
+  const placeholderName = useMemo(() => {
+    if (!selectedDirigente) return "El dirigente";
+    return selectedDirigente.full_name.split(" ")[0];
+  }, [selectedDirigente]);
+
   const generate = useGenerateReelScript();
   const { data: recent, isLoading: recentLoading } = useRecentReelScripts(
     dirigenteId,
@@ -240,7 +250,7 @@ export default function ReelsPage() {
               <Textarea
                 value={contextoAdicional}
                 onChange={(e) => setContextoAdicional(e.target.value)}
-                placeholder="ej. Saymi acaba de regresar de gira en Ixtlán · post fue viral"
+                placeholder={`ej. ${placeholderName} acaba de regresar de gira en Ixtlán · post fue viral`}
                 rows={3}
                 maxLength={2000}
               />

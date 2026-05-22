@@ -67,21 +67,34 @@ Responde ÚNICAMENTE el array JSON. Sin texto adicional, sin markdown, sin backt
 
 
 def call_cc(prompt: str, timeout: int = DEFAULT_TIMEOUT_CC) -> str | None:
-    if not Path(CLAUDE_BIN).exists():
-        print(f"  [CC] binary not found at {CLAUDE_BIN}", file=sys.stderr)
-        return None
-    try:
-        result = subprocess.run(
-            [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, prompt],
-            capture_output=True, text=True, timeout=timeout,
-        )
-        if result.returncode != 0:
-            print(f"  [CC] stderr: {result.stderr[:200]}", file=sys.stderr)
-            return None
-        return result.stdout
-    except subprocess.TimeoutExpired:
-        print(f"  [CC] timeout {timeout}s", file=sys.stderr)
-        return None
+    # 1. Claude
+    if Path(CLAUDE_BIN).exists():
+        try:
+            result = subprocess.run(
+                [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, prompt],
+                capture_output=True, text=True, timeout=timeout,
+                stdin=subprocess.DEVNULL,
+            )
+            if result.returncode == 0 and result.stdout:
+                return result.stdout
+        except subprocess.TimeoutExpired:
+            print(f"  [CC] timeout {timeout}s", file=sys.stderr)
+
+    # 2. Gemini fallback
+    GEMINI_CMD = "/opt/homebrew/bin/gemini"
+    if Path(GEMINI_CMD).exists():
+        try:
+            result = subprocess.run(
+                [GEMINI_CMD, "--sandbox", "--approval-mode", "plan", "-p", prompt],
+                capture_output=True, text=True, timeout=180,
+                stdin=subprocess.DEVNULL,
+            )
+            if result.returncode == 0 and result.stdout:
+                return result.stdout
+        except subprocess.TimeoutExpired:
+            print("  [Gemini] timeout", file=sys.stderr)
+
+    return None
 
 
 def call_cc_with_retry(prompt: str) -> str | None:

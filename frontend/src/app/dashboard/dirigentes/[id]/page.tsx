@@ -43,9 +43,11 @@ export default function DirigenteDetailPage() {
   const { data: crecimiento } = useDirigenteCrecimiento(id);
 
   const sentimentTrend = tonoTrendData ?? [];
-  // Filter plans for this dirigente
+  // Filter plans for this dirigente, including only updated AI Plans (Estrategia and Contenido)
   const dirigentePlans = (planesData?.items ?? []).filter(
-    (p) => p.dirigente_id === Number(id)
+    (p) =>
+      p.dirigente_id === Number(id) &&
+      (p.tipo === "CONSOLIDACION" || p.tipo === "CONTENIDO")
   );
 
   if (isLoading) {
