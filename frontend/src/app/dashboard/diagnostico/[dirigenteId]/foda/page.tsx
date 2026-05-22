@@ -83,7 +83,7 @@ function Quadrant({
         </div>
       </CardHeader>
       <CardContent className="flex-1">
-        <div className="max-h-[380px] overflow-y-auto pr-1">
+        <div className="max-h-[280px] overflow-y-auto pr-1">
           {items.length === 0 ? (
             <p className="text-xs italic text-muted-foreground">{emptyHint}</p>
           ) : (
