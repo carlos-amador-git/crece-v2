@@ -434,8 +434,8 @@ export function CardB05({ bloque }: { bloque: BloqueBase & { data?: B05Data } })
   return (
     <CardShell
       code="B05"
-      title="Sentimiento de la audiencia"
-      pregunta="¿Qué emociones predominan en los comentarios de tu gente?"
+      title="Qué siente tu audiencia"
+      pregunta="Análisis de las principales emociones que la gente expresa en tus comentarios."
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
@@ -484,7 +484,7 @@ export function CardB06({ bloque }: { bloque: BloqueBase & { data?: B06Data } })
   return (
     <CardShell
       code="B06"
-      title="Semáforo de crisis"
+      title="Alerta de crisis"
       pregunta="Detección automática de ataques o picos de toxicidad en tiempo real."
       fidelity="T1"
       status={bloque.status}
@@ -520,7 +520,7 @@ export function CardB07({ bloque }: { bloque: BloqueBase & { data?: B07Data } })
   return (
     <CardShell
       code="B07"
-      title="Nuevos seguidores"
+      title="Publicaciones que atraen gente"
       pregunta="¿Qué publicaciones están atrayendo a más personas a seguirte?"
       fidelity="T3"
       status={bloque.status}
@@ -699,8 +699,8 @@ export function CardB10({ bloque }: { bloque: BloqueBase & { data?: B10Data } })
   return (
     <CardShell
       code="B10"
-      title="Tu toque humano"
-      pregunta="¿Qué tan 'político tradicional' o 'persona real' se percibe tu cuenta?"
+      title="Conexión humana"
+      pregunta="¿Qué tan 'persona real' se percibe tu comunicación frente a un estilo político tradicional?"
       fidelity="T1"
       status={bloque.status}
       missing={bloque.missing}
@@ -808,8 +808,8 @@ export function CardB10WithDrilldown({
   return (
     <CardShell
       code="B10"
-      title="Tu toque humano"
-      pregunta="¿Qué tan 'político tradicional' o 'persona real' se percibe tu cuenta?"
+      title="Conexión humana"
+      pregunta="¿Qué tan 'persona real' se percibe tu comunicación frente a un estilo político tradicional?"
       fidelity="T1"
       status={bloque.status}
       missing={bloque.missing}
