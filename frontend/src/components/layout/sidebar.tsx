@@ -43,6 +43,7 @@ import {
   Stethoscope,
   Sparkles,
   Rocket,
+  Inbox,
   Wand2,
   Trophy,
   Film,
@@ -104,7 +105,7 @@ const sections: Section[] = [
       // D-DIAGNOSTICO-REORG-2026-05-22 · Diagnóstico agrupa 3 sub-items:
       // Recepción (antes "Diagnostico"), Diferenciadores y FODA. URLs intactas.
       group("diagnostico-group", "Diagnóstico", Stethoscope, [
-        leaf("/dashboard/diagnostico", "Recepción", Stethoscope),
+        leaf("/dashboard/diagnostico", "Recepción", Inbox),
         leaf("/dashboard/diagnostico-tier2", "Diferenciadores", Sparkles),
         leaf("/dashboard/diagnostico/foda", "FODA", Shield),
       ]),
