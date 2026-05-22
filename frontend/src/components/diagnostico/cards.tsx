@@ -415,10 +415,17 @@ function emocionLabel(k: string): string {
 export function CardB05({ bloque }: { bloque: BloqueBase & { data?: B05Data } }) {
   const d = bloque.data;
   const em = d?.emociones_promedio ?? {};
-  const chart = PLUTCHIK_ORDER.map((k) => ({
-    emocion: emocionLabel(k),
-    valor: Number(em[k] ?? 0),
-  }));
+  const chart = PLUTCHIK_ORDER.map((k) => {
+    const val = Number(em[k] ?? 0);
+    // Visual boost: usas sqrt para que emociones de 1-5% sean visibles frente a picos de 80-90%
+    // Sin esto, la gráfica parece una línea recta al centro.
+    const boosted = Math.sqrt(val);
+    return {
+      emocion: emocionLabel(k),
+      valor: boosted,
+      original: val, // guardamos el real por si el tooltip lo necesita
+    };
+  });
 
   // D-EKMAN-1: ratio joy/anger (antes trust/anger; trust no se emite por el NLP).
   // Backend devuelve ambos campos como alias durante migración.
