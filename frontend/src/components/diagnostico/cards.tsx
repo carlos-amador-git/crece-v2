@@ -345,8 +345,8 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
   return (
     <CardShell
       code="B04"
-      title="Frente a la competencia"
-      pregunta="Comparativa directa de tu nivel de conexión contra tus rivales."
+      title="Comparativa con rivales"
+      pregunta="Cómo te va frente a otros políticos de tu mismo tamaño de audiencia."
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
@@ -359,7 +359,7 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
           #{myRank}
         </span>
         <span className="text-sm font-medium text-muted-foreground">
-          entre tus {rows.length - 1} competidores directos
+          entre tus {rows.length - 1} rivales directos
         </span>
       </div>
       <div className="h-28 w-full mt-1">
@@ -586,8 +586,8 @@ export function CardB08({ bloque }: { bloque: BloqueBase & { data?: B08Data } })
   return (
     <CardShell
       code="B08"
-      title="Tu peso en la charla"
-      pregunta="¿Qué porcentaje de la conversación sobre tus temas clave te pertenece?"
+      title="Qué tanto se habla de ti"
+      pregunta="Tu peso en la conversación digital sobre temas relevantes para tu campaña."
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
