@@ -61,7 +61,7 @@ export function Footer() {
           <p>&copy; {new Date().getFullYear()} MD Consultoría TI. Todos los derechos reservados.</p>
           <p>
             Hecho con datos reales para{" "}
-            <span className="font-medium text-foreground">Movimiento Ciudadano CDMX</span>
+            <span className="font-medium text-foreground">dirigentes políticos de México</span>
           </p>
         </div>
       </div>

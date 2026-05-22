@@ -55,20 +55,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userData = await api.get<User>("/auth/me");
       setUser(userData);
-      // Restore active org from localStorage or set from user's org
-      const stored = localStorage.getItem("crece_active_org");
-      if (stored) {
+
+      // Restore active org from localStorage
+      const storedRaw = localStorage.getItem("crece_active_org");
+      let stored: OrgContext | null = null;
+      if (storedRaw) {
         try {
-          setActiveOrgState(JSON.parse(stored));
+          stored = JSON.parse(storedRaw);
         } catch {
-          // Invalid stored org — set from user
+          /* ignore */
         }
       }
-      if (!stored && userData.org_id && userData.org_nombre && userData.org_slug) {
-        const org = { id: userData.org_id, nombre: userData.org_nombre, slug: userData.org_slug };
-        setActiveOrgState(org);
-        localStorage.setItem("crece_active_org_id", String(org.id));
-        localStorage.setItem("crece_active_org", JSON.stringify(org));
+
+      // Logic: 
+      // 1. If not admin, ALWAYS force to user's org (no switching allowed)
+      // 2. If admin, allow switching, but if current active matches user.org_id, 
+      //    sync the name (in case it changed in DB).
+      const userOrg =
+        userData.org_id && userData.org_nombre && userData.org_slug
+          ? { id: userData.org_id, nombre: userData.org_nombre, slug: userData.org_slug }
+          : null;
+
+      if (userData.role !== "admin" || !stored) {
+        if (userOrg) {
+          setActiveOrgState(userOrg);
+          localStorage.setItem("crece_active_org_id", String(userOrg.id));
+          localStorage.setItem("crece_active_org", JSON.stringify(userOrg));
+        }
+      } else if (stored && userOrg && stored.id === userOrg.id && stored.nombre !== userOrg.nombre) {
+        // Sync name for admin if IDs match but name differs (stale cache)
+        setActiveOrgState(userOrg);
+        localStorage.setItem("crece_active_org", JSON.stringify(userOrg));
+      } else {
+        setActiveOrgState(stored);
       }
     } catch {
       localStorage.removeItem("crece_access_token");
