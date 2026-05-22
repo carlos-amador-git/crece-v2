@@ -115,6 +115,42 @@ propio dirigente.
 ### 10. Datos Faltantes
 Lista de datos que se necesitan para profundizar.
 
+---
+
+## BLOQUE EXTRA · JSON ESTRUCTURADO (OBLIGATORIO AL FINAL)
+
+Después de las 10 secciones markdown, agrega este bloque exacto:
+
+```json_diagnostico
+{
+  "ipd_score": <number>,
+  "ipd_bucket": "BAJO|MEDIO|ALTO",
+  "insight_bala": "<1-2 frases que sintetizan el hallazgo principal · MAX 240 chars>",
+  "fortalezas": [
+    {"titulo": "<corto>", "evidencia": "<dato concreto>", "implicacion": "<qué significa>"}
+  ],
+  "oportunidades": [
+    {"titulo": "<corto>", "evidencia": "<dato/benchmark>", "tactica": "<acción específica>"}
+  ],
+  "debilidades": [
+    {"titulo": "<corto>", "evidencia": "<dato concreto>", "riesgo": "<qué puede pasar>"}
+  ],
+  "amenazas": [
+    {"titulo": "<corto>", "evidencia": "<dato/contexto>", "mitigacion": "<cómo blindar>"}
+  ],
+  "acciones_top3": [
+    {"orden": 1, "texto": "<acción ejecutable 14-30d>", "cta_label": "<botón>", "cta_href": "/dashboard/..."}
+  ],
+  "plataforma_prioritaria": "<FACEBOOK|INSTAGRAM|TIKTOK|YOUTUBE|TWITTER>"
+}
+```
+
+REGLAS DEL JSON:
+- Mismo número de ítems FODA del markdown (8-10 por cuadrante mínimo).
+- Acciones: EXACTAMENTE 3.
+- CTAs reales de CRECE: /dashboard/hub, /dashboard/aceptacion/fans-y-perfiles, /dashboard/diagnostico, /dashboard/social/clima, /dashboard/sistema/onboarding.
+- NO mezclar idiomas · todo en español.
+
 ## CONTEXTO REAL DEL DIRIGENTE (USAR SOLO ESTOS DATOS):
 """
 
@@ -143,22 +179,61 @@ async def main() -> int:
         prompt = ENRICHED_PROMPT_HEADER + "\n```json\n" + json.dumps(ctx, indent=2, ensure_ascii=False, default=str) + "\n```\n"
 
         print(f"[+] Prompt size: {len(prompt)} chars", file=sys.stderr)
-        print(f"[+] Llamando Claude API ({settings.CLAUDE_MODEL}, max_tokens={args.max_tokens})...", file=sys.stderr)
 
-        import anthropic
-        client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY, timeout=180.0)
-        msg = client.messages.create(
-            model=settings.CLAUDE_MODEL,
-            max_tokens=args.max_tokens,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        content = msg.content[0].text
-        print(f"[+] Generado: {len(content)} chars · {msg.usage.input_tokens}→{msg.usage.output_tokens} tokens", file=sys.stderr)
+        # 2026-05-21 · cambiado de Claude API a CC subprocess (no requiere API key)
+        # · mismo approach que regen_diagnostico_v2.py · effort=high para FODA rico.
+        # Si CC no disponible localmente, fallback a gemini-clean.
+        import subprocess
+        from pathlib import Path
+
+        CLAUDE_BIN = "/Users/marxchavez/.local/bin/claude"
+        GEMINI_BIN = "/Users/marxchavez/.claude/bin/gemini-clean"
+        CC_EFFORT = os.environ.get("CC_EFFORT", "high")
+        TIMEOUT_S = int(os.environ.get("CC_TIMEOUT", "1200"))
+
+        content = None
+        if Path(CLAUDE_BIN).exists():
+            print(f"[+] Llamando CC subprocess (effort={CC_EFFORT}, timeout={TIMEOUT_S}s)...", file=sys.stderr)
+            try:
+                r = subprocess.run(
+                    [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, prompt],
+                    capture_output=True, text=True, timeout=TIMEOUT_S,
+                )
+                if r.returncode == 0 and r.stdout:
+                    content = r.stdout
+            except subprocess.TimeoutExpired:
+                print(f"[warn] CC subprocess timeout", file=sys.stderr)
+        if not content and Path(GEMINI_BIN).exists():
+            print(f"[+] Fallback a gemini-clean...", file=sys.stderr)
+            try:
+                r = subprocess.run([GEMINI_BIN, "--mode", "plan", "-p", prompt],
+                                   capture_output=True, text=True, timeout=900)
+                if r.returncode == 0 and r.stdout:
+                    content = r.stdout
+            except subprocess.TimeoutExpired:
+                pass
+        if not content:
+            print("ERROR: Ambos LLMs fallaron · ABORT", file=sys.stderr)
+            return 2
+        print(f"[+] Generado: {len(content)} chars", file=sys.stderr)
 
         if not args.apply:
             print("\n=========== OUTPUT (no persistido — usa --apply) ===========\n", file=sys.stderr)
             print(content)
             return 0
+
+        # Extraer JSON estructurado del bloque ```json_diagnostico ... ```
+        import re
+        estructura_json = None
+        m = re.search(r"```json_diagnostico\s*\n(.*?)\n```", content, re.DOTALL)
+        if m:
+            try:
+                estructura_json = json.loads(m.group(1))
+                print(f"[+] JSON estructurado parseado: {list(estructura_json.keys())}", file=sys.stderr)
+            except json.JSONDecodeError as e:
+                print(f"[warn] JSON parse fail: {e}", file=sys.stderr)
+        else:
+            print("[warn] No se encontró bloque json_diagnostico en output", file=sys.stderr)
 
         plan = PlanIA(
             dirigente_id=dirigente.id,
@@ -167,14 +242,15 @@ async def main() -> int:
             modelo_ia=settings.CLAUDE_MODEL,
             prompt_usado=prompt[:2000],
             datos_entrada=ctx,
-            generado_por_id=None,
+            generado_por_id=1,  # NOT NULL constraint
             aprobado=False,
             created_at=datetime.now(UTC),
+            estructura_json=estructura_json,
         )
         db.add(plan)
         await db.commit()
         await db.refresh(plan)
-        print(f"[OK] Persistido como planes_ia.id={plan.id}", file=sys.stderr)
+        print(f"[OK] Persistido como planes_ia.id={plan.id} (estructura_json={'sí' if estructura_json else 'no'})", file=sys.stderr)
         return 0
 
 
