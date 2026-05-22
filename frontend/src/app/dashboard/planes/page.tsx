@@ -54,7 +54,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-const TAB_VALUES = ["diagnostico", "estrategia", "contenido"] as const;
+// D-PLANES-DIAGNOSTICO-REMOVED-2026-05-22 · tab Diagnóstico eliminado.
+// Análisis vive en menú Diagnóstico (Recepción · Diferenciadores · FODA).
+// Planes IA queda enfocado en lo prospectivo: Estrategia + Contenido.
+const TAB_VALUES = ["estrategia", "contenido"] as const;
 type TabKey = (typeof TAB_VALUES)[number];
 
 function isAdminRole(role: string | undefined): boolean {
@@ -67,8 +70,10 @@ function PlanesInner() {
   const { user } = useAuth();
 
   const tabParam = searchParams.get("tab");
+  // Default "estrategia" (antes "diagnostico" · removido 2026-05-22).
+  // Bookmarks viejos con tab=diagnostico caen silenciosamente a estrategia.
   const initialTab: TabKey =
-    TAB_VALUES.includes((tabParam ?? "") as TabKey) ? (tabParam as TabKey) : "diagnostico";
+    TAB_VALUES.includes((tabParam ?? "") as TabKey) ? (tabParam as TabKey) : "estrategia";
 
   const userRole = (user as { role?: string } | null)?.role;
   const userDirigenteId = (user as { dirigente_id?: number } | null)?.dirigente_id;
@@ -137,10 +142,7 @@ function PlanesInner() {
       )}
 
       <Tabs defaultValue={initialTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
-          <TabsTrigger value="diagnostico" className="gap-2">
-            <Stethoscope className="h-4 w-4" /> Diagnóstico
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
           <TabsTrigger value="estrategia" className="gap-2">
             <Target className="h-4 w-4" /> Estrategia
           </TabsTrigger>
@@ -148,10 +150,6 @@ function PlanesInner() {
             <Calendar className="h-4 w-4" /> Contenido
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="diagnostico" className="mt-6">
-          <DiagnosticoTab dirigenteId={selectedDirigenteId} />
-        </TabsContent>
 
         <TabsContent value="estrategia" className="mt-6">
           <EstrategiaTab dirigenteId={selectedDirigenteId} />

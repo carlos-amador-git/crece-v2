@@ -45,9 +45,11 @@ JUICIO: ¿es bueno, malo, crítico, excepcional? ¿Qué significa para el
 dirigente?
 Usa metáforas y frases memorables. El diagnóstico debe ser MEMORABLE.
 
-IMPORTANTE: este diagnóstico es EXCLUSIVAMENTE sobre {nombre}. NO menciones
-otros dirigentes en el FODA ni recomendaciones. Usa SIEMPRE "{nombre}" o
-"tu/tus" referido a {nombre}.
+IMPORTANTE: este diagnóstico es sobre {nombre}. Puedes citar competidores
+que aparezcan en el contexto provisto (top_competitors) si la data lo
+justifica. PROHIBIDO mencionar dirigentes que NO estén en top_competitors
+del contexto · ESPECIALMENTE prohibido cualquier nombre que pertenezca a
+clientes nuestros (cross-contamination entre clientes). Si dudas, omite.
 
 ## ESTRUCTURA OBLIGATORIA (10 secciones):
 

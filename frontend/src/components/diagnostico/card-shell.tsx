@@ -11,6 +11,49 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+/**
+ * Traduce mensajes técnicos del backend (missing[]) a copy cliente.
+ * D-LENGUAJE-CLIENTE-2026-05-22 · CEO: dirigentes y community managers
+ * no leen español técnico. Mapper conservador: solo claves conocidas se
+ * traducen, el resto pasa intacto.
+ */
+function translateMissing(raw: string): string {
+  const map: { match: RegExp; pretty: string }[] = [
+    {
+      match: /competidor_directo_ids vac/i,
+      pretty: "Aún no marcaste a tus competidores · configúralos en Onboarding",
+    },
+    {
+      match: /Sin proxy S2|proxies_s2/i,
+      pretty: "Sin competidores configurados ni de referencia disponibles",
+    },
+    {
+      match: /Competidores se declaran en Onboarding/i,
+      pretty: "Configura tus rivales políticos desde el wizard",
+    },
+    {
+      match: /topics_extracted en 28d/i,
+      pretty: "Análisis de temas aún no calculado para este dirigente",
+    },
+    {
+      match: /Sprint S1 T5 topic extractor/i,
+      pretty: "Pendiente ejecutar análisis de tópicos sobre el corpus reciente",
+    },
+    {
+      match: /Sin datos de publicaciones individuales/i,
+      pretty: "Aún no hay histórico suficiente · disponible tras 14 días de monitoreo",
+    },
+    {
+      match: /followers_ganados/i,
+      pretty: "Crecimiento de seguidores requiere ≥ 2 mediciones en distintas fechas",
+    },
+  ];
+  for (const { match, pretty } of map) {
+    if (match.test(raw)) return pretty;
+  }
+  return raw;
+}
+
 interface CardShellProps {
   code: string; // B01..B10
   title: string;
@@ -154,7 +197,7 @@ export function CardShell({
               <ul className="space-y-0.5 text-[11px] leading-tight text-muted-foreground">
                 {missing.slice(0, 2).map((m, i) => (
                   <li key={i} className="break-words">
-                    {m}
+                    {translateMissing(m)}
                   </li>
                 ))}
               </ul>

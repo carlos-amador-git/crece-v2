@@ -101,9 +101,13 @@ const sections: Section[] = [
     items: [
       leaf("/dashboard", "Overview", LayoutDashboard),
       leaf("/dashboard/dirigentes", "Dirigentes", Users),
-      leaf("/dashboard/diagnostico", "Diagnostico", Stethoscope),
-      leaf("/dashboard/diagnostico-tier2", "Diferenciadores", Sparkles),
-      leaf("/dashboard/diagnostico/foda", "FODA", Shield),
+      // D-DIAGNOSTICO-REORG-2026-05-22 · Diagnóstico agrupa 3 sub-items:
+      // Recepción (antes "Diagnostico"), Diferenciadores y FODA. URLs intactas.
+      group("diagnostico-group", "Diagnóstico", Stethoscope, [
+        leaf("/dashboard/diagnostico", "Recepción", Stethoscope),
+        leaf("/dashboard/diagnostico-tier2", "Diferenciadores", Sparkles),
+        leaf("/dashboard/diagnostico/foda", "FODA", Shield),
+      ]),
       // F4 Content Hub (2026-05-19) · D13.5=A single ítem reemplaza las 4
       // entradas viejas (Monitoreo, Comentarios, Top Posts, Fans y Perfiles).
       // Rutas viejas siguen funcionando vía redirects 308 (rollback friendly).
