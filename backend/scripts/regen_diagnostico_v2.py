@@ -53,7 +53,9 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8002")
 
 PROMPT_TEMPLATE = """Eres analista político senior especializado en presencia digital política mexicana.
 
-CONTEXTO: Saymi Pineda Velasco · Secretaria de Turismo Oaxaca · oficialismo MORENA.
+CONTEXTO DEL DIRIGENTE: {nombre} · {cargo} · partido {partido} · rol {rol}.
+
+IMPORTANTE: este diagnóstico es EXCLUSIVAMENTE sobre {nombre}. NO menciones otros dirigentes en el insight ni en fortalezas/debilidades/riesgos. Usa SIEMPRE el nombre "{nombre}" (o "tu/tus" referido a {nombre}) cuando narres.
 
 DATOS REALES (computados ahora mismo desde la BD):
 
@@ -102,6 +104,22 @@ REGLAS DURAS:
 OUTPUT: ÚNICAMENTE el objeto JSON. Sin markdown, sin comentarios, sin texto adicional."""
 
 
+def fetch_dirigente_meta(dirigente_id: int) -> dict:
+    """Lee nombre/cargo/partido directo de BD para parametrizar prompt."""
+    import psycopg2 as psycopg
+    conn = psycopg.connect(DB_URL)
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT full_name, cargo, partido FROM dirigentes WHERE id = %s",
+            (dirigente_id,),
+        )
+        r = cur.fetchone()
+    conn.close()
+    if not r:
+        return {"nombre": f"Dirigente #{dirigente_id}", "cargo": "n/a", "partido": "n/a"}
+    return {"nombre": r[0] or f"Dirigente #{dirigente_id}", "cargo": r[1] or "n/a", "partido": r[2] or "n/a"}
+
+
 def fetch_diagnostico(dirigente_id: int, dirigente_email: str = "pineda@crece.mx") -> tuple[dict, dict, float, str]:
     """Llama /diagnostico/{id} y /diagnostico_tier2/{id} y retorna (tier1, tier2, ipd, bucket).
 
@@ -123,6 +141,9 @@ def fetch_diagnostico(dirigente_id: int, dirigente_email: str = "pineda@crece.mx
     # IPD: viene del overview de aceptación (calculate_ipd ya lo tiene)
     ov = requests.get(f"{BACKEND_URL}/api/v1/aceptacion/overview", headers=headers, timeout=10).json()
     diri = next((d for d in ov.get("dirigentes", []) if d.get("dirigente_id") == dirigente_id), None)
+    rol = (diri.get("rol_politico") if diri else None) or "n/a"
+    # Adjuntar rol al return (sin romper tuple existente)
+    fetch_diagnostico._last_rol = rol  # type: ignore[attr-defined]
     # placeholder IPD: si no hay, usar bucket por pct_aprobacion como aproximación
     ipd = 6.0
     if diri:
@@ -268,8 +289,12 @@ def main():
 
     tier1_md = bloques_to_md(t1.get("bloques", {}))
     tier2_md = bloques_to_md(t2.get("bloques", {}))
+    # D-DIAGNOSTICO-V2-FIX-2026-05-21 · prompt parametrizado por dirigente real.
+    meta = fetch_dirigente_meta(args.dirigente_id)
+    rol = getattr(fetch_diagnostico, "_last_rol", "n/a")
     prompt = PROMPT_TEMPLATE.format(
-        tier1_md=tier1_md, tier2_md=tier2_md, ipd_score=ipd, ipd_bucket=bucket
+        tier1_md=tier1_md, tier2_md=tier2_md, ipd_score=ipd, ipd_bucket=bucket,
+        nombre=meta["nombre"], cargo=meta["cargo"], partido=meta["partido"], rol=rol,
     )
 
     print(f"[2/4] LLM (effort={CC_EFFORT})…", flush=True)
