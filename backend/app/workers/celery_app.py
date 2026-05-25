@@ -92,6 +92,12 @@ celery_app.conf.update(
             "task": "app.workers.tasks.plan_ia_reporte_semanal",
             "schedule": crontab(hour=9, minute=0, day_of_week=1),
         },
+        # D-BEAT-SNAPSHOT-WEEKLY-2026-05-25 · destrabra B07 delta_followers
+        # Lunes 02:00 America/Mexico_City (timezone configurada en este module).
+        "snapshot-all-profiles-weekly": {
+            "task": "app.workers.tasks.snapshot_all_profiles",
+            "schedule": crontab(hour=2, minute=0, day_of_week=1),
+        },
     },
 )
 
