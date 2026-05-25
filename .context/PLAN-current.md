@@ -1,5 +1,6 @@
-ACTIVE: PLAN-2026-05-25-sprint-multi.md (F1-F5 · ~3.5h · 5 bugs UI + B07 beat snapshot semanal + B08 topics rivales + tono_discurso serializer + UPDATE 32 TT métricas + patch mapper · F4 tríada audit-full diferida sesión propia · listo para /sprint-implement)
-RECENT-CLOSED 2026-05-25: PLAN-2026-05-22-recovery.md (F3.0-F3.3 cerradas · 5/5 G-criteria verdes · batch único 670 OK 0 fails 30min · reporte en .context/REPORTE-RECOVERY-2026-05-22.md)
+ACTIVE: PLAN-2026-05-25-sprint-cierre-audit.md (F1-F5 · ~8h autopiloto + 1h F4 condicional · cierra 9/10 items audit-full 2026-05-19 + tríada · F1.3 part B rotación keys diferida sesión CEO · F4 matriz polaridad condicional decisión CEO · listo para /sprint-implement)
+RECENT-CLOSED 2026-05-25 tarde: PLAN-2026-05-25-sprint-multi.md (F1-F3+F5 · 5 bugs UI + B07 beat + B08 rivales + TT mapper · 7 commits push + Vercel deploy)
+RECENT-CLOSED 2026-05-25: PLAN-2026-05-22-recovery.md (F3.0-F3.3 cerradas · 5/5 G-criteria verdes · batch único 670 OK 0 fails 30min)
 PREVIOUS-CLOSED 2026-05-20: PLAN-2026-05-20-post-ingest-hugo.md (cerrado de facto por sesiones intermedias)
 PREVIOUS-CLOSED 2026-05-20: PLAN-2026-05-19-deuda-tests-y-fixes.md (CERRADO · PR #55 mergeado cd3e408e75 · 14/14 audit-full tasks · 3 falsos positivos verificados · hotfix Gemini regex · workflow CI smoke fix · sidebar Fans y Perfiles restaurado D-FANS-PERFILES-SIDEBAR-INVARIANTE)
 NEXT: TBD post-Saymi/Pepe ingest cierre (depende discrepancias NLP residuales · si <10% siguen ok producto, si >10% sprint dedicado NLP)

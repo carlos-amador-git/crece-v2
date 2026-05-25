@@ -295,7 +295,7 @@ export function Sidebar() {
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           active
             ? "bg-orange-500/15 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300 font-semibold"
-            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            : "text-foreground/70 hover:bg-muted/60 hover:text-foreground",
           collapsed && "justify-center px-2",
           insideGroup && !collapsed && "ml-4 pl-5 border-l border-border/60",
         )}
@@ -347,7 +347,7 @@ export function Sidebar() {
                   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                   active
                     ? "bg-accent/10 text-accent"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    : "text-foreground/70 hover:bg-muted/60 hover:text-foreground",
                 )}
                 aria-expanded={expanded}
                 aria-label={`${g.label} — expandir`}
@@ -383,7 +383,7 @@ export function Sidebar() {
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
             active && !expanded
               ? "text-orange-700 dark:text-orange-300 font-semibold"
-              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+              : "text-foreground/70 hover:bg-muted/60 hover:text-foreground",
           )}
           aria-expanded={expanded}
           aria-controls={`sidebar-group-${g.key}`}
