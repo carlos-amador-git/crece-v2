@@ -1,4 +1,6 @@
-ACTIVE: PLAN-2026-05-20-post-ingest-hugo.md (6 fases F0-F6 · ingest RADAR Hugo + cross-app coherence + NLP audit + planes IA + recomendaciones + UI validation + reporte cliente · autonomía concedida CEO con loop verificación por fase · pre cross-audit Gemini · Saymi #1 Pepe #2)
+ACTIVE: TBD · próximo sprint = tríada crítica pre-cliente audit-full 2026-05-19 · orden recomendado (1) rate-limit /posts/unified ~30min (2) filtros /hub ~1-1.5h (3) .env.scraping-keys rotación + git filter-repo ~1-2h sesión propia CEO
+RECENT-CLOSED 2026-05-25: PLAN-2026-05-22-recovery.md (F3.0-F3.3 cerradas · 5/5 G-criteria verdes · batch único 670 OK 0 fails 30min · reporte en .context/REPORTE-RECOVERY-2026-05-22.md)
+PREVIOUS-CLOSED 2026-05-20: PLAN-2026-05-20-post-ingest-hugo.md (cerrado de facto por sesiones intermedias)
 PREVIOUS-CLOSED 2026-05-20: PLAN-2026-05-19-deuda-tests-y-fixes.md (CERRADO · PR #55 mergeado cd3e408e75 · 14/14 audit-full tasks · 3 falsos positivos verificados · hotfix Gemini regex · workflow CI smoke fix · sidebar Fans y Perfiles restaurado D-FANS-PERFILES-SIDEBAR-INVARIANTE)
 NEXT: TBD post-Saymi/Pepe ingest cierre (depende discrepancias NLP residuales · si <10% siguen ok producto, si >10% sprint dedicado NLP)
 PREV: PLAN-2026-05-19-content-hub.md v2 (post-piloto · 4 fases F0-F3 · F4 backlog · F4 Content Hub absorbido por PR #54)

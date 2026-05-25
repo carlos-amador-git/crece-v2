@@ -102,6 +102,10 @@ graphify-out/
 
 # ── Local secrets (never track) ──────────────────────────────
 .env.vercel
+.env.vercel.pulled
+.env.vercel.pulled.*
+*.vercel.pulled
+*.vercel.pulled.*
 
 # ── Ephemeral session state ──────────────────────────────────
 .context/HANDOFF

@@ -1,6 +1,51 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-19 noche · /audit-full ejecutado · score 73.25/100 · tríada crítica activa pre-cliente
+**Ultimo update:** 2026-05-25 mediodía · Recovery 2026-05-22 CERRADO · Saymi 100% topics todas plataformas · próximo: tríada crítica pre-cliente
+
+## 2026-05-25 · Recovery post-crash 2026-05-22 CERRADO (~2h walltime cierre · batch 30 min · resto verificación)
+
+**Plan:** `.context/PLAN-2026-05-22-recovery.md` · reporte cierre `.context/REPORTE-RECOVERY-2026-05-22.md`
+
+### Hallazgo principal del cierre
+
+Entre 2026-05-22 (crash) y 2026-05-25 (cierre), sesiones intermedias avanzaron de facto la mayoría de pendientes del plan-22 sin actualizarlo. Plan estaba 3 días desactualizado.
+
+| Fase | Estado real al iniciar cierre | Acción cierre |
+|---|---|---|
+| F3.0 limpieza BD | ✅ ya hecha · plan #73 borrado · Ivette MORENA · WIP commit en `975d09c` | sin acción |
+| F3.1 NLP backfill | 100% tono · 100% emotions · sólo 670 Saymi YT+TT topics pendientes (con content >10c) | batch único 670 OK 0 fails 30min |
+| F3.2 frontend lenguaje | B04/B05/B08 ya cliente-ready · B05 Ekman 6 ya D-EKMAN-1 2026-05-12 · topics_extracted pretty-mapeado | sin acción |
+| F3.3 deploy | alias prod ya con commit Pedro Carlock del agente anterior (~11:30) | sin re-deploy · topics nuevos los lee backend al próximo request |
+
+### Tabla G1-G5 · sprint cerrado
+
+| # | Criterio | Estado |
+|---|---|---|
+| G1 | Plan #73 stale eliminado · #76 vigente | ✅ |
+| G2 | Ivette MORENA en BD | ✅ |
+| G3 | NLP gap <10% por (dirigente, plataforma) con content válido | ✅ Pepe 100% · Saymi 100% todas plataformas |
+| G4 | B04/B05/B08 lenguaje cliente · B05 6 emociones | ✅ |
+| G5 | Cero crashes RAM durante F3.1 | ✅ 670/670 OK · 0 fails |
+
+### Decisión nueva registrada
+- **D-RECOVERY-CIERRE-2026-05-25-PLAN-DESACTUALIZADO** · planes post-incidente caducan rápido. Lección: verificar estado real BD+código antes de re-ejecutar plan de recovery >3 días viejo. Evita ~90% re-trabajo.
+
+### Cambios sesión
+- `.gitignore` · agregado `*.vercel.pulled*` (5 patrones · evita commit accidental secrets locales)
+- `.context/REPORTE-RECOVERY-2026-05-22.md` · nuevo · reporte cierre completo
+- `.context/PLAN-current.md` · ACTIVE apunta a recovery (cerrado)
+- `backend/scripts/extract_topics_saymi_cc.py` · ejecutado, 670 posts Saymi nuevos topics_extracted
+
+### Pendientes diferidos al cerrar recovery
+- **Tríada crítica pre-cliente audit-full 2026-05-19** sigue abierta · próximo sprint
+  1. Rate limit `/posts/unified` (~30 min · SlowAPI middleware)
+  2. Filtros en `/hub` (~1-1.5h · regresión vs `/social` viejo)
+  3. `.env.scraping-keys` tracked git (~1-2h · alto blast · rotar keys + `git filter-repo` · sesión propia con CEO)
+- Backfill matriz polaridad v2 Saymi 595 posts legacy (sigue diferido sprint 20-may)
+- Mobile audit completo (sigue diferido)
+- 52 commits acumulados en `feat/post-ingest-hugo-2026-05-20` sin merge a `main`
+
+---
 
 ## 2026-05-19 noche · /audit-full · score 73.25/100
 
