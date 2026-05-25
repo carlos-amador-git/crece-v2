@@ -1,6 +1,66 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-25 mediodía · Recovery 2026-05-22 CERRADO · Saymi 100% topics todas plataformas · próximo: tríada crítica pre-cliente
+**Ultimo update:** 2026-05-25 tarde · Sprint multi PLAN-2026-05-25 CERRADO · 5 bugs UI + B07 beat + B08 rivales + TT mapper fix · 5 commits push + Vercel deploy · próximo: F4 tríada audit-full pre-cliente
+
+## 2026-05-25 tarde · Sprint multi PLAN-2026-05-25-sprint-multi CERRADO (~3h)
+
+**Plan:** `.context/PLAN-2026-05-25-sprint-multi.md` (F1-F3+F5 ejecutadas · F4 tríada diferida sesión propia)
+**Origen:** post-cierre recovery 2026-05-22 · CEO inspección visual descubrió 5 bugs UI + cuestionó B07/B08/B17
+**Cross-verificación primaria:** Hugo (peer RADAR `1m4oqc8n`) confirmó mapper TT contract antes de tocar BD
+
+### Fases ejecutadas
+
+| Fase | Items | Resultado |
+|---|---|---|
+| F1 backend SQL + scripts | TT mapper patch + UPDATE 32 posts + ER recompute + tono_discurso serializer | 5,749 likes + 90,051 views recuperados · ER avg 0.96% max 12.97% (rangos TT normales) · 0 fails |
+| F2 beat + topics rivales | snapshot_all_profiles task + beat lunes 02:00 MX + extract topics Ivette+Susana | Baseline 36 snaps OK · Ivette 17/17 + Susana 66/66 OK · B07+B08 destrabados |
+| F3 frontend UX | Título widget honesto + selector N=1 readonly + sticky platform filter | tsc verde · check-no-mocks verde |
+| F5 deploy | 5 commits incrementales + push + Vercel prod + alias | Alias `frontend-zeta-sepia-46.vercel.app` apunta a deploy `frontend-i1ye7nrdx` |
+| F4 tríada audit-full | rate-limit `/posts/unified` + filtros `/hub` + rotación `.env.scraping-keys` | DIFERIDA sesión propia con CEO (alto blast del item #3) |
+
+### Commits sesión (6 + 1 vercelignore)
+
+| Hash | Mensaje |
+|---|---|
+| `6b4ba0c` | fix(ingest): TIKTOK platform branch en ingest_radar_yt_x_posts |
+| `e654dda` | feat(workers): snapshot_all_profiles task + beat semanal · destrabra B07 |
+| `5d4373b` | fix(api,ui): tono_discurso en recent_posts + SentimentBadge fallback |
+| `ea04a1a` | ui(dirigentes,aceptacion): título honesto + selector N=1 + sticky filter |
+| `7092426` | docs(plan): PLAN-2026-05-25-sprint-multi · F1-F3+F5 cerradas |
+| (post-deploy) | chore(deploy): add .vercelignore con secrets pulled |
+
+### Bug #3 RADAR mapper · diagnóstico cross-verificado
+
+CEO observó posts TT con 0 likes en `/dashboard/dirigentes/3`. Mi primera reacción fue "scraper RADAR falló" sin verificar — error mío reconocido. Verificación primaria + consulta a Hugo (peer RADAR `1m4oqc8n`) confirmó:
+
+- RADAR yt-dlp_tiktok SÍ trajo métricas (raw_data.like_count hasta 2,529)
+- Bug es del mapper CRECE-side: script `ingest_radar_yt_x_posts.py` tenía else branch hardcoded ceros para TIKTOK
+- Fix: rama TIKTOK explícita + UPDATE one-shot desde raw_data hacia columnas
+- Sin re-scrape · datos ya estaban en raw_data
+
+### Decisiones nuevas registradas (5)
+
+- **D-RADAR-TT-MAPPER-2026-05-25** · mapeo canónico yt-dlp ratificado por Hugo (like_count→likes, view_count→views, comment_count→comments, repost_count→shares)
+- **D-BEAT-SNAPSHOT-WEEKLY-2026-05-25** · snapshot followers semanal lunes 02:00 MX para destrabar B07
+- **D-WIDGET-TITLE-HONESTY-2026-05-25** · "Publicaciones recientes" en lugar de "Contenido con más Impacto" porque query no ordena por impacto
+- **D-B17-NO-DISTRITAL-2026-05-25** · card actual refleja realidad (heurística keyword + flag global) · calendario INE distrital diferido hasta pedido cliente
+- **D-SoV-RIVALES-TOPICS-2026-05-25** · B08 SoV requiere topics en rivales · extract_topics sobre Ivette+Susana destraba comparativa real
+
+### Pendientes diferidos al cerrar sprint
+
+- **F4 tríada audit-full** completa (sesión propia · alto blast item #3)
+  1. Rate-limit `/posts/unified` (~30 min · low-risk)
+  2. Filtros en `/hub` (~1-1.5h · UX)
+  3. `.env.scraping-keys` rotación + git filter-repo (~1-2h · sesión propia CEO)
+- Matriz polaridad v2 Saymi 595 posts legacy
+- Mobile audit completo
+- 54 commits acumulados en `feat/post-ingest-hugo-2026-05-20` sin merge a `main`
+- Backlog: "Contenido con más Impacto" REAL (endpoint propio ORDER BY engagement_rate)
+- Bug #3 backlog F5: re-scrape para `save_count` queda en raw_data (sin columna)
+
+---
+
+## 2026-05-25 · Recovery post-crash 2026-05-22 CERRADO (~2h walltime cierre · batch 30 min · resto verificación)
 
 ## 2026-05-25 · Recovery post-crash 2026-05-22 CERRADO (~2h walltime cierre · batch 30 min · resto verificación)
 
