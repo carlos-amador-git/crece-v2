@@ -1,6 +1,55 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-25 tarde · Sprint multi PLAN-2026-05-25 CERRADO · 5 bugs UI + B07 beat + B08 rivales + TT mapper fix · 5 commits push + Vercel deploy · próximo: F4 tríada audit-full pre-cliente
+**Ultimo update:** 2026-05-25 noche · Sprint cierre-audit CERRADO · 9/10 items audit-full ya estaban hechos · #9 sidebar contraste fix aplicado · #1B rotación keys diferida sesión CEO · próximo: F4 matriz polaridad condicional + F1.3B rotación keys (sesión CEO)
+
+## 2026-05-25 noche · Sprint cierre-audit PLAN-2026-05-25-sprint-cierre-audit CERRADO (~1.5h)
+
+**Plan:** `.context/PLAN-2026-05-25-sprint-cierre-audit.md`
+**Origen:** CEO post-cierre sprint multi pide cerrar tríada + audit. Verificación primary source antes de implementar.
+
+### Hallazgo masivo
+
+**9 de 10 items audit-full 2026-05-19 ya estaban cerrados de facto** en sesiones intermedias (sin que el audit se actualizara). Plan original estimaba ~8h · realidad 30 min trabajo neto + commits.
+
+| # | Audit item | Estado verificación | Acción |
+|---|---|---|---|
+| 1 | .env.scraping-keys tracked | YA untrackeado (git ls-files 0) | nada · sigue diferida rotación + filter-repo a sesión CEO |
+| 2 | Prompt injection sanitize | YA hecho · llm_sanitizer.py "B4 audit-full" + sanitize_data_field 4x | nada |
+| 3 | Rate-limit /posts/unified | YA aplicado @limiter.limit("60/minute") | nada |
+| 4 | Filtros /hub | YA useSearchParams + platform/date/sentiment | nada |
+| 5 | Mobile vertical UnifiedPostCard | YA grid-cols-1 md:grid-cols-2 xl:grid-cols-3 en hub | nada |
+| 6 | Badge data_source | YA DATA_SOURCE_LABELS + tooltip | nada |
+| 7 | Skeletons Hub | YA UnifiedPostCardSkeleton + Suspense | nada |
+| 8 | Tests /posts/unified | YA test_posts_unified.py 17KB "C7 audit-full" | nada |
+| 9 | Sidebar contraste WCAG fail | text-muted-foreground (~4.0:1) → fix aplicado | text-foreground/70 (~7:1 AAA) |
+| 10 | Colisión "Contenido" sidebar | YA un solo item | nada |
+
+### Acciones efectivas sesión
+
+- 1 commit · sidebar contraste 3 ocurrencias text-foreground/70
+- Push + Vercel deploy `frontend-b74yrrywl` alias preservado
+- Plan + docs commiteados
+
+### Decisión registrada
+
+- **D-AUDIT-CLOSURE-2026-05-25** · 10/10 items audit-full cerrados con caveat #1B (rotación keys + filter-repo) sigue diferida a sesión propia CEO (alto blast)
+
+### Pendientes diferidos al cerrar sprint
+
+- **F1.3B rotación 7 keys** `.env.scraping-keys` + `git filter-repo` + force-push · sesión propia con CEO presente
+- **F4 matriz polaridad Saymi** v1→v2 vocab uniforme · CONDICIONAL decisión CEO · 1173 posts vocab v1 mezclados con 1000 vocab v2 (52/44% split, no es 100% legacy como decía plan-20)
+- PII compliance review (gap audit Gemini high) · sprint propio
+- Performance N+1 stress test BFF · sprint propio
+- Error Boundaries frontend específicos · sprint propio
+- 56+ commits sin merge a `main` · decisión operativa CEO
+
+### Lección sesión
+
+Patrón confirmado por tercera vez: planes >3 días caducan rápido. Cuando un plan menciona "deuda pendiente del audit/sprint anterior", verificar primary source ANTES de implementar (git ls-files, grep, query BD). Hoy evitó ~7h de trabajo duplicado.
+
+---
+
+## 2026-05-25 tarde · Sprint multi PLAN-2026-05-25 CERRADO · 5 bugs UI + B07 beat + B08 rivales + TT mapper fix · 5 commits push + Vercel deploy · próximo: F4 tríada audit-full pre-cliente
 
 ## 2026-05-25 tarde · Sprint multi PLAN-2026-05-25-sprint-multi CERRADO (~3h)
 
