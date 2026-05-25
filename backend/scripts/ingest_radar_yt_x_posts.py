@@ -102,6 +102,17 @@ async def main(json_path: Path, platform: str, dirigente_id: int, commit: bool) 
             views = int(payload.get("view_count") or 0)
             published_at = to_datetime(payload.get("timestamp"))
             post_type = detect_post_type_x(payload)
+        elif platform == "TIKTOK":
+            # yt-dlp TT payload (cross-verified with Hugo peer RADAR 2026-05-25):
+            # like_count→likes, view_count→views, comment_count→comments,
+            # repost_count→shares (TT repost == share). save_count queda en raw_data.
+            content = payload.get("description") or payload.get("title") or ""
+            likes = int(payload.get("like_count") or 0)
+            comments_n = int(payload.get("comment_count") or 0)
+            shares = int(payload.get("repost_count") or 0)
+            views = int(payload.get("view_count") or 0)
+            published_at = to_datetime(payload.get("timestamp"))
+            post_type = "VIDEO"
         else:
             content = payload.get("title") or payload.get("text") or ""
             likes = comments_n = shares = views = 0
