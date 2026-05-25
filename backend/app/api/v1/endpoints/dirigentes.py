@@ -280,6 +280,7 @@ async def get_dirigente(
                 "engagement_rate": post.engagement_rate,
                 "sentiment_score": post.sentiment_score,
                 "sentiment_label": post.sentiment_label.value if post.sentiment_label else None,
+                "tono_discurso": post.tono_discurso,
                 "media_urls": post.media_urls,
                 "url": (
                     (post.raw_data or {}).get("url")

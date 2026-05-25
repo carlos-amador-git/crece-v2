@@ -134,6 +134,7 @@ export interface SocialPost {
   url: string;
   sentiment_label: string | null;
   sentiment_score: number | null;
+  tono_discurso?: string | null;
   likes: number;
   comments: number;
   shares: number;
