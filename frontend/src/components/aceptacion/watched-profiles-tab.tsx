@@ -512,23 +512,25 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
         de cuentas a monitorear. Conexión detectada automáticamente desde el scraping.
       </p>
 
-      {/* Selector de plataforma · D-PLATFORM-SELECTOR (2026-05-21) */}
-      <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/20 px-3 py-2">
-        <span className="text-xs font-medium text-muted-foreground">Plataforma:</span>
-        {(["all", "FACEBOOK", "INSTAGRAM", "TWITTER", "TIKTOK", "YOUTUBE"] as const).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPlatformFilter(p)}
-            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-              platformFilter === p
-                ? "bg-orange-500/20 text-orange-700 dark:text-orange-300"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            }`}
-          >
-            {p === "all" ? "Todas" : p === "FACEBOOK" ? "Facebook" : p === "INSTAGRAM" ? "Instagram" : p === "TWITTER" ? "Twitter" : p === "TIKTOK" ? "TikTok" : "YouTube"}
-          </button>
-        ))}
+      {/* Selector de plataforma · D-PLATFORM-SELECTOR (2026-05-21) · sticky D-2026-05-25 */}
+      <div className="sticky top-0 z-20 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70 border-b border-border/50">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/20 px-3 py-2">
+          <span className="text-xs font-medium text-muted-foreground">Plataforma:</span>
+          {(["all", "FACEBOOK", "INSTAGRAM", "TWITTER", "TIKTOK", "YOUTUBE"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPlatformFilter(p)}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                platformFilter === p
+                  ? "bg-orange-500/20 text-orange-700 dark:text-orange-300"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              }`}
+            >
+              {p === "all" ? "Todas" : p === "FACEBOOK" ? "Facebook" : p === "INSTAGRAM" ? "Instagram" : p === "TWITTER" ? "Twitter" : p === "TIKTOK" ? "TikTok" : "YouTube"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Sprint B+C (PLAN-2026-05-17-fans-dashboard) · KPIs + Timeline + Top Posts + Top Fans */}

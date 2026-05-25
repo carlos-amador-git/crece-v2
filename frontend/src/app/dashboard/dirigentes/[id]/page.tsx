@@ -232,7 +232,7 @@ export default function DirigenteDetailPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-heading text-lg font-semibold">
-                Contenido con más Impacto
+                Publicaciones recientes
               </h3>
               <TabsList className="bg-transparent h-auto p-0">
                 <TabsTrigger value="social" className="text-xs text-muted-foreground hover:text-foreground p-0 h-auto bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:underline">

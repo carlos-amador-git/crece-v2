@@ -89,24 +89,31 @@ function FansYPerfilesInner() {
         <Skeleton className="h-10 w-[280px]" />
       ) : (
         <>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">Dirigente:</span>
-            <Select
-              value={String(observedDirigenteId)}
-              onValueChange={(v) => setObservedDirigenteId(Number(v))}
-            >
-              <SelectTrigger className="w-[280px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {dirigentesList.map((d) => (
-                  <SelectItem key={d.dirigente_id} value={String(d.dirigente_id)}>
-                    {d.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {dirigentesList.length > 1 ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Dirigente:</span>
+              <Select
+                value={String(observedDirigenteId)}
+                onValueChange={(v) => setObservedDirigenteId(Number(v))}
+              >
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {dirigentesList.map((d) => (
+                    <SelectItem key={d.dirigente_id} value={String(d.dirigente_id)}>
+                      {d.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3" data-testid="dirigente-readonly">
+              <span className="text-sm text-muted-foreground">Dirigente:</span>
+              <span className="text-sm font-semibold text-foreground">{observedName}</span>
+            </div>
+          )}
 
           <WatchedProfilesTab
             dirigenteId={observedDirigenteId}
