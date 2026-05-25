@@ -11,19 +11,21 @@
  * jamás se toca). Política R-3: el override SOLO se aplica en este
  * hook, ningún otro componente analítico lo usa.
  *
- * Filtros por `source`: cliente_seed | competidor | auto_suggested | all.
+ * Usa el endpoint dedicado /top-fans que ordena por score en SQL,
+ * garantizando que perfiles de alto score no sean desplazados por
+ * batches de auto_suggested con timestamps idénticos.
  */
 
 import { useMemo, useState } from "react";
-import { Crown, Flame, Filter, MessageSquare, Search, ThumbsUp, UserMinus, Users } from "lucide-react";
+import { Crown, Flame, MessageSquare, Search, ThumbsUp, UserMinus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  useWatchedProfiles,
-  type WatchedProfile,
+  useTopFans,
+  type TopFanEntry,
   type WatchedSource,
 } from "@/lib/api/hooks/use-watched-profiles";
 import { applyVipOverrides, type FanRankingEntry } from "@/lib/api/utils/vip-overrides";
@@ -32,6 +34,7 @@ import { formatNumber } from "@/lib/utils";
 interface TopFansRankingProps {
   dirigenteId: number;
   limit?: number;
+  platform?: string;
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -56,24 +59,26 @@ function rankDecor(idx: number) {
   return null;
 }
 
-export function TopFansRanking({ dirigenteId, limit = 20 }: TopFansRankingProps) {
+export function TopFansRanking({ dirigenteId, limit = 20, platform }: TopFansRankingProps) {
   const [sourceFilter, setSourceFilter] = useState<WatchedSource | "all">("all");
   const [query, setQuery] = useState("");
 
-  const { data: profiles, isLoading } = useWatchedProfiles({
+  const { data: topFans, isLoading } = useTopFans({
     dirigente_id: dirigenteId,
+    limit: 50, // fetch 50 del backend (ya ordenados por score), mostramos top `limit`
     source: sourceFilter === "all" ? undefined : sourceFilter,
+    platform: platform,
   });
 
   const ranking: FanRankingEntry[] = useMemo(() => {
-    const raw = (profiles ?? []).map((p: WatchedProfile) => ({
+    const raw = (topFans ?? []).map((p: TopFanEntry) => ({
       external_id: p.profile_external_id,
       display_name: p.display_name,
       handle: p.profile_handle,
       platform: p.platform,
       source: p.source,
-      reactions: p.n_likes ?? 0,
-      comments: p.n_comments ?? 0,
+      reactions: p.n_likes,
+      comments: p.n_comments,
     }));
     const withVip = applyVipOverrides(dirigenteId, raw);
     const q = query.trim().toLowerCase();
@@ -86,7 +91,7 @@ export function TopFansRanking({ dirigenteId, limit = 20 }: TopFansRankingProps)
         )
       : withVip;
     return filtered.slice(0, limit);
-  }, [profiles, dirigenteId, query, limit]);
+  }, [topFans, dirigenteId, query, limit]);
 
   return (
     <Card>

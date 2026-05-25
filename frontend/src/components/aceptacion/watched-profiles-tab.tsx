@@ -492,6 +492,7 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
   const { data: profiles, isLoading: profilesLoading } = useWatchedProfiles({
     dirigente_id: dirigenteId,
     source: sourceFilter === "all" ? undefined : sourceFilter,
+    platform: platformParam,
     has_engagement:
       activityFilter === "all" ? undefined : activityFilter === "active",
   });
@@ -550,8 +551,8 @@ export default function WatchedProfilesTab({ dirigenteId, dirigenteName }: Props
           Derecha: lista cliente_seed siempre visible con reactions reales.
           Apila vertical en mobile/tablet, 2 columnas en xl+. */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <TopFansRanking dirigenteId={dirigenteId} limit={20} />
-        <CuratedSeedList dirigenteId={dirigenteId} />
+        <TopFansRanking dirigenteId={dirigenteId} limit={20} platform={platformParam} />
+        <CuratedSeedList dirigenteId={dirigenteId} platform={platformParam} />
       </div>
 
       {/* KPI cards */}

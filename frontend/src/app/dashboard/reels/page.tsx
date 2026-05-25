@@ -27,13 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles, Copy, Check, Film, Clock, Hash } from "lucide-react";
 import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
@@ -157,21 +151,9 @@ export default function ReelsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Dirigente</Label>
-              <Select
-                value={dirigenteId ? String(dirigenteId) : ""}
-                onValueChange={(v) => setDirigenteId(Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar dirigente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dirigentes.map((d) => (
-                    <SelectItem key={d.id} value={String(d.id)}>
-                      {d.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-foreground shadow-sm select-none">
+                {selectedDirigente?.full_name ?? "Cargando..."}
+              </div>
             </div>
 
             <div className="space-y-2">

@@ -32,6 +32,7 @@ import { MessageSquare, ThumbsUp, Users } from "lucide-react";
 
 interface CuratedSeedListProps {
   dirigenteId: number;
+  platform?: string;
 }
 
 const PLATFORM_DOT: Record<string, string> = {
@@ -42,10 +43,11 @@ const PLATFORM_DOT: Record<string, string> = {
   YOUTUBE: "bg-red-500",
 };
 
-export function CuratedSeedList({ dirigenteId }: CuratedSeedListProps) {
+export function CuratedSeedList({ dirigenteId, platform }: CuratedSeedListProps) {
   const { data: profiles, isLoading } = useWatchedProfiles({
     dirigente_id: dirigenteId,
     source: "cliente_seed",
+    platform: platform,
   });
 
   // Aplicar VIP override (Misael Fan #1 con 250 per CEO 2026-05-20).

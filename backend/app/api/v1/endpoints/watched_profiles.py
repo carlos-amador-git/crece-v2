@@ -530,6 +530,91 @@ async def watched_suggestions(
     return [dict(r) for r in rows]
 
 
+# ── Top Fans ranking ──────────────────────────────────────────────────
+# Endpoint dedicado que computa score = n_likes*1 + n_comments*2.5 en SQL
+# y devuelve los top N perfiles ordenados por score DESC.
+# Razón: el endpoint genérico list_watched ordena por last_engagement, lo que
+# causa que batches de auto_suggested con timestamp idéntico desplacen perfiles
+# de alto score fuera del LIMIT 200 antes de llegar al frontend.
+
+class TopFanEntry(BaseModel):
+    id: int
+    platform: str
+    profile_external_id: str
+    profile_handle: str | None
+    display_name: str | None
+    source: str
+    n_likes: int
+    n_comments: int
+    score: float
+
+
+@router.get("/top-fans", response_model=list[TopFanEntry])
+async def top_fans(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+    dirigente_id: int,
+    limit: int = Query(default=50, ge=1, le=200),
+    source: str | None = Query(
+        default=None,
+        description="cliente_seed · auto_suggested · manual · None=todos"
+    ),
+    platform: str | None = Query(
+        default=None,
+        description="FACEBOOK · INSTAGRAM · TWITTER · TIKTOK · YOUTUBE · None=todas"
+    ),
+):
+    """Top fans ordenados por score = n_likes*1 + n_comments*2.5.
+
+    A diferencia de list_watched (que ordena por last_engagement), este endpoint
+    ordena directamente por score DESC en SQL, garantizando que los perfiles con
+    más engagement siempre aparezcan sin importar cuándo fueron ingresados.
+    """
+    await _assert_dirigente_access(db, user, dirigente_id)
+
+    where = ["wp.dirigente_observador_id = :did", "wp.is_active = true"]
+    params: dict = {"did": dirigente_id, "limit": limit}
+
+    if source:
+        where.append("wp.source = :src")
+        params["src"] = source
+    if platform:
+        where.append("wp.platform = :plat")
+        params["plat"] = platform.upper()
+
+    sql = f"""
+        SELECT
+          wp.id,
+          wp.platform,
+          wp.profile_external_id,
+          wp.profile_handle,
+          wp.display_name,
+          wp.source,
+          COALESCE(l.n_likes, 0)    AS n_likes,
+          COALESCE(c.n_comments, 0) AS n_comments,
+          COALESCE(l.n_likes, 0) * 1.0 + COALESCE(c.n_comments, 0) * 2.5 AS score
+        FROM watched_profiles wp
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*) AS n_likes
+          FROM watched_like_events wle
+          WHERE wle.watched_profile_id = wp.id
+        ) l ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*) AS n_comments
+          FROM social_comments sc
+          JOIN social_posts sp ON sp.id = sc.parent_post_id
+          JOIN social_profiles spr ON spr.id = sp.profile_id
+          WHERE sc.author_hash = wp.author_hash
+            AND spr.dirigente_id = wp.dirigente_observador_id
+        ) c ON true
+        WHERE {" AND ".join(where)}
+        ORDER BY score DESC, wp.id
+        LIMIT :limit
+    """
+    rows = (await db.execute(text(sql), params)).mappings().all()
+    return [TopFanEntry(**dict(r)) for r in rows]
+
+
 # ── Dashboard Stats: timeline, top-posts, interactions-summary ────────
 # PLAN-2026-05-17-fans-dashboard.md · Sprint A
 # Convención: timeline agrupado por sp.published_at (NO detected_at, sería pico falso).

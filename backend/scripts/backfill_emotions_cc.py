@@ -1,17 +1,11 @@
 """backfill_emotions_cc.py · 2026-05-22
 
-Pobla `social_posts.emotions` JSONB con 6 emociones Ekman vía CC subprocess.
-Reemplaza el pipeline Gemma 3:12b muerto · acuerdo CEO: CC + Gemini fallback.
-
-Batch 10 posts por LLM call para eficiencia. Procesa solo posts con
-content > 30 chars (los ultra-cortos no rinden).
-
-Output JSON por post:
-  {"joy": 0.42, "anger": 0.05, "sadness": 0.10, "fear": 0.03,
-   "disgust": 0.02, "surprise": 0.08, "others": 0.30}
+Pobla `social_posts.emotions` (o `social_comments.emotions`) con 6 emociones
+Ekman vía CC/Gemini. Reemplaza el pipeline unario de Gemma.
 
 Uso:
-    python3 backfill_emotions_cc.py --dirigente-id 57 --limit 500
+    python3 backfill_emotions_cc.py --dirigente-id 57 --limit 500 --type posts
+    python3 backfill_emotions_cc.py --dirigente-id 3 --limit 200 --type comments --force
 """
 from __future__ import annotations
 
@@ -53,7 +47,7 @@ POSTS A CLASIFICAR (id · content):
 OUTPUT: JSON array EXACTO con un objeto por post, en el mismo orden:
 ```json
 [
-  {{"post_id": "<id>", "emotions": {{"joy": 0.45, "anger": 0.05, "sadness": 0.10, "fear": 0.02, "disgust": 0.03, "surprise": 0.05, "others": 0.30}}}}
+  {{"post_id": <id>, "emotions": {{"joy": 0.45, "anger": 0.05, "sadness": 0.10, "fear": 0.02, "disgust": 0.03, "surprise": 0.05, "others": 0.30}}}}
 ]
 ```
 
@@ -83,7 +77,6 @@ def call_llm(prompt: str) -> str | None:
     GEMINI_CMD = "/opt/homebrew/bin/gemini"
     if Path(GEMINI_CMD).exists():
         try:
-            # -p/--prompt es modo headless. --approval-mode plan asegura read-only.
             r = subprocess.run(
                 [GEMINI_CMD, "--sandbox", "--approval-mode", "plan", "-p", prompt],
                 capture_output=True, text=True, timeout=180,
@@ -108,7 +101,7 @@ def parse_json_array(raw: str) -> list | None:
     except json.JSONDecodeError:
         pass
     # Greedy match
-    m = re.search(r"\[.*\]", cleaned, re.DOTALL)
+    m = re.search(r"\[\s*\{.*\}\s*\]", cleaned, re.DOTALL)
     if m:
         try:
             d = json.loads(m.group(0))
@@ -124,32 +117,52 @@ def main() -> int:
     p.add_argument("--dirigente-id", type=int, required=True)
     p.add_argument("--limit", type=int, default=500)
     p.add_argument("--min-chars", type=int, default=30)
+    p.add_argument("--type", choices=["posts", "comments"], default="posts")
+    p.add_argument("--force", action="store_true")
     args = p.parse_args()
 
     conn = psycopg2.connect(DB_URL)
     with conn.cursor() as cur:
-        cur.execute(
+        if args.type == "posts":
+            sql = """
+                SELECT sp.id, LEFT(sp.content, 1000)
+                FROM social_posts sp
+                JOIN social_profiles sps ON sps.id = sp.profile_id
+                WHERE sps.dirigente_id = %s
+                  AND sp.content IS NOT NULL
+                  AND LENGTH(TRIM(sp.content)) >= %s
             """
-            SELECT sp.id, LEFT(sp.content, 1000)
-            FROM social_posts sp
-            JOIN social_profiles sps ON sps.id = sp.profile_id
-            WHERE sps.dirigente_id = %s
-              AND (sp.emotions IS NULL OR sp.emotions = '{}'::jsonb)
-              AND sp.content IS NOT NULL
-              AND LENGTH(TRIM(sp.content)) >= %s
-            ORDER BY sp.published_at DESC
-            LIMIT %s
-            """,
-            (args.dirigente_id, args.min_chars, args.limit),
-        )
-        posts = [{"id": r[0], "content": r[1]} for r in cur.fetchall()]
-    print(f"[meta] {len(posts)} posts a procesar · batch={BATCH} effort={CC_EFFORT}", flush=True)
+            if not args.force:
+                sql += " AND (sp.emotions IS NULL OR sp.emotions = '{}'::jsonb)"
+            sql += " ORDER BY sp.published_at DESC LIMIT %s"
+            cur.execute(sql, (args.dirigente_id, args.min_chars, args.limit))
+        else:
+            sql = """
+                SELECT sc.id, LEFT(sc.content, 1000)
+                FROM social_comments sc
+                JOIN social_posts sp ON sp.id = sc.parent_post_id
+                JOIN social_profiles sps ON sps.id = sp.profile_id
+                WHERE sps.dirigente_id = %s
+                  AND sc.content IS NOT NULL
+                  AND LENGTH(TRIM(sc.content)) >= %s
+            """
+            if not args.force:
+                sql += " AND (sc.emotions IS NULL OR sc.emotions = '{}'::jsonb)"
+            sql += " ORDER BY sc.published_at DESC LIMIT %s"
+            cur.execute(sql, (args.dirigente_id, args.min_chars, args.limit))
+
+        items = [{"id": r[0], "content": r[1]} for r in cur.fetchall()]
+
+    print(f"[meta] {len(items)} {args.type} a procesar · batch={BATCH} effort={CC_EFFORT}", flush=True)
 
     total_updated = 0
     total_failed = 0
     t0 = time.monotonic()
-    for i in range(0, len(posts), BATCH):
-        batch = posts[i:i + BATCH]
+    
+    table = "social_posts" if args.type == "posts" else "social_comments"
+
+    for i in range(0, len(items), BATCH):
+        batch = items[i:i + BATCH]
         posts_block = "\n".join(
             f'  - id={p["id"]} · content: """{p["content"][:600].replace(chr(10), " ")}"""'
             for p in batch
@@ -158,41 +171,46 @@ def main() -> int:
         raw = call_llm(prompt)
         if not raw:
             total_failed += len(batch)
-            print(f"  [batch {i//BATCH+1}] LLM fail · skip {len(batch)}", flush=True)
+            print(f"  [batch {i//BATCH+1}] LLM fail")
             continue
+        
         parsed = parse_json_array(raw)
         if not parsed:
             total_failed += len(batch)
-            print(f"  [batch {i//BATCH+1}] parse fail · skip {len(batch)}", flush=True)
+            print(f"  [batch {i//BATCH+1}] parse fail (raw len={len(raw)})")
             continue
 
         with conn.cursor() as cur:
             for item in parsed:
-                try:
-                    pid = int(item.get("post_id") or 0)
-                    emo = item.get("emotions") or {}
-                    if pid and isinstance(emo, dict) and emo:
+                # El LLM puede devolver post_id o id
+                pid = item.get("post_id") or item.get("id")
+                ems = item.get("emotions")
+                if pid and isinstance(ems, dict):
+                    try:
                         cur.execute(
-                            "UPDATE social_posts SET emotions = %s::jsonb WHERE id = %s",
-                            (json.dumps(emo), pid),
+                            f"UPDATE {table} SET emotions = %s::jsonb WHERE id = %s",
+                            (json.dumps(ems), int(pid)),
                         )
-                        total_updated += 1
-                except Exception:
-                    total_failed += 1
+                        if cur.rowcount > 0:
+                            total_updated += 1
+                        else:
+                            total_failed += 1
+                    except Exception:
+                        total_failed += 1
         conn.commit()
 
         elapsed = time.monotonic() - t0
         rate = total_updated / elapsed if elapsed > 0 else 0
-        eta_s = (len(posts) - i - BATCH) / rate if rate > 0 else 0
+        eta_s = (len(items) - (i + len(batch))) / rate if rate > 0 else 0
         print(
-            f"  [batch {i//BATCH+1}/{(len(posts)-1)//BATCH+1}] "
+            f"  [batch {i//BATCH+1}/{(len(items)-1)//BATCH+1 if items else 1}] "
             f"updated cum={total_updated} fail={total_failed} · "
             f"elapsed={elapsed:.0f}s · eta={eta_s:.0f}s",
             flush=True,
         )
 
     conn.close()
-    print(f"\nDONE · updated={total_updated} failed={total_failed} total={len(posts)}", flush=True)
+    print(f"\nDONE · updated={total_updated} failed={total_failed} total={len(items)}", flush=True)
     return 0
 
 

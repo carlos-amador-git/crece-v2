@@ -621,3 +621,119 @@ async def test_interactions_summary_403_for_viewer_other_org(
         headers=auth_headers(viewer_token),
     )
     assert resp.status_code == 403
+
+
+# ── /top-fans ────────────────────────────────────────────────────────
+
+
+async def test_top_fans_calculates_correct_score_and_orders_properly(
+    client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
+) -> None:
+    """Verifica que el endpoint /top-fans calcule correctamente el score (likes*1 + comments*2.5) y ordene de forma decreciente."""
+    d = await _seed_dirigente(db_session)
+    p = await _seed_profile(db_session, d)
+    
+    # 3 posts diferentes para no violar el unique constraint uq_watched_like_post_type
+    post1 = await _seed_post(db_session, p, published_at=datetime.now(UTC) - timedelta(days=5), platform_post_id="post_1")
+    post2 = await _seed_post(db_session, p, published_at=datetime.now(UTC) - timedelta(days=5), platform_post_id="post_2")
+    post3 = await _seed_post(db_session, p, published_at=datetime.now(UTC) - timedelta(days=5), platform_post_id="post_3")
+
+    # Perfil 1: 3 likes, 0 comments -> score = 3.0
+    w1 = await _seed_watched_profile(db_session, d, external_id="fan_like_only")
+    await _seed_reaction(db_session, w1, post1)
+    await _seed_reaction(db_session, w1, post2)
+    await _seed_reaction(db_session, w1, post3)
+
+    # Perfil 2: 1 like, 2 comments -> score = 1*1.0 + 2*2.5 = 6.0
+    w2 = await _seed_watched_profile(db_session, d, external_id="fan_mixed")
+    await _seed_reaction(db_session, w2, post1)
+    await _seed_comment(db_session, post1, author_hash=w2.author_hash)
+    await _seed_comment(db_session, post2, author_hash=w2.author_hash)
+
+    resp = await client.get(
+        f"{BASE}/top-fans?dirigente_id={d.id}&limit=5",
+        headers=auth_headers(admin_token),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert len(body) == 2
+
+    # El score más alto (6.0) debe estar primero
+    assert body[0]["profile_external_id"] == "fan_mixed"
+    assert body[0]["n_likes"] == 1
+    assert body[0]["n_comments"] == 2
+    assert body[0]["score"] == 6.0
+
+    # El score más bajo (3.0) debe estar segundo
+    assert body[1]["profile_external_id"] == "fan_like_only"
+    assert body[1]["n_likes"] == 3
+    assert body[1]["n_comments"] == 0
+    assert body[1]["score"] == 3.0
+
+
+async def test_top_fans_filters_by_platform_and_source(
+    client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
+) -> None:
+    """Verifica que los filtros de plataforma y origen funcionen correctamente."""
+    d = await _seed_dirigente(db_session)
+
+    # w1 es de tipo cliente_seed y FACEBOOK
+    w1 = await _seed_watched_profile(db_session, d, external_id="seed_fb", source="cliente_seed")
+    # w2 es de tipo auto_suggested (cambiado manual post-seed)
+    w2 = await _seed_watched_profile(db_session, d, external_id="auto_fb", source="auto_suggested")
+
+    # w3 es de INSTAGRAM
+    w3 = WatchedProfile(
+        dirigente_observador_id=d.id,
+        org_id=d.org_id,
+        platform="INSTAGRAM",
+        profile_external_id="auto_ig",
+        profile_handle="auto_ig",
+        source="auto_suggested",
+        tags=[],
+        author_hash=compute_watched_hash("INSTAGRAM", "auto_ig"),
+    )
+    db_session.add(w3)
+    await db_session.commit()
+
+    # Filtro por plataforma: INSTAGRAM
+    resp = await client.get(
+        f"{BASE}/top-fans?dirigente_id={d.id}&platform=INSTAGRAM",
+        headers=auth_headers(admin_token),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 1
+    assert body[0]["profile_external_id"] == "auto_ig"
+
+    # Filtro por source: cliente_seed
+    resp2 = await client.get(
+        f"{BASE}/top-fans?dirigente_id={d.id}&source=cliente_seed",
+        headers=auth_headers(admin_token),
+    )
+    assert resp2.status_code == 200
+    body2 = resp2.json()
+    assert len(body2) == 1
+    assert body2[0]["profile_external_id"] == "seed_fb"
+
+
+async def test_top_fans_rbac_and_errors(
+    client: AsyncClient, db_session: AsyncSession, admin_token: str, viewer_token: str
+) -> None:
+    """Prueba controles de acceso y respuestas de error para /top-fans."""
+    # 404 dirigente inexistente
+    resp = await client.get(
+        f"{BASE}/top-fans?dirigente_id=99999",
+        headers=auth_headers(admin_token),
+    )
+    assert resp.status_code == 404
+
+    # 403 viewer sin acceso a la organización del dirigente
+    org = await _seed_organizacion(db_session, slug="org-rbac-top-fans")
+    d = await _seed_dirigente(db_session, org_id=org.id)
+    resp2 = await client.get(
+        f"{BASE}/top-fans?dirigente_id={d.id}",
+        headers=auth_headers(viewer_token),
+    )
+    assert resp2.status_code == 403
+

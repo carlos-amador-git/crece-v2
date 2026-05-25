@@ -130,6 +130,35 @@ export function useWatchedProfiles(params: ListParams = {}) {
   });
 }
 
+export interface TopFanEntry {
+  id: number;
+  platform: string;
+  profile_external_id: string;
+  profile_handle: string | null;
+  display_name: string | null;
+  source: string;
+  n_likes: number;
+  n_comments: number;
+  score: number;
+}
+
+interface TopFansParams {
+  dirigente_id: number;
+  limit?: number;
+  source?: WatchedSource;
+  platform?: string;
+}
+
+export function useTopFans(params: TopFansParams) {
+  return useQuery({
+    queryKey: ["watched-profiles", "top-fans", params],
+    queryFn: () =>
+      api.get<TopFanEntry[]>(`/aceptacion/watched-profiles/top-fans${qs(params as unknown as Record<string, unknown>)}`),
+    staleTime: 30_000,
+    enabled: !!params.dirigente_id,
+  });
+}
+
 export function useWatchedSummary(dirigente_id: number) {
   return useQuery({
     queryKey: ["watched-profiles", "summary", dirigente_id],
