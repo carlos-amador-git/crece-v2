@@ -1,4 +1,4 @@
-ACTIVE: TBD · próximo sprint = tríada crítica pre-cliente audit-full 2026-05-19 · orden recomendado (1) rate-limit /posts/unified ~30min (2) filtros /hub ~1-1.5h (3) .env.scraping-keys rotación + git filter-repo ~1-2h sesión propia CEO
+ACTIVE: PLAN-2026-05-25-sprint-multi.md (F1-F5 · ~3.5h · 5 bugs UI + B07 beat snapshot semanal + B08 topics rivales + tono_discurso serializer + UPDATE 32 TT métricas + patch mapper · F4 tríada audit-full diferida sesión propia · listo para /sprint-implement)
 RECENT-CLOSED 2026-05-25: PLAN-2026-05-22-recovery.md (F3.0-F3.3 cerradas · 5/5 G-criteria verdes · batch único 670 OK 0 fails 30min · reporte en .context/REPORTE-RECOVERY-2026-05-22.md)
 PREVIOUS-CLOSED 2026-05-20: PLAN-2026-05-20-post-ingest-hugo.md (cerrado de facto por sesiones intermedias)
 PREVIOUS-CLOSED 2026-05-20: PLAN-2026-05-19-deuda-tests-y-fixes.md (CERRADO · PR #55 mergeado cd3e408e75 · 14/14 audit-full tasks · 3 falsos positivos verificados · hotfix Gemini regex · workflow CI smoke fix · sidebar Fans y Perfiles restaurado D-FANS-PERFILES-SIDEBAR-INVARIANTE)
