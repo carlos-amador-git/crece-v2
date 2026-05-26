@@ -24,6 +24,8 @@ from pathlib import Path
 
 import asyncpg
 
+from app.services.author_hash import ensure_author_hash
+
 DUMP_ROOT = Path(
     os.environ.get("DUMP_ROOT", "/Users/marxchavez/Projects/radar/exports/linda_handoff_20260520_0608")
 )
@@ -78,7 +80,8 @@ async def main(*, dry_run: bool) -> int:
                     continue
 
                 platform_comment_id = c["platform_comment_id"]
-                author_hash = c.get("author_hash") or ""
+                # Guard PII: si RADAR mandó nombre crudo en vez de hash, hashear
+                author_hash = ensure_author_hash(c.get("author_hash") or "", "FACEBOOK")
                 commenter_handle = c.get("author_display_name")
                 is_reply = bool(c.get("is_reply_to_comment", False))
                 likes = int(c.get("likes") or 0)

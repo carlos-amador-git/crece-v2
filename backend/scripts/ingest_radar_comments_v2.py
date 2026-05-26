@@ -28,6 +28,8 @@ from pathlib import Path
 
 import asyncpg
 
+from app.services.author_hash import ensure_author_hash
+
 DIRIGENTE_ID = int(os.environ.get("DIRIGENTE_ID", "3"))
 PLATFORM = os.environ.get("PLATFORM", "FACEBOOK")
 DATA_SOURCE = "radar-fb-playwright-v1"  # value pre-existente en BD para consistency
@@ -104,7 +106,7 @@ async def main(json_path: Path, commit: bool) -> int:
                 post_id,
                 c.get("comment_id_surrogate") or c.get("comment_id") or "",
                 c.get("comment_text") or "",
-                c.get("author_hash") or "",
+                ensure_author_hash(c.get("author_hash") or "", "FACEBOOK"),
                 0,  # likes
                 published_at,
                 False,  # is_reply_to_comment
