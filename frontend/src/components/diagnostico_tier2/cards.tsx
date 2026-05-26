@@ -162,6 +162,13 @@ export function CardB11({ bloque }: { bloque: BloqueBase & { data?: B11Data } })
 // =========================================================================
 // B12 — CIB Detector
 // =========================================================================
+// Razones internas → etiqueta legible en español
+const CIB_RAZON_LABELS: Record<string, string> = {
+  maestro_ceremonias: "Comentarios en ráfaga",
+  coro_cluster: "Texto idéntico a otra cuenta",
+  comments_alta_frecuencia: "Alta frecuencia",
+};
+
 export function CardB12({ bloque }: { bloque: BloqueBase & { data?: B12Data } }) {
   const d = bloque.data;
   const flagged = d?.flagged_cib ?? [];
@@ -180,7 +187,7 @@ export function CardB12({ bloque }: { bloque: BloqueBase & { data?: B12Data } })
     <CardShell
       code="B12"
       title="Detector de coordinación artificial"
-      pregunta="¿Hay comportamiento coordinado inauténtico en los comments?"
+      pregunta="¿Hay comportamiento coordinado inauténtico en los comentarios?"
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
@@ -191,19 +198,23 @@ export function CardB12({ bloque }: { bloque: BloqueBase & { data?: B12Data } })
           {d?.n_flagged_total ?? <EmptyMetric />}
         </span>
         <div className="flex flex-col leading-tight">
-          <span className="text-xs text-muted-foreground">flagged</span>
+          <span className="text-xs text-muted-foreground">cuentas sospechosas</span>
           {confidence != null && (
             <span className={cn("text-[11px] font-medium", severityTone)}>
-              conf {fmtNum(confidence)}
+              sospecha media {fmtNum(confidence)} / 1
             </span>
           )}
         </div>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        {d?.n_authors_unicos ?? 0} authors únicos · {d?.total_comments_analizados ?? 0} comments
+        {d?.n_authors_unicos ?? 0} autores únicos · {d?.total_comments_analizados ?? 0} comentarios
       </p>
 
       {flagged.length > 0 ? (
+        <>
+        <p className="text-[10px] text-muted-foreground">
+          Cuentas con señales de coordinación · sospecha 0–1 (mayor = más sospechosa):
+        </p>
         <ul
           className="space-y-1.5 text-[11px] max-h-40 overflow-y-auto pr-1"
           data-testid="b12-flagged-list"
@@ -217,26 +228,33 @@ export function CardB12({ bloque }: { bloque: BloqueBase & { data?: B12Data } })
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-[10px] truncate">
-                    {f.author_hash.slice(0, 12)}…
+                    cuenta {f.author_hash.slice(0, 10)}…
                   </span>
-                  <span className={cn("text-[10px] font-medium tabular-nums", severityTone)}>
-                    {fmtNum(f.confidence)}
+                  <span
+                    className={cn("text-[10px] font-medium tabular-nums", severityTone)}
+                    title="Nivel de sospecha (0–1)"
+                  >
+                    sospecha {fmtNum(f.confidence)}
                   </span>
                 </div>
-                <div className="mt-0.5 flex flex-wrap gap-0.5">
-                  {f.razones.slice(0, 2).map((r, i) => (
-                    <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-3.5">
-                      {r.split(":")[0]}
-                    </Badge>
-                  ))}
+                <div className="mt-0.5 flex flex-wrap items-center gap-0.5">
+                  {f.razones.slice(0, 2).map((r, i) => {
+                    const key = r.split(":")[0];
+                    return (
+                      <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-3.5">
+                        {CIB_RAZON_LABELS[key] ?? key}
+                      </Badge>
+                    );
+                  })}
                   <span className="text-[10px] text-muted-foreground ml-1">
-                    · {f.n_comments} comments
+                    · {f.n_comments} comentarios
                   </span>
                 </div>
               </div>
             </li>
           ))}
         </ul>
+        </>
       ) : (
         <p className="text-[11px] text-muted-foreground italic">
           Sin authors flagged — señal limpia.
