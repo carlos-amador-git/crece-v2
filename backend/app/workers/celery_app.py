@@ -111,8 +111,13 @@ def _init_orm_event_listeners(**_kwargs) -> None:
 
     Los scrapers insertan/actualizan posts vía ORM dentro del worker Celery, NO
     en el proceso uvicorn (que registra los listeners en su lifespan). Sin esto,
-    engagement_rate no se calcularía en la ruta de ingest automática.
+    engagement_rate no se calcularía en la ruta de ingest automática, y las ops
+    destructivas en tasks (delete/update de modelos auditados) no se registrarían
+    en audit_log (gap LFPDPPP art. 32). En contexto Celery el audit queda con
+    user_id=NULL ("operación de sistema") — comportamiento esperado y seguro.
     """
+    from app.core.audit_listeners import init_audit_listeners
     from app.core.engagement_listeners import init_engagement_listeners
 
     init_engagement_listeners()
+    init_audit_listeners()
