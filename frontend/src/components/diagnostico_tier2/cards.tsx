@@ -479,6 +479,13 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
 // =========================================================================
 // B15 — Rage Click Flag
 // =========================================================================
+const SIGNAL_LABELS: Record<string, string> = {
+  sentiment_neg: "Sentimiento negativo",
+  er_spike: "Pico de interacción",
+  keywords_hostiles: "Palabras hostiles",
+  tonos_hostiles: "Tono hostil",
+};
+
 export function CardB15({ bloque }: { bloque: BloqueBase & { data?: B15Data } }) {
   const d = bloque.data;
   const pct = d?.pct_engagement_rage ?? 0;
@@ -536,7 +543,7 @@ export function CardB15({ bloque }: { bloque: BloqueBase & { data?: B15Data } })
             {styles.label}
           </span>
           <span className="text-[11px] text-muted-foreground">
-            {detectados} posts rage · {fmtPct(pct)} del total
+            {detectados} con indignación · {fmtPct(pct)} de los evaluados
           </span>
         </div>
       </div>
@@ -554,22 +561,34 @@ export function CardB15({ bloque }: { bloque: BloqueBase & { data?: B15Data } })
                   score {p.score_rage}
                 </span>
               </div>
-              <div className="mt-0.5 flex flex-wrap gap-0.5">
-                {p.signals.slice(0, 2).map((s, i) => (
-                  <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-3.5">
-                    {s.split(":")[0]}
-                  </Badge>
-                ))}
+              <div className="mt-0.5 flex flex-wrap items-center gap-0.5">
+                {p.signals.slice(0, 2).map((s, i) => {
+                  const key = s.split(":")[0];
+                  return (
+                    <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-3.5">
+                      {SIGNAL_LABELS[key] ?? key}
+                    </Badge>
+                  );
+                })}
                 <span className="text-[10px] text-muted-foreground ml-1">
-                  {p.n_comments_hostiles}/{p.n_comments_total} hostiles
+                  {p.n_comments_negativos} de {p.n_comments_total} comentarios negativos
                 </span>
               </div>
+              {p.comentarios_muestra.length > 0 && (
+                <ul className="mt-1 space-y-0.5 border-l-2 border-border/60 pl-2">
+                  {p.comentarios_muestra.map((c, i) => (
+                    <li key={i} className="text-[10px] leading-snug text-muted-foreground">
+                      &ldquo;{c}&rdquo;
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
         </ol>
       ) : (
         <p className="text-[11px] text-muted-foreground italic">
-          Sin posts rage detectados en la ventana.
+          Sin señales de hostilidad detectadas en la ventana.
         </p>
       )}
     </CardShell>

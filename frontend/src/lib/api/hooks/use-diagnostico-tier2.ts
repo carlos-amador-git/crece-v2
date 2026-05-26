@@ -90,10 +90,12 @@ export interface B15RagePost {
   post_id: number;
   score_rage: number;
   n_comments_hostiles: number;
+  n_comments_negativos: number;
   n_comments_total: number;
   pct_hostil: number;
   er: number;
   signals: string[];
+  comentarios_muestra: string[];
   published_at: string | null;
 }
 
@@ -102,6 +104,8 @@ export interface B15Data {
   pct_engagement_rage: number;
   top_posts_rage: B15RagePost[];
   n_posts_analizados: number;
+  n_posts_evaluados: number;
+  min_comments_rage: number;
   er_mediano_baseline: number;
   er_umbral_spike: number;
   umbrales: Record<string, number>;
