@@ -26,12 +26,16 @@
 
 **Hallazgo clave:** a diferencia de las 8 revisadas visualmente (todas con issues reales), las 10 no-revisadas NO tienen errores críticos. Solo 2 calibraciones menores no-cliente-facing.
 
-### Pendiente del plan (F2-F6)
-- F2: nada urgente (triage no encontró críticos). Opcional: B08 gap min-posts + B09 floor interacciones.
-- F3.2: dedup cross-source comments (apify+radar solapan) — dato aparte, no bloquea.
+### A — Cadena `post_ingest_enrich` CONSTRUIDA (opción CEO, commit `769d3fa`)
+- `backend/scripts/post_ingest_enrich.py --dirigente-id N`: secuencia 5 pasos NLP (posts tono/target → comments tono/target/polaridad → emotions posts/comments → topics), idempotente, reusa scripts existentes. Generalizó `extract_topics` + `backfill_nlp_saymi` a cualquier dirigente (identidad del prompt desde BD). Wiring probado en host (0 CC). **Subsume F5** (topics es paso 5 + por-dirigente).
+- Pendiente E2E real: datos de Piña (Hugo entrega al cerrar captura). Posible gap sentiment_score → confirmar con Piña.
+
+### Pendiente del plan
+- **E2E cadena A con Piña** (Hugo entrega JSON al cerrar captura 3 MC + Felipe; CEO priorizó no desviar captura).
+- F2 opcional: B08 gap min-posts + B09 floor interacciones (menores, no cliente-facing).
+- F3.2: dedup cross-source comments (apify+radar solapan) — dato aparte.
 - F4: sprint palabras moderación configurables (plan escrito).
-- F5: backfill topics_extracted no-Saymi (chunked, Gemini).
-- F6: mobile audit · N+1 BFF · error boundaries · matriz legacy · merge ~60 commits → main.
+- F6: mobile audit · N+1 BFF · error boundaries · matriz legacy · merge ~62 commits → main.
 - B07 ← RADAR (Hugo).
 
 ---
