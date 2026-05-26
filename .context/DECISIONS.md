@@ -1,5 +1,51 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-05-26 — D-ER-CANONICO · engagement_rate centralizado + calculado en todas las rutas de ingest
+
+**Contexto:** `social_posts.engagement_rate` tiene `default=0.0`. Las rutas de ingest (scrapers ORM, RADAR ingest SQL, Apify) no lo calculaban → 35% de posts globales en 0 pese a interacción real. Rompía B03 (matriz 2×2 colapsaba), degradaba B07/B15.
+
+**Decisión:**
+- Fórmula CANÓNICA única en `app/services/engagement.py`: con views (TikTok/YT/Reels) `(likes+comments)/views*100`; sin views (X/FB) `(likes+comments+shares)/followers*100`. Verificada por reverse-engineering + `bot_detection.py`. NO inventa datos (deriva de métricas reales). followers actuales = aproximación aceptada (no persistimos followers_at_post_time).
+- Event listener `before_insert`/`before_update` en SocialPost (`app/core/engagement_listeners.py`) registrado en uvicorn (lifespan) **Y** Celery worker (`worker_process_init`). **Crítico:** los scrapers corren en el worker, no en uvicorn.
+- Scripts SQL crudo + backfill importan el helper (una sola fuente de verdad).
+- Backfill global aplicado: 1973 posts de todos los clientes.
+
+**Gap señalado (no resuelto):** `audit_listeners` tiene el mismo patrón pero solo en uvicorn, no en worker → ops destructivas en tasks Celery sin auditar (LFPDPPP). Fix aparte.
+
+---
+
+## 2026-05-26 — D-CARDS-CALIBRACION-DATOS-REALES · validar corrección semántica por-card
+
+**Contexto:** Review visual CEO descubrió que B18/B07/B14/B15/B03 daban resultados falsos (diputado→puta, +0 estancado, 0.966 desvío, 1-comentario-rage, 254 éxitos). Patrón común: las 18 cards Tier 2 se construyeron en lote con lógica placeholder (diccionarios, Jaccard léxico, snapshots copiados) y NUNCA se calibraron contra datos reales. Los audits midieron dimensiones (smoke/seguridad/perf) pero no la **corrección semántica** del número por-card.
+
+**Decisión:** toda card de diagnóstico debe validarse contra datos reales del piloto (Saymi) antes de considerarse cliente-ready. El "compila + renderiza + pasa smoke" NO basta. Regla reforzada: probar contra datos reales (ya en CLAUDE.md, violada en fase scaffold).
+
+---
+
+## 2026-05-26 — D-B14-COMPOSICION · Topic Drift → composición de conversación
+
+**Decisión:** B14 abandona el drift léxico bigram-Jaccard (saturado ~1.0) y mide **composición** de a qué responde la audiencia vía `nlp_target` (persona/tema/otro) + `topics_extracted` para nombrar temas. Se conserva el heatmap (CEO lo pidió explícitamente), recoloreado por foco dominante. Vista de composición elegida sobre score recalibrado.
+
+---
+
+## 2026-05-26 — D-B07-HONESTO-RADAR · B07 estado honesto, dato real vía RADAR
+
+**Decisión:** B07 muestra "Medición de crecimiento en proceso de integración" en vez de "+0 Estancado" falso (D-ANTI-MOCK-1). Adapter FE↔BE wired (delta_followers/top_posts) — se emite solo con variación REAL entre snapshots. El dato real de followers histórico lo provee **RADAR (Hugo, peer)**: RADAR persiste timeseries, CRECE ingiere a `social_profile_snapshots`. Contrato acordado, pendiente ejecución Hugo.
+
+---
+
+## 2026-05-26 — D-B15-VOLUMEN · hostilidad exige volumen real
+
+**Decisión:** B15 (rage/hostilidad) exige ≥5 comentarios en el post **y** ≥3 negativos reales para flag (antes 1 comentario negativo + ER spike disparaba falso positivo). Muestra evidencia inline (comentarios que dispararon). Esto además surfacea las críticas legítimas que B18-violencia correctamente ignora.
+
+---
+
+## 2026-05-26 — D-PALABRAS-CONFIG · diccionarios de moderación configurables por admin (PLAN)
+
+**Decisión (CEO):** mover los diccionarios hardcoded (hate/vpg/amenazas/rage) a tabla configurable por admin con categoría + severidad + **scope** (exacta/raíz/contiene). Default scope=exacta + botón "Probar" para no reabrir el bug del "diputado". Plan escrito en `.context/PLAN-2026-05-26-palabras-moderacion-config.md`. Sprint siguiente. Supersede el parche manual de gaps de género del diccionario B18.
+
+---
+
 ## 2026-05-19 tarde — D-BUG-CONTROL-CHARS-POST-PILOTO · Bug `/planes/{id}` JSON queda diferido
 
 **Contexto:** Plan deuda tests v2 incluyó concern Gemini (HIGH severity) sobre bug control chars en endpoint `/api/v1/planes/{id}`. Hipótesis Gemini: si cliente abre plan individual durante demo, axios podría fallar parseando JSON con `\n` raw en strings (output LLM sin escapar). Concerns absorbido en plan v2 moviendo verificación a Bloque A pre-piloto.

@@ -1,6 +1,39 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-25 noche · Sprint cierre-audit + F4 matriz polaridad CERRADOS · pre-apagón eléctrico CEO · todo pusheado · próximo: cargar este STATUS + verificar containers Docker al regresar
+**Ultimo update:** 2026-05-26 · Recuperación post-apagón + review visual CEO de 6 cards diagnóstico (B18/B07/B14/B15/B03) + fix de raíz engagement_rate en ingest · 6 commits pusheados · próximo: análisis B12 (coordinación artificial) + B13 (filtro de realidad)
+
+## 2026-05-26 · Recuperación post-apagón + review cards diagnóstico + fix ER raíz (sesión Linda)
+
+### Recuperación post-apagón (causa raíz: túnel, no containers)
+- Containers Docker nunca cayeron (auto-restart). El problema: el **quick-tunnel cloudflared muere cada 1-3h** (DNS NXDOMAIN); Vercel enruta `/api/v1/*` por `BACKEND_TUNNEL_URL` → frontend cargaba SIN datos (500).
+- Fix documentado: `bash scripts/mac-local/start-crece-tunnel.sh` (idempotente: rota túnel, actualiza Vercel env, redeploy). LaunchAgent corre c/hora pero el túnel muere más rápido → ventanas muertas. Considerar túnel nombrado estable (PID 616 ya corre uno).
+
+### Review visual CEO · 6 cards corregidas (todas con el mismo patrón: lógica placeholder nunca calibrada contra datos reales)
+| Card | Problema | Fix | Commit |
+|---|---|---|---|
+| B18 Violencia | "diputado" matcheaba "puta" (substring) | word-boundary `\b` + "cualquiera"→"una cualquiera" + labels español + mostrar todos + texto completo · Saymi 9→2 | `aaba572` |
+| B07 Crecimiento | snapshot copia followers estático (delta=0) + mismatch FE↔BE | estado honesto "en integración" + adapter delta_followers/top_posts · dato real depende de RADAR (Hugo) | `aaba572` |
+| B14 Topic Drift | bigram-Jaccard saturado (~1.0 a todo) | reframe a **composición** (nlp_target: persona/tema/otro) + topics_extracted · heatmap conservado (CEO lo pidió) · Saymi 55/28/17 | `2b6bc19` |
+| B15 Hostilidad | 1 comentario negativo + ER spike → falso rage | exige ≥5 comentarios + ≥3 negativos · evidencia inline · labels español · Saymi 15→7 | `9180052` |
+| B03 Salud (matriz 2×2) | ER=0 en 150 posts (default) → mediana 0 → Neutros/Sin eco imposibles | backfill ER global (1973 posts, TODOS los clientes) + umbral sobre ER>0 · Saymi 254/9/0/0→126/5/128/4 | `c773f40` |
+
+### Fix de raíz · engagement_rate en TODAS las rutas de ingest (`a8f8729`)
+- Causa: `engagement_rate` default=0.0; ingest (scrapers/RADAR/Apify) no lo calculaba → 35% global en 0 pese a interacción real. Rompía B03/B07/B15.
+- Helper canónico `app/services/engagement.py` (views>0: (likes+comments)/views*100; sino (likes+comments+shares)/followers*100) · 6 tests.
+- Event listener insert+update en SocialPost, registrado en uvicorn (lifespan) **Y** Celery worker (`worker_process_init` — crítico: scrapers corren en worker).
+- 4 scripts SQL crudo (radar posts_v3/yt_x/ig, apify_refresh_all) + backfill usan el helper.
+
+### Dependencias / pendientes abiertos
+- **B07 real depende de RADAR (Hugo, peer `exktbbec`)**: contrato acordado — RADAR persiste timeseries follower_count, CRECE lo ingiere a `social_profile_snapshots`. Hugo lo retoma tras cerrar 3 MC + Felipe.
+- **Plan palabras moderación configurables**: `.context/PLAN-2026-05-26-palabras-moderacion-config.md` (tabla con categoría+severidad+scope · default exacta · botón Probar). Siguiente sprint.
+- **Gap pre-existente:** `audit_listeners` solo registrado en uvicorn, NO en Celery worker → ops destructivas en tasks no se auditan (LFPDPPP). Fix aparte.
+- **topics_extracted** per-cliente: Saymi 93%, otros menos → B14 composición parcial en quien tenga menos topics.
+- **56 commits** acumulados en `feat/post-ingest-hugo-2026-05-20` sin merge a `main`.
+- **Próximo:** análisis B12 (Detector coordinación artificial) + B13 (Filtro de Realidad).
+
+---
+
+## 2026-05-25 noche · F4 matriz polaridad Saymi v1→v2 CERRADO (60 min walltime)
 
 ## 2026-05-25 noche · F4 matriz polaridad Saymi v1→v2 CERRADO (60 min walltime)
 
