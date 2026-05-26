@@ -181,13 +181,13 @@ def validate_item(item: dict, expected_id: int) -> dict | None:
     }
 
 
-def process_batch(conn, batch: list[dict], dry_run: bool) -> tuple[int, int]:
+def process_batch(conn, batch: list[dict], dry_run: bool, dirigente_nombre: str = "Saymi Pineda Velasco", rol: str = "oficialismo") -> tuple[int, int]:
     """Procesa un batch via CC con retry. Retorna (n_updated, n_failed).
 
     Si CC falla los 3 intentos, batch se reporta failed (no escribe BD) y
     queda para la proxima corrida. Gemini NO sustituye a CC aqui.
     """
-    prompt = build_batch_prompt(batch)
+    prompt = build_batch_prompt(batch, dirigente_nombre, rol)
     raw = call_cc_with_retry(prompt)
     if raw is None:
         return 0, len(batch)
@@ -250,6 +250,15 @@ def main():
     print(f"Sprint D backfill NLP — dirigente_id={args.dirigente_id}, limit={args.limit}, batch={args.batch_size}, dry_run={args.dry_run}")
 
     with psycopg.connect(DB_URL) as conn:
+        # Identidad real del dirigente para el prompt (genérico, no hardcode Saymi)
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT full_name, partido FROM dirigentes WHERE id = %s",
+                (args.dirigente_id,),
+            )
+            drow = cur.fetchone()
+        dirigente_nombre = drow[0] if drow else "el dirigente"
+        rol = (drow[1] or "político") if drow else "político"
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -287,7 +296,7 @@ def main():
             eta = (total - i) / rate if rate > 0 else 0
             print(f"\n[batch {batch_num}/{n_batches}] ids={[c['id'] for c in batch]} · "
                   f"elapsed={elapsed:.0f}s · eta={eta:.0f}s")
-            n_u, n_f = process_batch(conn, batch, args.dry_run)
+            n_u, n_f = process_batch(conn, batch, args.dry_run, dirigente_nombre, rol)
             total_updated += n_u
             total_failed += n_f
             print(f"  → updated={n_u}, failed={n_f} (cum: {total_updated}/{total})")

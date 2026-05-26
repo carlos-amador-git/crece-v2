@@ -40,12 +40,12 @@ DB_URL = os.environ.get(
 )
 
 
-def build_prompt(posts: list[dict]) -> str:
+def build_prompt(posts: list[dict], dirigente_desc: str) -> str:
     items = "\n".join(
         f'{i+1}. [id={p["id"]}] "{(p["content"] or "")[:500].replace(chr(34), chr(39))}"'
         for i, p in enumerate(posts)
     )
-    return f"""Eres un analista político mexicano. Extrae los temas centrales de cada post de Saymi Pineda Velasco (Secretaria de Turismo de Oaxaca, oficialismo MORENA).
+    return f"""Eres un analista político mexicano. Extrae los temas centrales de cada post de {dirigente_desc}.
 
 Posts:
 {items}
@@ -141,8 +141,8 @@ def validate_item(item: dict, expected_id: int) -> dict | None:
     }
 
 
-def process_batch(conn, batch: list[dict], dry_run: bool) -> tuple[int, int]:
-    prompt = build_prompt(batch)
+def process_batch(conn, batch: list[dict], dry_run: bool, dirigente_desc: str) -> tuple[int, int]:
+    prompt = build_prompt(batch, dirigente_desc)
     raw = call_cc_with_retry(prompt)
     if not raw:
         return (0, len(batch))
@@ -194,6 +194,22 @@ def main() -> int:
     )
 
     conn = psycopg.connect(DB_URL)
+    # Identidad del dirigente para el prompt (genérico, no hardcode Saymi)
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT full_name, cargo, partido FROM dirigentes WHERE id = %s",
+            (args.dirigente_id,),
+        )
+        drow = cur.fetchone()
+    if not drow:
+        print(f"dirigente {args.dirigente_id} no existe", file=sys.stderr)
+        return 1
+    _nombre, _cargo, _partido = drow
+    dirigente_desc = _nombre + (f" ({_cargo}" if _cargo else "")
+    if _partido:
+        dirigente_desc += f", {_partido}" if _cargo else f" ({_partido}"
+    if _cargo or _partido:
+        dirigente_desc += ")"
     with conn.cursor() as cur:
         cur.execute(
             """
