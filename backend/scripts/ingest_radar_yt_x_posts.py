@@ -56,18 +56,24 @@ def to_datetime(s: str | None) -> datetime | None:
 
 
 async def main(json_path: Path, platform: str, dirigente_id: int, commit: bool) -> int:
-    profile_id = PROFILE_MAP.get((dirigente_id, platform))
-    if not profile_id:
-        print(f"[err] No profile_id mapped for ({dirigente_id}, {platform})", file=sys.stderr)
-        return 1
-
     with json_path.open() as f:
         data = json.load(f)
     items = data.get("posts") or data.get("videos") or data.get("tweets") or data.get("items") or []
-    print(f"[meta] {len(items)} {platform} posts · dirigente={dirigente_id} profile={profile_id}")
 
     dsn = os.environ.get("DATABASE_URL_RAW", "postgresql://crece:crece_dev@crece-db:5432/crece")
     conn = await asyncpg.connect(dsn)
+
+    # profile_id por (dirigente_id, platform) desde BD — reusable sin editar
+    # PROFILE_MAP por dirigente. PROFILE_MAP queda como fallback legacy.
+    profile_id = await conn.fetchval(
+        "SELECT id FROM social_profiles WHERE dirigente_id=$1 AND platform=$2",
+        dirigente_id, platform,
+    ) or PROFILE_MAP.get((dirigente_id, platform))
+    if not profile_id:
+        print(f"[err] No profile for ({dirigente_id}, {platform})", file=sys.stderr)
+        await conn.close()
+        return 1
+    print(f"[meta] {len(items)} {platform} posts · dirigente={dirigente_id} profile={profile_id}")
 
     foll_row = await conn.fetchrow(
         "SELECT followers_count FROM social_profiles WHERE id = $1", profile_id
