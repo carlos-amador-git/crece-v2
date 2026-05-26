@@ -236,7 +236,7 @@ def main() -> int:
     t0 = time.monotonic()
     for i in range(0, len(rows), BATCH_SIZE):
         batch = rows[i : i + BATCH_SIZE]
-        ok, fail = process_batch(conn, batch, args.dry_run)
+        ok, fail = process_batch(conn, batch, args.dry_run, dirigente_desc)
         total_ok += ok
         total_fail += fail
         elapsed = time.monotonic() - t0

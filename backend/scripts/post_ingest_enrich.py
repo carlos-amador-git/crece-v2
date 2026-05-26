@@ -12,8 +12,9 @@ Pasos (en orden):
   1. Posts NLP        → tono_discurso + target_politico   (backfill_nlp_posts)
   2. Comments NLP     → nlp_tono + nlp_target + nlp_polaridad (backfill_nlp_saymi, generalizado)
   3. Emotions posts   → social_posts.emotions             (backfill_emotions_cc --type posts)
-  4. Emotions comments→ social_comments.emotions          (backfill_emotions_cc --type comments)
-  5. Topics           → topics_extracted                  (extract_topics_saymi_cc, generalizado)
+  4. Topics           → topics_extracted                  (extract_topics_saymi_cc, generalizado)
+
+(emotions es post-level: social_comments NO tiene columna emotions.)
 
 ER y author_hash NO van aquí: ya nacen limpios en el ingest (event listener +
 guard, 2026-05-26). Sentiment_score/label se computa vía analyze_sentiment
@@ -61,12 +62,12 @@ def main() -> int:
     lim = ["--limit", str(args.limit)]
     print(f"\n=== post_ingest_enrich · dirigente={did} · limit/paso={args.limit} · dry={args.dry_run} ===")
 
+    # Nota: emotions es post-level (social_comments NO tiene columna emotions).
     steps = [
         ("1. Posts NLP (tono+target)", "backfill_nlp_posts.py", lim),
         ("2. Comments NLP (tono+target+polaridad)", "backfill_nlp_saymi.py", lim),
         ("3. Emotions posts", "backfill_emotions_cc.py", [*lim, "--type", "posts"]),
-        ("4. Emotions comments", "backfill_emotions_cc.py", [*lim, "--type", "comments"]),
-        ("5. Topics", "extract_topics_saymi_cc.py", lim),
+        ("4. Topics", "extract_topics_saymi_cc.py", lim),
     ]
 
     results = [_step(lbl, scr, extra, did, args.dry_run) for lbl, scr, extra in steps]
