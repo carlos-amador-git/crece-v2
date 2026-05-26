@@ -366,117 +366,112 @@ export function CardB13({
 }
 
 // =========================================================================
-// B14 — Topic Drift
+// B14 — Composición de la conversación de la audiencia
 // =========================================================================
-function driftColor(score: number): string {
-  // 0=alineado (verde) → 1=drift total (rojo)
-  if (score < 0.4) return "hsl(var(--chart-positive))";
-  if (score < 0.75) return "hsl(30 95% 55%)";
-  return "hsl(var(--chart-negative))";
-}
+const COMPOSICION_COLORS = {
+  tema: "hsl(var(--chart-positive))", // verde: hablan de tu tema
+  persona: "hsl(210 90% 56%)", // azul: reaccionan a ti
+  otro: "hsl(30 95% 55%)", // ámbar: se desvían
+} as const;
+
+const COMPOSICION_LABELS = {
+  tema: "Hablan de tu tema",
+  persona: "Reaccionan a ti",
+  otro: "Se desvían",
+} as const;
+
+const COMPOSICION_ORDER = ["tema", "persona", "otro"] as const;
 
 export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } }) {
   const d = bloque.data;
-  const posts = d?.posts_con_drift ?? [];
-  const avg = d?.drift_score_promedio;
-  const altos = d?.posts_drift_alto ?? 0;
+  const comp = d?.composicion;
+  const posts = d?.posts ?? [];
+  const temas = d?.temas_top ?? [];
 
-  // Heatmap: mostrar hasta 24 posts en grid 6 cols x 4 rows
+  // Heatmap: hasta 24 posts en grid 6 cols x 4 rows, color = dominante
   const heatmap = posts.slice(0, 24);
 
   return (
     <CardShell
       code="B14"
       title="¿Tu audiencia habla de lo que publicas?"
-      pregunta="¿El texto de mi publicación coincide con lo que la gente comenta?"
+      pregunta="¿La gente comenta sobre tu tema, reacciona a ti, o se desvía?"
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b14"
-      calibrating
-      technicalNotes={
-        <>
-          <span className="font-medium">Detector en calibración.</span> El análisis
-          de coincidencia sobre textos cortos tiende a saturar cerca de{" "}
-          <span className="font-mono">1.0</span> — los resultados individuales
-          todavía no son interpretables de manera confiable. Úsalo como señal
-          relativa entre publicaciones, no como medida absoluta.
-        </>
-      }
     >
-      <div className="flex items-baseline gap-3" data-testid="b14-headline">
-        <span className="font-heading text-3xl font-bold tabular-nums">
-          {avg != null ? fmtNum(avg, 3) : <EmptyMetric />}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          desvío promedio · 0=alineado / 1=total
-        </span>
-      </div>
-      <p className="text-[11px] text-muted-foreground">
-        {d?.n_posts_analizados ?? 0} publicaciones analizadas · {altos} con desvío alto (&gt;
-        {d?.umbral_drift_alto ?? 0.75})
-      </p>
-
-      <div
-        className="rounded-md border border-amber-300/60 dark:border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/30 px-3 py-2 text-[11px] leading-snug"
-        data-testid="b14-calibration-warning"
-      >
-        <p className="text-amber-800 dark:text-amber-300">
-          <span className="font-medium">⚠️ En calibración</span> · usa el gráfico
-          solo como señal relativa entre publicaciones. Detalle técnico en el ⓘ.
-        </p>
-      </div>
-
-      {heatmap.length > 0 && (
-        <div className="space-y-1.5" data-testid="b14-heatmap">
-          <div className="grid grid-cols-6 gap-1">
-            {heatmap.map((p) => (
-              <div
-                key={p.post_id}
-                className="aspect-square rounded-sm"
-                style={{ backgroundColor: driftColor(p.drift_score) }}
-                title={`Publicación #${p.post_id} · desvío ${p.drift_score.toFixed(3)} · ${p.n_comments} comentarios`}
-                data-testid="b14-heatmap-cell"
-              />
-            ))}
+      {comp ? (
+        <>
+          {/* Barra de composición */}
+          <div className="space-y-1.5" data-testid="b14-composicion">
+            <div className="flex h-7 w-full overflow-hidden rounded-md bg-muted">
+              {COMPOSICION_ORDER.map((k) =>
+                comp[k] > 0 ? (
+                  <div
+                    key={k}
+                    style={{ width: `${comp[k]}%`, backgroundColor: COMPOSICION_COLORS[k] }}
+                    title={`${COMPOSICION_LABELS[k]}: ${comp[k]}%`}
+                  />
+                ) : null,
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+              {COMPOSICION_ORDER.map((k) => (
+                <span key={k} className="flex items-center gap-1">
+                  <span
+                    className="h-2 w-2 rounded-sm"
+                    style={{ backgroundColor: COMPOSICION_COLORS[k] }}
+                  />
+                  {COMPOSICION_LABELS[k]}{" "}
+                  <span className="font-medium tabular-nums">{comp[k]}%</span>
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-            <span className="italic">1 cuadro = 1 publicación · más reciente →</span>
-          </div>
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-sm bg-[hsl(var(--chart-positive))]" />
-              alineado
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: "hsl(30 95% 55%)" }} />
-              medio
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-sm bg-[hsl(var(--chart-negative))]" />
-              desvío alto
-            </span>
-          </div>
-        </div>
-      )}
 
-      {posts.length > 0 && (
-        <ol className="space-y-0.5 text-[11px]" data-testid="b14-top-posts">
-          {posts.slice(0, 3).map((p) => (
-            <li key={p.post_id} className="flex items-center gap-2">
-              <span
-                className="h-2 w-2 rounded-sm shrink-0"
-                style={{ backgroundColor: driftColor(p.drift_score) }}
-                aria-hidden="true"
-              />
-              <span className="flex-1 truncate text-muted-foreground">
-                #{p.post_id} · texto: {p.caption_tokens_top5.slice(0, 2).join(", ") || "—"}
-              </span>
-              <span className="font-medium tabular-nums">{fmtNum(p.drift_score, 2)}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+          <p className="text-[11px] text-muted-foreground">
+            {d?.n_comments_analizados ?? 0} comentarios en {d?.n_posts_analizados ?? 0} publicaciones
+          </p>
+
+          {/* Heatmap: 1 cuadro por publicación, color = foco dominante */}
+          {heatmap.length > 0 && (
+            <div className="space-y-1.5" data-testid="b14-heatmap">
+              <div className="grid grid-cols-6 gap-1">
+                {heatmap.map((p) => (
+                  <div
+                    key={p.post_id}
+                    className="aspect-square rounded-sm"
+                    style={{ backgroundColor: COMPOSICION_COLORS[p.dominante] }}
+                    title={`#${p.post_id} · ${p.n_comments} comentarios · tema ${p.pct_tema}% / a ti ${p.pct_persona}% / otro ${p.pct_otro}%`}
+                    data-testid="b14-heatmap-cell"
+                  />
+                ))}
+              </div>
+              <p className="text-[10px] italic text-muted-foreground">
+                1 cuadro = 1 publicación · color = foco dominante · más reciente →
+              </p>
+            </div>
+          )}
+
+          {/* Temas que generan conversación temática */}
+          {temas.length > 0 && (
+            <div className="space-y-1" data-testid="b14-temas">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Temas que generan conversación:
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {temas.slice(0, 6).map((t) => (
+                  <Badge key={t.tema} variant="secondary" className="text-[10px] font-normal">
+                    {t.tema}
+                    <span className="ml-1 tabular-nums text-muted-foreground">{t.n_comments}</span>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : null}
     </CardShell>
   );
 }

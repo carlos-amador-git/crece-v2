@@ -1,32 +1,37 @@
-"""B14 — Topic Drift Detector (MASTER §3.2 #14).
+"""B14 — Composición de la conversación de la audiencia (MASTER §3.2 #14).
 
-Compara los topics que el POST discute (caption + topics_extracted) contra
-los topics de los COMMENTS (nlp_target + content). Un drift alto significa
-que el post habla de X pero los comments discuten Y (malentendido,
-captura de la conversación por trolls, o viralidad por razón equivocada).
+Mide **a qué responde** la audiencia en los comments de cada post, usando la
+señal NLP ya disponible (`social_comments.nlp_target`, 98% poblado) y los
+`social_posts.topics_extracted` (temas del post):
 
-Metodología:
-    - Token set del caption = bigrams de palabras (>=3 chars, sin stopwords)
-    - Token set de comments agregados = bigrams de los comments bajo el post
-    - Jaccard similarity. drift_score = 1 - jaccard (0=alineado, 1=total drift).
+    - "tema"    → el comment habla del tema del post (nlp_target=tema_especifico)
+    - "persona" → reacciona al dirigente (nlp_target=dirigente) · engagement
+                  genérico sano (felicidades, bonita, emojis)
+    - "otro"    → se desvía a gobierno/oposición/otro asunto
+
+Reemplaza el drift léxico bigram-Jaccard v1, que estaba SATURADO: daba ~1.0 a
+casi todo porque los elogios genéricos no repiten las palabras del caption.
+0.966 de desvío "promedio" no significaba audiencia desconectada — significaba
+"los comentarios son reacciones cortas", que es lo normal.
 
 Returns:
     {
-        "posts_con_drift": [
-            {"post_id", "drift_score", "caption_tokens_top5", "comments_tokens_top5", "n_comments"},
+        "composicion": {"persona": 55.7, "tema": 28.0, "otro": 16.3},  # % sobre comments clasificados
+        "posts": [  # 1 por publicación → alimenta el heatmap
+            {"post_id", "n_comments", "dominante", "pct_tema", "pct_persona",
+             "pct_otro", "published_at"},
             ...
         ],
-        "drift_score_promedio": 0.42,
+        "temas_top": [{"tema": "turismo oaxaca", "n_comments": 42}, ...],
         "n_posts_analizados": 45,
-        "posts_drift_alto": 7,  # score > 0.75
+        "n_comments_analizados": 1200,
     }
 
 Insufficient:
-    - 0 posts con al menos 3 comments (no se puede medir drift)
+    - 0 posts con ≥3 comments clasificados (no se puede medir composición)
 """
 from __future__ import annotations
 
-import re
 from collections import Counter, defaultdict
 from datetime import UTC, datetime, timedelta
 
@@ -46,39 +51,30 @@ from app.services.diagnostico_tier2._common import (
 BLOQUE = "B14"
 VENTANA_DIAS = 90
 MIN_COMMENTS_POR_POST = 3
-UMBRAL_DRIFT_ALTO = 0.75
 
-STOPWORDS_ES = {
-    "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del",
-    "al", "a", "en", "y", "o", "u", "que", "qué", "por", "para", "con",
-    "sin", "sobre", "como", "cómo", "pero", "si", "sí", "no", "es", "son",
-    "era", "ser", "estar", "este", "esta", "esto", "ese", "esa", "eso",
-    "me", "te", "se", "le", "les", "mi", "tu", "su", "yo", "nos", "nosotros",
-    "más", "mas", "muy", "ya", "hay", "fue", "está", "están", "ha", "han",
-    "he", "sus", "lo", "https", "http", "www", "rt", "ft",
-    "jajaja", "jaja", "jaj", "jeje", "hola", "gracias",
-}
+# nlp_target → bucket de composición
+_TARGET_TEMA = "tema_especifico"
+_TARGET_PERSONA = "dirigente"
+# topics ruido que no nombran un tema real
+_TOPICS_RUIDO = {"otro", "institucional", "ninguno", "general", "sin_tema_claro"}
 
 
-def _tokenize(text: str | None) -> list[str]:
-    if not text:
+def _extract_topics(raw: object) -> list[str]:
+    """topics_extracted llega como {"topics": [...]} o lista directa."""
+    if not raw:
         return []
-    text = re.sub(r"http\S+", " ", text.lower())
-    text = re.sub(r"[^\wáéíóúñü ]", " ", text)
-    tokens = [t for t in text.split() if len(t) >= 3 and t not in STOPWORDS_ES]
-    return tokens
-
-
-def _bigrams(tokens: list[str]) -> set[str]:
-    if len(tokens) < 2:
-        return set(tokens)
-    return {f"{tokens[i]} {tokens[i+1]}" for i in range(len(tokens) - 1)} | set(tokens)
-
-
-def _jaccard(a: set[str], b: set[str]) -> float:
-    if not a or not b:
-        return 0.0
-    return len(a & b) / len(a | b)
+    if isinstance(raw, dict):
+        topics = raw.get("topics", [])
+    elif isinstance(raw, list):
+        topics = raw
+    else:
+        return []
+    out: list[str] = []
+    for t in topics:
+        s = str(t).strip().lower()
+        if s and s not in _TOPICS_RUIDO:
+            out.append(s)
+    return out
 
 
 async def compute(
@@ -99,12 +95,11 @@ async def compute(
         select(SocialPost).where(
             SocialPost.profile_id.in_(profile_ids),
             SocialPost.published_at >= since,
-            SocialPost.content.is_not(None),
         )
     )
     posts = list(posts_res.scalars().all())
     if not posts:
-        return build_insufficient(BLOQUE, missing=["0 posts con content en ventana"])
+        return build_insufficient(BLOQUE, missing=["0 posts en ventana"])
 
     comments = await load_comments_for_dirigente(db, dirigente_id, VENTANA_DIAS)
     if not comments:
@@ -114,56 +109,80 @@ async def compute(
     for c in comments:
         comments_por_post[c["post_id"]].append(c)
 
-    resultados: list[dict] = []
+    agg = Counter()  # persona / tema / otro (agregado)
+    tema_counter: Counter[str] = Counter()  # tema → n comments temáticos
+    posts_out: list[dict] = []
+
     for post in posts:
         post_comments = comments_por_post.get(post.id, [])
         if len(post_comments) < MIN_COMMENTS_POR_POST:
             continue
-        caption_tokens = _tokenize(post.content)
-        caption_bg = _bigrams(caption_tokens)
-        comments_text = " ".join(c.get("content") or "" for c in post_comments)
-        comments_tokens = _tokenize(comments_text)
-        comments_bg = _bigrams(comments_tokens)
-        sim = _jaccard(caption_bg, comments_bg)
-        drift = round(1.0 - sim, 3)
+        post_topics = _extract_topics(post.topics_extracted)
+        pb = Counter()  # bucket por-post
+        for c in post_comments:
+            tgt = (c.get("nlp_target") or "").strip().lower()
+            if not tgt:
+                continue  # sin clasificar → no cuenta
+            if tgt == _TARGET_PERSONA:
+                pb["persona"] += 1
+            elif tgt == _TARGET_TEMA:
+                pb["tema"] += 1
+                for t in post_topics:
+                    tema_counter[t] += 1
+            else:
+                pb["otro"] += 1
 
-        # top 5 tokens (no bigrams) para UI
-        caption_top = [t for t, _ in Counter(caption_tokens).most_common(5)]
-        comments_top = [t for t, _ in Counter(comments_tokens).most_common(5)]
+        total_pb = pb["persona"] + pb["tema"] + pb["otro"]
+        if total_pb == 0:
+            continue
 
-        resultados.append(
+        agg.update(pb)
+        dominante = pb.most_common(1)[0][0]
+        posts_out.append(
             {
                 "post_id": post.id,
-                "drift_score": drift,
-                "caption_tokens_top5": caption_top,
-                "comments_tokens_top5": comments_top,
-                "n_comments": len(post_comments),
-                "published_at": post.published_at.isoformat() if post.published_at else None,
+                "n_comments": total_pb,
+                "dominante": dominante,
+                "pct_tema": round(100.0 * pb["tema"] / total_pb, 1),
+                "pct_persona": round(100.0 * pb["persona"] / total_pb, 1),
+                "pct_otro": round(100.0 * pb["otro"] / total_pb, 1),
+                "published_at": (
+                    post.published_at.isoformat() if post.published_at else None
+                ),
             }
         )
 
-    if not resultados:
+    n_clasificados = agg["persona"] + agg["tema"] + agg["otro"]
+    if not posts_out or n_clasificados == 0:
         return build_insufficient(
             BLOQUE,
             missing=[
-                f"0 posts con ≥{MIN_COMMENTS_POR_POST} comments en ventana "
-                "— necesario para medir drift estadísticamente",
+                f"0 posts con ≥{MIN_COMMENTS_POR_POST} comments clasificados "
+                "(nlp_target) en ventana — necesario para medir composición",
             ],
         )
 
-    resultados.sort(key=lambda x: x["drift_score"], reverse=True)
-    drift_avg = round(sum(r["drift_score"] for r in resultados) / len(resultados), 3)
-    drift_alto = sum(1 for r in resultados if r["drift_score"] >= UMBRAL_DRIFT_ALTO)
+    # Más reciente primero (el heatmap rotula "más reciente →")
+    posts_out.sort(key=lambda p: p["published_at"] or "", reverse=True)
+
+    composicion = {
+        "persona": round(100.0 * agg["persona"] / n_clasificados, 1),
+        "tema": round(100.0 * agg["tema"] / n_clasificados, 1),
+        "otro": round(100.0 * agg["otro"] / n_clasificados, 1),
+    }
+    temas_top = [
+        {"tema": t, "n_comments": n} for t, n in tema_counter.most_common(8)
+    ]
 
     return build_ok(
         BLOQUE,
         {
-            "posts_con_drift": resultados[:20],
-            "drift_score_promedio": drift_avg,
-            "n_posts_analizados": len(resultados),
-            "posts_drift_alto": drift_alto,
-            "umbral_drift_alto": UMBRAL_DRIFT_ALTO,
+            "composicion": composicion,
+            "posts": posts_out[:60],
+            "temas_top": temas_top,
+            "n_posts_analizados": len(posts_out),
+            "n_comments_analizados": n_clasificados,
             "ventana_dias": VENTANA_DIAS,
-            "metodologia": "bigram_jaccard_v1",
+            "metodologia": "nlp_target_composition_v2",
         },
     )

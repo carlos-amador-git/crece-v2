@@ -65,21 +65,22 @@ export interface B13Data {
 }
 
 // ----- B14 Topic Drift -----
-export interface B14PostDrift {
+export interface B14PostComposicion {
   post_id: number;
-  drift_score: number;
-  caption_tokens_top5: string[];
-  comments_tokens_top5: string[];
   n_comments: number;
+  dominante: "tema" | "persona" | "otro";
+  pct_tema: number;
+  pct_persona: number;
+  pct_otro: number;
   published_at: string | null;
 }
 
 export interface B14Data {
-  posts_con_drift: B14PostDrift[];
-  drift_score_promedio: number;
+  composicion: { persona: number; tema: number; otro: number };
+  posts: B14PostComposicion[];
+  temas_top: Array<{ tema: string; n_comments: number }>;
   n_posts_analizados: number;
-  posts_drift_alto: number;
-  umbral_drift_alto: number;
+  n_comments_analizados: number;
   ventana_dias: number;
   metodologia: string;
 }
