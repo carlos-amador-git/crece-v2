@@ -126,6 +126,14 @@ async def main(json_path: Path, platform: str, dirigente_id: int, commit: bool) 
             views = int(payload.get("view_count") or 0)
             published_at = to_datetime(payload.get("timestamp"))
             post_type = "VIDEO"
+        elif platform == "FACEBOOK":
+            content = payload.get("text") or ""
+            likes = int(payload.get("likes_count") or 0)
+            comments_n = int(payload.get("comments_count") or 0)
+            shares = int(payload.get("shares_count") or 0)
+            views = 0
+            published_at = to_datetime(payload.get("time_iso") or payload.get("timestamp"))
+            post_type = "TEXT"
         else:
             content = payload.get("title") or payload.get("text") or ""
             likes = comments_n = shares = views = 0
@@ -173,7 +181,7 @@ async def main(json_path: Path, platform: str, dirigente_id: int, commit: bool) 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--json", type=Path, required=True)
-    p.add_argument("--platform", required=True, choices=["YOUTUBE", "TWITTER", "TIKTOK"])
+    p.add_argument("--platform", required=True, choices=["YOUTUBE", "TWITTER", "TIKTOK", "FACEBOOK"])
     p.add_argument("--dirigente-id", type=int, default=3)
     p.add_argument("--commit", action="store_true")
     args = p.parse_args()
