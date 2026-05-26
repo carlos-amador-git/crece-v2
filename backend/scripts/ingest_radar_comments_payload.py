@@ -61,17 +61,24 @@ async def main(profile_id: int, comments_f: Path, commit: bool) -> int:
     items = json.load(comments_f.open()).get("comments", [])
     n_ins = n_orphan = n_nokey = 0
     for it in items:
-        pl = it.get("payload", {})
-        post_pid = pl.get("post_id")
+        # Soporta ambos shapes RADAR: raw-payload (TT) y aplanado (FB con join key).
+        pl = it.get("payload", {}) or {}
+        post_pid = it.get("platform_post_id") or pl.get("post_id")
         if not post_pid:
             n_nokey += 1
             continue
-        parent = post_map.get(bare(post_pid)) or post_map.get(str(post_pid))
+        # Match exacto primero (FB base64 que NO debe truncarse); bare como fallback.
+        parent = post_map.get(str(post_pid)) or post_map.get(bare(post_pid))
         if not parent:
             n_orphan += 1
             continue
-        cid = pl.get("comment_id") or pl.get("comment_id_surrogate")
-        ah = ensure_author_hash(pl.get("author_username") or pl.get("author_display_name") or "", "RADAR")
+        cid = (it.get("comment_id") or it.get("comment_id_surrogate")
+               or pl.get("comment_id") or pl.get("comment_id_surrogate"))
+        content = it.get("comment_text") or pl.get("text") or ""
+        display = it.get("author_display_name") or pl.get("author_display_name")
+        author_raw = (it.get("author_hash") or it.get("author_username") or display
+                      or pl.get("author_username") or "")
+        ah = ensure_author_hash(author_raw, "RADAR")
         if commit and cid:
             await conn.execute(
                 """
@@ -81,9 +88,9 @@ async def main(profile_id: int, comments_f: Path, commit: bool) -> int:
                 VALUES ($1,$2,$3,$4,0,$5,false,$6,$7)
                 ON CONFLICT (platform_comment_id) DO NOTHING
                 """,
-                parent, str(cid), pl.get("text") or "", ah[:64],
-                parse_dt(pl.get("time_iso") or pl.get("create_time_iso")),
-                DATA_SOURCE, pl.get("author_display_name"),
+                parent, str(cid), content, ah[:64],
+                parse_dt(it.get("time_iso") or pl.get("time_iso") or pl.get("create_time_iso")),
+                DATA_SOURCE, display,
             )
         n_ins += 1
     await conn.close()
