@@ -1,6 +1,45 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-25 noche · Sprint cierre-audit CERRADO · 9/10 items audit-full ya estaban hechos · #9 sidebar contraste fix aplicado · #1B rotación keys diferida sesión CEO · próximo: F4 matriz polaridad condicional + F1.3B rotación keys (sesión CEO)
+**Ultimo update:** 2026-05-25 noche · Sprint cierre-audit + F4 matriz polaridad CERRADOS · pre-apagón eléctrico CEO · todo pusheado · próximo: cargar este STATUS + verificar containers Docker al regresar
+
+## 2026-05-25 noche · F4 matriz polaridad Saymi v1→v2 CERRADO (60 min walltime)
+
+- 1,155 OK + 5 fails de 1,160 procesados · 99.3% migrado
+- RAM 0 aborts · osciló 49-57%
+- Distribución v2 final: celebratorio 787 · informativo 716 · personal 482 · propositivo 150 · solidario 29 · defensivo 1 · residuo v1: 8 posts
+- Script `backend/scripts/migrate_tono_v1_to_v2_saymi.py` (reusable, RAM-conservador)
+- Commit pusheado: `chore(nlp): migrate tono Saymi v1→v2 · 1155/1160 OK · RAM conservador`
+- D-MATRIZ-POLARIDAD-V2-SAYMI-CIERRE-2026-05-25 registrada
+
+## PRE-APAGÓN 2026-05-25 noche
+
+CEO reportó apagón eléctrico. Estado al pre-cierre:
+- `git status` limpio salvo este STATUS.md (commit ahora)
+- Todos los commits previos pusheados a origin/feat/post-ingest-hugo-2026-05-20
+- Cero procesos background corriendo (F4 ya terminó normal exit=0)
+- Docker containers UP (crece-backend, db, redis, minio, celery-beat, celery-worker, flower, frontend)
+- Alias prod `frontend-zeta-sepia-46.vercel.app` apuntando a `frontend-b74yrrywl` (sidebar contrast fix)
+
+### Recuperación post-apagón
+
+Al regresar la luz:
+1. Verificar Docker daemon vivo: `docker ps`
+2. Si containers caídos: `docker compose up -d` desde raíz repo
+3. Cargar contexto: leer `.context/STATUS.md` (este archivo) + `.context/PLAN-current.md`
+4. Verificar último push: `git log --oneline origin/feat/post-ingest-hugo-2026-05-20 -5`
+5. Cero acción pendiente · sesión cerrada limpia
+
+### Sesión Linda · trabajo del día 2026-05-25 (resumen ejecutivo)
+
+3 sprints cerrados consecutivos:
+1. **PLAN-2026-05-22-recovery** (cierre) · Saymi topics 100% · 670/670 OK
+2. **PLAN-2026-05-25-sprint-multi** · 5 bugs UI + B07 beat + B08 rivales + TT mapper · 7 commits
+3. **PLAN-2026-05-25-sprint-cierre-audit** · 9/10 items audit ya estaban hechos · #9 sidebar contraste fix
+4. **F4 matriz polaridad** · 1155 posts v1→v2 · 60 min
+
+Total commits push hoy: 11. Push exitoso. Cero deuda pendiente operativa.
+
+---
 
 ## 2026-05-25 noche · Sprint cierre-audit PLAN-2026-05-25-sprint-cierre-audit CERRADO (~1.5h)
 
@@ -36,12 +75,13 @@
 
 ### Pendientes diferidos al cerrar sprint
 
-- **F1.3B rotación 7 keys** `.env.scraping-keys` + `git filter-repo` + force-push · sesión propia con CEO presente
 - **F4 matriz polaridad Saymi** v1→v2 vocab uniforme · CONDICIONAL decisión CEO · 1173 posts vocab v1 mezclados con 1000 vocab v2 (52/44% split, no es 100% legacy como decía plan-20)
 - PII compliance review (gap audit Gemini high) · sprint propio
 - Performance N+1 stress test BFF · sprint propio
 - Error Boundaries frontend específicos · sprint propio
 - 56+ commits sin merge a `main` · decisión operativa CEO
+
+**D-NO-ROTAR-KEYS-2026-05-25** · CEO ratificó que rotación de `.env.scraping-keys` + filter-repo NO interesa por ahora. Item #1 del audit-full queda fuera del backlog activo · no re-sugerir hasta que CEO lo levante.
 
 ### Lección sesión
 
