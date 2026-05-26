@@ -62,7 +62,7 @@ const tooltipStyle = {
 // Paleta 5 partidos — HSL consistente con design system
 const PARTIDO_COLORS: Record<string, string> = {
   MC: "hsl(30 95% 55%)", // naranja MC
-  MORENA: "hsl(0 75% 50%)", // guinda MORENA
+  MORENA: "hsl(340 72% 33%)", // guinda MORENA (vino, no rojo)
   PAN: "hsl(215 80% 50%)", // azul PAN
   PRI: "hsl(140 60% 40%)", // verde PRI
   PVEM: "hsl(90 60% 45%)", // verde PVEM
@@ -110,10 +110,11 @@ export function CardB11({ bloque }: { bloque: BloqueBase & { data?: B11Data } })
     >
       <div className="flex items-baseline gap-3" data-testid="b11-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
-          {score != null ? score.toFixed(1) : <EmptyMetric />}
+          {score != null ? `${score.toFixed(1)}%` : <EmptyMetric />}
         </span>
         <span className="text-xs text-muted-foreground">
-          score 0-100 · {partidoSelf ? `base ${partidoSelf}` : ""}
+          de los comentarios identificables viene de partidos distintos a tu base
+          {partidoSelf ? ` (${partidoSelf})` : ""}
         </span>
       </div>
       <p className="text-[11px] text-muted-foreground">
