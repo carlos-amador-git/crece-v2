@@ -83,6 +83,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.exception(f"audit_listeners init failed: {e}")
 
+    # engagement_rate · calcular al insertar/actualizar SocialPost (fix ingest 2026-05-26)
+    try:
+        from app.core.engagement_listeners import init_engagement_listeners
+        init_engagement_listeners()
+    except Exception as e:
+        logger.exception(f"engagement_listeners init failed: {e}")
+
     yield
 
     # Shutdown: dispose engine pool

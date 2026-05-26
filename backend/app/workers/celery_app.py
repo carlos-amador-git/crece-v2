@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import worker_process_init
 
 from app.core.config import settings
 
@@ -102,3 +103,16 @@ celery_app.conf.update(
 )
 
 celery_app.autodiscover_tasks(["app.workers"])
+
+
+@worker_process_init.connect
+def _init_orm_event_listeners(**_kwargs) -> None:
+    """Registra los event listeners de SQLAlchemy en cada proceso worker.
+
+    Los scrapers insertan/actualizan posts vía ORM dentro del worker Celery, NO
+    en el proceso uvicorn (que registra los listeners en su lifespan). Sin esto,
+    engagement_rate no se calcularía en la ruta de ingest automática.
+    """
+    from app.core.engagement_listeners import init_engagement_listeners
+
+    init_engagement_listeners()

@@ -31,6 +31,8 @@ from pathlib import Path
 
 import asyncpg
 
+from app.services.engagement import compute_engagement_rate
+
 # dirigente name → (dirigente_id, profile_id IG)
 PROFILE_MAP = {
     "Saymi Adriana Pineda Velasco": (3, 7),
@@ -65,6 +67,16 @@ async def main(json_path: Path, commit: bool) -> int:
     conn = await asyncpg.connect(dsn)
 
     counters: Counter[str] = Counter()
+    foll_cache: dict[int, int] = {}
+
+    async def _followers(pid: int) -> int:
+        if pid not in foll_cache:
+            r = await conn.fetchrow(
+                "SELECT followers_count FROM social_profiles WHERE id = $1", pid
+            )
+            foll_cache[pid] = (r["followers_count"] if r else 0) or 0
+        return foll_cache[pid]
+
     pp_ids = [p["platform_post_id"] for p in posts]
     rows = await conn.fetch(
         "SELECT platform_post_id FROM social_posts WHERE platform_post_id = ANY($1::text[])",
@@ -111,6 +123,7 @@ async def main(json_path: Path, commit: bool) -> int:
         )
 
         if commit:
+            er = compute_engagement_rate(likes, comments, 0, views, await _followers(profile_id))
             try:
                 await conn.execute(
                     """
@@ -119,11 +132,11 @@ async def main(json_path: Path, commit: bool) -> int:
                         published_at, likes, comments, shares, views,
                         engagement_rate, raw_data, scraped_at, is_political
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, 0, $9, NOW(), false)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9, $10, NOW(), false)
                     ON CONFLICT (platform_post_id) DO NOTHING
                     """,
                     profile_id, pp, caption, post_type, published_at,
-                    likes, comments, views,
+                    likes, comments, views, er,
                     json.dumps(raw_data, ensure_ascii=False),
                 )
             except Exception as e:

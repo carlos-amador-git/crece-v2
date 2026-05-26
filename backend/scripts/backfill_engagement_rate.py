@@ -28,6 +28,7 @@ import asyncio
 from sqlalchemy import text
 
 from app.core.database import async_session_factory
+from app.services.engagement import compute_engagement_rate
 
 # Selecciona candidatos + calcula ER nuevo en una sola pasada.
 SELECT_SQL = text(
@@ -50,11 +51,11 @@ UPDATE_SQL = text("UPDATE social_posts SET engagement_rate = :er WHERE id = :pid
 
 
 def _compute_er(likes: int, comments: int, shares: int, views: int, followers: int) -> float | None:
-    if views and views > 0:
-        return round((likes + comments) / views * 100.0, 4)
-    if followers and followers > 0:
-        return round((likes + comments + shares) / followers * 100.0, 4)
-    return None  # sin denominador → no se puede calcular, se deja como está
+    """Wrap del helper canónico. Devuelve None cuando no hay denominador
+    (views==0 y followers==0) para no tocar esas filas."""
+    if not (views and views > 0) and not (followers and followers > 0):
+        return None
+    return compute_engagement_rate(likes, comments, shares, views, followers)
 
 
 async def main(apply: bool) -> None:

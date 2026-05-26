@@ -20,6 +20,8 @@ from pathlib import Path
 
 import asyncpg
 
+from app.services.engagement import compute_engagement_rate
+
 # Mapping (dirigente_id, platform) → profile_id
 PROFILE_MAP = {
     (3, "YOUTUBE"): 24,
@@ -66,6 +68,11 @@ async def main(json_path: Path, platform: str, dirigente_id: int, commit: bool) 
 
     dsn = os.environ.get("DATABASE_URL_RAW", "postgresql://crece:crece_dev@crece-db:5432/crece")
     conn = await asyncpg.connect(dsn)
+
+    foll_row = await conn.fetchrow(
+        "SELECT followers_count FROM social_profiles WHERE id = $1", profile_id
+    )
+    followers = (foll_row["followers_count"] if foll_row else 0) or 0
 
     counters: Counter[str] = Counter()
     pp_ids = [str(p["platform_post_id"]) for p in items]
@@ -128,6 +135,7 @@ async def main(json_path: Path, platform: str, dirigente_id: int, commit: bool) 
 
         raw_data = {**payload, "caption_source": f"radar-{platform.lower()}-v1"}
         if commit:
+            er = compute_engagement_rate(likes, comments_n, shares, views, followers)
             try:
                 await conn.execute(
                     """
@@ -136,11 +144,11 @@ async def main(json_path: Path, platform: str, dirigente_id: int, commit: bool) 
                         published_at, likes, comments, shares, views,
                         engagement_rate, raw_data, scraped_at, is_political
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $10, NOW(), false)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), false)
                     ON CONFLICT (platform_post_id) DO NOTHING
                     """,
                     profile_id, pp, content[:5000], post_type, published_at,
-                    likes, comments_n, shares, views,
+                    likes, comments_n, shares, views, er,
                     json.dumps(raw_data, ensure_ascii=False, default=str),
                 )
             except Exception as e:

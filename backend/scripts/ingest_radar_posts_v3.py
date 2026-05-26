@@ -21,6 +21,8 @@ from pathlib import Path
 
 import asyncpg
 
+from app.services.engagement import compute_engagement_rate
+
 DIRIGENTE_ID = int(os.environ.get("DIRIGENTE_ID", "57"))
 PROFILE_ID = int(os.environ.get("PROFILE_ID", "47"))
 
@@ -45,6 +47,12 @@ async def main(json_path: Path, commit: bool) -> int:
         "postgresql://crece:crece_dev@crece-db:5432/crece",
     )
     conn = await asyncpg.connect(dsn)
+
+    # followers del perfil para el ER (FB no expone views → fórmula followers-based)
+    foll_row = await conn.fetchrow(
+        "SELECT followers_count FROM social_profiles WHERE id = $1", PROFILE_ID
+    )
+    followers = (foll_row["followers_count"] if foll_row else 0) or 0
 
     counters: Counter[str] = Counter()
     pp_ids = [p["platform_post_id"] for p in posts]
@@ -95,6 +103,7 @@ async def main(json_path: Path, commit: bool) -> int:
                 counters["skip_insufficient_data"] += 1
                 continue
             if commit:
+                er = compute_engagement_rate(likes, comments_count, shares, 0, followers)
                 try:
                     await conn.execute(
                         """
@@ -103,11 +112,11 @@ async def main(json_path: Path, commit: bool) -> int:
                             published_at, likes, comments, shares, views,
                             engagement_rate, raw_data, scraped_at, is_political
                         )
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, 0, $9, NOW(), false)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, $9, $10, NOW(), false)
                         ON CONFLICT (platform_post_id) DO NOTHING
                         """,
                         PROFILE_ID, pp, caption, post_type, published_at,
-                        likes, comments_count, shares,
+                        likes, comments_count, shares, er,
                         json.dumps(raw_data, ensure_ascii=False),
                     )
                 except Exception as e:
