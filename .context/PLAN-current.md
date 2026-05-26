@@ -1,5 +1,5 @@
-ACTIVE: PLAN-2026-05-25-sprint-cierre-audit.md (F1-F5 · ~8h autopiloto + 1h F4 condicional · cierra 9/10 items audit-full 2026-05-19 + tríada · F1.3 part B rotación keys diferida sesión CEO · F4 matriz polaridad condicional decisión CEO · listo para /sprint-implement)
-RECENT-CLOSED 2026-05-25 tarde: PLAN-2026-05-25-sprint-multi.md (F1-F3+F5 · 5 bugs UI + B07 beat + B08 rivales + TT mapper · 7 commits push + Vercel deploy)
+ACTIVE: PLAN-2026-05-26-cierre-pendientes-diagnostico.md (F0+F1 CERRADOS 2026-05-26 noche vía /sprint-implement · pendiente F2-opcional/F3.2/F4/F5/F6 · ver STATUS para detalle)
+RECENT-CLOSED 2026-05-25 tarde: PLAN-2026-05-25-sprint-cierre-audit.md (9/10 items audit-full) + PLAN-2026-05-25-sprint-multi.md (5 bugs UI + B07 beat + B08 rivales + TT mapper)
 RECENT-CLOSED 2026-05-25: PLAN-2026-05-22-recovery.md (F3.0-F3.3 cerradas · 5/5 G-criteria verdes · batch único 670 OK 0 fails 30min)
 PREVIOUS-CLOSED 2026-05-20: PLAN-2026-05-20-post-ingest-hugo.md (cerrado de facto por sesiones intermedias)
 PREVIOUS-CLOSED 2026-05-20: PLAN-2026-05-19-deuda-tests-y-fixes.md (CERRADO · PR #55 mergeado cd3e408e75 · 14/14 audit-full tasks · 3 falsos positivos verificados · hotfix Gemini regex · workflow CI smoke fix · sidebar Fans y Perfiles restaurado D-FANS-PERFILES-SIDEBAR-INVARIANTE)

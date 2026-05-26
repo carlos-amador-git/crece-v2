@@ -1,6 +1,40 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-26 · Recuperación post-apagón + review visual CEO de 6 cards diagnóstico (B18/B07/B14/B15/B03) + fix de raíz engagement_rate en ingest · 6 commits pusheados · próximo: análisis B12 (coordinación artificial) + B13 (filtro de realidad)
+**Ultimo update:** 2026-05-26 noche · `/sprint-implement` F0+F1 del plan cierre-pendientes · 8 cards revisadas + fix ER raíz + fix PII author_hash + audit_listeners en worker + B12 calibrado + triage de las 10 cards faltantes (de-riesgadas) · todo pusheado · próximo: F2/F3/F4/F5/F6 del plan
+
+## 2026-05-26 noche · /sprint-implement F0+F1 (plan cierre-pendientes) · sesión Linda
+
+**Plan:** `.context/PLAN-2026-05-26-cierre-pendientes-diagnostico.md` (cross-audit Gemini integrado).
+
+### Post-review (commits tras persistencia 8840ec5)
+- **PII author_hash** (`aab8edf`): 257 filas con nombre crudo → pseudonimizadas (242 social_comments + 15 watched_profiles) + guard `ensure_author_hash` en ingest radar. LFPDPPP. 0 PII cruda restante.
+- **B11** (`aba8087`): label claro (82.8% = % cruce partidista, NO "% MORENA") + color guinda. Saymi confirmada MORENA (Gobierno Oaxaca), no error.
+- **B12 labels** (`bd4a54e`): español + aclara que son cuentas con sospecha 0-1, no posts.
+
+### F0 (`<commit F0>`)
+- **F0.2 audit_listeners en Celery worker** (`worker_process_init`) — cierra gap LFPDPPP: ops destructivas en tasks no se auditaban (solo uvicorn). Verificado `after_delete=True` en worker.
+- **F0.3 + F3.1 calibración B12 coro:** investigación (Gemini priorizó) → los "coro" eran elogios genéricos ("Excelente"/"Felicidades", 429 autores en 202 grupos), NO coordinación ni dup. Fix `MIN_SHINGLES_CORO=6`. Saymi B12: 8→4 flagged. B13 (downstream) baja % inauténtico solo.
+
+### F1 triage de las 10 cards sin revisar (de-riesgadas)
+| Card | Veredicto |
+|---|---|
+| B01 ER, B02 Breakout, B05 Plutchik, B10 Humaniz, B17 Veda | ✅ OK (B05 ya tiene mapa español emociones D-EKMAN-1) |
+| B16 Promesas | vacío legítimo (0 promesas registradas) |
+| B04 Benchmark | OK |
+| B08 SoV | menor: 660 topics → gap_alert ruidoso (over-granularidad) |
+| B09 Share/Like | menor: "viral" sobre números chicos (1 like/4 shares) |
+
+**Hallazgo clave:** a diferencia de las 8 revisadas visualmente (todas con issues reales), las 10 no-revisadas NO tienen errores críticos. Solo 2 calibraciones menores no-cliente-facing.
+
+### Pendiente del plan (F2-F6)
+- F2: nada urgente (triage no encontró críticos). Opcional: B08 gap min-posts + B09 floor interacciones.
+- F3.2: dedup cross-source comments (apify+radar solapan) — dato aparte, no bloquea.
+- F4: sprint palabras moderación configurables (plan escrito).
+- F5: backfill topics_extracted no-Saymi (chunked, Gemini).
+- F6: mobile audit · N+1 BFF · error boundaries · matriz legacy · merge ~60 commits → main.
+- B07 ← RADAR (Hugo).
+
+---
 
 ## 2026-05-26 · Recuperación post-apagón + review cards diagnóstico + fix ER raíz (sesión Linda)
 

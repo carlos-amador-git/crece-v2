@@ -1,5 +1,31 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-05-26 noche — D-AUTHOR-HASH-PII · pseudonimización canónica + guard
+
+**Contexto:** 257 filas (242 social_comments + 15 watched_profiles) tenían el NOMBRE REAL en `author_hash` sin hashear (ruta RADAR FB Playwright). PII en texto plano (LFPDPPP) + rompía dedup + falsos "coordinación" en B12.
+
+**Decisión:** `app/services/author_hash.py::ensure_author_hash()` es el guard canónico — si ya es hash lo deja, si es PII cruda hashea `sha256(platform:value:salt)` (salt `COMMENT_AUTHOR_SALT`, mismo esquema que apify_fb_deep). Determinista → mismo nombre = mismo hash en ambas tablas. Backfill aplicó a las 257 filas. Guard agregado en `ingest_radar_comments(_v2)`. NO merge automático con hashes basados en author_id (distinto input) — eso queda como dedup cross-source futuro.
+
+---
+
+## 2026-05-26 noche — D-LISTENERS-WORKER · event listeners en uvicorn Y Celery worker
+
+**Contexto:** los SQLAlchemy event listeners (`audit_listeners`, `engagement_listeners`) solo se registraban en el lifespan de uvicorn. Los scrapers + ops de BD corren en el **Celery worker** (proceso aparte) → engagement_rate no se calculaba y ops destructivas no se auditaban (gap LFPDPPP art.32).
+
+**Decisión:** registrar ambos en `worker_process_init` (`celery_app.py`) además de `main.py`. En contexto Celery el audit queda `user_id=NULL` ("operación de sistema") — seguro, inserts en try/except. El worker NO auto-recarga → requiere `docker restart crece-celery-worker`.
+
+---
+
+## 2026-05-26 noche — D-B12-CORO-CALIBRACION · contenido distintivo mínimo
+
+**Contexto:** B12 "coro_cluster" (Jaccard ≥0.8) marcaba como coordinación a autores con texto idéntico. Investigación (Gemini priorizó dup-vs-coordinación): eran **elogios genéricos** ("Excelente", "Felicidades", "Saludos amiga" — 429 autores en 202 grupos), NO coordinación ni dup de BD.
+
+**Decisión:** `MIN_SHINGLES_CORO=6` — un autor solo entra a coro si su corpus tiene ≥6 shingles distintivos. Excluye elogio genérico corto, mantiene mensajes largos repetidos (coordinación real plausible). Saymi 8→4 flagged. **Calibración de B12/B15 cerrada; calibraciones menores B08/B09 quedan opcionales.**
+
+**Triage F1 (verdicto):** las 10 cards no-revisadas (B01/02/04/05/06/08/09/10/16/17) NO tienen errores críticos — contraste con las 8 revisadas visualmente que sí. B05 ya tenía mapa español (D-EKMAN-1). Solo B08 (gap_alert ruidoso) y B09 (viral números chicos) tienen calibración menor pendiente, no cliente-facing.
+
+---
+
 ## 2026-05-26 — D-ER-CANONICO · engagement_rate centralizado + calculado en todas las rutas de ingest
 
 **Contexto:** `social_posts.engagement_rate` tiene `default=0.0`. Las rutas de ingest (scrapers ORM, RADAR ingest SQL, Apify) no lo calculaban → 35% de posts globales en 0 pese a interacción real. Rompía B03 (matriz 2×2 colapsaba), degradaba B07/B15.
