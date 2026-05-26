@@ -813,6 +813,18 @@ const SEVERITY_COLORS = {
   HIGH: "hsl(var(--chart-negative))",
 } as const;
 
+const SEVERIDAD_LABELS: Record<string, string> = {
+  LOW: "Leve",
+  MEDIUM: "Medio",
+  HIGH: "Grave",
+};
+
+const CATEGORIA_LABELS: Record<string, string> = {
+  hate_speech: "Discurso de odio",
+  violencia_genero: "Violencia de género",
+  amenaza: "Amenaza directa",
+};
+
 export function CardB18({ bloque }: { bloque: BloqueBase & { data?: B18Data } }) {
   const d = bloque.data;
   const pct = d?.pct_violento;
@@ -862,6 +874,7 @@ export function CardB18({ bloque }: { bloque: BloqueBase & { data?: B18Data } })
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis
                 dataKey="severity"
+                tickFormatter={(v: string) => SEVERIDAD_LABELS[v] ?? v}
                 tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                 axisLine={false}
                 tickLine={false}
@@ -884,8 +897,8 @@ export function CardB18({ bloque }: { bloque: BloqueBase & { data?: B18Data } })
       )}
 
       {top.length > 0 && (
-        <ul className="space-y-1 text-[11px] max-h-28 overflow-y-auto pr-1" data-testid="b18-top-comments">
-          {top.slice(0, 5).map((c) => (
+        <ul className="space-y-1 text-[11px] max-h-48 overflow-y-auto pr-1" data-testid="b18-top-comments">
+          {top.map((c) => (
             <li
               key={c.comment_id}
               className="rounded-md border border-border/50 bg-card px-2 py-1"
@@ -896,13 +909,13 @@ export function CardB18({ bloque }: { bloque: BloqueBase & { data?: B18Data } })
                   className="text-[9px] px-1 py-0 h-3.5"
                   style={{ color: SEVERITY_COLORS[c.severity], borderColor: SEVERITY_COLORS[c.severity] }}
                 >
-                  {c.severity}
+                  {SEVERIDAD_LABELS[c.severity] ?? c.severity}
                 </Badge>
                 <span className="text-[10px] text-muted-foreground">
-                  {c.categorias.slice(0, 2).join(", ")}
+                  {c.categorias.slice(0, 2).map((cat) => CATEGORIA_LABELS[cat] ?? cat).join(", ")}
                 </span>
               </div>
-              <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2 leading-snug">
+              <p className="mt-0.5 text-[10px] text-muted-foreground leading-snug">
                 {c.snippet}
               </p>
             </li>

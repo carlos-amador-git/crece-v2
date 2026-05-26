@@ -522,6 +522,11 @@ export function CardB06({ bloque }: { bloque: BloqueBase & { data?: B06Data } })
 export function CardB07({ bloque }: { bloque: BloqueBase & { data?: B07Data } }) {
   const d = bloque.data;
   const top = d?.top_posts ?? [];
+  // delta_followers solo es real si el backend lo provee con historial de
+  // seguidores medido. Hoy la fuente real (timeseries por plataforma) está en
+  // integración con RADAR; sin ella no mostramos un "+0 Estancado" falso
+  // (D-ANTI-MOCK-1).
+  const hasRealDelta = d?.delta_followers != null;
   const delta = d?.delta_followers ?? 0;
 
   return (
@@ -533,8 +538,23 @@ export function CardB07({ bloque }: { bloque: BloqueBase & { data?: B07Data } })
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b07"
-      signal={delta > 0 ? { label: "Creciendo", variant: "positive" } : { label: "Estancado", variant: "neutral" }}
+      signal={
+        hasRealDelta
+          ? delta > 0
+            ? { label: "Creciendo", variant: "positive" }
+            : { label: "Estancado", variant: "neutral" }
+          : undefined
+      }
     >
+      {!hasRealDelta ? (
+        <p
+          className="text-[11px] text-muted-foreground italic leading-snug"
+          data-testid="b07-pending"
+        >
+          Medición de crecimiento de seguidores en proceso de integración.
+        </p>
+      ) : (
+        <>
       <div className="flex items-baseline gap-2" data-testid="b07-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
           {delta >= 0 ? "+" : ""}{delta}
@@ -572,6 +592,8 @@ export function CardB07({ bloque }: { bloque: BloqueBase & { data?: B07Data } })
         </div>
       ) : (
         <p className="text-[11px] text-muted-foreground italic">Sin datos de publicaciones individuales.</p>
+      )}
+        </>
       )}
     </CardShell>
   );
