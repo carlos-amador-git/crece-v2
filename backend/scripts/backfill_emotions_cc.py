@@ -64,7 +64,7 @@ def call_llm(prompt: str) -> str | None:
     if Path(CLAUDE_BIN).exists():
         try:
             r = subprocess.run(
-                [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, prompt],
+                [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, *(["--model", os.environ["CC_MODEL"]] if os.environ.get("CC_MODEL") else []), prompt],
                 capture_output=True, text=True, timeout=TIMEOUT_S,
                 stdin=subprocess.DEVNULL,
             )
