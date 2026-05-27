@@ -362,6 +362,11 @@ class PlanIAPipeline:
         macOS se cuelga silenciosamente en payloads grandes (Sprint S4
         empírico 2026-04-19). Sync httpx en 16-460s según prompt.
         """
+        if not settings.OLLAMA_ENABLED:
+            raise RuntimeError(
+                "Ollama deshabilitado (OLLAMA_ENABLED=false); el pipeline Plan IA "
+                "requiere migración a Claude antes de reactivarse."
+            )
         endpoint = f"{self.ollama_base_url}/api/generate"
         payload = {
             "model": self.model,

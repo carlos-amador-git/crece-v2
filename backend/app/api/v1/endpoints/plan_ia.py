@@ -36,6 +36,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.dirigente import Dirigente
@@ -95,6 +96,15 @@ async def generate_plan_ia(
           "rechazadas": [...]
         }
     """
+    if not settings.OLLAMA_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Generación de Plan IA temporalmente no disponible (pipeline en "
+                "migración a Claude). Usa el módulo de Planes mientras tanto."
+            ),
+        )
+
     org_id = _resolve_org_id(current_user, request)
     if org_id is None:
         raise HTTPException(

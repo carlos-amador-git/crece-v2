@@ -303,6 +303,9 @@ class ContentFactory:
     ) -> ContenidoGenerado:
         """Generate content for a dirigente and persist it."""
         provider = settings.AI_PROVIDER
+        if provider == "ollama" and not settings.OLLAMA_ENABLED:
+            logger.warning("Ollama disabled (OLLAMA_ENABLED=false); using Claude.")
+            provider = "claude"
 
         # Load dirigente
         dirigente = await _load_dirigente(db, dirigente_id)
@@ -409,6 +412,9 @@ class ContentFactory:
     ) -> AsyncGenerator[str, None]:
         """Stream content generation via SSE-compatible chunks."""
         provider = settings.AI_PROVIDER
+        if provider == "ollama" and not settings.OLLAMA_ENABLED:
+            logger.warning("Ollama disabled (OLLAMA_ENABLED=false); using Claude.")
+            provider = "claude"
 
         # Load dirigente
         dirigente = await _load_dirigente(db, dirigente_id)

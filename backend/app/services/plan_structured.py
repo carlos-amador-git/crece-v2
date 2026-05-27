@@ -126,6 +126,9 @@ async def generate_structured_plan(
     """
     context = await _gather_context(db, dirigente)
     provider = provider_override or settings.AI_PROVIDER
+    if provider == "ollama" and not settings.OLLAMA_ENABLED:
+        logger.warning("Ollama disabled (OLLAMA_ENABLED=false); using Claude.")
+        provider = "claude"
     caller = _call_ollama_json if provider == "ollama" else _call_claude_json
 
     prompt = _build_structured_prompt(tipo, context, contexto_adicional)

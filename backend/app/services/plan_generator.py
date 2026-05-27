@@ -379,8 +379,21 @@ async def _stream_ollama(prompt: str) -> AsyncGenerator[str, None]:
 # ── Provider router ──────────────────────────────────────────────────
 
 
+def _resolve_provider(override: str | None) -> str:
+    """Resolve the effective provider, forcing Claude when Ollama is disabled."""
+    provider = override or settings.AI_PROVIDER
+    if provider == "ollama" and not settings.OLLAMA_ENABLED:
+        logger.warning(
+            "Ollama requested (override=%s, AI_PROVIDER=%s) but OLLAMA_ENABLED=false; using Claude.",
+            override,
+            settings.AI_PROVIDER,
+        )
+        return "claude"
+    return provider
+
+
 def _get_provider() -> str:
-    return settings.AI_PROVIDER
+    return _resolve_provider(None)
 
 
 def _get_model_name() -> str:
@@ -405,7 +418,7 @@ async def generate_plan(
     context = await _gather_context(db, dirigente)
     prompt = _build_prompt(tipo, context, contexto_adicional)
 
-    provider = provider_override or _get_provider()
+    provider = _resolve_provider(provider_override)
 
     if provider == "ollama":
         contenido = await _generate_ollama(prompt)
@@ -446,7 +459,7 @@ async def generate_plan_stream(
     context = await _gather_context(db, dirigente)
     prompt = _build_prompt(tipo, context, contexto_adicional)
 
-    provider = provider_override or _get_provider()
+    provider = _resolve_provider(provider_override)
     collected_text = ""
 
     stream_fn = _stream_ollama(prompt) if provider == "ollama" else _stream_claude(prompt)

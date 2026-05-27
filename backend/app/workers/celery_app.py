@@ -67,16 +67,10 @@ celery_app.conf.update(
             "task": "app.workers.retention_tasks.cleanup_old_comments",
             "schedule": 86400.0,
         },
-        # S1 T8 D-21 — Ollama health smoke every 5 min (Layer 1 + Layer 2 both providers)
-        "ollama-health-smoke-5min": {
-            "task": "app.workers.tasks.ollama_health_smoke",
-            "schedule": 300.0,
-        },
-        # S1 T8 D-21 — Ollama prewarm every 4h (00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC)
-        "ollama-prewarm-4h": {
-            "task": "app.workers.tasks.ollama_prewarm",
-            "schedule": 14400.0,
-        },
+        # NOTE: ollama-health-smoke-5min + ollama-prewarm-4h removed — they
+        # deliberately loaded the ~8GB gemma3:12b model on a schedule and were
+        # the primary OOM trigger on the shared VPS. Restore when Ollama runs
+        # on its own host (see OLLAMA_ENABLED).
         # S4 T8 · Plan IA seguimiento diario — 03:00 UTC
         "plan-ia-seguimiento-diario": {
             "task": "app.workers.tasks.plan_ia_seguimiento_diario",
