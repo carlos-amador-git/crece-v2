@@ -1,6 +1,31 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-26 noche · `/sprint-implement` F0+F1 del plan cierre-pendientes · 8 cards revisadas + fix ER raíz + fix PII author_hash + audit_listeners en worker + B12 calibrado + triage de las 10 cards faltantes (de-riesgadas) · todo pusheado · próximo: F2/F3/F4/F5/F6 del plan
+**Ultimo update:** 2026-05-26 noche · pipeline RADAR→CRECE E2E + Piña & Ballesteros ingestados (2/4) con 4 adapters reusables · enrich NLP PENDIENTE (slow CC) · Solano/Felipe ← Hugo · próximo: correr enrich + ingestar Solano/Felipe + B07 followers
+
+## 2026-05-26 noche tardío · Pipeline ingest RADAR→CRECE E2E (sesión Linda · /sprint-implement A)
+
+**Decisión CEO opción A:** cadena `post_ingest_enrich` + ingest adapters reusables (no backfills manuales). Cross-audit Gemini integrado.
+
+### Adapters construidos (HOST · `cd backend && PYTHONPATH=. DATABASE_URL_RAW=postgresql://crece:crece_dev@localhost:5438/crece .venv/bin/python scripts/...`)
+- `ingest_radar_ig.py --dirigente-id N --profile-id M --posts F --comments F --commit` (IG: normaliza ppid media_id_userid→bare, mapea campos, ER+hash).
+- `ingest_radar_yt_x_posts.py --json F --platform {YOUTUBE,TWITTER,TIKTOK,FACEBOOK} --dirigente-id N --commit` (payload crudo, profile por BD, ER+hash, +FACEBOOK branch).
+- `ingest_radar_comments_payload.py --dirigente-id N --profile-id M --comments F --commit` (comments raw-payload TT + aplanado FB · match exacto + bare fallback).
+- `post_ingest_enrich.py --dirigente-id N [--limit M]` (cadena NLP: posts tono/target → comments tono/target/polaridad → emotions posts → topics · idempotente).
+
+### Estado ingest
+- **Piña (dir 1):** 5 redes posts (522) + IG/FB/TT comments (917). ER OK. PII 0.
+- **Ballesteros (dir 8):** 5 redes posts (685) + IG/FB/TT comments (1466). CERO código nuevo (adapters escalaron). ER OK salvo FB (followers=0).
+- **Solano + Felipe:** pendientes captura Hugo (mismo patrón, env var + join key FB base64).
+
+### Gaps (RADAR-side, Hugo trackea · no bloquean enrich)
+- YT/X comments sin `post_id` en origen → no resuelven (Piña 4, Balles 56). Deuda menor, re-captura post-Felipe.
+- FB/TT followers_count=0 → FB ER no computa (followers-based). = req B07 follower timeseries (Hugo arranca post-Solano/Felipe).
+
+### PENDIENTE CRÍTICO
+- **Correr enrich NLP** de Piña + Ballesteros: `post_ingest_enrich.py --dirigente-id 1` y `--dirigente-id 8` (slow CC ~horas c/u · idempotente · cubre comments nuevos). Hasta correrlo, B0x/B14/B15/B18/FODA NO tienen NLP de la data nueva. Hubo un background de Piña parcial; correr pass completo.
+- Likers IG (Piña 6872, Balles 8473) → script reactors (fans, no bloquea).
+- IG comments shape: Hugo manda IG aplanado (comment_id/comment_text top-level) → `ingest_radar_ig` lo come; FB/TT/X/YT comments raw-payload o aplanado → `comments_payload`.
+
 
 ## 2026-05-26 noche · /sprint-implement F0+F1 (plan cierre-pendientes) · sesión Linda
 
