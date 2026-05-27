@@ -1,6 +1,20 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-26 noche · pipeline RADAR→CRECE E2E + Piña & Ballesteros ingestados (2/4) con 4 adapters reusables · enrich NLP PENDIENTE (slow CC) · Solano/Felipe ← Hugo · próximo: correr enrich + ingestar Solano/Felipe + B07 followers
+**Ultimo update:** 2026-05-27 · CRASH RAM (máquina al borde + factores concurrentes) → reboot. **NADA se perdió.** ⚠️ CORRECCIÓN de un error mío previo: dije "data 3 MC perdida" — FALSO, fue join a tabla equivocada (`watched_profiles`=audiencia/likers en vez de `social_profiles`=perfil propio del dirigente, que es a lo que apunta `social_posts.profile_id`). Join correcto: **data INTACTA en crece-db :5438** — Piña(1) 522 posts/494 tono/2922 comments · Solano(2) 353/234/147 · Ballesteros(8) 685/271/41868. Enrich iba 40-95% al tronar. **Trabajo real (chico, NO re-ingest):** (1) parchear 4 scripts NLP con `--strict-mcp-config` (validado: apaga MCP sin romper auth; `--bare` NO sirve, exige API key); (2) correr `post_ingest_enrich.py --dirigente-id {1,8,2}` attended/lotes/idempotente (solo delta sin enriquecer), CC_MODEL=sonnet medium; (3) verificar app. Enrich target :5438 (NO :5453=radar scraper crudo).
+
+## 2026-05-27 · POSTMORTEM crash RAM (data 3 MC NO perdida — ver corrección al inicio) (sesión Linda)
+
+**Qué pasó:** lancé `post_ingest_enrich.py` en background para dir 1/8/2 (~650 filas, cada una invoca `claude --print`) unattended de noche, sobre una máquina ya saturada y concurrente con la captura de browser de radar.
+
+**Causa raíz — medida 2026-05-27 (Gate A, 3 pasadas):** plain `claude --print` (lo que los 4 scripts NLP hacen) **spawnea 26 procesos MCP por llamada** (medido: delta 69→95 procs durante la llamada; el RSS del padre 448 MB los ocultaba). Mi hipótesis original (flota MCP por llamada) era CORRECTA. **Fix validado: `--strict-mcp-config`** → MCP delta 1 (≈0), mantiene auth de suscripción, output válido; bucle serial de 8 con inferencia real → RAM estable (~1050-1230 MB), 0 procs colgados. **`--bare` descartado:** apaga MCP pero rompe el auth OAuth (exige `ANTHROPIC_API_KEY`, unset → "Not logged in") → violaría `D-PLAN-IA-CC-GEMINI-CLI-1`. **Contribuyente al crash (no único):** presión acumulativa — máquina al borde (~688 MB libres con ambos stacks Docker) + 26-MCP transitorios × 650 llamadas plain unattended + captura browser de radar concurrente. **Fix:** Fase 3 = añadir `--strict-mcp-config` a los 4 scripts (PENDIENTE) + R3 (attended, no concurrente con radar) + R4 (chequear RAM antes).
+
+**Findings verificados (crece-db :5438, 2026-05-27):**
+- NLP/enrich target = **:5438** (scripts default `postgresql://crece:crece_dev@localhost:5438/crece`, comentario explícito). `:5453`=radar_db (scrape_results/targets/jobs = scraper crudo de Hugo, NO destino NLP).
+- ⚠️ ERROR CORREGIDO: lo de "0 posts para 3 MC" fue join a tabla equivocada. `social_posts.profile_id` → **`social_profiles`** (perfil PROPIO del dirigente), NO `watched_profiles` (audiencia/likers). {3,57,59} en watched_profiles es audiencia, no posts.
+- **Join correcto (social_profiles): los 3 MC SÍ tienen data en :5438, intacta** — Piña(1) 522 posts/494 tono/2922 comments · Solano(2) 353/234/147 · Ballesteros(8) 685/271/41868. Enrich parcial (40-95%). Solo falta correr el delta NLP (idempotente). NADA perdido, NO re-ingest.
+- 4109 posts orfanos (profile_id sin watched_profile), acumulados semanas, mayoría ya enriquecidos. Batch fresco 2026-05-27 (266, tono=0) = RSS news bot (dir 56), no los 3 MC.
+
+**Trabajo real (data intacta, NO re-ingest):** (1) parchear los 4 sub-scripts NLP con `--strict-mcp-config` (validado: apaga los 26 MCP/llamada sin romper auth de suscripción); (2) correr `post_ingest_enrich.py --dirigente-id {1,8,2}` attended, lotes `--limit`, chequear RAM antes (idempotente → solo delta sin enriquecer); (3) verificar app. CC_MODEL=sonnet CC_EFFORT=medium (confirmado CEO 2026-05-27).
 
 ## 2026-05-26 noche tardío · Pipeline ingest RADAR→CRECE E2E (sesión Linda · /sprint-implement A)
 

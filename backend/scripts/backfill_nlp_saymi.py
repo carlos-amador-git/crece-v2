@@ -109,7 +109,7 @@ def call_cc(prompt: str, timeout: int = DEFAULT_TIMEOUT_CC) -> str | None:
         return None
     try:
         result = subprocess.run(
-            [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, *(["--model", os.environ["CC_MODEL"]] if os.environ.get("CC_MODEL") else []), prompt],
+            [CLAUDE_BIN, "--print", "--strict-mcp-config", "--effort", CC_EFFORT, *(["--model", os.environ["CC_MODEL"]] if os.environ.get("CC_MODEL") else []), prompt],
             capture_output=True, text=True, timeout=timeout,
         )
         if result.returncode != 0:
