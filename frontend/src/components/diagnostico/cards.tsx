@@ -88,21 +88,31 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
     min: Number(p.er_esperado_rango_pct?.[0] ?? 0),
   }));
 
-  const avgActual = platforms.length
-    ? platforms.reduce((acc, [, p]) => acc + (p.er_actual_pct ?? 0), 0) / platforms.length
+  // B01 floor (A+C): un ER% calculado sobre <500 seguidores es estadísticamente
+  // ruidoso (un puñado de likes dispara el %). Esas redes NO entran al headline ni
+  // al tier "Sobresaliente"; se reportan aparte con banda de confianza baja.
+  const AUDIENCIA_MINIMA = 500;
+  const reliable = platforms.filter(([, p]) => (p.followers ?? 0) >= AUDIENCIA_MINIMA);
+  const excluidasBajaAudiencia = platforms.length - reliable.length;
+  const sinAudienciaConfiable = platforms.length > 0 && reliable.length === 0;
+
+  const avgActual = reliable.length
+    ? reliable.reduce((acc, [, p]) => acc + (p.er_actual_pct ?? 0), 0) / reliable.length
     : null;
-  const avgMin = platforms.length
-    ? platforms.reduce((acc, [, p]) => acc + (p.er_esperado_rango_pct?.[0] ?? 0), 0) /
-      platforms.length
+  const avgMin = reliable.length
+    ? reliable.reduce((acc, [, p]) => acc + (p.er_esperado_rango_pct?.[0] ?? 0), 0) /
+      reliable.length
     : null;
 
   let signal: { label: string; variant: SignalVariant } | undefined;
-  if (avgActual != null && avgMin != null) {
+  if (avgActual != null && avgMin != null && avgMin > 0) {
     const ratio = avgActual / avgMin;
     if (ratio >= 1.5) signal = { label: "Sobresaliente", variant: "positive" };
     else if (ratio >= 1.0) signal = { label: "Saludable", variant: "positive" };
     else if (ratio >= 0.7) signal = { label: "Bajo", variant: "warning" };
     else signal = { label: "Crítico", variant: "negative" };
+  } else if (sinAudienciaConfiable) {
+    signal = { label: "Audiencia insuficiente", variant: "neutral" };
   }
 
   return (
@@ -134,6 +144,18 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
               {(avgActual / avgMin).toFixed(1)} veces
             </span>{" "}
             más interacción que otros políticos con tu mismo alcance.
+            {excluidasBajaAudiencia > 0 && (
+              <span className="mt-1 block text-amber-600 dark:text-amber-500">
+                {excluidasBajaAudiencia} red{excluidasBajaAudiencia > 1 ? "es" : ""} con menos de{" "}
+                {AUDIENCIA_MINIMA} seguidores excluida{excluidasBajaAudiencia > 1 ? "s" : ""} del
+                cálculo (muestra muy pequeña, ER no confiable).
+              </span>
+            )}
+          </>
+        ) : sinAudienciaConfiable ? (
+          <>
+            Audiencia por debajo de {AUDIENCIA_MINIMA} seguidores en todas las redes — muestra
+            insuficiente para un benchmark confiable.
           </>
         ) : (
           <>Aún no hay suficientes posts para comparar contra el promedio político.</>
