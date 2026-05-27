@@ -250,16 +250,6 @@ def plan_ia_generate_async(
     from app.core.config import settings
     from app.services.plan_ia.llm_pipeline import default_pipeline
 
-    if not settings.OLLAMA_ENABLED:
-        logger.warning(
-            "plan_ia_generate_async aborted: OLLAMA_ENABLED=false (pipeline pending Claude migration)"
-        )
-        return {
-            "status": "error",
-            "error": "ollama_disabled",
-            "recomendaciones_ids": [],
-        }
-
     start = _dt.now(UTC)
     logger.info(
         "plan_ia_generate_async start dirigente_id=%d org_id=%d force=%s task_id=%s",
