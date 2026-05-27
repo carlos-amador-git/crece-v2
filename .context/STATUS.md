@@ -12,10 +12,12 @@
 - `ingest_radar_comments_payload.py --dirigente-id N --profile-id M --comments F --commit` (comments raw-payload TT + aplanado FB · match exacto + bare fallback).
 - `post_ingest_enrich.py --dirigente-id N [--limit M]` (cadena NLP: posts tono/target → comments tono/target/polaridad → emotions posts → topics · idempotente).
 
-### Estado ingest
-- **Piña (dir 1):** 5 redes posts (522) + IG/FB/TT comments (917). ER OK. PII 0.
-- **Ballesteros (dir 8):** 5 redes posts (685) + IG/FB/TT comments (1466). CERO código nuevo (adapters escalaron). ER OK salvo FB (followers=0).
-- **Solano + Felipe:** pendientes captura Hugo (mismo patrón, env var + join key FB base64).
+### Estado ingest — LOS 3 MC COMPLETOS (3/4)
+- **Piña (dir 1):** 5 redes posts (522) + IG/FB/TT comments (917). ER OK. PII 0. Enrich corriendo (PID 1814, ~374/522 tono al persistir).
+- **Ballesteros (dir 8):** 5 redes posts (685) + IG/FB/TT comments (1466). CERO código nuevo. ER OK salvo FB (followers=0).
+- **Solano (dir 2):** IG 100p/46c + TT + X 19p + FB 1p + TT comments 24. CERO código nuevo. (low-activity FB/X; sin YT profile).
+- **Felipe:** pendiente captura Hugo (test del pipeline genérico · FB personal + TT + IG).
+- **Enrich NLP de los 3:** correr `post_ingest_enrich.py --dirigente-id {1,8,2}` (slow CC, idempotente). Sin esto las cards no tienen NLP de la data nueva.
 
 ### Gaps (RADAR-side, Hugo trackea · no bloquean enrich)
 - YT/X comments sin `post_id` en origen → no resuelven (Piña 4, Balles 56). Deuda menor, re-captura post-Felipe.
