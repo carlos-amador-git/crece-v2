@@ -17,7 +17,8 @@
 - **Ballesteros (dir 8):** 5 redes posts (685) + IG/FB/TT comments (1466). CERO código nuevo. ER OK salvo FB (followers=0).
 - **Solano (dir 2):** IG 100p/46c + TT + X 19p + FB 1p + TT comments 24. CERO código nuevo. (low-activity FB/X; sin YT profile).
 - **Felipe:** pendiente captura Hugo (test del pipeline genérico · FB personal + TT + IG).
-- **Enrich NLP de los 3:** correr `post_ingest_enrich.py --dirigente-id {1,8,2}` (slow CC, idempotente). Sin esto las cards no tienen NLP de la data nueva.
+- **Enrich NLP de los 3: LANZADO en background** 2026-05-27 ~00:27 (Sonnet 4.6 + effort medium · `CC_MODEL=sonnet CC_EFFORT=medium`). Cadena dir 1→8→2, ~650 llamadas CC, ~1.5-2h. Log `/tmp/enrich_3mc_1827.log`. **Verificar al regresar:** `grep -E "RESUMEN|✓|✗" /tmp/enrich_3mc_*.log` + `SELECT dirigente, COUNT(tono)... ` por dir. Si algún paso falló, re-correr es idempotente. Job viejo Opus (PID 1814) matado.
+  - Comando manual si hay que re-correr: `cd backend && CC_MODEL=sonnet CC_EFFORT=medium PYTHONPATH=. .venv/bin/python scripts/post_ingest_enrich.py --dirigente-id N`
 
 ### Gaps (RADAR-side, Hugo trackea · no bloquean enrich)
 - YT/X comments sin `post_id` en origen → no resuelven (Piña 4, Balles 56). Deuda menor, re-captura post-Felipe.
