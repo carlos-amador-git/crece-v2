@@ -134,6 +134,8 @@ frontend/.env.production
 # Datos originales del CRECE Oracle APEX con PII de ~63K ciudadanos.
 # NUNCA commitear. Gated por env var CRECE_MC_RAW_DIR.
 backend/data/raw/mc_original/
+# Deltas crudos de RADAR (posts+comments scraped, PII en comments) — NUNCA commitear.
+backend/data/*_delta/
 backend/.config/
 backend/.pki/
 backend/.wdm/
