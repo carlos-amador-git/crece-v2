@@ -7,7 +7,8 @@ Orquesta la generación de recomendaciones Plan IA:
 3. Calcula delta B13 dinámico per-dirigente (nunca literal 16%).
 4. Lee el prompt vivo de `PROMPT-PLAN-IA-v{N}.md` (D-24).
 5. Renderiza el prompt sustituyendo tokens `{{VARIABLE}}`.
-6. Envía a Gemma 3:12b vía Ollama (temperature=0.2, seed=42, num_predict=1500).
+6. Envía a Claude (default, prefill JSON) o Gemma 3:12b vía Ollama si
+   AI_PROVIDER=ollama y OLLAMA_ENABLED (temperature=0.2).
 7. Parsea JSON estricto.
 8. Valida cada recomendación con `AntiVanityValidator`.
 9. Si ≥1 rechazo: retry hasta 2 veces inyectando feedback.
@@ -340,20 +341,33 @@ class PlanIAPipeline:
         *,
         ollama_base_url: str | None = None,
         model: str = "gemma3:12b",
+        claude_model: str | None = None,
         temperature: float = 0.2,
         seed: int = 42,
         num_predict: int = 2000,
+        max_tokens: int = 8192,
         timeout_s: float = 600.0,
         max_retries: int = 1,
     ) -> None:
         self.ollama_base_url = (ollama_base_url or settings.OLLAMA_BASE_URL).rstrip("/")
         self.model = model
+        self.claude_model = claude_model or settings.CLAUDE_MODEL
         self.temperature = temperature
         self.seed = seed
         self.num_predict = num_predict
+        self.max_tokens = max_tokens
         self.timeout_s = timeout_s
         self.max_retries = max_retries
         self.validator = AntiVanityValidator()
+        # Provider selection: Claude by default. Ollama only when explicitly
+        # enabled (the ~8GB gemma3:12b model OOMs the shared VPS — see
+        # OLLAMA_ENABLED). This pipeline was migrated to Claude.
+        self.provider = (
+            "ollama"
+            if settings.AI_PROVIDER == "ollama" and settings.OLLAMA_ENABLED
+            else "claude"
+        )
+        self.active_model = self.model if self.provider == "ollama" else self.claude_model
 
     def _call_ollama_sync(self, prompt: str) -> str:
         """Sync HTTP call a Ollama. Se envuelve vía anyio.to_thread.
@@ -392,6 +406,48 @@ class PlanIAPipeline:
 
         return await to_thread.run_sync(self._call_ollama_sync, prompt)
 
+    def _call_claude_sync(self, prompt: str) -> str:
+        """Sync Claude call que devuelve el texto JSON crudo.
+
+        Envuelto en anyio.to_thread igual que el path Ollama para no bloquear
+        el event loop del worker. Usa prefill '{' para forzar que la respuesta
+        sea un objeto JSON (mismo patrón probado en plan_structured).
+        """
+        import anthropic
+
+        if not settings.CLAUDE_API_KEY:
+            raise RuntimeError(
+                "CLAUDE_API_KEY no configurada; el pipeline Plan IA requiere Claude."
+            )
+        client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY, timeout=self.timeout_s)
+        message = client.messages.create(
+            model=self.claude_model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            system=(
+                "Eres un estratega de comunicación política. Devuelve EXCLUSIVAMENTE "
+                "un objeto JSON válido con la clave 'recomendaciones' (array). Nada de "
+                "texto adicional, markdown ni fences."
+            ),
+            messages=[
+                {"role": "user", "content": prompt},
+                {"role": "assistant", "content": "{"},  # prefill JSON opening
+            ],
+        )
+        return "{" + message.content[0].text
+
+    async def _call_claude(self, prompt: str) -> str:
+        """Async wrapper sobre la llamada sync a Claude."""
+        from anyio import to_thread
+
+        return await to_thread.run_sync(self._call_claude_sync, prompt)
+
+    async def _call_llm(self, prompt: str) -> str:
+        """Dispatch a Claude (default) u Ollama según el provider activo."""
+        if self.provider == "ollama":
+            return await self._call_ollama(prompt)
+        return await self._call_claude(prompt)
+
     async def _generate_and_validate(
         self,
         *,
@@ -425,9 +481,11 @@ class PlanIAPipeline:
                 len(rendered),
             )
             try:
-                last_raw = await self._call_ollama(rendered)
-            except httpx.HTTPError as e:
-                logger.error("PlanIA ollama HTTP fail attempt=%d: %s", attempt, e)
+                last_raw = await self._call_llm(rendered)
+            except Exception as e:  # noqa: BLE001 — resiliencia LLM (Claude/Ollama)
+                logger.error(
+                    "PlanIA %s LLM fail attempt=%d: %s", self.provider, attempt, e
+                )
                 continue
 
             parsed = _parse_llm_json(last_raw)
@@ -578,7 +636,8 @@ class PlanIAPipeline:
                 )[2],
                 "perfil_1_5": perfil_1_5,
                 "prompt_version": _PROMPT_VERSION,
-                "model": self.model,
+                "provider": self.provider,
+                "model": self.active_model,
             },
             "recomendaciones_creadas": created_ids,
             "rechazadas": rejected,
