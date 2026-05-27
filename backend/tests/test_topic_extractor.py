@@ -30,6 +30,16 @@ from app.nlp.topic_extractor import EMOTION_SEED, TOPIC_SEED, TopicExtractor
 from tests.conftest import auth_headers
 
 
+@pytest.fixture(autouse=True)
+def _enable_ollama(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise the Gemma/Ollama extraction path with mocked HTTP.
+    Production default is OLLAMA_ENABLED=false (which short-circuits before the
+    HTTP call), so enable it explicitly here."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "OLLAMA_ENABLED", True)
+
+
 # ---------------------------------------------------------------------------
 # Unit tests — TopicExtractor con Ollama mockeado
 # ---------------------------------------------------------------------------

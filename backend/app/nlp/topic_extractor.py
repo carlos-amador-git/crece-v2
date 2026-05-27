@@ -221,6 +221,15 @@ class TopicExtractor:
         """
         now = lambda: datetime.now(UTC).isoformat()
 
+        if not settings.OLLAMA_ENABLED:
+            return {
+                "emocion": None,
+                "topics": ["otro"],
+                "model": self.model,
+                "extracted_at": now(),
+                "_err": "ollama_disabled",
+            }
+
         if not text or not text.strip():
             return {
                 "emocion": None,

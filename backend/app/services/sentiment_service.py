@@ -242,6 +242,9 @@ class SentimentService:
             valores suman ≈ 1.0. En caso de error, todas las claves son 0.0 y
             se añade ``_err`` con el diagnóstico.
         """
+        if not settings.OLLAMA_ENABLED:
+            return _zero_plutchik(with_err="ollama_disabled")
+
         if not text or not text.strip():
             return _zero_plutchik(with_err="empty_text")
 

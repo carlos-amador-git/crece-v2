@@ -250,6 +250,16 @@ def plan_ia_generate_async(
     from app.core.config import settings
     from app.services.plan_ia.llm_pipeline import default_pipeline
 
+    if not settings.OLLAMA_ENABLED:
+        logger.warning(
+            "plan_ia_generate_async aborted: OLLAMA_ENABLED=false (pipeline pending Claude migration)"
+        )
+        return {
+            "status": "error",
+            "error": "ollama_disabled",
+            "recomendaciones_ids": [],
+        }
+
     start = _dt.now(UTC)
     logger.info(
         "plan_ia_generate_async start dirigente_id=%d org_id=%d force=%s task_id=%s",
@@ -562,6 +572,10 @@ def label_trend_cluster(self, trend_id: int) -> dict:  # type: ignore[no-untyped
             "en castellano, sin emojis, sin comillas, el tema común de estos posts "
             f"de {alcaldia_nombre or 'CDMX'}:\n\n{joined}\n\nTema:"
         )
+
+        if not settings.OLLAMA_ENABLED:
+            logger.info("label_trend_cluster %d skipped: OLLAMA_ENABLED=false", trend_id)
+            return {"status": "skipped", "reason": "ollama_disabled", "trend_id": trend_id}
 
         ollama_url = getattr(settings, "OLLAMA_BASE_URL", "http://host.docker.internal:11434")
         model = getattr(settings, "OLLAMA_MODEL", "gemma3:12b")
@@ -897,6 +911,11 @@ def ollama_health_smoke() -> dict:
     Persists 4 rows in llm_health_log per invocation (2 providers × 2 layers).
     Optionally adds cold check row if last ok >4h ago.
     """
+    from app.core.config import settings
+
+    if not settings.OLLAMA_ENABLED:
+        return {"status": "skipped", "reason": "ollama_disabled"}
+
     import asyncio
 
     from app.ops.llm_health import health_smoke_both
@@ -999,6 +1018,11 @@ def ollama_prewarm() -> dict:
 
     Evita cold start de 102s en Coolify VPS (D-21 / coolify_failover_smoke.md).
     """
+    from app.core.config import settings
+
+    if not settings.OLLAMA_ENABLED:
+        return {"status": "skipped", "reason": "ollama_disabled"}
+
     import asyncio
 
     from app.ops.llm_health import prewarm_both

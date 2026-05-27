@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "gemma3:12b"
     AI_PROVIDER: str = "claude"  # "claude" | "ollama"
+    # Master kill-switch for ALL local Ollama usage. Default off: the ~8GB
+    # gemma3:12b model OOMs the shared VPS (RAM+swap exhausted → swap thrash →
+    # MinIO drive offline + worker OOM). When false: plan/content generation
+    # forces Claude, and the Gemma NLP enrichment (Plutchik emotions, topic
+    # extraction, trend-cluster labels) plus the Ollama-only /plan-ia pipeline
+    # short-circuit instead of loading the model.
+    OLLAMA_ENABLED: bool = False
 
     # ── YouTube Data API v3 ──────────────────────────────
     YOUTUBE_API_KEY: str = ""
