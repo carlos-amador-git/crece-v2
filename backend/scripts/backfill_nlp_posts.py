@@ -293,6 +293,7 @@ def main():
                 JOIN social_profiles sprof ON sp.profile_id = sprof.id
                 WHERE sprof.dirigente_id = %s
                   AND (sp.tono_discurso IS NULL {where_legacy})
+                  AND length(trim(COALESCE(sp.content,''))) > 0
                 ORDER BY sp.published_at DESC NULLS LAST, sp.id
                 LIMIT %s
                 """,
