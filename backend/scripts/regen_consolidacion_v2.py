@@ -164,7 +164,7 @@ def call_llm(prompt: str) -> tuple[str | None, str]:
     if Path(CLAUDE_BIN).exists():
         try:
             r = subprocess.run(
-                [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, prompt],
+                [CLAUDE_BIN, "--print", "--strict-mcp-config", "--effort", CC_EFFORT, prompt],
                 capture_output=True, text=True, timeout=DEFAULT_TIMEOUT_CC,
                 stdin=subprocess.DEVNULL,
             )
