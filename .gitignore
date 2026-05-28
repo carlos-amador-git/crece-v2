@@ -102,6 +102,10 @@ graphify-out/
 
 # ── Local secrets (never track) ──────────────────────────────
 .env.vercel
+.env.vercel.pulled
+.env.vercel.pulled.*
+*.vercel.pulled
+*.vercel.pulled.*
 
 # ── Ephemeral session state ──────────────────────────────────
 .context/HANDOFF
@@ -130,6 +134,8 @@ frontend/.env.production
 # Datos originales del CRECE Oracle APEX con PII de ~63K ciudadanos.
 # NUNCA commitear. Gated por env var CRECE_MC_RAW_DIR.
 backend/data/raw/mc_original/
+# Deltas crudos de RADAR (posts+comments scraped, PII en comments) — NUNCA commitear.
+backend/data/*_delta/
 backend/.config/
 backend/.pki/
 backend/.wdm/
@@ -162,3 +168,8 @@ backend/data/reportes_plan_ia/
 
 # Scratch outputs scrapers (testing — usar MinIO para archivar)
 backend/scripts/data/
+
+# Recovery 2026-05-22
+backups/
+.context/exports/
+e2e/screenshots/

@@ -33,19 +33,30 @@ export interface VipOverride {
 export const VIP_OVERRIDES: Record<number, Record<string, VipOverride>> = {
   // Saymi Pineda Velasco · dirigente_id=3
   3: {
-    "misael.gomez.981351": {
-      external_id: "misael.gomez.981351",
+    // D-MISAEL-VIP-250-FIX (2026-05-20 post-consolidación): ext_id ahora apunta
+    // al row cliente_seed REAL de Misael (FB numeric ID `61578398601244`) en vez
+    // del ext_id virtual `misael.gomez.981351` (que NO existía en BD).
+    //
+    // Bug original que esto corrige (CEO 2026-05-20 09:00):
+    //   "Misael no puede estar Fan #1 con 250 Y en lugar 3 dentro de Audiencia
+    //    Objetivo simultáneamente."
+    //
+    // Causa raíz: applyVipOverrides usa el ext_id como key para REEMPLAZAR un
+    // row existente. Como `misael.gomez.981351` no matcheaba ningún row de BD,
+    // el override INSERTABA un Misael virtual SEPARADO del Misael cliente_seed
+    // real (87 reactions reales post-consolidación). Resultado: Misael
+    // aparecía 2 veces (#1 virtual + #N real).
+    //
+    // Post-fix: el override matchea con cliente_seed `61578398601244`, lo
+    // reemplaza por la entry mockup con 250 reactions, y NO se duplica.
+    "61578398601244": {
+      external_id: "61578398601244",
       position: 1,
-      // Acuerdo CEO 2026-05-18 (no documentado en su momento, recuperado 2026-05-19).
-      // Defendible: apenas por encima del top cliente_seed real (Mueller=34) y
-      // dentro del max matemático (42 posts con reactions capturadas en BD).
-      // NO regresar a 80 — fue número fantasma del plan v3. Ver DECISIONS.md
-      // D-MISAEL-VIP-40.
-      reactions: 40,
-      comments: 12,
+      reactions: 320,
+      comments: 15,
       display_name: "Misael Gómez",
       badge: "⭐ Fan #1",
-      reason: "Cliente request 2026-05-17 · acuerdo CEO 40 reactions / 12 comments",
+      reason: "CEO 2026-05-21 · Misael indisputable Fan #1 · score 357.5 (>Pedro Carlock 312 real post-ingest RADAR · margen +45.5)",
     },
   },
 };

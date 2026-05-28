@@ -460,7 +460,7 @@ async def get_diagnostico_foda(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sin acceso a este dirigente")
 
     sql = text("""
-        SELECT id, contenido, created_at
+        SELECT id, contenido, created_at, estructura_json
           FROM planes_ia
          WHERE dirigente_id = :did AND tipo = 'DIAGNOSTICO'
          ORDER BY created_at DESC
@@ -479,8 +479,19 @@ async def get_diagnostico_foda(
             "plan_derivado_id": None,
         }
 
-    diag_id, contenido, created_at = row
-    foda = _parse_foda(contenido or "")
+    diag_id, contenido, created_at, estructura_json = row
+
+    if estructura_json and "fortalezas" in estructura_json:
+        fortalezas = estructura_json["fortalezas"]
+        oportunidades = estructura_json.get("oportunidades", [])
+        debilidades = estructura_json.get("debilidades", [])
+        amenazas = estructura_json.get("amenazas", estructura_json.get("riesgos", []))
+    else:
+        foda_parsed = _parse_foda(contenido or "")
+        fortalezas = [{"titulo": f, "evidencia": ""} for f in foda_parsed["fortalezas"]]
+        oportunidades = [{"titulo": o, "evidencia": ""} for o in foda_parsed["oportunidades"]]
+        debilidades = [{"titulo": d, "evidencia": ""} for d in foda_parsed["debilidades"]]
+        amenazas = [{"titulo": a, "evidencia": ""} for a in foda_parsed["amenazas"]]
 
     plan_sql = text("""
         SELECT id FROM planes_ia
@@ -491,10 +502,10 @@ async def get_diagnostico_foda(
 
     return {
         "dirigente_id": dirigente_id,
-        "fortalezas": foda["fortalezas"],
-        "oportunidades": foda["oportunidades"],
-        "debilidades": foda["debilidades"],
-        "amenazas": foda["amenazas"],
+        "fortalezas": fortalezas,
+        "oportunidades": oportunidades,
+        "debilidades": debilidades,
+        "amenazas": amenazas,
         "diagnostico_id": diag_id,
         "generado_at": created_at.isoformat() if created_at else None,
         "plan_derivado_id": plan_row[0] if plan_row else None,

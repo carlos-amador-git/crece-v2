@@ -414,6 +414,56 @@ def scrape_all_profiles() -> dict:
     }
 
 
+@celery_app.task(name="app.workers.tasks.snapshot_all_profiles")
+def snapshot_all_profiles() -> dict:
+    """Periodic task: persist a snapshot of current followers_count + posts_count.
+
+    Difiere de ``scrape_all_profiles`` en que NO ejecuta scrapers internos. Solo
+    lee el estado actual de ``social_profiles`` (que RADAR/ingest mantienen
+    actualizado) y persiste fila en ``social_profile_snapshots``. Esto garantiza
+    que B07 (Growth Attribution · delta_followers) tenga al menos 2 mediciones
+    en distintas fechas aunque los scrapers internos fallen.
+
+    Schedule: weekly Monday 02:00 MX (D-BEAT-SNAPSHOT-WEEKLY-2026-05-25).
+    """
+    from app.models.social import SocialProfile, SocialProfileSnapshot
+
+    session = _get_sync_session()
+    snapshots = 0
+
+    skipped_orphan = 0
+    try:
+        profiles = session.query(SocialProfile).all()
+        for profile in profiles:
+            org_id = profile.dirigente.org_id if profile.dirigente else None
+            if org_id is None:
+                # Perfiles huérfanos (sin dirigente o dirigente sin org_id, p.ej.
+                # tipo NEWS sin owner) no pueden persistir snapshot por NOT NULL
+                # constraint en social_profile_snapshots.org_id.
+                skipped_orphan += 1
+                continue
+            snapshot = SocialProfileSnapshot(
+                profile_id=profile.id,
+                dirigente_id=profile.dirigente_id,
+                org_id=org_id,
+                platform=profile.platform,
+                followers_count=profile.followers_count,
+                posts_count=profile.posts_count,
+            )
+            session.add(snapshot)
+            snapshots += 1
+        session.commit()
+    finally:
+        session.close()
+
+    logger.info(
+        "snapshot_all_profiles complete: snapshots=%d skipped_orphan=%d",
+        snapshots,
+        skipped_orphan,
+    )
+    return {"status": "ok", "snapshots": snapshots, "skipped_orphan": skipped_orphan}
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Sprint 4 — Trends detector pipeline
 # ──────────────────────────────────────────────────────────────────────

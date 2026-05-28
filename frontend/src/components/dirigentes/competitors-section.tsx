@@ -421,10 +421,10 @@ function CompetitorDetailDrawer({
         </div>
       )}
 
-      {/* Engagement último mes */}
+      {/* Interacción último mes */}
       <div className="rounded-md border bg-muted/30 p-3">
         <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-          <TrendingUp className="h-3 w-3" /> Engagement último mes
+          <TrendingUp className="h-3 w-3" /> Interacción último mes
         </div>
         <div className="mt-1 font-heading text-lg font-bold tabular-nums">
           {lastMonth?.engagement_rate != null

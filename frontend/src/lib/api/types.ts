@@ -134,6 +134,7 @@ export interface SocialPost {
   url: string;
   sentiment_label: string | null;
   sentiment_score: number | null;
+  tono_discurso?: string | null;
   likes: number;
   comments: number;
   shares: number;
@@ -205,11 +206,65 @@ export interface PlanIA {
   tipo: string;
   contenido: string;
   modelo_ia: string;
-  prompt_usado: string;
-  datos_entrada: Record<string, unknown> | null;
+  prompt_usado?: string;
+  datos_entrada?: Record<string, unknown> | null;
   generado_por_id: number;
   aprobado: boolean;
   created_at: string;
+  estructura_json?: DiagnosticoEstructura | Record<string, unknown> | null;
+}
+
+/** D-DIAGNOSTICO-V2-2026-05-21 · shape generado por regen_diagnostico_v2.py */
+export interface DiagnosticoEstructura {
+  ipd_score: number;
+  ipd_bucket: "BAJO" | "MEDIO" | "ALTO";
+  delta_vs_anterior: number | null;
+  insight_bala: string;
+  fortalezas: { card: string; titulo: string; evidencia: string }[];
+  debilidades: { card: string; titulo: string; evidencia: string }[];
+  riesgos: { card: string; titulo: string; evidencia: string }[];
+  acciones_top3: {
+    orden: number;
+    texto: string;
+    card_origen: string;
+    cta_label: string;
+    cta_href: string;
+  }[];
+}
+
+/** D-CONSOLIDACION-V2-2026-05-21 · shape generado por regen_consolidacion_v2.py */
+export interface ConsolidacionEstructura {
+  resumen_ejecutivo: string;
+  objetivo_90d: {
+    narrativa: string;
+    kpis_target: { metrica: string; valor_baseline: number; valor_target: number; unidad: string }[];
+  };
+  narrativa_central: string;
+  pilares: { titulo: string; descripcion: string; tacticas: string[] }[];
+  audiencias_prioritarias: { nombre: string; rationale: string; tactica_clave: string }[];
+  mitigaciones_debilidades: { debilidad_origen: string; accion_mitigacion: string }[];
+  roadmap_3_hitos: { mes: number; hito: string; kpi_control: string }[];
+  riesgos: { tipo: string; descripcion: string; mitigacion: string }[];
+}
+
+/** D-CONTENIDO-V2-2026-05-21 · shape generado por regen_contenido_v2.py */
+export interface ContenidoEstructura {
+  ventana: { inicio: string; fin: string; semanas: number };
+  cadencia_recomendada: Record<string, string>;
+  pilares_editoriales: { titulo: string; descripcion: string; frecuencia_semanal_pct: number }[];
+  posts_sugeridos: {
+    fecha_sugerida: string;
+    hora_optima: string;
+    plataforma: string;
+    tipo: string;
+    pilar: string;
+    copy: string;
+    hashtags: string[];
+    tono: string;
+    rationale: string;
+    cta_label: string;
+  }[];
+  veda_warnings: { fecha_inicio: string; fecha_fin: string; descripcion: string }[];
 }
 
 export type PlanType = "DIAGNOSTICO" | "CONSOLIDACION" | "CRISIS" | "CONTENIDO";

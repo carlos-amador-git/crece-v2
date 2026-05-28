@@ -43,9 +43,11 @@ export default function DirigenteDetailPage() {
   const { data: crecimiento } = useDirigenteCrecimiento(id);
 
   const sentimentTrend = tonoTrendData ?? [];
-  // Filter plans for this dirigente
+  // Filter plans for this dirigente, including only updated AI Plans (Estrategia and Contenido)
   const dirigentePlans = (planesData?.items ?? []).filter(
-    (p) => p.dirigente_id === Number(id)
+    (p) =>
+      p.dirigente_id === Number(id) &&
+      (p.tipo === "CONSOLIDACION" || p.tipo === "CONTENIDO")
   );
 
   if (isLoading) {
@@ -230,7 +232,7 @@ export default function DirigenteDetailPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-heading text-lg font-semibold">
-                Contenido con más Impacto
+                Publicaciones recientes
               </h3>
               <TabsList className="bg-transparent h-auto p-0">
                 <TabsTrigger value="social" className="text-xs text-muted-foreground hover:text-foreground p-0 h-auto bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:underline">
@@ -393,8 +395,17 @@ export default function DirigenteDetailPage() {
                 day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
               });
 
+              const targetHref =
+                plan.tipo === "CONSOLIDACION"
+                  ? `/dashboard/planes?dirigente=${dirigente.id}&tab=estrategia`
+                  : plan.tipo === "CONTENIDO"
+                  ? `/dashboard/planes?dirigente=${dirigente.id}&tab=contenido`
+                  : plan.tipo === "DIAGNOSTICO"
+                  ? `/dashboard/diagnostico/${dirigente.id}/foda`
+                  : `/dashboard/planes?dirigente=${dirigente.id}`;
+
               return (
-                <Link key={plan.id} href={`/dashboard/planes/${plan.id}`}>
+                <Link key={plan.id} href={targetHref}>
                   <Card className="cursor-pointer transition-shadow hover:shadow-md">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">

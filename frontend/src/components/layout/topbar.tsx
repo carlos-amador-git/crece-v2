@@ -84,7 +84,7 @@ export function Topbar() {
     if (!isAdmin) return;
     api
       .get<{ items: OrgListItem[] }>("/organizaciones/?page_size=50")
-      .then((res) => setOrgList(res.items))
+      .then((res) => setOrgList(res?.items || []))
       .catch(() => {});
   }, [isAdmin]);
 

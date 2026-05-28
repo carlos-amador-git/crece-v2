@@ -91,7 +91,8 @@ export interface TopPostItem {
 
 export interface InteractionsSummary {
   dirigente_id: number;
-  window_days: number;
+  /** null cuando all_time=true · UI muestra "histórico" en vez de "Nd". */
+  window_days: number | null;
   total_reactions: number;
   total_comments: number;
   comments_classified: number;
@@ -126,6 +127,35 @@ export function useWatchedProfiles(params: ListParams = {}) {
     queryFn: () =>
       api.get<WatchedProfile[]>(`/aceptacion/watched-profiles/${qs(params as Record<string, unknown>)}`),
     staleTime: 30_000,
+  });
+}
+
+export interface TopFanEntry {
+  id: number;
+  platform: string;
+  profile_external_id: string;
+  profile_handle: string | null;
+  display_name: string | null;
+  source: string;
+  n_likes: number;
+  n_comments: number;
+  score: number;
+}
+
+interface TopFansParams {
+  dirigente_id: number;
+  limit?: number;
+  source?: WatchedSource;
+  platform?: string;
+}
+
+export function useTopFans(params: TopFansParams) {
+  return useQuery({
+    queryKey: ["watched-profiles", "top-fans", params],
+    queryFn: () =>
+      api.get<TopFanEntry[]>(`/aceptacion/watched-profiles/top-fans${qs(params as unknown as Record<string, unknown>)}`),
+    staleTime: 30_000,
+    enabled: !!params.dirigente_id,
   });
 }
 
@@ -195,13 +225,17 @@ export function useDeleteWatched() {
 
 // Sprint A hooks · dashboard fans
 
-export function useWatchedTimeline(dirigente_id: number, days = 44) {
+// D-PLATFORM-SELECTOR-2026-05-21 · platform filter opcional (default cross).
+
+export function useWatchedTimeline(dirigente_id: number, days = 44, platform?: string) {
   return useQuery({
-    queryKey: ["watched-profiles", "timeline", dirigente_id, days],
-    queryFn: () =>
-      api.get<TimelinePoint[]>(
-        `/aceptacion/watched-profiles/timeline?dirigente_id=${dirigente_id}&days=${days}`
-      ),
+    queryKey: ["watched-profiles", "timeline", dirigente_id, days, platform ?? "all"],
+    queryFn: () => {
+      const qs = platform
+        ? `dirigente_id=${dirigente_id}&days=${days}&platform=${platform}`
+        : `dirigente_id=${dirigente_id}&days=${days}`;
+      return api.get<TimelinePoint[]>(`/aceptacion/watched-profiles/timeline?${qs}`);
+    },
     staleTime: 60_000,
     enabled: !!dirigente_id,
   });
@@ -211,26 +245,46 @@ export function useWatchedTopPosts(
   dirigente_id: number,
   kind: "winners" | "losers" = "winners",
   limit = 3,
-  days = 30
+  days = 30,
+  platform?: string,
 ) {
   return useQuery({
-    queryKey: ["watched-profiles", "top-posts", dirigente_id, kind, limit, days],
-    queryFn: () =>
-      api.get<TopPostItem[]>(
-        `/aceptacion/watched-profiles/top-posts?dirigente_id=${dirigente_id}&kind=${kind}&limit=${limit}&days=${days}`
-      ),
+    queryKey: ["watched-profiles", "top-posts", dirigente_id, kind, limit, days, platform ?? "all"],
+    queryFn: () => {
+      const qs = platform
+        ? `dirigente_id=${dirigente_id}&kind=${kind}&limit=${limit}&days=${days}&platform=${platform}`
+        : `dirigente_id=${dirigente_id}&kind=${kind}&limit=${limit}&days=${days}`;
+      return api.get<TopPostItem[]>(`/aceptacion/watched-profiles/top-posts?${qs}`);
+    },
     staleTime: 60_000,
     enabled: !!dirigente_id,
   });
 }
 
-export function useWatchedInteractionsSummary(dirigente_id: number, days = 44) {
+export function useWatchedInteractionsSummary(
+  dirigente_id: number,
+  days = 44,
+  allTime = false,
+  platform?: string,
+) {
   return useQuery({
-    queryKey: ["watched-profiles", "interactions-summary", dirigente_id, days],
-    queryFn: () =>
-      api.get<InteractionsSummary>(
-        `/aceptacion/watched-profiles/interactions-summary?dirigente_id=${dirigente_id}&days=${days}`
-      ),
+    queryKey: [
+      "watched-profiles",
+      "interactions-summary",
+      dirigente_id,
+      days,
+      allTime,
+      platform ?? "all",
+    ],
+    queryFn: () => {
+      const parts = allTime
+        ? [`dirigente_id=${dirigente_id}`, `all_time=true`]
+        : [`dirigente_id=${dirigente_id}`, `days=${days}`];
+      if (platform) parts.push(`platform=${platform}`);
+      return api.get<InteractionsSummary>(
+        `/aceptacion/watched-profiles/interactions-summary?${parts.join("&")}`
+      );
+    },
     staleTime: 60_000,
     enabled: !!dirigente_id,
   });

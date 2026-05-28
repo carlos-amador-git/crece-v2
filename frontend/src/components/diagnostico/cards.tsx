@@ -88,21 +88,31 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
     min: Number(p.er_esperado_rango_pct?.[0] ?? 0),
   }));
 
-  const avgActual = platforms.length
-    ? platforms.reduce((acc, [, p]) => acc + (p.er_actual_pct ?? 0), 0) / platforms.length
+  // B01 floor (A+C): un ER% calculado sobre <500 seguidores es estadísticamente
+  // ruidoso (un puñado de likes dispara el %). Esas redes NO entran al headline ni
+  // al tier "Sobresaliente"; se reportan aparte con banda de confianza baja.
+  const AUDIENCIA_MINIMA = 500;
+  const reliable = platforms.filter(([, p]) => (p.followers ?? 0) >= AUDIENCIA_MINIMA);
+  const excluidasBajaAudiencia = platforms.length - reliable.length;
+  const sinAudienciaConfiable = platforms.length > 0 && reliable.length === 0;
+
+  const avgActual = reliable.length
+    ? reliable.reduce((acc, [, p]) => acc + (p.er_actual_pct ?? 0), 0) / reliable.length
     : null;
-  const avgMin = platforms.length
-    ? platforms.reduce((acc, [, p]) => acc + (p.er_esperado_rango_pct?.[0] ?? 0), 0) /
-      platforms.length
+  const avgMin = reliable.length
+    ? reliable.reduce((acc, [, p]) => acc + (p.er_esperado_rango_pct?.[0] ?? 0), 0) /
+      reliable.length
     : null;
 
   let signal: { label: string; variant: SignalVariant } | undefined;
-  if (avgActual != null && avgMin != null) {
+  if (avgActual != null && avgMin != null && avgMin > 0) {
     const ratio = avgActual / avgMin;
     if (ratio >= 1.5) signal = { label: "Sobresaliente", variant: "positive" };
     else if (ratio >= 1.0) signal = { label: "Saludable", variant: "positive" };
     else if (ratio >= 0.7) signal = { label: "Bajo", variant: "warning" };
     else signal = { label: "Crítico", variant: "negative" };
+  } else if (sinAudienciaConfiable) {
+    signal = { label: "Audiencia insuficiente", variant: "neutral" };
   }
 
   return (
@@ -134,6 +144,18 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
               {(avgActual / avgMin).toFixed(1)} veces
             </span>{" "}
             más interacción que otros políticos con tu mismo alcance.
+            {excluidasBajaAudiencia > 0 && (
+              <span className="mt-1 block text-amber-600 dark:text-amber-500">
+                {excluidasBajaAudiencia} red{excluidasBajaAudiencia > 1 ? "es" : ""} con menos de{" "}
+                {AUDIENCIA_MINIMA} seguidores excluida{excluidasBajaAudiencia > 1 ? "s" : ""} del
+                cálculo (muestra muy pequeña, ER no confiable).
+              </span>
+            )}
+          </>
+        ) : sinAudienciaConfiable ? (
+          <>
+            Audiencia por debajo de {AUDIENCIA_MINIMA} seguidores en todas las redes — muestra
+            insuficiente para un benchmark confiable.
           </>
         ) : (
           <>Aún no hay suficientes posts para comparar contra el promedio político.</>
@@ -345,8 +367,8 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
   return (
     <CardShell
       code="B04"
-      title="Frente a la competencia"
-      pregunta="Comparativa directa de tu nivel de conexión contra tus rivales."
+      title="Comparativa con rivales"
+      pregunta="Cómo te va frente a otros políticos de tu mismo tamaño de audiencia."
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
@@ -359,7 +381,7 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
           #{myRank}
         </span>
         <span className="text-sm font-medium text-muted-foreground">
-          entre tus {rows.length - 1} competidores directos
+          entre tus {rows.length - 1} rivales directos
         </span>
       </div>
       <div className="h-28 w-full mt-1">
@@ -415,10 +437,17 @@ function emocionLabel(k: string): string {
 export function CardB05({ bloque }: { bloque: BloqueBase & { data?: B05Data } }) {
   const d = bloque.data;
   const em = d?.emociones_promedio ?? {};
-  const chart = PLUTCHIK_ORDER.map((k) => ({
-    emocion: emocionLabel(k),
-    valor: Number(em[k] ?? 0),
-  }));
+  const chart = PLUTCHIK_ORDER.map((k) => {
+    const val = Number(em[k] ?? 0);
+    // Visual boost: usas sqrt para que emociones de 1-5% sean visibles frente a picos de 80-90%
+    // Sin esto, la gráfica parece una línea recta al centro.
+    const boosted = Math.sqrt(val);
+    return {
+      emocion: emocionLabel(k),
+      valor: boosted,
+      original: val, // guardamos el real por si el tooltip lo necesita
+    };
+  });
 
   // D-EKMAN-1: ratio joy/anger (antes trust/anger; trust no se emite por el NLP).
   // Backend devuelve ambos campos como alias durante migración.
@@ -434,8 +463,8 @@ export function CardB05({ bloque }: { bloque: BloqueBase & { data?: B05Data } })
   return (
     <CardShell
       code="B05"
-      title="Sentimiento de la audiencia"
-      pregunta="¿Qué emociones predominan en los comentarios de tu gente?"
+      title="Qué siente tu audiencia"
+      pregunta="Análisis de las principales emociones que la gente expresa en tus comentarios."
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
@@ -484,7 +513,7 @@ export function CardB06({ bloque }: { bloque: BloqueBase & { data?: B06Data } })
   return (
     <CardShell
       code="B06"
-      title="Semáforo de crisis"
+      title="Alerta de crisis"
       pregunta="Detección automática de ataques o picos de toxicidad en tiempo real."
       fidelity="T1"
       status={bloque.status}
@@ -515,19 +544,39 @@ export function CardB06({ bloque }: { bloque: BloqueBase & { data?: B06Data } })
 export function CardB07({ bloque }: { bloque: BloqueBase & { data?: B07Data } }) {
   const d = bloque.data;
   const top = d?.top_posts ?? [];
+  // delta_followers solo es real si el backend lo provee con historial de
+  // seguidores medido. Hoy la fuente real (timeseries por plataforma) está en
+  // integración con RADAR; sin ella no mostramos un "+0 Estancado" falso
+  // (D-ANTI-MOCK-1).
+  const hasRealDelta = d?.delta_followers != null;
   const delta = d?.delta_followers ?? 0;
 
   return (
     <CardShell
       code="B07"
-      title="Nuevos seguidores"
+      title="Publicaciones que atraen gente"
       pregunta="¿Qué publicaciones están atrayendo a más personas a seguirte?"
       fidelity="T3"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b07"
-      signal={delta > 0 ? { label: "Creciendo", variant: "positive" } : { label: "Estancado", variant: "neutral" }}
+      signal={
+        hasRealDelta
+          ? delta > 0
+            ? { label: "Creciendo", variant: "positive" }
+            : { label: "Estancado", variant: "neutral" }
+          : undefined
+      }
     >
+      {!hasRealDelta ? (
+        <p
+          className="text-[11px] text-muted-foreground italic leading-snug"
+          data-testid="b07-pending"
+        >
+          Medición de crecimiento de seguidores en proceso de integración.
+        </p>
+      ) : (
+        <>
       <div className="flex items-baseline gap-2" data-testid="b07-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
           {delta >= 0 ? "+" : ""}{delta}
@@ -566,6 +615,8 @@ export function CardB07({ bloque }: { bloque: BloqueBase & { data?: B07Data } })
       ) : (
         <p className="text-[11px] text-muted-foreground italic">Sin datos de publicaciones individuales.</p>
       )}
+        </>
+      )}
     </CardShell>
   );
 }
@@ -586,8 +637,8 @@ export function CardB08({ bloque }: { bloque: BloqueBase & { data?: B08Data } })
   return (
     <CardShell
       code="B08"
-      title="Tu peso en la charla"
-      pregunta="¿Qué porcentaje de la conversación sobre tus temas clave te pertenece?"
+      title="Qué tanto se habla de ti"
+      pregunta="Tu peso en la conversación digital sobre temas relevantes para tu campaña."
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
@@ -699,8 +750,8 @@ export function CardB10({ bloque }: { bloque: BloqueBase & { data?: B10Data } })
   return (
     <CardShell
       code="B10"
-      title="Tu toque humano"
-      pregunta="¿Qué tan 'político tradicional' o 'persona real' se percibe tu cuenta?"
+      title="Conexión humana"
+      pregunta="¿Qué tan 'persona real' se percibe tu comunicación frente a un estilo político tradicional?"
       fidelity="T1"
       status={bloque.status}
       missing={bloque.missing}
@@ -808,8 +859,8 @@ export function CardB10WithDrilldown({
   return (
     <CardShell
       code="B10"
-      title="Tu toque humano"
-      pregunta="¿Qué tan 'político tradicional' o 'persona real' se percibe tu cuenta?"
+      title="Conexión humana"
+      pregunta="¿Qué tan 'persona real' se percibe tu comunicación frente a un estilo político tradicional?"
       fidelity="T1"
       status={bloque.status}
       missing={bloque.missing}

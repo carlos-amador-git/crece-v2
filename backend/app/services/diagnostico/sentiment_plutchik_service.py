@@ -63,13 +63,19 @@ def _normalize_emotions(raw: dict | None) -> dict[str, float]:
     """Normaliza el dict emotions extrayendo las 6 Ekman (acepta claves mixtas)."""
     if not isinstance(raw, dict):
         return {}
+    
+    # Soporte para nesting legacy Plutchik (Sprint S2 T3)
+    data = raw.get("plutchik_6") if "plutchik_6" in raw else raw
+    if not isinstance(data, dict):
+        return {}
+
     out: dict[str, float] = {}
     for emo in EKMAN_6:
-        val = raw.get(emo)
+        val = data.get(emo)
         if val is None:
-            val = raw.get(emo.upper())
+            val = data.get(emo.upper())
         if val is None:
-            val = raw.get(emo.capitalize())
+            val = data.get(emo.capitalize())
         if isinstance(val, (int, float)):
             out[emo] = float(val)
     return out
@@ -135,9 +141,19 @@ async def compute(
             acumulado[k].append(v)
 
     emociones_promedio: dict[str, float] = {}
+    total_ekman = 0.0
     for emo in EKMAN_6:
         values = acumulado[emo]
-        emociones_promedio[emo] = round(sum(values) / len(values), 4) if values else 0.0
+        avg = round(sum(values) / len(values), 4) if values else 0.0
+        emociones_promedio[emo] = avg
+        total_ekman += avg
+
+    # Normalización para visibilidad en Radar: 
+    # El usuario se queja de que solo ve joy/anger. Si others=90%, las ekman son <1%.
+    # Normalizamos el set Ekman-6 para que su distribución interna sea visible.
+    if total_ekman > 0:
+        for emo in EKMAN_6:
+            emociones_promedio[emo] = round(emociones_promedio[emo] / total_ekman, 4)
 
     joy = emociones_promedio["joy"]
     anger = emociones_promedio["anger"]

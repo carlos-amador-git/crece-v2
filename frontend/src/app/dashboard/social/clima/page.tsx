@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
@@ -14,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   TrendingUp, TrendingDown, LayoutGrid, LineChart as LineChartIcon,
   ChevronDown, Crown, Users2, MapPin, BarChart3, Search,
+  CheckCircle2, Clock,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -65,6 +67,17 @@ function bucketOf(s: ClimaPoliticoSerie): Bucket {
   return "otro";
 }
 
+/** Heurística: si el último punto tiene fecha dentro de los 18 meses pasados, la serie está activa */
+const ACTIVE_MONTHS = 18;
+function isActive(serie: ClimaPoliticoSerie): boolean {
+  if (serie.puntos.length === 0) return false;
+  const sorted = serie.puntos.slice().sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const lastFecha = sorted[sorted.length - 1].fecha;
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - ACTIVE_MONTHS);
+  return new Date(lastFecha) >= cutoff;
+}
+
 function deltaLabel(puntos: ClimaPoliticoSerie["puntos"], metrica: string) {
   const filtered = puntos.filter((p) => p.metrica === metrica).sort((a, b) => a.fecha.localeCompare(b.fecha));
   if (filtered.length < 1) return null;
@@ -90,21 +103,61 @@ const tickFmt = (v: string) => {
   return `${d.toLocaleString("es-MX", { month: "short" })} ${d.getFullYear().toString().slice(2)}`;
 };
 
-function AprobacionCard({ serie, color, hero = false }: { serie: ClimaPoliticoSerie; color?: string; hero?: boolean }) {
+/** Devuelve la clase CSS de borde izquierdo según nivel de aprobación */
+function semaphoreClass(aprobPct: number | null): string {
+  if (aprobPct === null) return "border-l-4 border-l-muted";
+  if (aprobPct >= 60) return "border-l-4 border-l-emerald-500";
+  if (aprobPct >= 40) return "border-l-4 border-l-amber-400";
+  return "border-l-4 border-l-rose-500";
+}
+
+function AprobacionCard({
+  serie,
+  color,
+  hero = false,
+  vigente,
+  rank,
+}: {
+  serie: ClimaPoliticoSerie;
+  color?: string;
+  hero?: boolean;
+  vigente?: boolean;
+  rank?: number;
+}) {
   const aprob = deltaLabel(serie.puntos, "aprobacion");
   const desaprob = deltaLabel(serie.puntos, "desaprobacion");
   const chartData = pivotChartData(serie.puntos);
-  // Para alcaldes: "Acapulco de Juárez, Guerrero". Para gobernadores: solo entidad.
   const entidadLabel = serie.actor_tipo === "alcalde" && serie.municipio
     ? `${serie.municipio}, ${serie.entidad ?? ""}`.replace(/, $/, "")
     : serie.entidad ?? "México";
   const lineColor = color ?? getColor(serie.actor_nombre);
+  const borderClass = semaphoreClass(aprob?.current ?? null);
 
   return (
-    <Card className={`flex flex-col ${hero ? "border-emerald-300 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/10" : ""}`}>
+    <Card className={`flex flex-col ${borderClass} ${hero ? "bg-emerald-50/30 dark:bg-emerald-950/10" : ""}`}>
       <CardHeader className="pb-1 pt-4 px-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+              {rank != null && (
+                <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
+                  #{rank}
+                </span>
+              )}
+              {vigente !== undefined && (
+                vigente ? (
+                  <Badge variant="outline" className="gap-1 border-emerald-400/60 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+                    <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" />
+                    En cargo
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="gap-1 px-1.5 py-0 text-[10px] text-muted-foreground">
+                    <Clock className="h-2.5 w-2.5" aria-hidden="true" />
+                    Ex-
+                  </Badge>
+                )
+              )}
+            </div>
             <CardTitle className={`leading-tight truncate ${hero ? "text-base font-bold" : "text-sm font-semibold"}`}>
               {serie.actor_nombre}
             </CardTitle>
@@ -174,7 +227,6 @@ function AprobacionCard({ serie, color, hero = false }: { serie: ClimaPoliticoSe
 }
 
 function serieKey(s: ClimaPoliticoSerie): string {
-  // Para alcaldes incluir municipio para evitar colisión (mismo nombre, distintos municipios)
   return s.actor_tipo === "alcalde" && s.municipio
     ? `${s.actor_nombre} (${s.municipio})`
     : s.actor_nombre;
@@ -263,7 +315,7 @@ function FederalTab({ buckets }: { buckets: Record<Bucket, ClimaPoliticoSerie[]>
             <Crown className="h-3.5 w-3.5" />
             Presidenta actual
           </div>
-          <AprobacionCard serie={presidenta} color="hsl(142, 70%, 45%)" hero />
+          <AprobacionCard serie={presidenta} color="hsl(142, 70%, 45%)" hero vigente />
         </section>
       ) : (
         <p className="text-sm text-muted-foreground">No hay serie disponible para la presidencia actual.</p>
@@ -282,7 +334,7 @@ function FederalTab({ buckets }: { buckets: Record<Bucket, ClimaPoliticoSerie[]>
           {showExpres && (
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               {exps.map((s, idx) => (
-                <AprobacionCard key={s.actor_nombre} serie={s} color={getColor(s.actor_nombre, idx)} />
+                <AprobacionCard key={s.actor_nombre} serie={s} color={getColor(s.actor_nombre, idx)} vigente={false} />
               ))}
             </div>
           )}
@@ -292,14 +344,28 @@ function FederalTab({ buckets }: { buckets: Record<Bucket, ClimaPoliticoSerie[]>
   );
 }
 
+/** Sub-tabs Actuales / Histórico dentro de Gobernadores */
 function GobernadoresTab({ series }: { series: ClimaPoliticoSerie[] }) {
+  const { activos, historico } = useMemo(() => {
+    const a: ClimaPoliticoSerie[] = [];
+    const h: ClimaPoliticoSerie[] = [];
+    for (const s of series) {
+      (isActive(s) ? a : h).push(s);
+    }
+    return { activos: a, historico: h };
+  }, [series]);
+
   const estados = useMemo(() => {
     const set = new Set(series.map((s) => s.entidad).filter(Boolean) as string[]);
     return Array.from(set).sort();
   }, [series]);
-  const [estado, setEstado] = useState<string>("__todos__");
 
-  const filtered = estado === "__todos__" ? series : series.filter((s) => s.entidad === estado);
+  const [estado, setEstado] = useState<string>("__todos__");
+  const [subTab, setSubTab] = useState<"actuales" | "historico">("actuales");
+
+  const sourceList = subTab === "actuales" ? activos : historico;
+  const filtered = estado === "__todos__" ? sourceList : sourceList.filter((s) => s.entidad === estado);
+
   const byEstado = useMemo(() => {
     const m: Record<string, ClimaPoliticoSerie[]> = {};
     for (const s of filtered) {
@@ -315,22 +381,46 @@ function GobernadoresTab({ series }: { series: ClimaPoliticoSerie[] }) {
 
   return (
     <div className="space-y-4">
-      {estados.length > 1 && (
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          <Select value={estado} onValueChange={setEstado}>
-            <SelectTrigger className="h-8 w-[220px] text-xs">
-              <SelectValue placeholder="Todos los estados" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__todos__">Todos los estados ({series.length})</SelectItem>
-              {estados.map((e) => (
-                <SelectItem key={e} value={e}>{e}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Sub-tabs Actuales / Histórico */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1 w-fit">
+          <button
+            type="button"
+            onClick={() => { setSubTab("actuales"); setEstado("__todos__"); }}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${subTab === "actuales" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            Actuales
+            <span className="text-[10px] text-muted-foreground/70">{activos.length}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setSubTab("historico"); setEstado("__todos__"); }}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${subTab === "historico" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            Histórico
+            <span className="text-[10px] text-muted-foreground/70">{historico.length}</span>
+          </button>
         </div>
-      )}
+
+        {estados.length > 1 && (
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <Select value={estado} onValueChange={setEstado}>
+              <SelectTrigger className="h-8 w-[220px] text-xs">
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__todos__">Todos los estados ({sourceList.length})</SelectItem>
+                {estados.map((e) => (
+                  <SelectItem key={e} value={e}>{e}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
 
       {Object.entries(byEstado)
         .sort(([a], [b]) => a.localeCompare(b))
@@ -340,30 +430,64 @@ function GobernadoresTab({ series }: { series: ClimaPoliticoSerie[] }) {
               {est} <span className="text-muted-foreground/50">· {items.length}</span>
             </div>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              {items.map((s, idx) => (
-                <AprobacionCard key={`${s.actor_nombre}-${s.entidad}`} serie={s} color={getColor(s.actor_nombre, idx)} />
-              ))}
+              {items
+                .slice()
+                .sort((a, b) => {
+                  const av = deltaLabel(a.puntos, "aprobacion")?.current ?? 0;
+                  const bv = deltaLabel(b.puntos, "aprobacion")?.current ?? 0;
+                  return bv - av;
+                })
+                .map((s, idx) => (
+                  <AprobacionCard
+                    key={`${s.actor_nombre}-${s.entidad}`}
+                    serie={s}
+                    color={getColor(s.actor_nombre, idx)}
+                    vigente={subTab === "actuales"}
+                    rank={idx + 1}
+                  />
+                ))}
             </div>
           </section>
         ))}
+
+      {filtered.length === 0 && (
+        <p className="text-sm text-muted-foreground">No hay datos en esta categoría para el estado seleccionado.</p>
+      )}
     </div>
   );
 }
 
+/** Sub-tabs Actuales / Histórico dentro de Alcaldes */
 function AlcaldesTab({ series }: { series: ClimaPoliticoSerie[] }) {
+  const { activos, historico } = useMemo(() => {
+    const a: ClimaPoliticoSerie[] = [];
+    const h: ClimaPoliticoSerie[] = [];
+    for (const s of series) {
+      (isActive(s) ? a : h).push(s);
+    }
+    return { activos: a, historico: h };
+  }, [series]);
+
   const estados = useMemo(() => {
     const set = new Set(series.map((s) => s.entidad).filter(Boolean) as string[]);
     return Array.from(set).sort();
   }, [series]);
+
+  const [subTab, setSubTab] = useState<"actuales" | "historico">("actuales");
   const [estado, setEstado] = useState<string>("__todos__");
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(20);
 
+  const sourceList = subTab === "actuales" ? activos : historico;
+
   const filtered = useMemo(() => {
-    let out = estado === "__todos__" ? series : series.filter((s) => s.entidad === estado);
+    let out = estado === "__todos__" ? sourceList : sourceList.filter((s) => s.entidad === estado);
     if (query.trim()) {
       const q = query.toLowerCase();
-      out = out.filter((s) => s.actor_nombre.toLowerCase().includes(q));
+      out = out.filter((s) =>
+        s.actor_nombre.toLowerCase().includes(q) ||
+        (s.municipio ?? "").toLowerCase().includes(q)
+      );
     }
     out = out.slice().sort((a, b) => {
       const ap = deltaLabel(a.puntos, "aprobacion")?.current ?? 0;
@@ -371,7 +495,7 @@ function AlcaldesTab({ series }: { series: ClimaPoliticoSerie[] }) {
       return bp - ap;
     });
     return out;
-  }, [series, estado, query]);
+  }, [sourceList, estado, query]);
 
   if (series.length === 0) {
     return <p className="text-sm text-muted-foreground">No hay alcaldes disponibles para tu organización.</p>;
@@ -381,7 +505,29 @@ function AlcaldesTab({ series }: { series: ClimaPoliticoSerie[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Sub-tabs Actuales / Histórico */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1 w-fit">
+          <button
+            type="button"
+            onClick={() => { setSubTab("actuales"); setEstado("__todos__"); setQuery(""); setLimit(20); }}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${subTab === "actuales" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            Actuales
+            <span className="text-[10px] text-muted-foreground/70">{activos.length}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setSubTab("historico"); setEstado("__todos__"); setQuery(""); setLimit(20); }}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors ${subTab === "historico" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            Histórico
+            <span className="text-[10px] text-muted-foreground/70">{historico.length}</span>
+          </button>
+        </div>
+
         {estados.length > 1 && (
           <>
             <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -390,7 +536,7 @@ function AlcaldesTab({ series }: { series: ClimaPoliticoSerie[] }) {
                 <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__todos__">Todos ({series.length})</SelectItem>
+                <SelectItem value="__todos__">Todos ({sourceList.length})</SelectItem>
                 {estados.map((e) => (
                   <SelectItem key={e} value={e}>{e}</SelectItem>
                 ))}
@@ -398,12 +544,13 @@ function AlcaldesTab({ series }: { series: ClimaPoliticoSerie[] }) {
             </Select>
           </>
         )}
+
         <div className="relative flex-1 min-w-[200px] max-w-[320px]">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => { setQuery(e.target.value); setLimit(20); }}
-            placeholder="Buscar alcalde..."
+            placeholder="Buscar alcalde o municipio..."
             className="h-8 pl-8 text-xs"
           />
         </div>
@@ -415,9 +562,19 @@ function AlcaldesTab({ series }: { series: ClimaPoliticoSerie[] }) {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         {visible.map((s, idx) => (
-          <AprobacionCard key={`${s.actor_nombre}-${s.entidad}`} serie={s} color={getColor(s.actor_nombre, idx)} />
+          <AprobacionCard
+            key={`${s.actor_nombre}-${s.entidad}-${s.municipio ?? ""}`}
+            serie={s}
+            color={getColor(s.actor_nombre, idx)}
+            vigente={subTab === "actuales"}
+            rank={idx + 1}
+          />
         ))}
       </div>
+
+      {filtered.length === 0 && (
+        <p className="text-sm text-muted-foreground">No se encontraron alcaldes con esos filtros.</p>
+      )}
 
       {filtered.length > visible.length && (
         <div className="flex justify-center pt-2">
@@ -455,8 +612,6 @@ export default function ClimaPage() {
       presidenta_actual: [], expresidente: [], gobernador: [], alcalde: [], promedio: [], otro: [],
     };
     if (!data) return init;
-    // Dedupe Sheinbaum federal: mismo (actor_nombre, ambito) puede aparecer 2 veces
-    // por overlap de actor_tipo presidenta/presidente. Quedarse con la que tenga más puntos.
     const merged = new Map<string, ClimaPoliticoSerie>();
     for (const s of data) {
       const key = `${s.actor_nombre}|${s.ambito}|${s.entidad ?? ""}`;
@@ -466,6 +621,19 @@ export default function ClimaPage() {
     for (const s of merged.values()) init[bucketOf(s)].push(s);
     return init;
   }, [data]);
+
+  /** Top 10 alcaldes actuales ordenados por la métrica seleccionada — recalcula cuando cambia comparaMetrica */
+  const alcaldesTop10 = useMemo(() => {
+    const activosAlcaldes = buckets.alcalde.filter(isActive);
+    return activosAlcaldes
+      .slice()
+      .sort((a, b) => {
+        const av = deltaLabel(a.puntos, comparaMetrica)?.current ?? 0;
+        const bv = deltaLabel(b.puntos, comparaMetrica)?.current ?? 0;
+        return bv - av;
+      })
+      .slice(0, 10);
+  }, [buckets.alcalde, comparaMetrica]);
 
   if (isLoading) {
     return (
@@ -483,6 +651,8 @@ export default function ClimaPage() {
   }
 
   const all = data;
+  const federales = [...buckets.presidenta_actual, ...buckets.expresidente];
+  const gobernadores = buckets.gobernador;
 
   return (
     <div className="space-y-5 p-6">
@@ -586,6 +756,9 @@ export default function ClimaPage() {
                 onClick={() => setCompareScope("federal_gob")}
               >
                 Federal + Gobernadores
+                <span className="ml-1 text-[10px] text-muted-foreground/70">
+                  {(federales.length + gobernadores.length)}
+                </span>
               </Button>
               <Button
                 variant={compareScope === "with_alcaldes" ? "secondary" : "ghost"}
@@ -594,6 +767,9 @@ export default function ClimaPage() {
                 onClick={() => setCompareScope("with_alcaldes")}
               >
                 + Top 10 alcaldes
+                <span className="ml-1 text-[10px] text-muted-foreground/70">
+                  {(federales.length + gobernadores.length + alcaldesTop10.length)}
+                </span>
               </Button>
               <Button
                 variant={compareScope === "all" ? "secondary" : "ghost"}
@@ -602,21 +778,11 @@ export default function ClimaPage() {
                 onClick={() => setCompareScope("all")}
               >
                 Todos
+                <span className="ml-1 text-[10px] text-muted-foreground/70">{all.length}</span>
               </Button>
             </div>
           </div>
           {(() => {
-            // Selector de series para evitar overlap visual con N alcaldes.
-            const federales = [...buckets.presidenta_actual, ...buckets.expresidente];
-            const gobernadores = buckets.gobernador;
-            const alcaldesTop10 = buckets.alcalde
-              .slice()
-              .sort((a, b) => {
-                const av = deltaLabel(a.puntos, comparaMetrica)?.current ?? 0;
-                const bv = deltaLabel(b.puntos, comparaMetrica)?.current ?? 0;
-                return bv - av;
-              })
-              .slice(0, 10);
             let scoped: ClimaPoliticoSerie[] = [];
             if (compareScope === "federal_gob") scoped = [...federales, ...gobernadores];
             else if (compareScope === "with_alcaldes") scoped = [...federales, ...gobernadores, ...alcaldesTop10];
@@ -638,11 +804,19 @@ export default function ClimaPage() {
                     const sublabel = serie.actor_tipo === "alcalde" && serie.municipio
                       ? `${serie.municipio}, ${serie.entidad ?? ""}`.replace(/, $/, "")
                       : serie.entidad ?? "México";
+                    const vigente = isActive(serie);
                     return (
                       <div key={`${serie.actor_nombre}-${serie.entidad}-${serie.municipio ?? ""}`} className="flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5">
                         <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[11px] font-medium">{serie.actor_nombre}</div>
+                          <div className="flex items-center gap-1">
+                            <div className="truncate text-[11px] font-medium">{serie.actor_nombre}</div>
+                            {serie.ambito !== "federal" && (
+                              vigente
+                                ? <CheckCircle2 className="h-2.5 w-2.5 shrink-0 text-emerald-500" />
+                                : <Clock className="h-2.5 w-2.5 shrink-0 text-muted-foreground/50" />
+                            )}
+                          </div>
                           <div className="text-[10px] text-muted-foreground truncate">{sublabel}</div>
                         </div>
                         <div className="shrink-0 text-right">

@@ -40,6 +40,8 @@ import psycopg2.extras
 import requests
 from apify_client import ApifyClient
 
+from app.services.engagement import compute_engagement_rate
+
 # ── Config ───────────────────────────────────────────────────────────
 
 # Cargar .env del proyecto root + .env.scraping-keys de backend
@@ -172,6 +174,21 @@ def upsert_post(conn, profile_id: int, platform: str, post: dict) -> int | None:
         return None
 
     cur = conn.cursor()
+
+    # ER: usar el de Apify si viene; si no, calcularlo con la fórmula canónica
+    _likes = post.get("likes") or 0
+    _comments = post.get("comments") or 0
+    _shares = post.get("shares") or 0
+    _views = post.get("views") or 0
+    er = post.get("engagement_rate")
+    if not er:
+        _followers = 0
+        if not _views:
+            cur.execute("SELECT followers_count FROM social_profiles WHERE id = %s", (profile_id,))
+            _r = cur.fetchone()
+            _followers = (_r[0] if _r else 0) or 0
+        er = compute_engagement_rate(_likes, _comments, _shares, _views, _followers)
+
     cur.execute(
         """
         INSERT INTO social_posts
@@ -185,6 +202,7 @@ def upsert_post(conn, profile_id: int, platform: str, post: dict) -> int | None:
             comments = EXCLUDED.comments,
             shares = EXCLUDED.shares,
             views = EXCLUDED.views,
+            engagement_rate = EXCLUDED.engagement_rate,
             scraped_at = EXCLUDED.scraped_at,
             raw_data = EXCLUDED.raw_data
         RETURNING id
@@ -195,11 +213,11 @@ def upsert_post(conn, profile_id: int, platform: str, post: dict) -> int | None:
             (post.get("content") or "")[:5000],
             post.get("post_type") or "TEXT",
             pub,
-            post.get("likes") or 0,
-            post.get("comments") or 0,
-            post.get("shares") or 0,
-            post.get("views") or 0,
-            post.get("engagement_rate") or 0.0,
+            _likes,
+            _comments,
+            _shares,
+            _views,
+            er,
             False,  # is_political — NLP layer lo decide después
             json.dumps({**(post.get("raw_data") or {}), "data_source": DATA_SOURCE}),
             datetime.now(UTC),

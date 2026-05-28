@@ -218,7 +218,7 @@ export function CompetitorComparisonCard({
                       tone="rival"
                     />
                     <StatBlock
-                      label="Engagement último mes"
+                      label="Interacción último mes"
                       value={
                         lastMonth?.engagement_rate != null
                           ? `${(lastMonth.engagement_rate * 100).toFixed(1)}%`

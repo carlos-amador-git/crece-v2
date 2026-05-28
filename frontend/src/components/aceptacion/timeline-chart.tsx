@@ -17,7 +17,9 @@ import { useMemo, useEffect, useState } from "react";
 import {
   Bar,
   CartesianGrid,
+  Cell,
   ComposedChart,
+  LabelList,
   Legend,
   Line,
   ReferenceArea,
@@ -40,6 +42,8 @@ import { formatNumber } from "@/lib/utils";
 interface TimelineChartProps {
   dirigenteId: number;
   days?: number;
+  /** D-PLATFORM-SELECTOR-2026-05-21 · None=cross */
+  platform?: string;
 }
 
 function useIsMobile(breakpoint = 640) {
@@ -61,18 +65,37 @@ function formatTickDate(d: string) {
   return `${day}/${m}`;
 }
 
-export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
-  const { data, isLoading, isError } = useWatchedTimeline(dirigenteId, days);
+export function TimelineChart({ dirigenteId, days = 44, platform }: TimelineChartProps) {
+  const { data, isLoading, isError } = useWatchedTimeline(dirigenteId, days, platform);
   const isMobile = useIsMobile();
 
-  const { points, partialBandStart, partialBandEnd } = useMemo(() => {
+  const { points, partialBandStart, partialBandEnd, yCap, hasOutliers } = useMemo(() => {
     const list: TimelinePoint[] = data ?? [];
     const firstPartial = list.find((p) => p.window_quality === "partial");
     const lastPartial = [...list].reverse().find((p) => p.window_quality === "partial");
+
+    // CEO 2026-05-21 · outlier truncation N2 · techo Y = p95 × 1.05.
+    // Barras con n_reactions > cap se truncan visualmente y se colorean ámbar.
+    // Badge "↑ N" sobre cada barra outlier muestra el valor real.
+    const reactions = list.map((p) => p.n_reactions).filter((n) => n > 0).sort((a, b) => a - b);
+    let yCapValue: number | null = null;
+    let outliersExist = false;
+    if (reactions.length >= 5) {
+      // P95 lineal interpolation (igual a PERCENTILE_CONT 0.95 de PostgreSQL).
+      const idx = (reactions.length - 1) * 0.95;
+      const lo = Math.floor(idx);
+      const hi = Math.ceil(idx);
+      const p95 = lo === hi ? reactions[lo] : reactions[lo] + (reactions[hi] - reactions[lo]) * (idx - lo);
+      yCapValue = Math.ceil(p95 * 1.05);
+      outliersExist = reactions.some((r) => r > yCapValue!);
+    }
+
     return {
       points: list,
       partialBandStart: firstPartial?.date ?? null,
       partialBandEnd: lastPartial?.date ?? null,
+      yCap: yCapValue,
+      hasOutliers: outliersExist,
     };
   }, [data]);
 
@@ -80,7 +103,7 @@ export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Engagement diario</CardTitle>
+          <CardTitle className="text-base font-semibold">Interacción diaria</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-72 w-full" />
@@ -93,7 +116,7 @@ export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Engagement diario</CardTitle>
+          <CardTitle className="text-base font-semibold">Interacción diaria</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-destructive">No se pudo cargar el timeline.</p>
@@ -106,7 +129,7 @@ export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Engagement diario</CardTitle>
+          <CardTitle className="text-base font-semibold">Interacción diaria</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
@@ -121,12 +144,13 @@ export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-baseline justify-between">
-          <CardTitle className="text-base font-semibold">Engagement diario</CardTitle>
+          <CardTitle className="text-base font-semibold">Interacción diaria</CardTitle>
           <span
             className="text-xs text-muted-foreground"
-            title="Banda gris derecha (últimos 3d): posts publicados recientemente que aún están acumulando reactions. Zonas vacías a la izquierda: días fuera de la cobertura RADAR (sin reactors individuales capturados aunque haya posts publicados con likes públicos en BD)."
+            title="Banda gris derecha (últimos 3d): posts publicados recientemente que aún están acumulando reactions. Zonas vacías a la izquierda: días fuera de la cobertura RADAR (sin reactors individuales capturados aunque haya posts publicados con likes públicos en BD). Barras ámbar: días con engagement excepcional (>p95) truncadas para mejorar legibilidad — el valor real aparece sobre la barra."
           >
             últimos {days}d · banda gris = acumulando · zonas vacías = sin cobertura RADAR
+            {hasOutliers ? " · barras ámbar = picos virales (>p95)" : ""}
           </span>
         </div>
       </CardHeader>
@@ -180,7 +204,7 @@ export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
           ) : (
             <ComposedChart
               data={points}
-              margin={{ top: 10, right: 16, left: 0, bottom: 10 }}
+              margin={{ top: hasOutliers ? 28 : 10, right: 16, left: 0, bottom: 10 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               {partialBandStart && partialBandEnd && (
@@ -212,6 +236,8 @@ export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v: number) => formatNumber(v)}
+                domain={yCap != null ? [0, yCap] : ["auto", "auto"]}
+                allowDataOverflow={yCap != null}
               />
               <YAxis
                 yAxisId="right"
@@ -241,7 +267,46 @@ export function TimelineChart({ dirigenteId, days = 44 }: TimelineChartProps) {
                 fill="hsl(var(--primary))"
                 radius={[3, 3, 0, 0]}
                 fillOpacity={0.9}
-              />
+              >
+                {points.map((p, i) => {
+                  const isOutlier = yCap != null && p.n_reactions > yCap;
+                  return (
+                    <Cell
+                      key={`cell-${i}`}
+                      fill={isOutlier ? "#f59e0b" : "hsl(var(--primary))"}
+                    />
+                  );
+                })}
+                <LabelList
+                  dataKey="n_reactions"
+                  position="top"
+                  offset={6}
+                  content={(props) => {
+                    const { x, y, width, value } = props as {
+                      x?: number;
+                      y?: number;
+                      width?: number;
+                      value?: number;
+                    };
+                    if (value == null || yCap == null || value <= yCap) return null;
+                    if (x == null || y == null || width == null) return null;
+                    return (
+                      <text
+                        x={x + width / 2}
+                        y={Math.max(y - 8, 12)}
+                        textAnchor="middle"
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          fill: "#b45309",
+                        }}
+                      >
+                        {`↑ ${formatNumber(value)}`}
+                      </text>
+                    );
+                  }}
+                />
+              </Bar>
               <Line
                 yAxisId="right"
                 type="monotone"

@@ -47,6 +47,11 @@ VENTANA_DIAS = 90
 UMBRAL_HOSTIL_PCT = 0.25  # >=25% de comments con keyword hostil
 UMBRAL_SENTIMENT_NEG = -0.3
 ER_SPIKE_MULT = 3.0
+# Volumen mínimo: un post con 1-2 comentarios no es "ola de indignación".
+# Sin esto, 1 comentario negativo + pico de ER en post de bajo volumen disparaba
+# un falso "rage" (revisión CEO 2026-05-26).
+MIN_COMMENTS_RAGE = 5
+MIN_NEG_COMMENTS = 3
 
 
 def _comment_es_hostil(content: str | None) -> bool:
@@ -97,10 +102,13 @@ async def compute(
     er_umbral_spike = er_mediano * ER_SPIKE_MULT if er_mediano > 0 else 0.0
 
     rage_posts: list[dict] = []
+    n_evaluados = 0
     for post in posts:
         pc = comments_por_post.get(post.id, [])
-        if not pc:
+        # Volumen mínimo para poder hablar de "indignación" (no 1-2 comentarios)
+        if len(pc) < MIN_COMMENTS_RAGE:
             continue
+        n_evaluados += 1
         n_hostiles = sum(1 for c in pc if _comment_es_hostil(c.get("content")))
         pct_hostil = n_hostiles / len(pc)
 
@@ -113,6 +121,11 @@ async def compute(
         pol_avg = (
             sum(polaridades) / len(polaridades) if polaridades else None
         )
+        n_negativos = sum(
+            1
+            for c in pc
+            if c.get("nlp_polaridad") is not None and c["nlp_polaridad"] < 0
+        )
         tonos_hostiles = sum(
             1 for c in pc if (c.get("nlp_tono") or "").lower() in {"hostil", "indignacion", "furia"}
         )
@@ -120,32 +133,46 @@ async def compute(
         signals: list[str] = []
         if pct_hostil >= UMBRAL_HOSTIL_PCT:
             signals.append(f"keywords_hostiles:{pct_hostil:.0%}")
-        if pol_avg is not None and pol_avg <= UMBRAL_SENTIMENT_NEG:
+        # sentiment_neg requiere volumen real de negativos, no 1 comentario
+        if (
+            n_negativos >= MIN_NEG_COMMENTS
+            and pol_avg is not None
+            and pol_avg <= UMBRAL_SENTIMENT_NEG
+        ):
             signals.append(f"sentiment_neg:{pol_avg:.2f}")
-        elif tonos_hostiles / len(pc) >= 0.3:
+        elif tonos_hostiles >= MIN_NEG_COMMENTS and tonos_hostiles / len(pc) >= 0.3:
             signals.append(f"tonos_hostiles:{tonos_hostiles}/{len(pc)}")
         if er_umbral_spike > 0 and (post.engagement_rate or 0) > er_umbral_spike:
             signals.append(f"er_spike:{post.engagement_rate:.3f}")
 
         score_rage = round(len(signals) / 3.0, 2)
         if len(signals) >= 2:
+            # Evidencia: comentarios hostiles/negativos que dispararon el flag
+            muestra = [
+                (c.get("content") or "").strip()[:160]
+                for c in pc
+                if _comment_es_hostil(c.get("content"))
+                or (c.get("nlp_polaridad") is not None and c["nlp_polaridad"] < 0)
+            ]
             rage_posts.append(
                 {
                     "post_id": post.id,
                     "score_rage": score_rage,
                     "n_comments_hostiles": n_hostiles,
+                    "n_comments_negativos": n_negativos,
                     "n_comments_total": len(pc),
                     "pct_hostil": round(pct_hostil * 100, 1),
                     "er": round(post.engagement_rate or 0, 4),
                     "signals": signals,
+                    "comentarios_muestra": [m for m in muestra if m][:3],
                     "published_at": post.published_at.isoformat() if post.published_at else None,
                 }
             )
 
     rage_posts.sort(key=lambda x: x["score_rage"], reverse=True)
     pct_engagement_rage = round(
-        (len(rage_posts) / len(posts)) * 100.0, 2
-    ) if posts else 0.0
+        (len(rage_posts) / n_evaluados) * 100.0, 2
+    ) if n_evaluados else 0.0
 
     return build_ok(
         BLOQUE,
@@ -154,6 +181,8 @@ async def compute(
             "pct_engagement_rage": pct_engagement_rage,
             "top_posts_rage": rage_posts[:10],
             "n_posts_analizados": len(posts),
+            "n_posts_evaluados": n_evaluados,
+            "min_comments_rage": MIN_COMMENTS_RAGE,
             "er_mediano_baseline": round(er_mediano, 4),
             "er_umbral_spike": round(er_umbral_spike, 4),
             "umbrales": {

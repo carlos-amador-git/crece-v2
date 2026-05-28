@@ -62,7 +62,7 @@ const tooltipStyle = {
 // Paleta 5 partidos — HSL consistente con design system
 const PARTIDO_COLORS: Record<string, string> = {
   MC: "hsl(30 95% 55%)", // naranja MC
-  MORENA: "hsl(0 75% 50%)", // guinda MORENA
+  MORENA: "hsl(340 72% 33%)", // guinda MORENA (vino, no rojo)
   PAN: "hsl(215 80% 50%)", // azul PAN
   PRI: "hsl(140 60% 40%)", // verde PRI
   PVEM: "hsl(90 60% 45%)", // verde PVEM
@@ -110,10 +110,11 @@ export function CardB11({ bloque }: { bloque: BloqueBase & { data?: B11Data } })
     >
       <div className="flex items-baseline gap-3" data-testid="b11-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
-          {score != null ? score.toFixed(1) : <EmptyMetric />}
+          {score != null ? `${score.toFixed(1)}%` : <EmptyMetric />}
         </span>
         <span className="text-xs text-muted-foreground">
-          score 0-100 · {partidoSelf ? `base ${partidoSelf}` : ""}
+          de los comentarios identificables viene de partidos distintos a tu base
+          {partidoSelf ? ` (${partidoSelf})` : ""}
         </span>
       </div>
       <p className="text-[11px] text-muted-foreground">
@@ -161,6 +162,13 @@ export function CardB11({ bloque }: { bloque: BloqueBase & { data?: B11Data } })
 // =========================================================================
 // B12 — CIB Detector
 // =========================================================================
+// Razones internas → etiqueta legible en español
+const CIB_RAZON_LABELS: Record<string, string> = {
+  maestro_ceremonias: "Comentarios en ráfaga",
+  coro_cluster: "Texto idéntico a otra cuenta",
+  comments_alta_frecuencia: "Alta frecuencia",
+};
+
 export function CardB12({ bloque }: { bloque: BloqueBase & { data?: B12Data } }) {
   const d = bloque.data;
   const flagged = d?.flagged_cib ?? [];
@@ -179,7 +187,7 @@ export function CardB12({ bloque }: { bloque: BloqueBase & { data?: B12Data } })
     <CardShell
       code="B12"
       title="Detector de coordinación artificial"
-      pregunta="¿Hay comportamiento coordinado inauténtico en los comments?"
+      pregunta="¿Hay comportamiento coordinado inauténtico en los comentarios?"
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
@@ -190,19 +198,23 @@ export function CardB12({ bloque }: { bloque: BloqueBase & { data?: B12Data } })
           {d?.n_flagged_total ?? <EmptyMetric />}
         </span>
         <div className="flex flex-col leading-tight">
-          <span className="text-xs text-muted-foreground">flagged</span>
+          <span className="text-xs text-muted-foreground">cuentas sospechosas</span>
           {confidence != null && (
             <span className={cn("text-[11px] font-medium", severityTone)}>
-              conf {fmtNum(confidence)}
+              sospecha media {fmtNum(confidence)} / 1
             </span>
           )}
         </div>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        {d?.n_authors_unicos ?? 0} authors únicos · {d?.total_comments_analizados ?? 0} comments
+        {d?.n_authors_unicos ?? 0} autores únicos · {d?.total_comments_analizados ?? 0} comentarios
       </p>
 
       {flagged.length > 0 ? (
+        <>
+        <p className="text-[10px] text-muted-foreground">
+          Cuentas con señales de coordinación · sospecha 0–1 (mayor = más sospechosa):
+        </p>
         <ul
           className="space-y-1.5 text-[11px] max-h-40 overflow-y-auto pr-1"
           data-testid="b12-flagged-list"
@@ -216,26 +228,33 @@ export function CardB12({ bloque }: { bloque: BloqueBase & { data?: B12Data } })
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-[10px] truncate">
-                    {f.author_hash.slice(0, 12)}…
+                    cuenta {f.author_hash.slice(0, 10)}…
                   </span>
-                  <span className={cn("text-[10px] font-medium tabular-nums", severityTone)}>
-                    {fmtNum(f.confidence)}
+                  <span
+                    className={cn("text-[10px] font-medium tabular-nums", severityTone)}
+                    title="Nivel de sospecha (0–1)"
+                  >
+                    sospecha {fmtNum(f.confidence)}
                   </span>
                 </div>
-                <div className="mt-0.5 flex flex-wrap gap-0.5">
-                  {f.razones.slice(0, 2).map((r, i) => (
-                    <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-3.5">
-                      {r.split(":")[0]}
-                    </Badge>
-                  ))}
+                <div className="mt-0.5 flex flex-wrap items-center gap-0.5">
+                  {f.razones.slice(0, 2).map((r, i) => {
+                    const key = r.split(":")[0];
+                    return (
+                      <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-3.5">
+                        {CIB_RAZON_LABELS[key] ?? key}
+                      </Badge>
+                    );
+                  })}
                   <span className="text-[10px] text-muted-foreground ml-1">
-                    · {f.n_comments} comments
+                    · {f.n_comments} comentarios
                   </span>
                 </div>
               </div>
             </li>
           ))}
         </ul>
+        </>
       ) : (
         <p className="text-[11px] text-muted-foreground italic">
           Sin authors flagged — señal limpia.
@@ -366,117 +385,112 @@ export function CardB13({
 }
 
 // =========================================================================
-// B14 — Topic Drift
+// B14 — Composición de la conversación de la audiencia
 // =========================================================================
-function driftColor(score: number): string {
-  // 0=alineado (verde) → 1=drift total (rojo)
-  if (score < 0.4) return "hsl(var(--chart-positive))";
-  if (score < 0.75) return "hsl(30 95% 55%)";
-  return "hsl(var(--chart-negative))";
-}
+const COMPOSICION_COLORS = {
+  tema: "hsl(var(--chart-positive))", // verde: hablan de tu tema
+  persona: "hsl(210 90% 56%)", // azul: reaccionan a ti
+  otro: "hsl(30 95% 55%)", // ámbar: se desvían
+} as const;
+
+const COMPOSICION_LABELS = {
+  tema: "Hablan de tu tema",
+  persona: "Reaccionan a ti",
+  otro: "Se desvían",
+} as const;
+
+const COMPOSICION_ORDER = ["tema", "persona", "otro"] as const;
 
 export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } }) {
   const d = bloque.data;
-  const posts = d?.posts_con_drift ?? [];
-  const avg = d?.drift_score_promedio;
-  const altos = d?.posts_drift_alto ?? 0;
+  const comp = d?.composicion;
+  const posts = d?.posts ?? [];
+  const temas = d?.temas_top ?? [];
 
-  // Heatmap: mostrar hasta 24 posts en grid 6 cols x 4 rows
+  // Heatmap: hasta 24 posts en grid 6 cols x 4 rows, color = dominante
   const heatmap = posts.slice(0, 24);
 
   return (
     <CardShell
       code="B14"
       title="¿Tu audiencia habla de lo que publicas?"
-      pregunta="¿Mi caption habla de lo que los comments discuten?"
+      pregunta="¿La gente comenta sobre tu tema, reacciona a ti, o se desvía?"
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b14"
-      calibrating
-      technicalNotes={
-        <>
-          <span className="font-medium">Detector en calibración.</span> Jaccard
-          sobre captions cortos tiende a saturar cerca de{" "}
-          <span className="font-mono">1.0</span> — los scores individuales
-          todavía no son interpretables de manera confiable. Úsalo como señal
-          relativa entre posts, no como medida absoluta.
-        </>
-      }
     >
-      <div className="flex items-baseline gap-3" data-testid="b14-headline">
-        <span className="font-heading text-3xl font-bold tabular-nums">
-          {avg != null ? fmtNum(avg, 3) : <EmptyMetric />}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          drift promedio · 0=alineado / 1=total
-        </span>
-      </div>
-      <p className="text-[11px] text-muted-foreground">
-        {d?.n_posts_analizados ?? 0} posts analizados · {altos} con drift alto (&gt;
-        {d?.umbral_drift_alto ?? 0.75})
-      </p>
-
-      <div
-        className="rounded-md border border-amber-300/60 dark:border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/30 px-3 py-2 text-[11px] leading-snug"
-        data-testid="b14-calibration-warning"
-      >
-        <p className="text-amber-800 dark:text-amber-300">
-          <span className="font-medium">⚠️ En calibración</span> · usa el grid
-          solo como señal relativa entre posts. Detalle técnico en el ⓘ.
-        </p>
-      </div>
-
-      {heatmap.length > 0 && (
-        <div className="space-y-1.5" data-testid="b14-heatmap">
-          <div className="grid grid-cols-6 gap-1">
-            {heatmap.map((p) => (
-              <div
-                key={p.post_id}
-                className="aspect-square rounded-sm"
-                style={{ backgroundColor: driftColor(p.drift_score) }}
-                title={`Post #${p.post_id} · drift ${p.drift_score.toFixed(3)} · ${p.n_comments} comments`}
-                data-testid="b14-heatmap-cell"
-              />
-            ))}
+      {comp ? (
+        <>
+          {/* Barra de composición */}
+          <div className="space-y-1.5" data-testid="b14-composicion">
+            <div className="flex h-7 w-full overflow-hidden rounded-md bg-muted">
+              {COMPOSICION_ORDER.map((k) =>
+                comp[k] > 0 ? (
+                  <div
+                    key={k}
+                    style={{ width: `${comp[k]}%`, backgroundColor: COMPOSICION_COLORS[k] }}
+                    title={`${COMPOSICION_LABELS[k]}: ${comp[k]}%`}
+                  />
+                ) : null,
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+              {COMPOSICION_ORDER.map((k) => (
+                <span key={k} className="flex items-center gap-1">
+                  <span
+                    className="h-2 w-2 rounded-sm"
+                    style={{ backgroundColor: COMPOSICION_COLORS[k] }}
+                  />
+                  {COMPOSICION_LABELS[k]}{" "}
+                  <span className="font-medium tabular-nums">{comp[k]}%</span>
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-            <span className="italic">1 cuadro = 1 post · más reciente →</span>
-          </div>
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-sm bg-[hsl(var(--chart-positive))]" />
-              alineado
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: "hsl(30 95% 55%)" }} />
-              medio
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-sm bg-[hsl(var(--chart-negative))]" />
-              drift alto
-            </span>
-          </div>
-        </div>
-      )}
 
-      {posts.length > 0 && (
-        <ol className="space-y-0.5 text-[11px]" data-testid="b14-top-posts">
-          {posts.slice(0, 3).map((p) => (
-            <li key={p.post_id} className="flex items-center gap-2">
-              <span
-                className="h-2 w-2 rounded-sm shrink-0"
-                style={{ backgroundColor: driftColor(p.drift_score) }}
-                aria-hidden="true"
-              />
-              <span className="flex-1 truncate text-muted-foreground">
-                #{p.post_id} · caption: {p.caption_tokens_top5.slice(0, 2).join(", ") || "—"}
-              </span>
-              <span className="font-medium tabular-nums">{fmtNum(p.drift_score, 2)}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+          <p className="text-[11px] text-muted-foreground">
+            {d?.n_comments_analizados ?? 0} comentarios en {d?.n_posts_analizados ?? 0} publicaciones
+          </p>
+
+          {/* Heatmap: 1 cuadro por publicación, color = foco dominante */}
+          {heatmap.length > 0 && (
+            <div className="space-y-1.5" data-testid="b14-heatmap">
+              <div className="grid grid-cols-6 gap-1">
+                {heatmap.map((p) => (
+                  <div
+                    key={p.post_id}
+                    className="aspect-square rounded-sm"
+                    style={{ backgroundColor: COMPOSICION_COLORS[p.dominante] }}
+                    title={`#${p.post_id} · ${p.n_comments} comentarios · tema ${p.pct_tema}% / a ti ${p.pct_persona}% / otro ${p.pct_otro}%`}
+                    data-testid="b14-heatmap-cell"
+                  />
+                ))}
+              </div>
+              <p className="text-[10px] italic text-muted-foreground">
+                1 cuadro = 1 publicación · color = foco dominante · más reciente →
+              </p>
+            </div>
+          )}
+
+          {/* Temas que generan conversación temática */}
+          {temas.length > 0 && (
+            <div className="space-y-1" data-testid="b14-temas">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Temas que generan conversación:
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {temas.slice(0, 6).map((t) => (
+                  <Badge key={t.tema} variant="secondary" className="text-[10px] font-normal">
+                    {t.tema}
+                    <span className="ml-1 tabular-nums text-muted-foreground">{t.n_comments}</span>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : null}
     </CardShell>
   );
 }
@@ -484,6 +498,13 @@ export function CardB14({ bloque }: { bloque: BloqueBase & { data?: B14Data } })
 // =========================================================================
 // B15 — Rage Click Flag
 // =========================================================================
+const SIGNAL_LABELS: Record<string, string> = {
+  sentiment_neg: "Sentimiento negativo",
+  er_spike: "Pico de interacción",
+  keywords_hostiles: "Palabras hostiles",
+  tonos_hostiles: "Tono hostil",
+};
+
 export function CardB15({ bloque }: { bloque: BloqueBase & { data?: B15Data } }) {
   const d = bloque.data;
   const pct = d?.pct_engagement_rage ?? 0;
@@ -496,7 +517,7 @@ export function CardB15({ bloque }: { bloque: BloqueBase & { data?: B15Data } })
       border: "border-[hsl(var(--chart-positive))]/40",
       text: "text-[hsl(var(--chart-positive))]",
       Icon: CheckCircle2,
-      label: "Engagement sano",
+      label: "Interacción sana",
     },
     amarillo: {
       bg: "bg-amber-500/10",
@@ -541,7 +562,7 @@ export function CardB15({ bloque }: { bloque: BloqueBase & { data?: B15Data } })
             {styles.label}
           </span>
           <span className="text-[11px] text-muted-foreground">
-            {detectados} posts rage · {fmtPct(pct)} del total
+            {detectados} con indignación · {fmtPct(pct)} de los evaluados
           </span>
         </div>
       </div>
@@ -559,22 +580,34 @@ export function CardB15({ bloque }: { bloque: BloqueBase & { data?: B15Data } })
                   score {p.score_rage}
                 </span>
               </div>
-              <div className="mt-0.5 flex flex-wrap gap-0.5">
-                {p.signals.slice(0, 2).map((s, i) => (
-                  <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-3.5">
-                    {s.split(":")[0]}
-                  </Badge>
-                ))}
+              <div className="mt-0.5 flex flex-wrap items-center gap-0.5">
+                {p.signals.slice(0, 2).map((s, i) => {
+                  const key = s.split(":")[0];
+                  return (
+                    <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-3.5">
+                      {SIGNAL_LABELS[key] ?? key}
+                    </Badge>
+                  );
+                })}
                 <span className="text-[10px] text-muted-foreground ml-1">
-                  {p.n_comments_hostiles}/{p.n_comments_total} hostiles
+                  {p.n_comments_negativos} de {p.n_comments_total} comentarios negativos
                 </span>
               </div>
+              {p.comentarios_muestra.length > 0 && (
+                <ul className="mt-1 space-y-0.5 border-l-2 border-border/60 pl-2">
+                  {p.comentarios_muestra.map((c, i) => (
+                    <li key={i} className="text-[10px] leading-snug text-muted-foreground">
+                      &ldquo;{c}&rdquo;
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
         </ol>
       ) : (
         <p className="text-[11px] text-muted-foreground italic">
-          Sin posts rage detectados en la ventana.
+          Sin señales de hostilidad detectadas en la ventana.
         </p>
       )}
     </CardShell>
@@ -813,6 +846,18 @@ const SEVERITY_COLORS = {
   HIGH: "hsl(var(--chart-negative))",
 } as const;
 
+const SEVERIDAD_LABELS: Record<string, string> = {
+  LOW: "Leve",
+  MEDIUM: "Medio",
+  HIGH: "Grave",
+};
+
+const CATEGORIA_LABELS: Record<string, string> = {
+  hate_speech: "Discurso de odio",
+  violencia_genero: "Violencia de género",
+  amenaza: "Amenaza directa",
+};
+
 export function CardB18({ bloque }: { bloque: BloqueBase & { data?: B18Data } }) {
   const d = bloque.data;
   const pct = d?.pct_violento;
@@ -862,6 +907,7 @@ export function CardB18({ bloque }: { bloque: BloqueBase & { data?: B18Data } })
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis
                 dataKey="severity"
+                tickFormatter={(v: string) => SEVERIDAD_LABELS[v] ?? v}
                 tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                 axisLine={false}
                 tickLine={false}
@@ -884,8 +930,8 @@ export function CardB18({ bloque }: { bloque: BloqueBase & { data?: B18Data } })
       )}
 
       {top.length > 0 && (
-        <ul className="space-y-1 text-[11px] max-h-28 overflow-y-auto pr-1" data-testid="b18-top-comments">
-          {top.slice(0, 5).map((c) => (
+        <ul className="space-y-1 text-[11px] max-h-48 overflow-y-auto pr-1" data-testid="b18-top-comments">
+          {top.map((c) => (
             <li
               key={c.comment_id}
               className="rounded-md border border-border/50 bg-card px-2 py-1"
@@ -896,13 +942,13 @@ export function CardB18({ bloque }: { bloque: BloqueBase & { data?: B18Data } })
                   className="text-[9px] px-1 py-0 h-3.5"
                   style={{ color: SEVERITY_COLORS[c.severity], borderColor: SEVERITY_COLORS[c.severity] }}
                 >
-                  {c.severity}
+                  {SEVERIDAD_LABELS[c.severity] ?? c.severity}
                 </Badge>
                 <span className="text-[10px] text-muted-foreground">
-                  {c.categorias.slice(0, 2).join(", ")}
+                  {c.categorias.slice(0, 2).map((cat) => CATEGORIA_LABELS[cat] ?? cat).join(", ")}
                 </span>
               </div>
-              <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2 leading-snug">
+              <p className="mt-0.5 text-[10px] text-muted-foreground leading-snug">
                 {c.snippet}
               </p>
             </li>

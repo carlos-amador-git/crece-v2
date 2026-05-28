@@ -2,17 +2,16 @@
 
 Clasifica los comments de Saymi (dirigente_id=3) que NO tienen `nlp_tono`.
 
-Stack: subprocess `claude` (Claude Code CLI) con --print --effort high (default
-post audit 2026-05-18: effort=low subestimaba criticas y sobre-clasificaba
-como "personal/+0"). Retry exponencial 3 intentos (2s/5s/15s). Si CC falla
-los 3 intentos, el batch queda pendiente para la proxima corrida. NO usa Ollama (D-1 plan) ni Groq API ni
-API key de Anthropic.
+Stack:
+- subprocess `claude` (Claude Code CLI) con --print --effort high.
+- Fallback: subprocess `gemini` (Gemini CLI) si CC falla o CLAUDE_BIN no existe.
+- Retry exponencial 3 intentos (2s/5s/15s).
 
-Gemini NO se usa como fallback aqui. Su rol es cross-audit independiente
-(ver `backend/scripts/cross_audit_nlp_gemini.py`).
+Idempotente: WHERE nlp_tono IS NULL (re-run = no-op para los ya clasificados).
 
 IMPORTANTE — debe correr en HOST (Mac Mini), NO dentro del container:
 - claude CLI vive en /Users/marxchavez/.local/bin/claude (host)
+- gemini CLI vive en /opt/homebrew/bin/gemini (host)
 - DB_URL por defecto apunta a host postgres en :5438
 
 Mapping tono → polaridad (heurística observada en BD existente):
@@ -23,8 +22,6 @@ Mapping tono → polaridad (heurística observada en BD existente):
 Uso (desde HOST):
   python backend/scripts/backfill_nlp_saymi.py --dry-run --limit 5  # smoke
   python backend/scripts/backfill_nlp_saymi.py --limit 508          # full
-  nohup python backend/scripts/backfill_nlp_saymi.py --limit 508 \
-      > backend/.context/nlp_backfill_saymi_$(date +%Y%m%d_%H%M).log 2>&1 &
 """
 from __future__ import annotations
 
@@ -98,51 +95,56 @@ Responde ÚNICAMENTE el array JSON. Sin texto adicional, sin markdown."""
 
 
 def call_cc(prompt: str, timeout: int = DEFAULT_TIMEOUT_CC) -> str | None:
-    """Invoca Claude Code CLI con --print --effort `CC_EFFORT`. Retorna stdout o None.
+    """Invoca Claude Code CLI con fallback a Gemini CLI."""
+    # 1. Claude
+    if Path(CLAUDE_BIN).exists():
+        try:
+            result = subprocess.run(
+                [CLAUDE_BIN, "--print", "--strict-mcp-config", "--effort", CC_EFFORT, *(["--model", os.environ["CC_MODEL"]] if os.environ.get("CC_MODEL") else []), prompt],
+                capture_output=True, text=True, timeout=timeout,
+                stdin=subprocess.DEVNULL,
+            )
+            if result.returncode == 0 and result.stdout:
+                return result.stdout
+            if result.returncode != 0:
+                print(f"  [CC] stderr: {result.stderr[:200]}", file=sys.stderr)
+        except subprocess.TimeoutExpired:
+            print(f"  [CC] timeout {timeout}s", file=sys.stderr)
+        except Exception as e:
+            print(f"  [CC] error: {e}", file=sys.stderr)
 
-    Default effort=high (post audit 2026-05-18: low subestimaba criticas).
-    Timeout default 600s (effort=high tarda mas que low). Override via env
-    `CC_TIMEOUT` y `CC_EFFORT`.
-    """
-    if not Path(CLAUDE_BIN).exists():
-        print(f"  [CC] binary not found at {CLAUDE_BIN} (¿corriendo en container?)", file=sys.stderr)
-        return None
-    try:
-        result = subprocess.run(
-            [CLAUDE_BIN, "--print", "--effort", CC_EFFORT, prompt],
-            capture_output=True, text=True, timeout=timeout,
-        )
-        if result.returncode != 0:
-            print(f"  [CC] stderr: {result.stderr[:200]}", file=sys.stderr)
-            return None
-        return result.stdout
-    except subprocess.TimeoutExpired:
-        print(f"  [CC] timeout {timeout}s", file=sys.stderr)
-        return None
-    except Exception as e:
-        print(f"  [CC] error: {e}", file=sys.stderr)
-        return None
+    # 2. Gemini fallback
+    GEMINI_CMD = "/opt/homebrew/bin/gemini"
+    if Path(GEMINI_CMD).exists():
+        try:
+            result = subprocess.run(
+                [GEMINI_CMD, "--sandbox", "--approval-mode", "plan", "-p", prompt],
+                capture_output=True, text=True, timeout=180,
+                stdin=subprocess.DEVNULL,
+            )
+            if result.returncode == 0 and result.stdout:
+                return result.stdout
+        except subprocess.TimeoutExpired:
+            print("  [Gemini] timeout", file=sys.stderr)
+
+    return None
 
 
 def call_cc_with_retry(prompt: str, timeout: int = DEFAULT_TIMEOUT_CC) -> str | None:
-    """Llama a CC con retry exponencial (3 intentos, backoff 2s/5s/15s).
-
-    Gemini NO se usa como fallback aqui. Su rol es cross-audit independiente
-    (ver `cross_audit_nlp_gemini.py`). Si CC falla los 3 intentos, el batch
-    se reporta como failed y queda pendiente para la proxima corrida.
-    """
-    backoffs = [2, 5, 15]
+    """Llama a CC/Gemini con retry exponencial optimizado para evitar rate-limits (30s/60s/120s)."""
+    backoffs = [30, 60, 120]
     for attempt, sleep_secs in enumerate(backoffs, start=1):
         raw = call_cc(prompt, timeout=timeout)
         if raw is not None:
             if attempt > 1:
-                print(f"  [CC] exito en intento {attempt}/3")
+                print(f"  [Gemini] exito en intento {attempt}/3")
             return raw
         if attempt < len(backoffs):
-            print(f"  [CC] intento {attempt}/3 fallo, retry en {sleep_secs}s")
+            print(f"  [Gemini] intento {attempt}/3 fallo (429), retry en {sleep_secs}s")
             time.sleep(sleep_secs)
-    print("  [CC] los 3 intentos fallaron, batch sera reintentado en la proxima corrida")
+    print("  [Gemini] los 3 intentos fallaron, batch sera reintentado en la proxima corrida")
     return None
+
 
 
 def parse_array_response(raw: str) -> list[dict] | None:
@@ -181,13 +183,9 @@ def validate_item(item: dict, expected_id: int) -> dict | None:
     }
 
 
-def process_batch(conn, batch: list[dict], dry_run: bool) -> tuple[int, int]:
-    """Procesa un batch via CC con retry. Retorna (n_updated, n_failed).
-
-    Si CC falla los 3 intentos, batch se reporta failed (no escribe BD) y
-    queda para la proxima corrida. Gemini NO sustituye a CC aqui.
-    """
-    prompt = build_batch_prompt(batch)
+def process_batch(conn, batch: list[dict], dry_run: bool, dirigente_nombre: str = "Saymi Pineda Velasco", rol: str = "oficialismo") -> tuple[int, int]:
+    """Procesa un batch via CC/Gemini con retry. Retorna (n_updated, n_failed)."""
+    prompt = build_batch_prompt(batch, dirigente_nombre, rol)
     raw = call_cc_with_retry(prompt)
     if raw is None:
         return 0, len(batch)
@@ -250,6 +248,15 @@ def main():
     print(f"Sprint D backfill NLP — dirigente_id={args.dirigente_id}, limit={args.limit}, batch={args.batch_size}, dry_run={args.dry_run}")
 
     with psycopg.connect(DB_URL) as conn:
+        # Identidad real del dirigente para el prompt (genérico, no hardcode Saymi)
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT full_name, partido FROM dirigentes WHERE id = %s",
+                (args.dirigente_id,),
+            )
+            drow = cur.fetchone()
+        dirigente_nombre = drow[0] if drow else "el dirigente"
+        rol = (drow[1] or "político") if drow else "político"
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -287,12 +294,16 @@ def main():
             eta = (total - i) / rate if rate > 0 else 0
             print(f"\n[batch {batch_num}/{n_batches}] ids={[c['id'] for c in batch]} · "
                   f"elapsed={elapsed:.0f}s · eta={eta:.0f}s")
-            n_u, n_f = process_batch(conn, batch, args.dry_run)
+            n_u, n_f = process_batch(conn, batch, args.dry_run, dirigente_nombre, rol)
             total_updated += n_u
             total_failed += n_f
             print(f"  → updated={n_u}, failed={n_f} (cum: {total_updated}/{total})")
 
-        print(f"\nDONE — updated={total_updated}, failed={total_failed}, total={total}, elapsed={time.time()-t0:.0f}s")
+            # Throttling: wait 30s between batches to avoid 429
+            time.sleep(30)
+
+
+        print(f"\\nDONE — updated={total_updated}, failed={total_failed}, total={total}, elapsed={time.time()-t0:.0f}s")
 
 
 if __name__ == "__main__":

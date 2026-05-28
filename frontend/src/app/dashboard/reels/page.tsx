@@ -27,13 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles, Copy, Check, Film, Clock, Hash } from "lucide-react";
 import { useDirigentes } from "@/lib/api/hooks/use-dirigentes";
@@ -75,6 +69,16 @@ export default function ReelsPage() {
     }
   }, [dirigenteId, dirigentes]);
 
+  const selectedDirigente = useMemo(
+    () => dirigentes.find((d) => d.id === dirigenteId),
+    [dirigentes, dirigenteId],
+  );
+
+  const placeholderName = useMemo(() => {
+    if (!selectedDirigente) return "El dirigente";
+    return selectedDirigente.full_name.split(" ")[0];
+  }, [selectedDirigente]);
+
   const generate = useGenerateReelScript();
   const { data: recent, isLoading: recentLoading } = useRecentReelScripts(
     dirigenteId,
@@ -93,6 +97,33 @@ export default function ReelsPage() {
     });
   };
 
+  // Regenera con los mismos params de un item del historial · 1 click, sin
+  // pasar por el form. Reemplaza el currentScript.
+  // ReelScriptListItem no incluye incluir_cta/contexto_adicional (no se
+  // persisten en el list) · asumimos defaults razonables: cta=true (mayoría
+  // de reels lo lleva), contexto=null (no se reusa).
+  const handleRegenerate = (item: { duracion_segundos: number; tono: string; tema: string | null }) => {
+    if (!dirigenteId) return;
+    generate.mutate({
+      dirigente_id: dirigenteId,
+      tema: item.tema,
+      duracion_segundos: item.duracion_segundos as Duracion,
+      tono: item.tono as Tono,
+      incluir_cta: true,
+      contexto_adicional: null,
+    });
+  };
+
+  // Duplica · carga config del item al form sin enviar. Usuario puede editar.
+  const handleDuplicate = (item: { duracion_segundos: number; tono: string; tema: string | null }) => {
+    setTema(item.tema ?? "");
+    setDuracion(item.duracion_segundos as Duracion);
+    setTono(item.tono as Tono);
+    setIncluirCta(true);
+    setContextoAdicional("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const currentScript = generate.data?.script;
   const currentMeta = generate.data?.metadata;
 
@@ -104,8 +135,7 @@ export default function ReelsPage() {
           Generador de guiones para reels
         </h1>
         <p className="text-sm text-muted-foreground">
-          Guiones cortos para Instagram, TikTok o Facebook · generados con
-          Groq Llama 3.3 70B (tier gratuito) · 1-2 segundos por guión.
+          Guiones listos para grabar en segundos. Instagram · TikTok · Facebook.
         </p>
       </div>
 
@@ -121,21 +151,9 @@ export default function ReelsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Dirigente</Label>
-              <Select
-                value={dirigenteId ? String(dirigenteId) : ""}
-                onValueChange={(v) => setDirigenteId(Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar dirigente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dirigentes.map((d) => (
-                    <SelectItem key={d.id} value={String(d.id)}>
-                      {d.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-foreground shadow-sm select-none">
+                {selectedDirigente?.full_name ?? "Cargando..."}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -214,7 +232,7 @@ export default function ReelsPage() {
               <Textarea
                 value={contextoAdicional}
                 onChange={(e) => setContextoAdicional(e.target.value)}
-                placeholder="ej. Saymi acaba de regresar de gira en Ixtlán · post fue viral"
+                placeholder={`ej. ${placeholderName} acaba de regresar de gira en Ixtlán · post fue viral`}
                 rows={3}
                 maxLength={2000}
               />
@@ -244,14 +262,18 @@ export default function ReelsPage() {
         <div className="space-y-4">
           {generate.isPending && <GeneratingSkeleton />}
 
-          {currentScript && currentMeta && (
+          {!generate.isPending && currentScript && currentMeta && (
             <ScriptCard
               script={currentScript}
-              metadata={`${currentMeta.model.replace("groq/", "")} · ${
-                currentMeta.elapsed_ms
-              }ms · ${currentMeta.completion_tokens ?? "?"} tokens`}
+              wordCount={countWords(currentScript)}
+              metadata={`${currentMeta.elapsed_ms}ms · ${currentMeta.completion_tokens ?? "?"} tokens`}
               header="Guión generado"
             />
+          )}
+
+          {/* Empty state · placeholder visual antes de generar */}
+          {!generate.isPending && !currentScript && (
+            <EmptyOutputPlaceholder />
           )}
 
           {/* Historial */}
@@ -298,6 +320,27 @@ export default function ReelsPage() {
                       <div className="mt-3">
                         <ScriptSections script={r.script} compact />
                       </div>
+                      <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5 text-[10px]"
+                          disabled={generate.isPending}
+                          onClick={() => handleRegenerate(r)}
+                        >
+                          <Sparkles className="h-3 w-3" /> Regenerar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5 text-[10px]"
+                          onClick={() => handleDuplicate(r)}
+                        >
+                          <Copy className="h-3 w-3" /> Duplicar y editar
+                        </Button>
+                      </div>
                     </details>
                   ))}
                 </div>
@@ -310,25 +353,97 @@ export default function ReelsPage() {
   );
 }
 
+function countWords(script: ReelScript): number {
+  const parts = [script.hook ?? "", script.desarrollo ?? "", script.cta ?? ""];
+  return parts.join(" ").split(/\s+/).filter(Boolean).length;
+}
+
+function scriptToText(script: ReelScript): string {
+  const lines: string[] = [];
+  if (script.hook) lines.push(`HOOK (3-5s): ${script.hook}`);
+  if (script.desarrollo) lines.push(`\nDESARROLLO: ${script.desarrollo}`);
+  if (script.cta) lines.push(`\nCTA: ${script.cta}`);
+  return lines.join("\n");
+}
+
 function ScriptCard({
   script,
   metadata,
+  wordCount,
   header,
 }: {
   script: ReelScript;
   metadata: string;
+  wordCount: number;
   header: string;
 }) {
+  const [copiedAll, setCopiedAll] = useState(false);
+  const handleCopyAll = async () => {
+    await navigator.clipboard.writeText(scriptToText(script));
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 1500);
+  };
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">{header}</CardTitle>
-          <span className="text-[10px] text-muted-foreground">{metadata}</span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base">{header}</CardTitle>
+            <Badge variant="outline" className="text-[10px] tabular-nums">
+              ~{wordCount} palabras
+            </Badge>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-[10px]"
+            onClick={handleCopyAll}
+          >
+            {copiedAll ? (
+              <>
+                <Check className="h-3 w-3" /> copiado
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" /> Copiar todo
+              </>
+            )}
+          </Button>
         </div>
+        <span className="text-[10px] text-muted-foreground" title="Solo visible para administradores · vive en tooltip">
+          {metadata}
+        </span>
       </CardHeader>
       <CardContent>
         <ScriptSections script={script} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyOutputPlaceholder() {
+  return (
+    <Card className="border-dashed">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm text-muted-foreground">Tu guión aparecerá aquí</CardTitle>
+        <CardDescription className="text-xs">
+          Generaremos 3 bloques · gancho · desarrollo · CTA.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {[
+          { label: "Hook · primeros 3-5 seg", text: "Apertura que captura atención en 3 segundos. Sin esto, el reel se pierde." },
+          { label: "Desarrollo", text: "Contenido principal estructurado para mantener al espectador hasta el final." },
+          { label: "CTA · cierre", text: "Llamada a la acción concreta · seguir, compartir, comentar." },
+        ].map((s) => (
+          <div key={s.label} className="rounded-md border border-dashed bg-muted/10 p-3">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+              {s.label}
+            </span>
+            <p className="mt-1 text-xs italic text-muted-foreground/50">{s.text}</p>
+          </div>
+        ))}
       </CardContent>
     </Card>
   );
@@ -402,7 +517,7 @@ function GeneratingSkeleton() {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Sparkles className="h-4 w-4 animate-pulse text-primary" />
-          Generando con Groq...
+          Generando guión...
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

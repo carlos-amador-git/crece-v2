@@ -37,6 +37,8 @@ export interface UnifiedItemBase {
   // Campos específicos por view (todos opcionales)
   comments_classified?: number;
   comments_classified_pct?: number | null;
+  /** Total comments en BD CRECE · puede diferir de comments_total (counter scraper FB API). */
+  comments_ingested_count?: number;
   avg_polaridad?: number | null;
   sample_quotes?: QuoteSample[];
   engagement_rate?: number | null;
@@ -107,6 +109,7 @@ export function unifiedItemToPostUnified(item: UnifiedItemBase) {
     cobertura_pct: item.cobertura_pct ?? null,
     comments_total: item.comments_total,
     comments_classified_pct: item.comments_classified_pct ?? null,
+    comments_ingested_count: item.comments_ingested_count ?? null,
     polaridad_avg: item.avg_polaridad ?? null,
     polaridad_label: item.avg_polaridad
       ? item.avg_polaridad > 0.1

@@ -530,6 +530,91 @@ async def watched_suggestions(
     return [dict(r) for r in rows]
 
 
+# ── Top Fans ranking ──────────────────────────────────────────────────
+# Endpoint dedicado que computa score = n_likes*1 + n_comments*2.5 en SQL
+# y devuelve los top N perfiles ordenados por score DESC.
+# Razón: el endpoint genérico list_watched ordena por last_engagement, lo que
+# causa que batches de auto_suggested con timestamp idéntico desplacen perfiles
+# de alto score fuera del LIMIT 200 antes de llegar al frontend.
+
+class TopFanEntry(BaseModel):
+    id: int
+    platform: str
+    profile_external_id: str
+    profile_handle: str | None
+    display_name: str | None
+    source: str
+    n_likes: int
+    n_comments: int
+    score: float
+
+
+@router.get("/top-fans", response_model=list[TopFanEntry])
+async def top_fans(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+    dirigente_id: int,
+    limit: int = Query(default=50, ge=1, le=200),
+    source: str | None = Query(
+        default=None,
+        description="cliente_seed · auto_suggested · manual · None=todos"
+    ),
+    platform: str | None = Query(
+        default=None,
+        description="FACEBOOK · INSTAGRAM · TWITTER · TIKTOK · YOUTUBE · None=todas"
+    ),
+):
+    """Top fans ordenados por score = n_likes*1 + n_comments*2.5.
+
+    A diferencia de list_watched (que ordena por last_engagement), este endpoint
+    ordena directamente por score DESC en SQL, garantizando que los perfiles con
+    más engagement siempre aparezcan sin importar cuándo fueron ingresados.
+    """
+    await _assert_dirigente_access(db, user, dirigente_id)
+
+    where = ["wp.dirigente_observador_id = :did", "wp.is_active = true"]
+    params: dict = {"did": dirigente_id, "limit": limit}
+
+    if source:
+        where.append("wp.source = :src")
+        params["src"] = source
+    if platform:
+        where.append("wp.platform = :plat")
+        params["plat"] = platform.upper()
+
+    sql = f"""
+        SELECT
+          wp.id,
+          wp.platform,
+          wp.profile_external_id,
+          wp.profile_handle,
+          wp.display_name,
+          wp.source,
+          COALESCE(l.n_likes, 0)    AS n_likes,
+          COALESCE(c.n_comments, 0) AS n_comments,
+          COALESCE(l.n_likes, 0) * 1.0 + COALESCE(c.n_comments, 0) * 2.5 AS score
+        FROM watched_profiles wp
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*) AS n_likes
+          FROM watched_like_events wle
+          WHERE wle.watched_profile_id = wp.id
+        ) l ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*) AS n_comments
+          FROM social_comments sc
+          JOIN social_posts sp ON sp.id = sc.parent_post_id
+          JOIN social_profiles spr ON spr.id = sp.profile_id
+          WHERE sc.author_hash = wp.author_hash
+            AND spr.dirigente_id = wp.dirigente_observador_id
+        ) c ON true
+        WHERE {" AND ".join(where)}
+        ORDER BY score DESC, wp.id
+        LIMIT :limit
+    """
+    rows = (await db.execute(text(sql), params)).mappings().all()
+    return [TopFanEntry(**dict(r)) for r in rows]
+
+
 # ── Dashboard Stats: timeline, top-posts, interactions-summary ────────
 # PLAN-2026-05-17-fans-dashboard.md · Sprint A
 # Convención: timeline agrupado por sp.published_at (NO detected_at, sería pico falso).
@@ -561,7 +646,8 @@ class TopPostItem(BaseModel):
 
 class InteractionsSummary(BaseModel):
     dirigente_id: int
-    window_days: int
+    window_days: int | None
+    """None cuando all_time=True · UI debe mostrar 'histórico' en vez de 'Nd'."""
     total_reactions: int
     total_comments: int
     comments_classified: int
@@ -577,6 +663,7 @@ async def watched_timeline(
     user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int,
     days: int = Query(default=44, ge=7, le=120),
+    platform: str | None = Query(default=None, description="FACEBOOK · INSTAGRAM · TWITTER · TIKTOK · YOUTUBE · None=todas"),
 ):
     """Series temporales agrupadas por DÍA DE PUBLICACIÓN del post (no detected_at).
 
@@ -586,16 +673,23 @@ async def watched_timeline(
     `window_quality`:
       - complete: bucket en ventana [now-days, now-3d]
       - partial:  bucket en últimos 3d (posts siguen acumulando reactions)
+
+    `platform`: None (default) = cross-platform agregado. Filter explícito
+    si quiere comparar plataformas individuales.
     """
     await _assert_dirigente_access(db, user, dirigente_id)
+    platform_clause = "AND sps.platform = :platform" if platform else ""
+    params: dict = {"did": dirigente_id, "days": str(days)}
+    if platform:
+        params["platform"] = platform
 
-    rows = (await db.execute(text("""
+    rows = (await db.execute(text(f"""
         WITH posts_in_range AS (
           SELECT sp.id, sp.published_at::date AS bucket
           FROM social_posts sp
           JOIN social_profiles sps ON sp.profile_id=sps.id
           WHERE sps.dirigente_id=:did
-            AND sps.platform='FACEBOOK'
+            {platform_clause}
             AND sp.published_at::date >= (NOW()::date - (:days || ' days')::interval)
         ),
         per_bucket_reactions AS (
@@ -614,7 +708,7 @@ async def watched_timeline(
         FROM per_bucket_reactions r
         LEFT JOIN per_bucket_comments c ON c.bucket=r.bucket
         ORDER BY r.bucket
-    """), {"did": dirigente_id, "days": str(days)})).all()
+    """), params)).all()
 
     out: list[TimelinePoint] = []
     cutoff_partial = datetime.now(UTC).date() - timedelta(days=3)
@@ -639,6 +733,7 @@ async def watched_top_posts(
     kind: Literal["winners", "losers"] = "winners",
     limit: int = Query(default=3, ge=1, le=10),
     days: int = Query(default=30, ge=7, le=120),
+    platform: str | None = Query(default=None, description="None=cross-platform · FACEBOOK · INSTAGRAM · etc"),
 ):
     """Top posts ranqueados por polaridad neta de comments + engagement.
 
@@ -652,6 +747,14 @@ async def watched_top_posts(
     order = "DESC" if kind == "winners" else "ASC"
     polarity_filter = "AVG(sc.nlp_polaridad) > 0" if kind == "winners" else "AVG(sc.nlp_polaridad) < 0"
 
+    # Salvaguarda 2026-05-20 (CEO Issue #3): excluir posts sin ninguna reacción
+    # pública (sp.likes >= 1). Defensa contra "posts huérfanos rankeados solo
+    # por polaridad NLP". En Saymi BD actual no afecta el ranking (mínimo
+    # observado 20 likes), pero protege otros dirigentes con corpus menor.
+    platform_clause = "AND sps.platform = :platform" if platform else ""
+    params: dict = {"did": dirigente_id, "days": str(days), "limit": limit}
+    if platform:
+        params["platform"] = platform
     rows = (await db.execute(text(f"""
         SELECT
           sp.id AS post_id,
@@ -666,14 +769,15 @@ async def watched_top_posts(
         JOIN social_profiles sps ON sp.profile_id=sps.id
         LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
         WHERE sps.dirigente_id=:did
-          AND sps.platform='FACEBOOK'
+          {platform_clause}
           AND sp.published_at >= NOW() - (:days || ' days')::interval
+          AND sp.likes >= 1
         GROUP BY sp.id
         HAVING COUNT(sc.id) FILTER (WHERE sc.nlp_polaridad IS NOT NULL) >= 3
           AND {polarity_filter}
         ORDER BY AVG(sc.nlp_polaridad) {order}, sp.likes DESC
         LIMIT :limit
-    """), {"did": dirigente_id, "days": str(days), "limit": limit})).all()
+    """), params)).all()
 
     out: list[TopPostItem] = []
     for r in rows:
@@ -709,24 +813,53 @@ async def watched_interactions_summary(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_user)],
     dirigente_id: int,
-    days: int = Query(default=44, ge=7, le=120),
+    days: int = Query(default=44, ge=7, le=3650),
+    all_time: bool = Query(default=False),
+    platform: str | None = Query(default=None, description="None=cross-platform · FACEBOOK · INSTAGRAM · etc"),
 ):
-    """KPIs agregados para header del dashboard."""
-    await _assert_dirigente_access(db, user, dirigente_id)
+    """KPIs agregados para header del dashboard.
 
-    base = (await db.execute(text("""
-        SELECT
-          COUNT(DISTINCT wle.id) AS reactions,
-          COUNT(DISTINCT sc.id) AS comments,
-          COUNT(DISTINCT sc.id) FILTER (WHERE sc.nlp_tono IS NOT NULL) AS classified,
-          COUNT(DISTINCT sp.id) AS posts_window
-        FROM social_profiles sps
-        LEFT JOIN social_posts sp ON sp.profile_id=sps.id
-          AND sp.published_at >= NOW() - (:days || ' days')::interval
-        LEFT JOIN watched_like_events wle ON wle.post_id=sp.id
-        LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
-        WHERE sps.dirigente_id=:did AND sps.platform='FACEBOOK'
-    """), {"did": dirigente_id, "days": str(days)})).first()
+    `all_time=true` ignora el filtro de fecha y reporta total histórico
+    (decisión CEO 2026-05-20: el badge con ventana 44d ocultaba ~30% de
+    las reactions reales · per Hugo RADAR delta ~100K vs UI 56K).
+
+    `platform`: None default = cross-platform agregado (CEO 2026-05-21
+    D-PLATFORM-SELECTOR). Explícito para vista por red.
+    """
+    await _assert_dirigente_access(db, user, dirigente_id)
+    platform_clause = "AND sps.platform = :platform" if platform else ""
+    base_params: dict = {"did": dirigente_id}
+    if platform:
+        base_params["platform"] = platform
+
+    if all_time:
+        base = (await db.execute(text(f"""
+            SELECT
+              COUNT(DISTINCT wle.id) AS reactions,
+              COUNT(DISTINCT sc.id) AS comments,
+              COUNT(DISTINCT sc.id) FILTER (WHERE sc.nlp_tono IS NOT NULL) AS classified,
+              COUNT(DISTINCT sp.id) AS posts_window
+            FROM social_profiles sps
+            LEFT JOIN social_posts sp ON sp.profile_id=sps.id
+            LEFT JOIN watched_like_events wle ON wle.post_id=sp.id
+            LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
+            WHERE sps.dirigente_id=:did {platform_clause}
+        """), base_params)).first()
+    else:
+        window_params = {**base_params, "days": str(days)}
+        base = (await db.execute(text(f"""
+            SELECT
+              COUNT(DISTINCT wle.id) AS reactions,
+              COUNT(DISTINCT sc.id) AS comments,
+              COUNT(DISTINCT sc.id) FILTER (WHERE sc.nlp_tono IS NOT NULL) AS classified,
+              COUNT(DISTINCT sp.id) AS posts_window
+            FROM social_profiles sps
+            LEFT JOIN social_posts sp ON sp.profile_id=sps.id
+              AND sp.published_at >= NOW() - (:days || ' days')::interval
+            LEFT JOIN watched_like_events wle ON wle.post_id=sp.id
+            LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
+            WHERE sps.dirigente_id=:did {platform_clause}
+        """), window_params)).first()
 
     mix_rows = (await db.execute(text("""
         SELECT wle.reaction_type, COUNT(*) AS n
@@ -745,7 +878,7 @@ async def watched_interactions_summary(
 
     return InteractionsSummary(
         dirigente_id=dirigente_id,
-        window_days=days,
+        window_days=None if all_time else days,
         total_reactions=base[0] or 0,
         total_comments=total_comments,
         comments_classified=classified,

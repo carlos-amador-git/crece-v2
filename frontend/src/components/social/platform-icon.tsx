@@ -42,7 +42,8 @@ export function PlatformIcon({
   size = 16,
   className,
 }: PlatformIconProps) {
-  const config = platformConfig[platform];
+  const normalized = (platform?.toLowerCase() ?? "") as SocialPlatform;
+  const config = platformConfig[normalized];
   if (!config) return null;
 
   return (

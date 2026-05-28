@@ -97,7 +97,11 @@ async def compute(
     if not engagements:
         return build_insufficient(BLOQUE, missing=["engagement_rate=NULL en todos los posts"])
 
-    umbral_eng = median(engagements)
+    # Mediana sobre ER>0: posts sin ER calculado (=0) no deben arrastrar el umbral
+    # a 0 y colapsar la matriz (todo cae en "alto", Neutros/Sin eco imposibles).
+    # Los ER=0 caen correctamente en "bajo engagement". Mismo patrón que B15.
+    engagements_nonzero = [e for e in engagements if e > 0]
+    umbral_eng = median(engagements_nonzero) if engagements_nonzero else 0.0
 
     clasificados = []
     conteo = {"INSIGNIA": 0, "CRISIS": 0, "VANIDAD": 0, "MUERTA": 0}

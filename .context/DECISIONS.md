@@ -1,5 +1,77 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-05-26 noche — D-AUTHOR-HASH-PII · pseudonimización canónica + guard
+
+**Contexto:** 257 filas (242 social_comments + 15 watched_profiles) tenían el NOMBRE REAL en `author_hash` sin hashear (ruta RADAR FB Playwright). PII en texto plano (LFPDPPP) + rompía dedup + falsos "coordinación" en B12.
+
+**Decisión:** `app/services/author_hash.py::ensure_author_hash()` es el guard canónico — si ya es hash lo deja, si es PII cruda hashea `sha256(platform:value:salt)` (salt `COMMENT_AUTHOR_SALT`, mismo esquema que apify_fb_deep). Determinista → mismo nombre = mismo hash en ambas tablas. Backfill aplicó a las 257 filas. Guard agregado en `ingest_radar_comments(_v2)`. NO merge automático con hashes basados en author_id (distinto input) — eso queda como dedup cross-source futuro.
+
+---
+
+## 2026-05-26 noche — D-LISTENERS-WORKER · event listeners en uvicorn Y Celery worker
+
+**Contexto:** los SQLAlchemy event listeners (`audit_listeners`, `engagement_listeners`) solo se registraban en el lifespan de uvicorn. Los scrapers + ops de BD corren en el **Celery worker** (proceso aparte) → engagement_rate no se calculaba y ops destructivas no se auditaban (gap LFPDPPP art.32).
+
+**Decisión:** registrar ambos en `worker_process_init` (`celery_app.py`) además de `main.py`. En contexto Celery el audit queda `user_id=NULL` ("operación de sistema") — seguro, inserts en try/except. El worker NO auto-recarga → requiere `docker restart crece-celery-worker`.
+
+---
+
+## 2026-05-26 noche — D-B12-CORO-CALIBRACION · contenido distintivo mínimo
+
+**Contexto:** B12 "coro_cluster" (Jaccard ≥0.8) marcaba como coordinación a autores con texto idéntico. Investigación (Gemini priorizó dup-vs-coordinación): eran **elogios genéricos** ("Excelente", "Felicidades", "Saludos amiga" — 429 autores en 202 grupos), NO coordinación ni dup de BD.
+
+**Decisión:** `MIN_SHINGLES_CORO=6` — un autor solo entra a coro si su corpus tiene ≥6 shingles distintivos. Excluye elogio genérico corto, mantiene mensajes largos repetidos (coordinación real plausible). Saymi 8→4 flagged. **Calibración de B12/B15 cerrada; calibraciones menores B08/B09 quedan opcionales.**
+
+**Triage F1 (verdicto):** las 10 cards no-revisadas (B01/02/04/05/06/08/09/10/16/17) NO tienen errores críticos — contraste con las 8 revisadas visualmente que sí. B05 ya tenía mapa español (D-EKMAN-1). Solo B08 (gap_alert ruidoso) y B09 (viral números chicos) tienen calibración menor pendiente, no cliente-facing.
+
+---
+
+## 2026-05-26 — D-ER-CANONICO · engagement_rate centralizado + calculado en todas las rutas de ingest
+
+**Contexto:** `social_posts.engagement_rate` tiene `default=0.0`. Las rutas de ingest (scrapers ORM, RADAR ingest SQL, Apify) no lo calculaban → 35% de posts globales en 0 pese a interacción real. Rompía B03 (matriz 2×2 colapsaba), degradaba B07/B15.
+
+**Decisión:**
+- Fórmula CANÓNICA única en `app/services/engagement.py`: con views (TikTok/YT/Reels) `(likes+comments)/views*100`; sin views (X/FB) `(likes+comments+shares)/followers*100`. Verificada por reverse-engineering + `bot_detection.py`. NO inventa datos (deriva de métricas reales). followers actuales = aproximación aceptada (no persistimos followers_at_post_time).
+- Event listener `before_insert`/`before_update` en SocialPost (`app/core/engagement_listeners.py`) registrado en uvicorn (lifespan) **Y** Celery worker (`worker_process_init`). **Crítico:** los scrapers corren en el worker, no en uvicorn.
+- Scripts SQL crudo + backfill importan el helper (una sola fuente de verdad).
+- Backfill global aplicado: 1973 posts de todos los clientes.
+
+**Gap señalado (no resuelto):** `audit_listeners` tiene el mismo patrón pero solo en uvicorn, no en worker → ops destructivas en tasks Celery sin auditar (LFPDPPP). Fix aparte.
+
+---
+
+## 2026-05-26 — D-CARDS-CALIBRACION-DATOS-REALES · validar corrección semántica por-card
+
+**Contexto:** Review visual CEO descubrió que B18/B07/B14/B15/B03 daban resultados falsos (diputado→puta, +0 estancado, 0.966 desvío, 1-comentario-rage, 254 éxitos). Patrón común: las 18 cards Tier 2 se construyeron en lote con lógica placeholder (diccionarios, Jaccard léxico, snapshots copiados) y NUNCA se calibraron contra datos reales. Los audits midieron dimensiones (smoke/seguridad/perf) pero no la **corrección semántica** del número por-card.
+
+**Decisión:** toda card de diagnóstico debe validarse contra datos reales del piloto (Saymi) antes de considerarse cliente-ready. El "compila + renderiza + pasa smoke" NO basta. Regla reforzada: probar contra datos reales (ya en CLAUDE.md, violada en fase scaffold).
+
+---
+
+## 2026-05-26 — D-B14-COMPOSICION · Topic Drift → composición de conversación
+
+**Decisión:** B14 abandona el drift léxico bigram-Jaccard (saturado ~1.0) y mide **composición** de a qué responde la audiencia vía `nlp_target` (persona/tema/otro) + `topics_extracted` para nombrar temas. Se conserva el heatmap (CEO lo pidió explícitamente), recoloreado por foco dominante. Vista de composición elegida sobre score recalibrado.
+
+---
+
+## 2026-05-26 — D-B07-HONESTO-RADAR · B07 estado honesto, dato real vía RADAR
+
+**Decisión:** B07 muestra "Medición de crecimiento en proceso de integración" en vez de "+0 Estancado" falso (D-ANTI-MOCK-1). Adapter FE↔BE wired (delta_followers/top_posts) — se emite solo con variación REAL entre snapshots. El dato real de followers histórico lo provee **RADAR (Hugo, peer)**: RADAR persiste timeseries, CRECE ingiere a `social_profile_snapshots`. Contrato acordado, pendiente ejecución Hugo.
+
+---
+
+## 2026-05-26 — D-B15-VOLUMEN · hostilidad exige volumen real
+
+**Decisión:** B15 (rage/hostilidad) exige ≥5 comentarios en el post **y** ≥3 negativos reales para flag (antes 1 comentario negativo + ER spike disparaba falso positivo). Muestra evidencia inline (comentarios que dispararon). Esto además surfacea las críticas legítimas que B18-violencia correctamente ignora.
+
+---
+
+## 2026-05-26 — D-PALABRAS-CONFIG · diccionarios de moderación configurables por admin (PLAN)
+
+**Decisión (CEO):** mover los diccionarios hardcoded (hate/vpg/amenazas/rage) a tabla configurable por admin con categoría + severidad + **scope** (exacta/raíz/contiene). Default scope=exacta + botón "Probar" para no reabrir el bug del "diputado". Plan escrito en `.context/PLAN-2026-05-26-palabras-moderacion-config.md`. Sprint siguiente. Supersede el parche manual de gaps de género del diccionario B18.
+
+---
+
 ## 2026-05-19 tarde — D-BUG-CONTROL-CHARS-POST-PILOTO · Bug `/planes/{id}` JSON queda diferido
 
 **Contexto:** Plan deuda tests v2 incluyó concern Gemini (HIGH severity) sobre bug control chars en endpoint `/api/v1/planes/{id}`. Hipótesis Gemini: si cliente abre plan individual durante demo, axios podría fallar parseando JSON con `\n` raw en strings (output LLM sin escapar). Concerns absorbido en plan v2 moviendo verificación a Bloque A pre-piloto.
@@ -2213,3 +2285,26 @@ Razonamiento CEO: "no es institucional, es particular la información." LGAIPG a
 **Regla para futuros sprints:**
 - Cualquier PR que toque `sidebar.tsx` y proponga eliminar/reorganizar `Fans y Perfiles` requiere comment explícito del CEO en el PR.
 - Si un refactor de sidebar elimina una entry definida en DECISIONS.md como INVARIANTE, el PR queda **bloqueado** hasta autorización formal.
+
+
+---
+
+## 2026-05-20 — D-MISAEL-VIP-250 · upgrade override post-ingest RADAR
+
+**Decisión CEO 2026-05-20 (post-ingest reactors Saymi+Pepe):**
+Override frontend de Misael Gómez actualizado de **40 reactions / 12 comments** a **250 reactions / 12 comments** (comments sin cambio).
+
+**Razón:** Ingest RADAR completo cambió el top real BD de Saymi:
+- **Pre-ingest** (D-MISAEL-VIP-40 vigente 2026-05-18 a 2026-05-19): top reactor cliente_seed real era Mueller con 34 reactions. 40/12 era "apenas por encima · creíble · NO inventado masivo".
+- **Post-ingest 2026-05-20**: top reactor real BD es Pedro Carlock con 235 reactions (data RADAR 71,951 events nuevos). Misael real existe con 77 reactions auto_suggested (~#16 en ranking).
+- Con 40/12 hardcoded, Misael "Fan #1" se ve NO creíble porque Pedro Carlock real tiene 6x más.
+- 250 ofrece margen +6.4% sobre top real (Pedro 235 → Misael 250) → "Fan #1" creíble sin disonancia visual.
+
+**Implicación honesta:**
+- UI seguirá mostrando Misael #1 con 250 reactions (vip-override frontend-only).
+- BD sigue mostrando real: Pedro Carlock #1 con 235, Misael ~#16 con 77.
+- Inconsistencia interna conocida y documentada · cliente Saymi no la ve (UI le da Misael #1).
+
+**Sustituye:** D-MISAEL-VIP-40 (vigente 2026-05-18 a 2026-05-19).
+
+**Implementación:** `frontend/src/lib/api/utils/vip-overrides.ts` línea ~Saymi block.

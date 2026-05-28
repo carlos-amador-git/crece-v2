@@ -51,6 +51,11 @@ UMBRAL_MAESTRO_CEREMONIAS = 3  # comments en mismo post en <60min
 VENTANA_MAESTRO_SEG = 60 * 60
 UMBRAL_JACCARD = 0.8  # similaridad para "cuentas coro"
 UMBRAL_COMMENTS_NUEVO_AUTHOR = 5  # comments_cuenta_nueva_sospechosa
+# Contenido distintivo mínimo (shingles) para evaluar "coro". Sin esto, elogios
+# genéricos cortos ("Excelente", "Felicidades", "Saludos amiga") que muchos
+# usuarios distintos escriben igual disparaban falsos "coro" (verificado
+# 2026-05-26: 429 autores en 202 grupos de texto genérico, NO coordinación).
+MIN_SHINGLES_CORO = 6
 
 
 def _shingles(text: str, n: int = 3) -> set[str]:
@@ -118,12 +123,18 @@ async def compute(
         author_corpus[c["author_hash"]] += " " + (c.get("content") or "")
         author_comment_count[c["author_hash"]] += 1
 
-    authors_candidatos = [a for a, n in author_comment_count.items() if n >= 2]
+    # Candidatos coro: >=2 comments Y corpus con contenido distintivo suficiente
+    # (>= MIN_SHINGLES_CORO). Excluye elogios genéricos cortos que no son coordinación.
+    shingles_por_author = {
+        a: _shingles(author_corpus[a])
+        for a, n in author_comment_count.items()
+        if n >= 2
+    }
+    authors_candidatos = [
+        a for a, sh in shingles_por_author.items() if len(sh) >= MIN_SHINGLES_CORO
+    ]
     coro_clusters: list[tuple[str, str]] = []
     if 2 <= len(authors_candidatos) <= 500:
-        shingles_por_author = {
-            a: _shingles(author_corpus[a]) for a in authors_candidatos
-        }
         for i in range(len(authors_candidatos)):
             for j in range(i + 1, len(authors_candidatos)):
                 a1 = authors_candidatos[i]

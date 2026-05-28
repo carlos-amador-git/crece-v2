@@ -79,6 +79,7 @@ export function PostCard({ post }: PostCardProps) {
             <SentimentBadge
               sentiment={post.sentiment_label}
               score={post.sentiment_score}
+              tonoDiscurso={post.tono_discurso}
             />
           </div>
           <p className="mb-3 line-clamp-3 text-sm text-foreground/90">

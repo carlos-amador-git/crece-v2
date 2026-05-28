@@ -1,6 +1,313 @@
 # CRECE v2.0 — Status
 
-**Ultimo update:** 2026-05-19 noche · /audit-full ejecutado · score 73.25/100 · tríada crítica activa pre-cliente
+**Ultimo update:** 2026-05-27 · CRASH RAM (máquina al borde + factores concurrentes) → reboot. **NADA se perdió.** ⚠️ CORRECCIÓN de un error mío previo: dije "data 3 MC perdida" — FALSO, fue join a tabla equivocada (`watched_profiles`=audiencia/likers en vez de `social_profiles`=perfil propio del dirigente, que es a lo que apunta `social_posts.profile_id`). Join correcto: **data INTACTA en crece-db :5438** — Piña(1) 522 posts/494 tono/2922 comments · Solano(2) 353/234/147 · Ballesteros(8) 685/271/41868. Enrich iba 40-95% al tronar. **Trabajo real (chico, NO re-ingest):** (1) parchear 4 scripts NLP con `--strict-mcp-config` (validado: apaga MCP sin romper auth; `--bare` NO sirve, exige API key); (2) correr `post_ingest_enrich.py --dirigente-id {1,8,2}` attended/lotes/idempotente (solo delta sin enriquecer), CC_MODEL=sonnet medium; (3) verificar app. Enrich target :5438 (NO :5453=radar scraper crudo).
+
+## 2026-05-27 · POSTMORTEM crash RAM (data 3 MC NO perdida — ver corrección al inicio) (sesión Linda)
+
+**Qué pasó:** lancé `post_ingest_enrich.py` en background para dir 1/8/2 (~650 filas, cada una invoca `claude --print`) unattended de noche, sobre una máquina ya saturada y concurrente con la captura de browser de radar.
+
+**Causa raíz — medida 2026-05-27 (Gate A, 3 pasadas):** plain `claude --print` (lo que los 4 scripts NLP hacen) **spawnea 26 procesos MCP por llamada** (medido: delta 69→95 procs durante la llamada; el RSS del padre 448 MB los ocultaba). Mi hipótesis original (flota MCP por llamada) era CORRECTA. **Fix validado: `--strict-mcp-config`** → MCP delta 1 (≈0), mantiene auth de suscripción, output válido; bucle serial de 8 con inferencia real → RAM estable (~1050-1230 MB), 0 procs colgados. **`--bare` descartado:** apaga MCP pero rompe el auth OAuth (exige `ANTHROPIC_API_KEY`, unset → "Not logged in") → violaría `D-PLAN-IA-CC-GEMINI-CLI-1`. **Contribuyente al crash (no único):** presión acumulativa — máquina al borde (~688 MB libres con ambos stacks Docker) + 26-MCP transitorios × 650 llamadas plain unattended + captura browser de radar concurrente. **Fix:** Fase 3 = añadir `--strict-mcp-config` a los 4 scripts (PENDIENTE) + R3 (attended, no concurrente con radar) + R4 (chequear RAM antes).
+
+**Findings verificados (crece-db :5438, 2026-05-27):**
+- NLP/enrich target = **:5438** (scripts default `postgresql://crece:crece_dev@localhost:5438/crece`, comentario explícito). `:5453`=radar_db (scrape_results/targets/jobs = scraper crudo de Hugo, NO destino NLP).
+- ⚠️ ERROR CORREGIDO: lo de "0 posts para 3 MC" fue join a tabla equivocada. `social_posts.profile_id` → **`social_profiles`** (perfil PROPIO del dirigente), NO `watched_profiles` (audiencia/likers). {3,57,59} en watched_profiles es audiencia, no posts.
+- **Join correcto (social_profiles): los 3 MC SÍ tienen data en :5438, intacta** — Piña(1) 522 posts/494 tono/2922 comments · Solano(2) 353/234/147 · Ballesteros(8) 685/271/41868. Enrich parcial (40-95%). Solo falta correr el delta NLP (idempotente). NADA perdido, NO re-ingest.
+- 4109 posts orfanos (profile_id sin watched_profile), acumulados semanas, mayoría ya enriquecidos. Batch fresco 2026-05-27 (266, tono=0) = RSS news bot (dir 56), no los 3 MC.
+
+**Trabajo real (data intacta, NO re-ingest):** (1) parchear los 4 sub-scripts NLP con `--strict-mcp-config` (validado: apaga los 26 MCP/llamada sin romper auth de suscripción); (2) correr `post_ingest_enrich.py --dirigente-id {1,8,2}` attended, lotes `--limit`, chequear RAM antes (idempotente → solo delta sin enriquecer); (3) verificar app. CC_MODEL=sonnet CC_EFFORT=medium (confirmado CEO 2026-05-27).
+
+## 2026-05-26 noche tardío · Pipeline ingest RADAR→CRECE E2E (sesión Linda · /sprint-implement A)
+
+**Decisión CEO opción A:** cadena `post_ingest_enrich` + ingest adapters reusables (no backfills manuales). Cross-audit Gemini integrado.
+
+### Adapters construidos (HOST · `cd backend && PYTHONPATH=. DATABASE_URL_RAW=postgresql://crece:crece_dev@localhost:5438/crece .venv/bin/python scripts/...`)
+- `ingest_radar_ig.py --dirigente-id N --profile-id M --posts F --comments F --commit` (IG: normaliza ppid media_id_userid→bare, mapea campos, ER+hash).
+- `ingest_radar_yt_x_posts.py --json F --platform {YOUTUBE,TWITTER,TIKTOK,FACEBOOK} --dirigente-id N --commit` (payload crudo, profile por BD, ER+hash, +FACEBOOK branch).
+- `ingest_radar_comments_payload.py --dirigente-id N --profile-id M --comments F --commit` (comments raw-payload TT + aplanado FB · match exacto + bare fallback).
+- `post_ingest_enrich.py --dirigente-id N [--limit M]` (cadena NLP: posts tono/target → comments tono/target/polaridad → emotions posts → topics · idempotente).
+
+### Estado ingest — LOS 3 MC COMPLETOS (3/4)
+- **Piña (dir 1):** 5 redes posts (522) + IG/FB/TT comments (917). ER OK. PII 0. Enrich corriendo (PID 1814, ~374/522 tono al persistir).
+- **Ballesteros (dir 8):** 5 redes posts (685) + IG/FB/TT comments (1466). CERO código nuevo. ER OK salvo FB (followers=0).
+- **Solano (dir 2):** IG 100p/46c + TT + X 19p + FB 1p + TT comments 24. CERO código nuevo. (low-activity FB/X; sin YT profile).
+- **Felipe:** pendiente captura Hugo (test del pipeline genérico · FB personal + TT + IG).
+- **Enrich NLP de los 3: LANZADO en background** 2026-05-27 ~00:27 (Sonnet 4.6 + effort medium · `CC_MODEL=sonnet CC_EFFORT=medium`). Cadena dir 1→8→2, ~650 llamadas CC, ~1.5-2h. Log `/tmp/enrich_3mc_1827.log`. **Verificar al regresar:** `grep -E "RESUMEN|✓|✗" /tmp/enrich_3mc_*.log` + `SELECT dirigente, COUNT(tono)... ` por dir. Si algún paso falló, re-correr es idempotente. Job viejo Opus (PID 1814) matado.
+  - Comando manual si hay que re-correr: `cd backend && CC_MODEL=sonnet CC_EFFORT=medium PYTHONPATH=. .venv/bin/python scripts/post_ingest_enrich.py --dirigente-id N`
+
+### Gaps (RADAR-side, Hugo trackea · no bloquean enrich)
+- YT/X comments sin `post_id` en origen → no resuelven (Piña 4, Balles 56). Deuda menor, re-captura post-Felipe.
+- FB/TT followers_count=0 → FB ER no computa (followers-based). = req B07 follower timeseries (Hugo arranca post-Solano/Felipe).
+
+### PENDIENTE CRÍTICO
+- **Correr enrich NLP** de Piña + Ballesteros: `post_ingest_enrich.py --dirigente-id 1` y `--dirigente-id 8` (slow CC ~horas c/u · idempotente · cubre comments nuevos). Hasta correrlo, B0x/B14/B15/B18/FODA NO tienen NLP de la data nueva. Hubo un background de Piña parcial; correr pass completo.
+- Likers IG (Piña 6872, Balles 8473) → script reactors (fans, no bloquea).
+- IG comments shape: Hugo manda IG aplanado (comment_id/comment_text top-level) → `ingest_radar_ig` lo come; FB/TT/X/YT comments raw-payload o aplanado → `comments_payload`.
+
+
+## 2026-05-26 noche · /sprint-implement F0+F1 (plan cierre-pendientes) · sesión Linda
+
+**Plan:** `.context/PLAN-2026-05-26-cierre-pendientes-diagnostico.md` (cross-audit Gemini integrado).
+
+### Post-review (commits tras persistencia 8840ec5)
+- **PII author_hash** (`aab8edf`): 257 filas con nombre crudo → pseudonimizadas (242 social_comments + 15 watched_profiles) + guard `ensure_author_hash` en ingest radar. LFPDPPP. 0 PII cruda restante.
+- **B11** (`aba8087`): label claro (82.8% = % cruce partidista, NO "% MORENA") + color guinda. Saymi confirmada MORENA (Gobierno Oaxaca), no error.
+- **B12 labels** (`bd4a54e`): español + aclara que son cuentas con sospecha 0-1, no posts.
+
+### F0 (`<commit F0>`)
+- **F0.2 audit_listeners en Celery worker** (`worker_process_init`) — cierra gap LFPDPPP: ops destructivas en tasks no se auditaban (solo uvicorn). Verificado `after_delete=True` en worker.
+- **F0.3 + F3.1 calibración B12 coro:** investigación (Gemini priorizó) → los "coro" eran elogios genéricos ("Excelente"/"Felicidades", 429 autores en 202 grupos), NO coordinación ni dup. Fix `MIN_SHINGLES_CORO=6`. Saymi B12: 8→4 flagged. B13 (downstream) baja % inauténtico solo.
+
+### F1 triage de las 10 cards sin revisar (de-riesgadas)
+| Card | Veredicto |
+|---|---|
+| B01 ER, B02 Breakout, B05 Plutchik, B10 Humaniz, B17 Veda | ✅ OK (B05 ya tiene mapa español emociones D-EKMAN-1) |
+| B16 Promesas | vacío legítimo (0 promesas registradas) |
+| B04 Benchmark | OK |
+| B08 SoV | menor: 660 topics → gap_alert ruidoso (over-granularidad) |
+| B09 Share/Like | menor: "viral" sobre números chicos (1 like/4 shares) |
+
+**Hallazgo clave:** a diferencia de las 8 revisadas visualmente (todas con issues reales), las 10 no-revisadas NO tienen errores críticos. Solo 2 calibraciones menores no-cliente-facing.
+
+### A — Cadena `post_ingest_enrich` CONSTRUIDA (opción CEO, commit `769d3fa`)
+- `backend/scripts/post_ingest_enrich.py --dirigente-id N`: secuencia 5 pasos NLP (posts tono/target → comments tono/target/polaridad → emotions posts/comments → topics), idempotente, reusa scripts existentes. Generalizó `extract_topics` + `backfill_nlp_saymi` a cualquier dirigente (identidad del prompt desde BD). Wiring probado en host (0 CC). **Subsume F5** (topics es paso 5 + por-dirigente).
+- Pendiente E2E real: datos de Piña (Hugo entrega al cerrar captura). Posible gap sentiment_score → confirmar con Piña.
+
+### Pendiente del plan
+- **E2E cadena A con Piña** (Hugo entrega JSON al cerrar captura 3 MC + Felipe; CEO priorizó no desviar captura).
+- F2 opcional: B08 gap min-posts + B09 floor interacciones (menores, no cliente-facing).
+- F3.2: dedup cross-source comments (apify+radar solapan) — dato aparte.
+- F4: sprint palabras moderación configurables (plan escrito).
+- F6: mobile audit · N+1 BFF · error boundaries · matriz legacy · merge ~62 commits → main.
+- B07 ← RADAR (Hugo).
+
+---
+
+## 2026-05-26 · Recuperación post-apagón + review cards diagnóstico + fix ER raíz (sesión Linda)
+
+### Recuperación post-apagón (causa raíz: túnel, no containers)
+- Containers Docker nunca cayeron (auto-restart). El problema: el **quick-tunnel cloudflared muere cada 1-3h** (DNS NXDOMAIN); Vercel enruta `/api/v1/*` por `BACKEND_TUNNEL_URL` → frontend cargaba SIN datos (500).
+- Fix documentado: `bash scripts/mac-local/start-crece-tunnel.sh` (idempotente: rota túnel, actualiza Vercel env, redeploy). LaunchAgent corre c/hora pero el túnel muere más rápido → ventanas muertas. Considerar túnel nombrado estable (PID 616 ya corre uno).
+
+### Review visual CEO · 6 cards corregidas (todas con el mismo patrón: lógica placeholder nunca calibrada contra datos reales)
+| Card | Problema | Fix | Commit |
+|---|---|---|---|
+| B18 Violencia | "diputado" matcheaba "puta" (substring) | word-boundary `\b` + "cualquiera"→"una cualquiera" + labels español + mostrar todos + texto completo · Saymi 9→2 | `aaba572` |
+| B07 Crecimiento | snapshot copia followers estático (delta=0) + mismatch FE↔BE | estado honesto "en integración" + adapter delta_followers/top_posts · dato real depende de RADAR (Hugo) | `aaba572` |
+| B14 Topic Drift | bigram-Jaccard saturado (~1.0 a todo) | reframe a **composición** (nlp_target: persona/tema/otro) + topics_extracted · heatmap conservado (CEO lo pidió) · Saymi 55/28/17 | `2b6bc19` |
+| B15 Hostilidad | 1 comentario negativo + ER spike → falso rage | exige ≥5 comentarios + ≥3 negativos · evidencia inline · labels español · Saymi 15→7 | `9180052` |
+| B03 Salud (matriz 2×2) | ER=0 en 150 posts (default) → mediana 0 → Neutros/Sin eco imposibles | backfill ER global (1973 posts, TODOS los clientes) + umbral sobre ER>0 · Saymi 254/9/0/0→126/5/128/4 | `c773f40` |
+
+### Fix de raíz · engagement_rate en TODAS las rutas de ingest (`a8f8729`)
+- Causa: `engagement_rate` default=0.0; ingest (scrapers/RADAR/Apify) no lo calculaba → 35% global en 0 pese a interacción real. Rompía B03/B07/B15.
+- Helper canónico `app/services/engagement.py` (views>0: (likes+comments)/views*100; sino (likes+comments+shares)/followers*100) · 6 tests.
+- Event listener insert+update en SocialPost, registrado en uvicorn (lifespan) **Y** Celery worker (`worker_process_init` — crítico: scrapers corren en worker).
+- 4 scripts SQL crudo (radar posts_v3/yt_x/ig, apify_refresh_all) + backfill usan el helper.
+
+### Dependencias / pendientes abiertos
+- **B07 real depende de RADAR (Hugo, peer `exktbbec`)**: contrato acordado — RADAR persiste timeseries follower_count, CRECE lo ingiere a `social_profile_snapshots`. Hugo lo retoma tras cerrar 3 MC + Felipe.
+- **Plan palabras moderación configurables**: `.context/PLAN-2026-05-26-palabras-moderacion-config.md` (tabla con categoría+severidad+scope · default exacta · botón Probar). Siguiente sprint.
+- **Gap pre-existente:** `audit_listeners` solo registrado en uvicorn, NO en Celery worker → ops destructivas en tasks no se auditan (LFPDPPP). Fix aparte.
+- **topics_extracted** per-cliente: Saymi 93%, otros menos → B14 composición parcial en quien tenga menos topics.
+- **56 commits** acumulados en `feat/post-ingest-hugo-2026-05-20` sin merge a `main`.
+- **Próximo:** análisis B12 (Detector coordinación artificial) + B13 (Filtro de Realidad).
+
+---
+
+## 2026-05-25 noche · F4 matriz polaridad Saymi v1→v2 CERRADO (60 min walltime)
+
+## 2026-05-25 noche · F4 matriz polaridad Saymi v1→v2 CERRADO (60 min walltime)
+
+- 1,155 OK + 5 fails de 1,160 procesados · 99.3% migrado
+- RAM 0 aborts · osciló 49-57%
+- Distribución v2 final: celebratorio 787 · informativo 716 · personal 482 · propositivo 150 · solidario 29 · defensivo 1 · residuo v1: 8 posts
+- Script `backend/scripts/migrate_tono_v1_to_v2_saymi.py` (reusable, RAM-conservador)
+- Commit pusheado: `chore(nlp): migrate tono Saymi v1→v2 · 1155/1160 OK · RAM conservador`
+- D-MATRIZ-POLARIDAD-V2-SAYMI-CIERRE-2026-05-25 registrada
+
+## PRE-APAGÓN 2026-05-25 noche
+
+CEO reportó apagón eléctrico. Estado al pre-cierre:
+- `git status` limpio salvo este STATUS.md (commit ahora)
+- Todos los commits previos pusheados a origin/feat/post-ingest-hugo-2026-05-20
+- Cero procesos background corriendo (F4 ya terminó normal exit=0)
+- Docker containers UP (crece-backend, db, redis, minio, celery-beat, celery-worker, flower, frontend)
+- Alias prod `frontend-zeta-sepia-46.vercel.app` apuntando a `frontend-b74yrrywl` (sidebar contrast fix)
+
+### Recuperación post-apagón
+
+Al regresar la luz:
+1. Verificar Docker daemon vivo: `docker ps`
+2. Si containers caídos: `docker compose up -d` desde raíz repo
+3. Cargar contexto: leer `.context/STATUS.md` (este archivo) + `.context/PLAN-current.md`
+4. Verificar último push: `git log --oneline origin/feat/post-ingest-hugo-2026-05-20 -5`
+5. Cero acción pendiente · sesión cerrada limpia
+
+### Sesión Linda · trabajo del día 2026-05-25 (resumen ejecutivo)
+
+3 sprints cerrados consecutivos:
+1. **PLAN-2026-05-22-recovery** (cierre) · Saymi topics 100% · 670/670 OK
+2. **PLAN-2026-05-25-sprint-multi** · 5 bugs UI + B07 beat + B08 rivales + TT mapper · 7 commits
+3. **PLAN-2026-05-25-sprint-cierre-audit** · 9/10 items audit ya estaban hechos · #9 sidebar contraste fix
+4. **F4 matriz polaridad** · 1155 posts v1→v2 · 60 min
+
+Total commits push hoy: 11. Push exitoso. Cero deuda pendiente operativa.
+
+---
+
+## 2026-05-25 noche · Sprint cierre-audit PLAN-2026-05-25-sprint-cierre-audit CERRADO (~1.5h)
+
+**Plan:** `.context/PLAN-2026-05-25-sprint-cierre-audit.md`
+**Origen:** CEO post-cierre sprint multi pide cerrar tríada + audit. Verificación primary source antes de implementar.
+
+### Hallazgo masivo
+
+**9 de 10 items audit-full 2026-05-19 ya estaban cerrados de facto** en sesiones intermedias (sin que el audit se actualizara). Plan original estimaba ~8h · realidad 30 min trabajo neto + commits.
+
+| # | Audit item | Estado verificación | Acción |
+|---|---|---|---|
+| 1 | .env.scraping-keys tracked | YA untrackeado (git ls-files 0) | nada · sigue diferida rotación + filter-repo a sesión CEO |
+| 2 | Prompt injection sanitize | YA hecho · llm_sanitizer.py "B4 audit-full" + sanitize_data_field 4x | nada |
+| 3 | Rate-limit /posts/unified | YA aplicado @limiter.limit("60/minute") | nada |
+| 4 | Filtros /hub | YA useSearchParams + platform/date/sentiment | nada |
+| 5 | Mobile vertical UnifiedPostCard | YA grid-cols-1 md:grid-cols-2 xl:grid-cols-3 en hub | nada |
+| 6 | Badge data_source | YA DATA_SOURCE_LABELS + tooltip | nada |
+| 7 | Skeletons Hub | YA UnifiedPostCardSkeleton + Suspense | nada |
+| 8 | Tests /posts/unified | YA test_posts_unified.py 17KB "C7 audit-full" | nada |
+| 9 | Sidebar contraste WCAG fail | text-muted-foreground (~4.0:1) → fix aplicado | text-foreground/70 (~7:1 AAA) |
+| 10 | Colisión "Contenido" sidebar | YA un solo item | nada |
+
+### Acciones efectivas sesión
+
+- 1 commit · sidebar contraste 3 ocurrencias text-foreground/70
+- Push + Vercel deploy `frontend-b74yrrywl` alias preservado
+- Plan + docs commiteados
+
+### Decisión registrada
+
+- **D-AUDIT-CLOSURE-2026-05-25** · 10/10 items audit-full cerrados con caveat #1B (rotación keys + filter-repo) sigue diferida a sesión propia CEO (alto blast)
+
+### Pendientes diferidos al cerrar sprint
+
+- **F4 matriz polaridad Saymi** v1→v2 vocab uniforme · CONDICIONAL decisión CEO · 1173 posts vocab v1 mezclados con 1000 vocab v2 (52/44% split, no es 100% legacy como decía plan-20)
+- PII compliance review (gap audit Gemini high) · sprint propio
+- Performance N+1 stress test BFF · sprint propio
+- Error Boundaries frontend específicos · sprint propio
+- 56+ commits sin merge a `main` · decisión operativa CEO
+
+**D-NO-ROTAR-KEYS-2026-05-25** · CEO ratificó que rotación de `.env.scraping-keys` + filter-repo NO interesa por ahora. Item #1 del audit-full queda fuera del backlog activo · no re-sugerir hasta que CEO lo levante.
+
+### Lección sesión
+
+Patrón confirmado por tercera vez: planes >3 días caducan rápido. Cuando un plan menciona "deuda pendiente del audit/sprint anterior", verificar primary source ANTES de implementar (git ls-files, grep, query BD). Hoy evitó ~7h de trabajo duplicado.
+
+---
+
+## 2026-05-25 tarde · Sprint multi PLAN-2026-05-25 CERRADO · 5 bugs UI + B07 beat + B08 rivales + TT mapper fix · 5 commits push + Vercel deploy · próximo: F4 tríada audit-full pre-cliente
+
+## 2026-05-25 tarde · Sprint multi PLAN-2026-05-25-sprint-multi CERRADO (~3h)
+
+**Plan:** `.context/PLAN-2026-05-25-sprint-multi.md` (F1-F3+F5 ejecutadas · F4 tríada diferida sesión propia)
+**Origen:** post-cierre recovery 2026-05-22 · CEO inspección visual descubrió 5 bugs UI + cuestionó B07/B08/B17
+**Cross-verificación primaria:** Hugo (peer RADAR `1m4oqc8n`) confirmó mapper TT contract antes de tocar BD
+
+### Fases ejecutadas
+
+| Fase | Items | Resultado |
+|---|---|---|
+| F1 backend SQL + scripts | TT mapper patch + UPDATE 32 posts + ER recompute + tono_discurso serializer | 5,749 likes + 90,051 views recuperados · ER avg 0.96% max 12.97% (rangos TT normales) · 0 fails |
+| F2 beat + topics rivales | snapshot_all_profiles task + beat lunes 02:00 MX + extract topics Ivette+Susana | Baseline 36 snaps OK · Ivette 17/17 + Susana 66/66 OK · B07+B08 destrabados |
+| F3 frontend UX | Título widget honesto + selector N=1 readonly + sticky platform filter | tsc verde · check-no-mocks verde |
+| F5 deploy | 5 commits incrementales + push + Vercel prod + alias | Alias `frontend-zeta-sepia-46.vercel.app` apunta a deploy `frontend-i1ye7nrdx` |
+| F4 tríada audit-full | rate-limit `/posts/unified` + filtros `/hub` + rotación `.env.scraping-keys` | DIFERIDA sesión propia con CEO (alto blast del item #3) |
+
+### Commits sesión (6 + 1 vercelignore)
+
+| Hash | Mensaje |
+|---|---|
+| `6b4ba0c` | fix(ingest): TIKTOK platform branch en ingest_radar_yt_x_posts |
+| `e654dda` | feat(workers): snapshot_all_profiles task + beat semanal · destrabra B07 |
+| `5d4373b` | fix(api,ui): tono_discurso en recent_posts + SentimentBadge fallback |
+| `ea04a1a` | ui(dirigentes,aceptacion): título honesto + selector N=1 + sticky filter |
+| `7092426` | docs(plan): PLAN-2026-05-25-sprint-multi · F1-F3+F5 cerradas |
+| (post-deploy) | chore(deploy): add .vercelignore con secrets pulled |
+
+### Bug #3 RADAR mapper · diagnóstico cross-verificado
+
+CEO observó posts TT con 0 likes en `/dashboard/dirigentes/3`. Mi primera reacción fue "scraper RADAR falló" sin verificar — error mío reconocido. Verificación primaria + consulta a Hugo (peer RADAR `1m4oqc8n`) confirmó:
+
+- RADAR yt-dlp_tiktok SÍ trajo métricas (raw_data.like_count hasta 2,529)
+- Bug es del mapper CRECE-side: script `ingest_radar_yt_x_posts.py` tenía else branch hardcoded ceros para TIKTOK
+- Fix: rama TIKTOK explícita + UPDATE one-shot desde raw_data hacia columnas
+- Sin re-scrape · datos ya estaban en raw_data
+
+### Decisiones nuevas registradas (5)
+
+- **D-RADAR-TT-MAPPER-2026-05-25** · mapeo canónico yt-dlp ratificado por Hugo (like_count→likes, view_count→views, comment_count→comments, repost_count→shares)
+- **D-BEAT-SNAPSHOT-WEEKLY-2026-05-25** · snapshot followers semanal lunes 02:00 MX para destrabar B07
+- **D-WIDGET-TITLE-HONESTY-2026-05-25** · "Publicaciones recientes" en lugar de "Contenido con más Impacto" porque query no ordena por impacto
+- **D-B17-NO-DISTRITAL-2026-05-25** · card actual refleja realidad (heurística keyword + flag global) · calendario INE distrital diferido hasta pedido cliente
+- **D-SoV-RIVALES-TOPICS-2026-05-25** · B08 SoV requiere topics en rivales · extract_topics sobre Ivette+Susana destraba comparativa real
+
+### Pendientes diferidos al cerrar sprint
+
+- **F4 tríada audit-full** completa (sesión propia · alto blast item #3)
+  1. Rate-limit `/posts/unified` (~30 min · low-risk)
+  2. Filtros en `/hub` (~1-1.5h · UX)
+  3. `.env.scraping-keys` rotación + git filter-repo (~1-2h · sesión propia CEO)
+- Matriz polaridad v2 Saymi 595 posts legacy
+- Mobile audit completo
+- 54 commits acumulados en `feat/post-ingest-hugo-2026-05-20` sin merge a `main`
+- Backlog: "Contenido con más Impacto" REAL (endpoint propio ORDER BY engagement_rate)
+- Bug #3 backlog F5: re-scrape para `save_count` queda en raw_data (sin columna)
+
+---
+
+## 2026-05-25 · Recovery post-crash 2026-05-22 CERRADO (~2h walltime cierre · batch 30 min · resto verificación)
+
+## 2026-05-25 · Recovery post-crash 2026-05-22 CERRADO (~2h walltime cierre · batch 30 min · resto verificación)
+
+**Plan:** `.context/PLAN-2026-05-22-recovery.md` · reporte cierre `.context/REPORTE-RECOVERY-2026-05-22.md`
+
+### Hallazgo principal del cierre
+
+Entre 2026-05-22 (crash) y 2026-05-25 (cierre), sesiones intermedias avanzaron de facto la mayoría de pendientes del plan-22 sin actualizarlo. Plan estaba 3 días desactualizado.
+
+| Fase | Estado real al iniciar cierre | Acción cierre |
+|---|---|---|
+| F3.0 limpieza BD | ✅ ya hecha · plan #73 borrado · Ivette MORENA · WIP commit en `975d09c` | sin acción |
+| F3.1 NLP backfill | 100% tono · 100% emotions · sólo 670 Saymi YT+TT topics pendientes (con content >10c) | batch único 670 OK 0 fails 30min |
+| F3.2 frontend lenguaje | B04/B05/B08 ya cliente-ready · B05 Ekman 6 ya D-EKMAN-1 2026-05-12 · topics_extracted pretty-mapeado | sin acción |
+| F3.3 deploy | alias prod ya con commit Pedro Carlock del agente anterior (~11:30) | sin re-deploy · topics nuevos los lee backend al próximo request |
+
+### Tabla G1-G5 · sprint cerrado
+
+| # | Criterio | Estado |
+|---|---|---|
+| G1 | Plan #73 stale eliminado · #76 vigente | ✅ |
+| G2 | Ivette MORENA en BD | ✅ |
+| G3 | NLP gap <10% por (dirigente, plataforma) con content válido | ✅ Pepe 100% · Saymi 100% todas plataformas |
+| G4 | B04/B05/B08 lenguaje cliente · B05 6 emociones | ✅ |
+| G5 | Cero crashes RAM durante F3.1 | ✅ 670/670 OK · 0 fails |
+
+### Decisión nueva registrada
+- **D-RECOVERY-CIERRE-2026-05-25-PLAN-DESACTUALIZADO** · planes post-incidente caducan rápido. Lección: verificar estado real BD+código antes de re-ejecutar plan de recovery >3 días viejo. Evita ~90% re-trabajo.
+
+### Cambios sesión
+- `.gitignore` · agregado `*.vercel.pulled*` (5 patrones · evita commit accidental secrets locales)
+- `.context/REPORTE-RECOVERY-2026-05-22.md` · nuevo · reporte cierre completo
+- `.context/PLAN-current.md` · ACTIVE apunta a recovery (cerrado)
+- `backend/scripts/extract_topics_saymi_cc.py` · ejecutado, 670 posts Saymi nuevos topics_extracted
+
+### Pendientes diferidos al cerrar recovery
+- **Tríada crítica pre-cliente audit-full 2026-05-19** sigue abierta · próximo sprint
+  1. Rate limit `/posts/unified` (~30 min · SlowAPI middleware)
+  2. Filtros en `/hub` (~1-1.5h · regresión vs `/social` viejo)
+  3. `.env.scraping-keys` tracked git (~1-2h · alto blast · rotar keys + `git filter-repo` · sesión propia con CEO)
+- Backfill matriz polaridad v2 Saymi 595 posts legacy (sigue diferido sprint 20-may)
+- Mobile audit completo (sigue diferido)
+- 52 commits acumulados en `feat/post-ingest-hugo-2026-05-20` sin merge a `main`
+
+---
 
 ## 2026-05-19 noche · /audit-full · score 73.25/100
 
