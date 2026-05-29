@@ -26,16 +26,34 @@ function FansYPerfilesInner() {
     [overview],
   );
 
+  const userDirigenteId = (user as { dirigente_id?: number } | null)?.dirigente_id ?? null;
+  const userOwnDirigenteHidden =
+    userDirigenteId !== null &&
+    dirigentesList.length > 0 &&
+    !dirigentesList.some((d) => d.dirigente_id === userDirigenteId);
+
   useEffect(() => {
     if (didAutoInit) return;
     if (dirigentesList.length === 0) return;
-    const userDirigenteId = (user as { dirigente_id?: number } | null)?.dirigente_id;
-    const selfMatch = userDirigenteId
-      ? dirigentesList.find((d) => d.dirigente_id === userDirigenteId)
-      : undefined;
-    setObservedDirigenteId(selfMatch?.dirigente_id ?? dirigentesList[0].dirigente_id);
+    if (userDirigenteId !== null) {
+      // Viewer logueado tiene un dirigente_id propio: solo lo seleccionamos si
+      // está en la lista accesible. Si NO está (p.ej. el dirigente aún no tiene
+      // data scrapeada y por eso el endpoint /overview lo excluye), dejamos
+      // observedDirigenteId = null y el render muestra un empty-state explícito.
+      // NO caemos al primer dirigente de la lista — eso sería un scope leak
+      // donde el viewer vería data de OTRO dirigente como si fuera la suya
+      // (anti-mock D-ANTI-MOCK-1: cero data inventada/cruzada visible).
+      const selfMatch = dirigentesList.find((d) => d.dirigente_id === userDirigenteId);
+      if (selfMatch) {
+        setObservedDirigenteId(selfMatch.dirigente_id);
+      }
+    } else {
+      // Staff (admin/analyst) sin dirigente_id propio: default al primero está
+      // bien porque exploran transversalmente.
+      setObservedDirigenteId(dirigentesList[0].dirigente_id);
+    }
     setDidAutoInit(true);
-  }, [user, dirigentesList, didAutoInit]);
+  }, [user, dirigentesList, didAutoInit, userDirigenteId]);
 
   const observedName = useMemo(() => {
     if (observedDirigenteId === null) return "";
@@ -83,6 +101,13 @@ function FansYPerfilesInner() {
         <Card>
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
             Sin dirigentes accesibles en tu organización. Contacta al administrador.
+          </CardContent>
+        </Card>
+      ) : userOwnDirigenteHidden ? (
+        <Card>
+          <CardContent className="p-8 text-center text-sm text-muted-foreground">
+            Tu perfil aún no tiene data scrapeada disponible. Cuando el monitoreo
+            inicie para tu dirigente, aparecerá aquí.
           </CardContent>
         </Card>
       ) : observedDirigenteId === null ? (
