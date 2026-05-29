@@ -177,6 +177,37 @@ async def seed():
         session.add_all([jimenez, cravioto])
         await session.flush()
 
+        # ── Dirigentes MC CDMX adicionales (clientes activos piloto) ──
+        # Nota: cargos/partidos marcados [PENDIENTE] son placeholders honestos.
+        # Marx tiene estos dirigentes con IDs específicos (8/57/60) en su BD vía
+        # ingesta no incluida en este seed; aquí toman IDs auto-increment.
+        ballesteros = Dirigente(
+            full_name="Laura Ballesteros Mancilla",
+            cargo="Diputada Federal Plurinominal",
+            partido="MC",
+            estado="Ciudad de México",
+            municipio="CDMX",
+            org_id=org_mc.id,
+        )
+        monroy = Dirigente(
+            full_name="Pepe Monroy",
+            cargo="[PENDIENTE] proyecto PAZ — actualizar desde admin UI",
+            partido="INDEPENDIENTE",
+            estado="Ciudad de México",
+            municipio="CDMX",
+            org_id=org_mc.id,
+        )
+        martinez = Dirigente(
+            full_name="Felipe Martínez",
+            cargo="[PENDIENTE] actualizar desde admin UI",
+            partido="MC",
+            estado="Ciudad de México",
+            municipio="CDMX",
+            org_id=org_mc.id,
+        )
+        session.add_all([ballesteros, monroy, martinez])
+        await session.flush()
+
         # ── Users para nuevas orgs ────────────────────────────────
         user_pineda = User(
             email="pineda@crece.mx",
@@ -215,6 +246,37 @@ async def seed():
             dirigente_id=cravioto.id,
         )
         session.add_all([user_pineda, user_nolasco, user_jimenez, user_cravioto])
+        await session.flush()
+
+        # ── Users para dirigentes MC adicionales ─────────────────────
+        user_ballesteros = User(
+            email="ballesteros@crece.mx",
+            hashed_password=hash_password("Ballesteros2026!"),
+            full_name="Laura Ballesteros Mancilla",
+            role=Role.VIEWER,
+            is_active=True,
+            org_id=org_mc.id,
+            dirigente_id=ballesteros.id,
+        )
+        user_monroy = User(
+            email="pmonroy@paz.mx",
+            hashed_password=hash_password("demo2026!"),
+            full_name="Pepe Monroy",
+            role=Role.VIEWER,
+            is_active=True,
+            org_id=org_mc.id,
+            dirigente_id=monroy.id,
+        )
+        user_martinez = User(
+            email="martinez@crece.mx",
+            hashed_password=hash_password("demo2026!"),
+            full_name="Felipe Martínez",
+            role=Role.VIEWER,
+            is_active=True,
+            org_id=org_mc.id,
+            dirigente_id=martinez.id,
+        )
+        session.add_all([user_ballesteros, user_monroy, user_martinez])
         await session.flush()
 
         # ── Social Profiles: Piña ─────────────────────────────────
