@@ -180,3 +180,29 @@ CEO proveyó cuenta `Rafael Personal` (`emotional_tables` · `AhTBMXghtRWWD0kye`
 ### B-23-07 · Refrescar scraping rezagados · ✅ CERRADO 2026-04-26
 
 Vía sprint-implement Sprint 1.2 · 156 nuevos posts · `MAX(published_at)=2026-04-25 22:43`. Hero KPI "Actividad Alineada" deja de estar vacío Ballesteros + Piña (TW/IG actualizado).
+
+---
+
+## ~~B-FELIPE-FB-DUP-9~~ · 9 posts FB Felipe con cross-scheme pfbid↔base64 · ✅ CERRADO 2026-05-28
+**Severidad:** menor (no urgente)
+**Detectado:** 2026-05-28 cierre sprint Felipe E2E
+**Estado:** ✅ CERRADO 2026-05-28 noche · CEO autorizó limpieza · SQL DELETE aplicado a 9 numeric_ids (ids 8939-8947, todos `likes=0, engagement_rate=0, reactor_events=0` — confirmado pre-delete que eran los huecos). FB Felipe ahora 85 → **76 posts únicos** (matchea cuenta original radar de Marx). 0 daño colateral (cero comments / reactor_events afectados por la cascada).
+
+Felipe FB quedó con 85 posts en CRECE = 76 únicos por url + 9 cross-scheme (mismo post bajo `platform_post_id=pfbid...` Y `platform_post_id=<base64>`). El adapter `ingest_radar_yt_x_posts.py` dedupea por `platform_post_id` (ON CONFLICT), no por `post_url`.
+
+Causa raíz radar-side: pepe_hybrid emite pfbid, cdp_discover_v1 emite base64 — ambos para el mismo post. Marx (peer v7luclno) propone fix (3): dedup por url en source futuro. Aplicará a próximo dirigente.
+
+**Impacto producto:** inflación 11% en count de posts FB Felipe. Reactors y comments **sí linkean al post correcto** (no se duplica engagement). Análisis ER, FODA y dashboards pueden mostrar 85 en vez de 76 hasta resolverse.
+
+**Decisión CEO aplicada (b):** Marx entregó dedup-list (`.context/felipe-fb-dup9-dedup-list-2026-05-28.json` · 9 pares `{url, base64_id, numeric_id}`). Linda ejecutó DELETE de los `numeric_id`s (eran los huecos sin engagement).
+
+**Verificación post-cleanup:**
+- FB Felipe: 76 posts únicos (Hugo expected = 76 desde inicio) ✅
+- Cero loss de engagement (0 comments / 0 reactor_events afectados) ✅
+- ON DELETE CASCADE no disparó eliminaciones colaterales en social_comments / watched_like_events ✅
+
+**Referencias cruzadas:**
+- D-041 (radar lado Marx) "contrato export radar↔crece" — Marx aplicará fix raíz en próximo dirigente (dedup por url en source)
+- ADR futuro "adapters universales lean flat shape" (cuando shape Hugo se estabilice)
+- dedup-list preservada para evidencia: `.context/felipe-fb-dup9-dedup-list-2026-05-28.json`
+

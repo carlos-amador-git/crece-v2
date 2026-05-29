@@ -59,7 +59,11 @@ async def main(profile_id: int, comments_f: Path, commit: bool) -> int:
     post_map = {r["platform_post_id"]: r["id"] for r in rows}
 
     items = json.load(comments_f.open()).get("comments", [])
-    n_ins = n_orphan = n_nokey = 0
+    # Contadores separados para visibilidad real (fix 2026-05-28):
+    #   n_ingestable: items con post padre + cid resueltos (candidatos a INSERT)
+    #   n_inserted:   INSERTs reales emitidos (solo si --commit y cid presente)
+    #   n_skipped_no_cid: post padre OK pero cid es falsy → SKIP silencioso pre-fix
+    n_ingestable = n_inserted = n_skipped_no_cid = n_orphan = n_nokey = 0
     for it in items:
         # Soporta ambos shapes RADAR: raw-payload (TT) y aplanado (FB con join key).
         pl = it.get("payload", {}) or {}
@@ -79,7 +83,11 @@ async def main(profile_id: int, comments_f: Path, commit: bool) -> int:
         author_raw = (it.get("author_hash") or it.get("author_username") or display
                       or pl.get("author_username") or "")
         ah = ensure_author_hash(author_raw, "RADAR")
-        if commit and cid:
+        if not cid:
+            n_skipped_no_cid += 1
+            continue
+        n_ingestable += 1
+        if commit:
             await conn.execute(
                 """
                 INSERT INTO social_comments
@@ -92,9 +100,13 @@ async def main(profile_id: int, comments_f: Path, commit: bool) -> int:
                 parse_dt(it.get("time_iso") or pl.get("time_iso") or pl.get("create_time_iso")),
                 DATA_SOURCE, display,
             )
-        n_ins += 1
+            n_inserted += 1
     await conn.close()
-    print(f"[comments] ingestables={n_ins} huérfanos(post no en CRECE)={n_orphan} sin_post_id={n_nokey}")
+    print(
+        f"[comments] ingestables={n_ingestable} inserted={n_inserted} "
+        f"sin_cid={n_skipped_no_cid} huérfanos(post no en CRECE)={n_orphan} "
+        f"sin_post_id={n_nokey}"
+    )
     print("[APPLY] OK" if commit else "[DRY-RUN] nada escrito.")
     return 0
 

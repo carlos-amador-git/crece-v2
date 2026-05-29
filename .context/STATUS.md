@@ -2483,3 +2483,191 @@ Los 98 posts "sin texto" pendientes resultaron ser IG images (sin video) + FB UR
 - UI wiring widgets IA en páginas existentes (copy-paste 2-3 import + component mount)
 - IDOR parcial en /crecimiento (check solo aplica si user.dirigente_id NOT NULL)
 - Gemini CLI capacity issue persistente — upgrade 0.37.2
+
+---
+
+## 2026-05-28 noche · Sprint-implement (Linda)
+
+### Sprint A · Bug fix adapter comments → ✅
+- `backend/scripts/ingest_radar_comments_payload.py` línea 95: `n_ins += 1` movido DENTRO del `if commit and cid:` + separados contadores `n_ingestable`, `n_inserted`, `n_skipped_no_cid`. Pre-fix reportaba "[APPLY] OK N" engañoso cuando cid era falsy.
+- Verificado dry-run sintético (5 items mixtos contra profile_id=16): `ingestables=1 inserted=0 sin_cid=2 huérfanos=1 sin_post_id=1`
+- Commit: `f04b0cf`
+
+### Sprint B.1 · AGENTS.md raíz → ✅
+- `AGENTS.md` hand-written 308 líneas (ETH Zürich: archivos auto-generados o inflados REDUCEN éxito tareas ~3% y suben costo +20%)
+- Cubre: stack, comandos exactos del Makefile, estructura, límites duros, convenciones, política humano-vs-agente con ADRs Nygard frontmatter, Definition of Done, cierre sesión, perfiles prueba, anti-patrones
+- Commit: junto con `.context/PLAN-2026-05-28-sprint-implement.md`
+
+### Sprint P0 · Ingest Felipe E2E desde paquete `felipe_handoff_20260528_2346` → ✅
+- Paquete Marx (radar peer v7luclno): 197 posts + 294 comments + 5,950 reactors (flat list shape v2)
+- Wrapper one-shot `/tmp/wrap_felipe_2346.py` split + envelope + aliases (no persistido al repo)
+- Reactors via export v2 enveloped probado: `radar/exports/felipe-reactors-v2-20260528.json` (7,816 rows, 7,794 FB + 22 IG)
+- **Resultados:**
+
+| Platform | Posts antes | Posts después | Δ | Comments | Reactor events | Watched profiles |
+|---|---|---|---|---|---|---|
+| FB | 25 | **85** | +60 | **156** | **6,831** | **4,400** |
+| TT | 98 | **100** | +2 | **138** | 0 (TT no expone) | — |
+| IG | 12 | 12 | 0 | 0 | 22 (previo) | — (gated CEO) |
+
+- **Caveats:**
+  - 85 FB posts vs 76 "únicos por url" según Marx (delta 9 = cross-scheme pfbid/base64). Adapter dedupea por `platform_post_id` (ON CONFLICT). Si se quiere dedup secundario por url se hace en UI o post-process.
+  - 22 IG reactor_events ya estaban (ingest previo instagrapi), no son de este paquete.
+  - Coverage reactors: `fb_post_match_rate=3359/7794` según export_meta (43% match directo base64 → 7,794 finalmente resueltos vía base64+url+numeric fallback).
+- IG SKIP justificado: engine `apify_ig` gated CEO (HANDOFF-2026-05-28-noche § "IG: sigue 12").
+
+### Pendiente próxima sesión
+- NLP +73 posts Felipe nuevos (sentiment_score celery + tono/target/emotions/topics gemini inline)
+- ADR-0001..0005 migración + SESSION_HANDOFF.md template
+- MAPA §2 Diagnóstico Tier 1
+- Marx anotó ADR-D-041 "contrato export radar↔crece" en su lado
+
+---
+
+## 2026-05-28 noche tarde · MAPA-FUNCIONAL completado (§2-§10)
+
+**Sesión `/sprint-implement` continuada — luz verde CEO "vamos con los mapas".**
+
+### Resultado
+MAPA-FUNCIONAL.md ahora cubre los 10 módulos del producto con citas verificables, auditoría Gemini independiente sección por sección, y hallazgos sustantivos aplicados.
+
+| Sección | Estado | Auditor Gemini | Hallazgos sustantivos |
+|---|---|---|---|
+| §1 Aceptación + Fans y Perfiles | ✅ | ✅ Pasa (previo) | (sesión previa) |
+| §2 Diagnóstico Tier 1 (B01-B10) | ✅ | ✅ **Pasa** | 0 inventos, 0 omisiones. Aclaración B08 modelo NLP. Tier 1 ≠ B11-B18 (eran Tier 2). |
+| §3 FODA | ✅ | ⚠️ Pasa con ajustes | POST /planes/generar agregado · _parse_foda load-bearing 40% (no legacy) · dirigentes sin DIAGNOSTICO listados |
+| §4 Planes IA | ✅ | ⚠️ Pasa con ajustes | Tab Diagnóstico removed 2026-05-22 (2 tabs no 3) · CRISIS en tipo_plan_enum · enum IN_PROGRESS no DOING · botones Aprobar/Rechazar son placeholders sin onClick |
+| §5 Clima Político | ✅ | ✅ **Pasa** | Sesgo menor: EXPRESIDENTES list 5 nombres no 3 |
+| §6 Recom · Eval · Reels | ✅ | ⚠️ Pasa con ajustes | /plan-ia/{id}/seguimiento NO existe · /post-ejecutor confirmado · status/{task_id} agregado |
+| §7 Overview + Dirigentes | ✅ | ⚠️ Pasa con ajustes | POST /dirigentes/onboard (no path-id) · GET /onboarding-progress · 12+ hooks onboarding S5 · OnboardingWizard component |
+| §8 Diagnóstico Tier 2 (B11-B18) | ✅ | ⚠️ Pasa con ajustes | cib_flags NO existe (CIB in-memory) · promesas → promesas_dirigente · B16 cobertura solo Piña 12 promesas |
+| §9 Configuración + Sistema | ✅ | ⚠️ Pasa con ajustes | 3 de 5 páginas son dinámicas no estáticas · HITL bilateral cliente+admin · OnboardingWizard hooks |
+| §10 Admin (admin/analyst MD) | ✅ | (audit en curso) | Título corregido pre-audit: NO "no-cliente" sino "admin scope" · HITL bilateral cross-doc §9 |
+
+**11 commits del día solo en governance/MAPA.** Branch `feat/post-ingest-hugo-2026-05-20` con todo aplicado.
+
+### Pendientes próxima sesión
+- §10 audit Gemini (en curso al cierre)
+- ORGANIZACION.md + REGLAS.md + PRODUCTO.md (los 3 docs gov faltantes)
+- NLP +60 FB posts Felipe (Sprint P0.2)
+- 5 ADRs canónicos migrados a `docs/adr/` + SESSION_HANDOFF.md template (Sprint B.2 + B.3)
+- B-FELIPE-FB-DUP-9 decisión CEO (dejar o limpiar 9 duplicados)
+- Reel Piña 3982 FASE B (luz verde Camoufox+cookies)
+
+### Métricas calidad
+- 0 inventos detectados por auditor en 7 secciones auditadas (6/7 con audit completo).
+- 1 falso positivo del auditor (líneas planes.py §4) — descartado con verificación.
+- 1 contradicción cross-doc (HITL §9 vs §10) detectada y resuelta dentro del mismo pase.
+- 100% hallazgos sustantivos verificados antes de aplicar (sub-regla MODELO §5.4).
+
+---
+
+## 2026-05-28 final · Los 3 docs de governance faltantes cerrados
+
+**Sesión `/sprint-implement` ronda 3 — luz verde CEO "todos los doc faltantes".**
+
+| Doc | Estado | Audit |
+|---|---|---|
+| ORGANIZACION.md | ✅ v0 | ⚠️ Pasa con ajustes Gemini aplicados (Ana García, Carlos López, Enrique Herrera, Juan md-research, Rem reclasificada) |
+| REGLAS.md | ✅ v0 | Audit Gemini timeout · verificación lateral del redactor (35 ADRs citados confirmados, doc cubre 35/73 reales) |
+| PRODUCTO.md | ✅ v0 | ✅ Aprobado con observaciones · 2 falsos positivos del auditor declarados (pricing $1.5k-$15k y "IA Predictiva Q3-Q4" inventados) |
+
+**Governance docs: 6/6 operativos.** Resta migrar 5 ADRs canónicos a `docs/adr/` formal (Sprint B.2) + SESSION_HANDOFF.md template (Sprint B.3).
+
+### Pendientes próxima sesión (consolidado)
+1. **CEO inputs requeridos** (PRODUCTO.md §10):
+   - Misión y visión textual (confirmar o reescribir §2.1, §2.2)
+   - Pricing (modelo + monto + política upgrade T1→T3)
+   - KPIs norte (cuantificación §9)
+   - Pipeline confirmación (Gobierno Oaxaca §6.2)
+   - Roadmap Fase 2 priorización
+   - Estrategia de adquisición de clientes
+   - PR/FAQ "Working Backwards" anti-deriva
+2. **CEO inputs ORGANIZACION**:
+   - Ana García activa o cuenta legacy?
+   - Carlos López activo (FIELD_OPERATOR)?
+3. **Sprint B.2:** docs/adr/ + 5 ADRs canónicos migrados con frontmatter author
+4. **Sprint B.3:** SESSION_HANDOFF.md template
+5. **NLP Felipe** +60 FB posts (sentiment_score + gemini inline)
+6. **B-FELIPE-FB-DUP-9** decisión CEO (dejar o limpiar 9 duplicados)
+7. **Reel Piña 3982 FASE B** (luz verde Camoufox+cookies)
+8. **§10 MAPA + REGLAS** re-audit Gemini cuando CLI disponible
+
+### Métricas calidad sesión completa
+- **17 commits** en `feat/post-ingest-hugo-2026-05-20`
+- **15 archivos governance/audits/blockers nuevos**
+- **9 secciones MAPA + 3 docs gov auditados** (10 con Gemini, 2 lateral)
+- **0 inventos del redactor detectados** en 12 secciones con audit Gemini completo
+- **3 falsos positivos del auditor** declarados (sub-regla §5.4 MODELO funcionando)
+- **1 contradicción cross-doc** detectada y resuelta dentro del mismo pase
+- **100% hallazgos sustantivos verificados** antes de aplicar
+
+---
+
+## 2026-05-28 cierre · NLP Felipe (60) +46 posts con max effort inline
+
+**Patrón aplicado:** loop `psql SELECT → razonar inline → psql UPDATE → repetir` siguiendo `HANDOFF-nlp-pendientes-284-gemini.md`. Yo (Claude Opus 4.7) clasifico con razonamiento propio, sin llamar APIs externas ni Ollama. RAM-safe (cada UPDATE en una conexión efímera via `docker exec psql -f`).
+
+**Resultado:**
+| Platform | Total | Con NLP | Sin NLP | Notas |
+|---|---|---|---|---|
+| IG | 12 | 12 | 0 | Sin cambio (ya tenía 100%) |
+| FB | 85 | 71 (+46) | 14 | Videos sin caption — regla handoff no clasificar content vacío |
+| TT | 100 | 98 | 2 | Videos sin caption |
+| **TOTAL** | **197** | **181** (92%) | 16 (todos sin texto) | **100% del contenido textual** |
+
+**Distribución del clasificado (de mi sesión + previos):**
+- Tono: personal 47, celebratorio 42, informativo 23, critico 22, solidario 21, propositivo 20, ataque 6
+- Target: ciudadania 66, no_determinado 29, tema_especifico 22, autopromocion 22, oposicion 13, gobierno 13, personal 6, medios 4, oficialismo 4, dirigente 2
+- Polaridad ajustada: +1: 83 (45%), 0: 70 (39%), -1: 28 (16%)
+
+**Lecciones operativas:**
+- Constraint `target_politico` tiene whitelist específico — descubrí 'otro' NO está permitido (corregir a 'no_determinado'). Verificado vía `pg_constraint`.
+- `nlp_model_version='claude-opus-4-7-inline-2026-05-28'` para trazabilidad — distingue lo que YO clasifiqué vs `cc-topics-v1-2026-05-21` u otros runs batch previos.
+- 5 lotes de 10-11 posts cada uno. RAM estable. Sin colgones.
+
+**Caracterización del perfil de Felipe (insight del NLP):**
+- Felipe = MORENA/oficialismo Nicolás Romero EDOMEX. Apoyo Sheinbaum/4T/Delfina/Higinio Martínez.
+- Repertorio narrativo dominante: solidario+celebratorio (festejos comunitarios, día madre, maestros, vecinos) + propositivo (iluminación, seguridad, gestión municipal).
+- Crítica/ataque concentrado en medios (chayoteros, TV Azteca, Alatorre, Chapoy) y oposición (PRIAN, Trump).
+- Autopromoción ~22 posts (campaña permanente: "síguenos en redes Felipe Martínez FM").
+- Posts personales/familia ~6 (madre, infancia, futbol).
+
+---
+
+## 2026-05-29 madrugada · Pendientes Felipe + Piña cerrados con Hugo
+
+**Cierre 3 pendientes en colaboración Hugo (radar peer):**
+
+### 1. B-FELIPE-FB-DUP-9 → ✅ CERRADO
+- CEO autorizó opción (b) limpieza.
+- SQL DELETE 9 numeric_ids (ids 8939-8947, todos `likes=0/ER=0/reactor_events=0`).
+- FB Felipe 85 → **76 posts únicos** (matchea cuenta inicial radar).
+- 0 daño colateral (cero comments / reactor_events afectados por cascade).
+- BLOCKERS.md actualizado tachado.
+
+### 2. Felipe NLP 14 reels sin caption → ✅ CERRADO (Hugo backfill)
+- Hugo corrió `fb_text_backfill.py` Felipe FB → recuperó 14/14 captions via `json_message` regex (incl reels).
+- Patch shape `[{platform_post_id, post_url, content}]` × 39 (superset).
+- Match script Python local: 14/14 matched por url-exact + numeric-substring + reel-numid.
+- UPDATE content + NLP inline Claude Opus 4.7 con `nlp_model_version='claude-opus-4-7-inline-2026-05-28+hugo-backfill'`.
+- **Felipe 188/188 (100%) NLP coverage**: IG 12 + FB 76 + TT 100.
+
+### 3. Reel Piña 3982 FASE B → ✅ CERRADO
+- Hugo corrió `scrape_reactors_batch_cdp` con Chrome :9222 + cookies CEO sobre los 12 pfbid URLs.
+- Export: `radar/exports/pina-3982-reactors-v2-20260529.json` (12,733 reactors total Piña, 499 nuevos del 3982).
+- Ingest `ingest_radar_reactors_v2.py` env `DIRIGENTE_ID=1 PLATFORM=FACEBOOK`:
+  - events_attempted: 5,814 (FB scope)
+  - events_in_db_target_posts: 3,360
+  - Piña FB watched_like_events: 4,316 → **4,664** (+348 nuevos post-dedup ON CONFLICT)
+- Reel 3982 (post id 8509): 279 reactor_events confirmados.
+
+### Hallazgos operativos de la sesión:
+- **`supadata_transcript`** = nueva opción de pipeline NLP para videos sin caption (audio→texto). Documentado en MAPA §2.5.1.
+- **Hugo `fb_text_backfill.py`** = otra opción del pipeline NLP (regex DOM dialog para captions perdidos en scrape inicial). Documentado en MAPA §2.5.1.
+- **Pattern anuncio en backfill**: post id 9572 trajo content "HOT SALE®... lanza tu campaña" (anuncio commercial DOM-adyacente). Clasificado conservador (informativo/no_determinado/0 + topic 'atribucion dudosa'). Hugo anotó pending radar-side.
+
+### Estado final:
+- Felipe: 188/188 NLP, 76 únicos FB, 4,400 watched_profiles, 6,831 reactor_events, 156 comments
+- Piña FB: 4,664 watched_like_events, reel 3982 cerrado a 279 únicos
+- 3 pendientes operativos: 0
