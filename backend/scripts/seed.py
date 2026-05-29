@@ -198,7 +198,7 @@ async def seed():
             org_id=org_mc.id,
         )
         martinez = Dirigente(
-            full_name="Felipe Martínez",
+            full_name="Felipe de Jesús Martínez Gallegos",
             cargo="[PENDIENTE] actualizar desde admin UI",
             partido="MC",
             estado="Ciudad de México",
@@ -270,7 +270,7 @@ async def seed():
         user_martinez = User(
             email="martinez@crece.mx",
             hashed_password=hash_password("demo2026!"),
-            full_name="Felipe Martínez",
+            full_name="Felipe de Jesús Martínez Gallegos",
             role=Role.VIEWER,
             is_active=True,
             org_id=org_mc.id,
