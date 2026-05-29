@@ -162,6 +162,7 @@ services:
       MINIO_BUCKET: crece-files
       MINIO_SECURE: "false"
       APP_ENV: production
+      CORS_ORIGINS: '["https://crece.mdconsultoria-ti.org","http://localhost:3000"]'
     depends_on:
       crece-db:
         condition: service_healthy
@@ -184,6 +185,7 @@ services:
       DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@crece-db:5432/${POSTGRES_DB:-crece_production}
       REDIS_URL: redis://crece-redis:6379/0
       APP_ENV: production
+      CORS_ORIGINS: '["https://crece.mdconsultoria-ti.org","http://localhost:3000"]'
     depends_on:
       crece-db:
         condition: service_healthy
