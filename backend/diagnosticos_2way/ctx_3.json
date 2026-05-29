@@ -1,0 +1,82 @@
+{
+  "dirigente": {
+    "nombre": "Saymi Adriana Pineda Velasco",
+    "cargo": "Secretaria de Turismo Oaxaca",
+    "partido": "MORENA",
+    "estado": "Oaxaca",
+    "municipio": "Oaxaca de Juárez"
+  },
+  "ipd": {
+    "score": 5.09,
+    "scale": "0-10 (10 = presencia digital óptima)",
+    "platform_scores": {
+      "instagram": 4.74,
+      "facebook": 7.0,
+      "twitter": 3.73,
+      "youtube": 0.09,
+      "tiktok": 9.01
+    },
+    "platform_coverage": "56%",
+    "posting_frequency_per_day": 5.13,
+    "interpretation": "MEDIO"
+  },
+  "social_profiles": [
+    {
+      "platform": "INSTAGRAM",
+      "handle": "@saymipinedavelasco",
+      "followers": 12404,
+      "posts_30d": 35,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.652
+    },
+    {
+      "platform": "FACEBOOK",
+      "handle": "saymipinedavelasco",
+      "followers": 114000,
+      "posts_30d": 62,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.4459
+    },
+    {
+      "platform": "TWITTER",
+      "handle": "@saymipinedav",
+      "followers": 8868,
+      "posts_30d": 24,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.6862
+    },
+    {
+      "platform": "YOUTUBE",
+      "handle": "saymipinedavelasco",
+      "followers": 581,
+      "posts_30d": 0,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": null
+    },
+    {
+      "platform": "TIKTOK",
+      "handle": "@saymipineda",
+      "followers": 20100,
+      "posts_30d": 33,
+      "avg_engagement_30d": 0.5033,
+      "avg_sentiment_30d": 0.5122
+    }
+  ],
+  "sentiment_30d": {
+    "POSITIVE": 33,
+    "NEUTRAL": 17
+  },
+  "top_competitors": [
+    {
+      "nombre": "Santiago Taboada Cortina",
+      "partido": "PAN",
+      "total_followers": 354000
+    },
+    {
+      "nombre": "Martí Batres Guadarrama",
+      "partido": "MORENA",
+      "total_followers": 285000
+    }
+  ],
+  "analysis_date": "2026-05-10T06:09:34.520656+00:00"
+}

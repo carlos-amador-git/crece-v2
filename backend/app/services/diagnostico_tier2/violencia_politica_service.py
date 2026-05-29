@@ -31,6 +31,7 @@ Insufficient:
 """
 from __future__ import annotations
 
+import re
 from collections import Counter
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,6 +51,13 @@ BLOQUE = "B18"
 VENTANA_DIAS = 90
 
 
+def _kw_hits(keywords: list[str], text: str) -> list[str]:
+    """Match con límite de palabra inicial para evitar falsos positivos por
+    substring. Sin esto ``"puta"`` matchea dentro de ``"diputado"``. El ``\\b``
+    inicial sin boundary final preserva stems (``"pendej"`` → ``"pendejo"``)."""
+    return [k for k in keywords if re.search(rf"\b{re.escape(k)}", text)]
+
+
 def _clasificar(content: str) -> tuple[str | None, list[str]]:
     """Return (severity, categorias)."""
     if not content:
@@ -57,9 +65,9 @@ def _clasificar(content: str) -> tuple[str | None, list[str]]:
     t = content.lower()
     categorias: list[str] = []
 
-    amenaza = [k for k in AMENAZAS_KEYWORDS if k in t]
-    vpg = [k for k in VIOLENCIA_GENERO_KEYWORDS if k in t]
-    hate = [k for k in HATE_SPEECH_KEYWORDS if k in t]
+    amenaza = _kw_hits(AMENAZAS_KEYWORDS, t)
+    vpg = _kw_hits(VIOLENCIA_GENERO_KEYWORDS, t)
+    hate = _kw_hits(HATE_SPEECH_KEYWORDS, t)
 
     if amenaza:
         categorias.append("amenaza")

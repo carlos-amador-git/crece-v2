@@ -5,6 +5,8 @@ import type {
   DirigenteDetail,
   DirigenteFilters,
   PaginatedResponse,
+  PesosTargetPolitico,
+  PesosUpdateResponse,
 } from "../types";
 
 export function useDirigentes(
@@ -90,6 +92,18 @@ export function useUpdateDirigente() {
       api.patch<Dirigente>(`/dirigentes/${id}`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["dirigentes"] });
+      queryClient.invalidateQueries({ queryKey: ["dirigente", variables.id] });
+    },
+  });
+}
+
+// D-23-H · Phase B · pesos editables target_politico (PATCH /pesos)
+export function useUpdateDirigentePesos() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pesos }: { id: number | string; pesos: PesosTargetPolitico }) =>
+      api.patch<PesosUpdateResponse>(`/dirigentes/${id}/pesos`, pesos),
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["dirigente", variables.id] });
     },
   });

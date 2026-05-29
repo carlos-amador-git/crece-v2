@@ -1,6 +1,7 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { usePlan } from "@/lib/api/hooks/use-planes";
@@ -16,7 +17,7 @@ const TIPO_LABELS: Record<string, { label: string; color: string; description: s
   DIAGNOSTICO: {
     label: "Diagnostico",
     color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    description: "Analisis completo de presencia digital con FODA, KPIs y recomendaciones.",
+    description: "Analisis completo de presencia digital con FODA, KPIs and recomendaciones.",
   },
   CONSOLIDACION: {
     label: "Consolidacion",
@@ -110,8 +111,27 @@ function PlanMarkdown({ content }: { content: string }) {
 export default function PlanDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const noRedirect = searchParams.get("noRedirect") === "true";
   const id = params.id as string;
   const { data: plan, isLoading, isError } = usePlan(id);
+
+  useEffect(() => {
+    if (noRedirect) return;
+    if (plan) {
+      if (plan.tipo === "CONSOLIDACION") {
+        router.replace(`/dashboard/planes?dirigente=${plan.dirigente_id}&tab=estrategia`);
+      } else if (plan.tipo === "CONTENIDO") {
+        router.replace(`/dashboard/planes?dirigente=${plan.dirigente_id}&tab=contenido`);
+      } else if (plan.tipo === "DIAGNOSTICO") {
+        router.replace(`/dashboard/diagnostico/${plan.dirigente_id}/foda`);
+      } else {
+        router.replace(`/dashboard/planes?dirigente=${plan.dirigente_id}`);
+      }
+    } else if (isError) {
+      router.replace(`/dashboard/planes`);
+    }
+  }, [plan, isError, noRedirect, router]);
 
   if (isLoading) {
     return (

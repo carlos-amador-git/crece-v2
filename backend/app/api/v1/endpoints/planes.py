@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.core.security import Role, RoleChecker, get_current_user
 from app.models.dirigente import Dirigente
 from app.models.plan_ia import EstadoTarea, PlanIA, PlanTarea, TipoPlan
@@ -28,22 +29,61 @@ from app.services.plan_structured import generate_structured_plan, record_task_c
 router = APIRouter()
 
 
+# ── 2026-04-25 audit IA H-01 · org_id scoping helpers ────────────────
+
+
+async def _get_dirigente_with_org_check(
+    db: AsyncSession, dirigente_id: int, current_user: User
+) -> Dirigente:
+    """Fetch dirigente · verifica que pertenezca al org del caller (admin bypass)."""
+    result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
+    dirigente = result.scalar_one_or_none()
+    if dirigente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+    if current_user.role != Role.ADMIN.value and dirigente.org_id != current_user.org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Dirigente fuera de tu organización",
+        )
+    return dirigente
+
+
+async def _get_plan_with_org_check(
+    db: AsyncSession, plan_id: int, current_user: User
+) -> PlanIA:
+    """Fetch plan + verifica que el dirigente asociado pertenezca al org del caller."""
+    result = await db.execute(
+        select(PlanIA, Dirigente)
+        .join(Dirigente, PlanIA.dirigente_id == Dirigente.id)
+        .where(PlanIA.id == plan_id)
+    )
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
+    plan, dirigente = row
+    if current_user.role != Role.ADMIN.value and dirigente.org_id != current_user.org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Plan fuera de tu organización",
+        )
+    return plan
+
+
 @router.post(
     "/generar",
     response_model=PlanIAResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
 )
+@limiter.limit("5/hour")
 async def generar_plan(
+    request: Request,
     payload: PlanGenerateRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> PlanIA:
     """Generate an AI-powered plan for a dirigente."""
-    result = await db.execute(select(Dirigente).where(Dirigente.id == payload.dirigente_id))
-    dirigente = result.scalar_one_or_none()
-    if dirigente is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+    dirigente = await _get_dirigente_with_org_check(db, payload.dirigente_id, current_user)
 
     if payload.estructurado:
         plan = await generate_structured_plan(
@@ -68,16 +108,15 @@ async def generar_plan(
     "/generar/stream",
     dependencies=[Depends(RoleChecker([Role.ADMIN, Role.ANALYST]))],
 )
+@limiter.limit("5/hour")
 async def generar_plan_stream(
+    request: Request,
     payload: PlanGenerateRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> EventSourceResponse:
     """Generate an AI plan with Server-Sent Events streaming."""
-    result = await db.execute(select(Dirigente).where(Dirigente.id == payload.dirigente_id))
-    dirigente = result.scalar_one_or_none()
-    if dirigente is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
+    dirigente = await _get_dirigente_with_org_check(db, payload.dirigente_id, current_user)
 
     return EventSourceResponse(
         generate_plan_stream(
@@ -104,8 +143,14 @@ async def list_planes(
 
     If the user has a dirigente_id, auto-filter to their dirigente only.
     """
-    query = select(PlanIA)
-    count_query = select(func.count(PlanIA.id))
+    # 2026-04-25 audit IA H-01 · scope cross-tenant via org_id en JOIN
+    query = select(PlanIA).join(Dirigente, PlanIA.dirigente_id == Dirigente.id)
+    count_query = select(func.count(PlanIA.id)).join(
+        Dirigente, PlanIA.dirigente_id == Dirigente.id
+    )
+    if current_user.role != Role.ADMIN.value:
+        query = query.where(Dirigente.org_id == current_user.org_id)
+        count_query = count_query.where(Dirigente.org_id == current_user.org_id)
 
     # Auto-filter for dirigente users
     effective_dirigente_id = dirigente_id
@@ -142,14 +187,10 @@ async def list_planes(
 async def get_plan(
     plan_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> PlanIA:
     """Get a specific plan by ID."""
-    result = await db.execute(select(PlanIA).where(PlanIA.id == plan_id))
-    plan = result.scalar_one_or_none()
-    if plan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
-    return plan
+    return await _get_plan_with_org_check(db, plan_id, current_user)
 
 
 @router.patch(
@@ -161,13 +202,10 @@ async def aprobar_plan(
     plan_id: int,
     payload: PlanApproveRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> PlanIA:
     """Approve or reject a plan. Admin only."""
-    result = await db.execute(select(PlanIA).where(PlanIA.id == plan_id))
-    plan = result.scalar_one_or_none()
-    if plan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
-
+    plan = await _get_plan_with_org_check(db, plan_id, current_user)
     plan.aprobado = payload.aprobado
     await db.flush()
     await db.refresh(plan)
@@ -175,14 +213,6 @@ async def aprobar_plan(
 
 
 # ── Sprint 3: tareas editables de un plan ────────────────────────────
-
-
-async def _get_plan_or_404(db: AsyncSession, plan_id: int) -> PlanIA:
-    result = await db.execute(select(PlanIA).where(PlanIA.id == plan_id))
-    plan = result.scalar_one_or_none()
-    if plan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
-    return plan
 
 
 async def _get_tarea_or_404(db: AsyncSession, plan_id: int, task_id: int) -> PlanTarea:
@@ -199,9 +229,9 @@ async def _get_tarea_or_404(db: AsyncSession, plan_id: int, task_id: int) -> Pla
 async def list_tareas(
     plan_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[PlanTarea]:
-    await _get_plan_or_404(db, plan_id)
+    await _get_plan_with_org_check(db, plan_id, current_user)
     result = await db.execute(
         select(PlanTarea).where(PlanTarea.plan_id == plan_id).order_by(PlanTarea.orden)
     )
@@ -220,6 +250,7 @@ async def update_tarea(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> PlanTarea:
+    await _get_plan_with_org_check(db, plan_id, current_user)
     tarea = await _get_tarea_or_404(db, plan_id, task_id)
 
     updates = payload.model_dump(exclude_unset=True)
@@ -258,6 +289,7 @@ async def complete_tarea(
 ) -> PlanTarea:
     from datetime import UTC, datetime
 
+    await _get_plan_with_org_check(db, plan_id, current_user)
     tarea = await _get_tarea_or_404(db, plan_id, task_id)
     tarea.estado = EstadoTarea.DONE
     tarea.metrica_valor_real = payload.metrica_valor_real
@@ -285,9 +317,9 @@ async def complete_tarea(
 async def get_progreso(
     plan_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> PlanProgresoResponse:
-    await _get_plan_or_404(db, plan_id)
+    await _get_plan_with_org_check(db, plan_id, current_user)
     result = await db.execute(select(PlanTarea).where(PlanTarea.plan_id == plan_id))
     tareas = list(result.scalars().all())
 

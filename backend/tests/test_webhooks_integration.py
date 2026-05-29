@@ -7,7 +7,6 @@ import hmac
 import json
 from unittest.mock import patch
 
-import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,8 +16,6 @@ from app.models.crm_interaccion import CrmInteraccion
 from app.models.electoral import SeccionElectoral
 from app.models.organizacion import Organizacion, TipoOrganizacion
 from app.models.user import User
-from tests.conftest import auth_headers
-
 
 # ---------------------------------------------------------------------------
 # Helpers

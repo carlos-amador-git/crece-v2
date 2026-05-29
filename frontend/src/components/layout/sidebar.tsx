@@ -43,6 +43,12 @@ import {
   Stethoscope,
   Sparkles,
   Rocket,
+  Inbox,
+  Wand2,
+  Trophy,
+  Film,
+  Star,
+  Eye,
 } from "lucide-react";
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -69,6 +75,7 @@ interface Section {
   label: string;
   adminOnly?: boolean;
   clientOnly?: boolean;
+  viewerHide?: boolean;
   items: SidebarItem[];
 }
 
@@ -95,30 +102,56 @@ const sections: Section[] = [
     items: [
       leaf("/dashboard", "Overview", LayoutDashboard),
       leaf("/dashboard/dirigentes", "Dirigentes", Users),
-      leaf("/dashboard/diagnostico/1", "Diagnostico", Stethoscope),
-      leaf("/dashboard/diagnostico-tier2/1", "Diferenciadores", Sparkles),
-      group("social", "Social", MessageSquare, [
-        leaf("/dashboard/social", "Monitoreo", Activity),
-        leaf("/dashboard/social/comentarios", "Comentarios", MessageSquare),
-        leaf("/dashboard/benchmark", "Benchmarks", BarChart3),
+      // D-DIAGNOSTICO-REORG-2026-05-22 · Diagnóstico agrupa 3 sub-items:
+      // Recepción (antes "Diagnostico"), Diferenciadores y FODA. URLs intactas.
+      group("diagnostico-group", "Diagnóstico", Stethoscope, [
+        leaf("/dashboard/diagnostico", "Recepción", Inbox),
+        leaf("/dashboard/diagnostico-tier2", "Diferenciadores", Sparkles),
+        leaf("/dashboard/diagnostico/foda", "FODA", Shield),
       ]),
+      // F4 Content Hub (2026-05-19) · D13.5=A single ítem reemplaza las 4
+      // entradas viejas (Monitoreo, Comentarios, Top Posts, Fans y Perfiles).
+      // Rutas viejas siguen funcionando vía redirects 308 (rollback friendly).
+      leaf("/dashboard/hub", "Contenido", MessageSquare),
+      leaf("/dashboard/social/clima", "Clima Político", Activity),
+      // D-ACEPTACION-DEDUPE-2026-05-20 · grupo reducido de 4 items a 2:
+      // - "Aceptación" (página adaptive según rol+N: perfil para viewer/N=1,
+      //   Battle Card comparativa para admin N>1)
+      // - "Fans y Perfiles" (D-FANS-PERFILES-INDEPENDENT-ROUTE)
+      //
+      // Eliminados: "Por dirigente" (sidebar admin-only que duplicaba grid de
+      // /aceptacion) y "Fantasmas" (duplicaba tabla; breakdown por plataforma
+      // se absorbió en DirigenteDetailContent). Redirects 308 en
+      // next.config.mjs para back-compat de links viejos.
       group("aceptacion", "Indice Aceptacion", Gauge, [
-        leaf("/dashboard/aceptacion", "Overview", LayoutDashboard),
-        leaf("/dashboard/aceptacion/dirigentes", "Por dirigente", UserSquare2),
-        leaf("/dashboard/aceptacion/fantasmas", "Fantasmas", Ghost),
+        leaf("/dashboard/aceptacion", "Aceptación", LayoutDashboard),
+        leaf("/dashboard/aceptacion/fans-y-perfiles", "Fans y Perfiles", Eye),
       ]),
       leaf("/dashboard/planes", "Planes IA", Brain),
-      leaf("/dashboard/recomendaciones", "Recomendaciones", Sparkles),
+      leaf("/dashboard/reels", "Reels (guiones)", Film),
+      leaf("/dashboard/recomendaciones", "Recomendaciones", Wand2),
+      leaf("/dashboard/settings/evaluacion-nlp", "Mi Evaluación", ClipboardList),
+    ],
+  },
+  {
+    label: "Configuración",
+    clientOnly: true,
+    items: [
+      group("configuracion", "Configuración", Settings, [
+        leaf("/dashboard/settings/analisis-politico", "Precisiones de análisis", Sliders, false),
+        leaf("/dashboard/sistema/metodologia", "Metodología", FileText, false),
+      ]),
     ],
   },
   {
     label: "Territorio y campana",
     clientOnly: true,
+    viewerHide: true,
     items: [
       group("territorio", "Territorio y campana", MapPin, [
         leaf("/dashboard/ciudadanos", "Ciudadanos", Users),
         leaf("/dashboard/scoring", "Scoring", BarChart3),
-        leaf("/dashboard/contenido", "Contenido", FileText),
+        leaf("/dashboard/content-factory", "Content Factory", FileText),
         leaf("/dashboard/campanas", "Campanas", Send),
         leaf("/dashboard/canvassing", "Canvassing", MapPin),
         leaf("/dashboard/participacion", "Participacion", Vote),
@@ -129,6 +162,7 @@ const sections: Section[] = [
   {
     label: "Sistema",
     clientOnly: true,
+    viewerHide: true,
     items: [
       group("sistema", "Sistema", Settings, [
         leaf("/dashboard/settings/analisis-politico", "Analisis Politico", Sliders, false),
@@ -143,6 +177,7 @@ const sections: Section[] = [
     adminOnly: true,
     items: [
       leaf("/dashboard/admin/overview", "Operacion de flota", LayoutDashboard, false),
+      leaf("/dashboard/admin/ranking", "Ranking competidores", BarChart3, false),
       leaf("/dashboard/admin/clasificacion", "Clasificacion", ClipboardList, false),
       leaf("/dashboard/admin/plan-ia-review", "Plan IA Review", Brain, false),
       leaf("/dashboard/onboarding/1", "Onboarding", Rocket, false),
@@ -200,15 +235,41 @@ export function Sidebar() {
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
-    // Diagnóstico: highlight para cualquier dirigente id, no solo /1
-    if (href.startsWith("/dashboard/diagnostico/")) {
+    // Diagnóstico: highlight en /dashboard/diagnostico (dispatcher) y /dashboard/diagnostico/{id}
+    // pero NO en /dashboard/diagnostico-tier2/... (mismo prefix).
+    if (href === "/dashboard/diagnostico") {
       return (
-        pathname.startsWith("/dashboard/diagnostico/") &&
-        !pathname.startsWith("/dashboard/diagnostico-tier2/")
+        (pathname === "/dashboard/diagnostico" ||
+          (pathname.startsWith("/dashboard/diagnostico/") &&
+            !pathname.endsWith("/foda") &&
+            !pathname.startsWith("/dashboard/diagnostico/foda"))) &&
+        !pathname.startsWith("/dashboard/diagnostico-tier2")
       );
     }
-    if (href.startsWith("/dashboard/diagnostico-tier2/")) {
-      return pathname.startsWith("/dashboard/diagnostico-tier2/");
+    if (href === "/dashboard/diagnostico/foda") {
+      return (
+        pathname === "/dashboard/diagnostico/foda" ||
+        (pathname.startsWith("/dashboard/diagnostico/") && pathname.endsWith("/foda"))
+      );
+    }
+    if (href === "/dashboard/diagnostico-tier2") {
+      return (
+        pathname === "/dashboard/diagnostico-tier2" ||
+        pathname.startsWith("/dashboard/diagnostico-tier2/")
+      );
+    }
+    // Aceptación (href = /dashboard/aceptacion) NO debe activarse cuando el
+    // pathname es una sub-ruta hermana del grupo (e.g. /aceptacion/fans-y-perfiles
+    // tiene su propio item de sidebar). Match estricto + descendientes directos
+    // de detalle (e.g. /aceptacion/3) que no tienen item propio.
+    if (href === "/dashboard/aceptacion") {
+      return (
+        pathname === "/dashboard/aceptacion" ||
+        (pathname.startsWith("/dashboard/aceptacion/") &&
+          !pathname.startsWith("/dashboard/aceptacion/fans-y-perfiles") &&
+          !pathname.startsWith("/dashboard/aceptacion/dirigentes") &&
+          !pathname.startsWith("/dashboard/aceptacion/fantasmas"))
+      );
     }
     return pathname.startsWith(href);
   };
@@ -233,19 +294,20 @@ export function Sidebar() {
           "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           active
-            ? "bg-accent/10 text-accent"
-            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            ? "bg-orange-500/15 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300 font-semibold"
+            : "text-foreground/70 hover:bg-muted/60 hover:text-foreground",
           collapsed && "justify-center px-2",
-          insideGroup && !collapsed && "pl-9",
+          insideGroup && !collapsed && "ml-4 pl-5 border-l border-border/60",
         )}
         style={
           active
-            ? { borderLeft: "3px solid hsl(var(--accent))" }
+            ? { borderLeft: "3px solid rgb(234 88 12)" } // orange-600 marca CRECE
             : { borderLeft: "3px solid transparent" }
         }
         aria-current={active ? "page" : undefined}
+        aria-label={collapsed ? item.label : undefined}
       >
-        <item.icon className="h-4 w-4 shrink-0" />
+        <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
         {!collapsed && <span>{item.label}</span>}
       </Link>
     );
@@ -285,13 +347,13 @@ export function Sidebar() {
                   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                   active
                     ? "bg-accent/10 text-accent"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    : "text-foreground/70 hover:bg-muted/60 hover:text-foreground",
                 )}
                 aria-expanded={expanded}
                 aria-label={`${g.label} — expandir`}
                 style={
                   active
-                    ? { borderLeft: "3px solid hsl(var(--accent))" }
+                    ? { borderLeft: "3px solid rgb(234 88 12)" } // orange-600 marca CRECE
                     : { borderLeft: "3px solid transparent" }
                 }
               >
@@ -320,8 +382,8 @@ export function Sidebar() {
             "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
             active && !expanded
-              ? "text-accent"
-              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+              ? "text-orange-700 dark:text-orange-300 font-semibold"
+              : "text-foreground/70 hover:bg-muted/60 hover:text-foreground",
           )}
           aria-expanded={expanded}
           aria-controls={`sidebar-group-${g.key}`}
@@ -383,15 +445,17 @@ export function Sidebar() {
             {sections
               .filter((section) => {
                 const isAdmin = user?.role === "admin";
+                const isViewer = user?.role === "viewer";
                 if (section.adminOnly) return isAdmin;
                 if (section.clientOnly && isAdmin) return false;
+                if (section.viewerHide && isViewer) return false;
                 return true;
               })
               .map((section) => (
                 <div key={section.label} className="mb-4">
                   {!collapsed && (
-                    <div className="mb-1 flex items-center gap-2 px-4">
-                      <p className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <div className="mb-1.5 flex items-center gap-2 px-4">
+                      <p className="shrink-0 text-[12px] font-semibold uppercase tracking-wider text-foreground/70">
                         {section.label}
                       </p>
                       <Separator className="flex-1" />
@@ -404,8 +468,10 @@ export function Sidebar() {
           </nav>
         </ScrollArea>
 
-        {/* ── User info — bottom ───────────────────────────── */}
-        <div className="border-t px-3 py-3">
+        {/* ── User info — bottom compact (CEO 2026-05-21 polish) ──────
+            Foto + nombre + chip rol · IPD/followers solo en tooltip al hover.
+            Antes ocupaba ~80px verticales con stack de chips · ahora ~48px. */}
+        <div className="border-t px-3 py-2">
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -421,48 +487,41 @@ export function Sidebar() {
               <TooltipContent side="right">
                 <p className="font-medium">{displayName}</p>
                 <p className="text-xs text-muted-foreground">{displayRole}</p>
+                {isDirigente && ipdLabel && <p className="text-xs">IPD {ipdLabel}/10</p>}
+                {isDirigente && audienciaLabel && <p className="text-xs">{audienciaLabel} seguidores</p>}
               </TooltipContent>
             </Tooltip>
           ) : (
-            <div className="flex items-center gap-3">
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
-                aria-hidden="true"
-              >
-                {initials}
-              </span>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-medium leading-tight">
-                  {displayName}
-                </span>
-                <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                  <span className="inline-flex w-fit rounded-sm bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
-                    {displayRole}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex cursor-default items-center gap-2 rounded-md px-1 py-1 hover:bg-muted/40">
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
+                    aria-hidden="true"
+                  >
+                    {initials}
                   </span>
-                  {isDirigente && ipdLabel && (
-                    <span
-                      className="inline-flex w-fit items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums"
-                      title="Indice de Penetracion Digital"
-                    >
-                      IPD {ipdLabel}/10
-                    </span>
-                  )}
-                  {isDirigente && audienciaLabel && (
-                    <span
-                      className="inline-flex w-fit items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums"
-                      title="Total de seguidores"
-                    >
-                      {audienciaLabel}
-                    </span>
-                  )}
+                  <div className="flex min-w-0 flex-1 flex-col leading-tight">
+                    <span className="truncate text-sm font-medium">{displayName}</span>
+                    <span className="text-[10px] text-muted-foreground">{displayRole}</span>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </TooltipTrigger>
+              {isDirigente && (ipdLabel || audienciaLabel) && (
+                <TooltipContent side="top" align="start">
+                  <p className="text-xs font-medium">{displayName}</p>
+                  {ipdLabel && <p className="text-xs text-muted-foreground">IPD: {ipdLabel}/10</p>}
+                  {audienciaLabel && (
+                    <p className="text-xs text-muted-foreground">{audienciaLabel} seguidores</p>
+                  )}
+                </TooltipContent>
+              )}
+            </Tooltip>
           )}
         </div>
 
-        {/* ── Collapse toggle — desktop only ───────────────── */}
-        <div className="hidden border-t p-2 lg:block">
+        {/* ── Collapse toggle — desktop only · sticky abajo siempre visible ── */}
+        <div className="hidden shrink-0 border-t p-1.5 lg:block">
           <Button
             variant="ghost"
             size="sm"

@@ -7,8 +7,12 @@ import {
   ArrowLeft,
   Eye,
   EyeOff,
-  Target,
+  Megaphone,
+  ScanSearch,
+  ShieldAlert,
   Sparkles,
+  Target,
+  type LucideIcon,
 } from "lucide-react";
 import {
   useDiagnosticoTier2,
@@ -61,7 +65,14 @@ export default function DiagnosticoTier2Page({ params }: Props) {
   const deltaTier1 = computeTier1Delta(tier1, data, filtroActivo);
 
   return (
-    <div className="space-y-6" data-testid="page-diagnostico-tier2">
+    <div
+      className={cn(
+        "space-y-6 transition-colors",
+        filtroActivo && "bg-[hsl(var(--chart-accent))]/[0.03] -mx-4 px-4 -my-4 py-4 rounded-lg",
+      )}
+      data-testid="page-diagnostico-tier2"
+      data-filtro-activo={filtroActivo ? "true" : "false"}
+    >
       {/* ---------- Header ---------- */}
       <header className="flex flex-col gap-3 border-b pb-4">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -243,20 +254,43 @@ export default function DiagnosticoTier2Page({ params }: Props) {
         </div>
       )}
 
-      {/* ---------- Success: 8 cards ---------- */}
+      {/* ---------- Success: 8 cards agrupadas en 3 zonas ---------- */}
       {data && !isLoading && (
-        <div
-          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-          data-testid="cards-grid-tier2"
-        >
-          <CardB11 bloque={data.bloques.B11_cross_partisan} />
-          <CardB12 bloque={data.bloques.B12_cib_detector} />
-          <CardB13 bloque={data.bloques.B13_filtro_realidad} />
-          <CardB14 bloque={data.bloques.B14_topic_drift} />
-          <CardB15 bloque={data.bloques.B15_rage_click} />
-          <CardB16 bloque={data.bloques.B16_promesas} />
-          <CardB17 bloque={data.bloques.B17_veda_compliance} />
-          <CardB18 bloque={data.bloques.B18_violencia_politica} />
+        <div className="space-y-8" data-testid="cards-grid-tier2">
+          <ZonaSection
+            id="autenticidad"
+            icon={ScanSearch}
+            titulo="Autenticidad"
+            pregunta="¿Es real lo que pasa?"
+            descripcion="Detecta amplificación inauténtica y excluye ruido coordinado del cálculo."
+          >
+            <CardB11 bloque={data.bloques.B11_cross_partisan} />
+            <CardB12 bloque={data.bloques.B12_cib_detector} />
+            <CardB13 bloque={data.bloques.B13_filtro_realidad} />
+          </ZonaSection>
+
+          <ZonaSection
+            id="narrativa"
+            icon={Megaphone}
+            titulo="Narrativa"
+            pregunta="¿Estamos comunicando bien?"
+            descripcion="Mide si tu mensaje llega a la audiencia, qué temas dominan y si cumples lo prometido."
+          >
+            <CardB14 bloque={data.bloques.B14_topic_drift} />
+            <CardB15 bloque={data.bloques.B15_rage_click} />
+            <CardB16 bloque={data.bloques.B16_promesas} />
+          </ZonaSection>
+
+          <ZonaSection
+            id="legal-riesgo"
+            icon={ShieldAlert}
+            titulo="Legal / Riesgo"
+            pregunta="¿Estamos seguros?"
+            descripcion="Cumplimiento veda electoral y vigilancia de violencia política en tus canales."
+          >
+            <CardB17 bloque={data.bloques.B17_veda_compliance} />
+            <CardB18 bloque={data.bloques.B18_violencia_politica} />
+          </ZonaSection>
         </div>
       )}
 
@@ -278,6 +312,63 @@ export default function DiagnosticoTier2Page({ params }: Props) {
         </footer>
       )}
     </div>
+  );
+}
+
+// -------------------------------------------------------------------------
+// ZonaSection — agrupa cards Tier 2 por dominio temático (Autenticidad /
+// Narrativa / Legal-Riesgo). Reduce las 8 cards independientes a 3 zonas
+// escaneables visualmente (review CEO 2026-05-13 noche).
+// -------------------------------------------------------------------------
+interface ZonaSectionProps {
+  id: string;
+  icon: LucideIcon;
+  titulo: string;
+  pregunta: string;
+  descripcion: string;
+  children: React.ReactNode;
+}
+
+function ZonaSection({
+  id,
+  icon: Icon,
+  titulo,
+  pregunta,
+  descripcion,
+  children,
+}: ZonaSectionProps) {
+  return (
+    <section
+      id={`zona-${id}`}
+      aria-labelledby={`zona-${id}-titulo`}
+      data-testid={`zona-${id}`}
+    >
+      <header className="mb-3 flex items-start gap-3">
+        <Icon
+          className="mt-0.5 h-5 w-5 shrink-0 text-[hsl(var(--chart-accent))]"
+          aria-hidden
+        />
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h2
+              id={`zona-${id}-titulo`}
+              className="font-heading text-base font-semibold tracking-tight"
+            >
+              {titulo}
+            </h2>
+            <span className="text-xs text-muted-foreground italic">
+              {pregunta}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+            {descripcion}
+          </p>
+        </div>
+      </header>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {children}
+      </div>
+    </section>
   );
 }
 

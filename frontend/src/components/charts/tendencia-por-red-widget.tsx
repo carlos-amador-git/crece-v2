@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   Treemap,
@@ -134,6 +134,61 @@ export function TendenciaPorRedWidget({ series }: Props) {
               nameKey="name"
               stroke="hsl(var(--background))"
               aspectRatio={4 / 3}
+              content={((props: Record<string, unknown>) => {
+                const x = (props.x as number) ?? 0;
+                const y = (props.y as number) ?? 0;
+                const width = (props.width as number) ?? 0;
+                const height = (props.height as number) ?? 0;
+                const name = (props.name as string) ?? "";
+                const fill = (props.fill as string) ?? "hsl(var(--muted))";
+                const followers = (props.size as number) ?? 0;
+                // Fit-text: ajusta tamaño según celda
+                const minSide = Math.min(width, height);
+                const showLabel = minSide >= 36;
+                const showCount = minSide >= 60;
+                const labelSize = Math.min(16, Math.max(11, minSide / 7));
+                const countSize = Math.min(12, Math.max(9, minSide / 11));
+                return (
+                  <g>
+                    <rect
+                      x={x}
+                      y={y}
+                      width={width}
+                      height={height}
+                      fill={fill}
+                      stroke="hsl(var(--background))"
+                      strokeWidth={2}
+                    />
+                    {showLabel && (
+                      <text
+                        x={x + width / 2}
+                        y={y + height / 2 - (showCount ? 8 : 0)}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="#fff"
+                        fontSize={labelSize}
+                        fontWeight={700}
+                        style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.35)", strokeWidth: 2 }}
+                      >
+                        {name}
+                      </text>
+                    )}
+                    {showCount && followers > 0 && (
+                      <text
+                        x={x + width / 2}
+                        y={y + height / 2 + 10}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="rgba(255,255,255,0.92)"
+                        fontSize={countSize}
+                        style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.35)", strokeWidth: 1.5 }}
+                      >
+                        {followers.toLocaleString("es-MX")}
+                      </text>
+                    )}
+                  </g>
+                );
+              }) as unknown as React.ReactElement}
             />
           </ResponsiveContainer>
         ) : kind === "stream" ? (

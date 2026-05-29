@@ -23,11 +23,36 @@ env/
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+
+# Caches locales (pesados, no van al image)
+.cache/
+.local/
+.wdm/
+.pki/
+.config/
+
+# Datos locales y SQLite (NO al image)
+data/raw/
+data/reportes_plan_ia/
+*.db
+*.db-shm
+*.db-wal
+accounts.db
+scweet_state*
+
+# Outputs de evaluación / benchmarks (NO al image)
+evaluations/
+eval/
+benchmarks/
+research/
+test_results/
 
 # Environment
 .env
 .env.local
 .env.*.local
+.env.scraping-keys
 
 # OS
 .DS_Store

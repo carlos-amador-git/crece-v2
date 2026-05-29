@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -23,7 +24,13 @@ _TIKTOKAPI_TIMEOUT = 60  # Seconds for TikTokApi async operations.
 
 
 def _yt_dlp_path() -> str:
-    """Resolve the yt-dlp binary co-located with the current Python interpreter."""
+    """Resolve the yt-dlp binary path. Prefer PATH lookup (multi-stage Docker
+    leaves yt-dlp in /install/bin while python is in /usr/local/bin)."""
+    found = shutil.which("yt-dlp")
+    if found:
+        return found
+    # Fallback al patrón "junto al python interpreter" para entornos donde
+    # yt-dlp no está en PATH pero sí co-instalado con el venv.
     return os.path.join(os.path.dirname(sys.executable), "yt-dlp")
 
 
@@ -190,12 +197,19 @@ class TikTokScraper(BaseScraper):
             videos: list[dict[str, Any]] = []
             try:
                 async with TikTokApi() as api:
-                    await api.create_sessions(
-                        ms_tokens=[ms_token] if ms_token else [],
-                        num_sessions=1,
-                        headless=True,
-                        sleep_after=3,
-                    )
+                    # CHROME_BIN del Dockerfile multi-stage apunta al chromium
+                    # del sistema (/usr/bin/chromium); evita el download del
+                    # bundle de Playwright que el container ya no incluye.
+                    chrome_bin = os.environ.get("CHROME_BIN")
+                    create_kwargs: dict[str, Any] = {
+                        "ms_tokens": [ms_token] if ms_token else [],
+                        "num_sessions": 1,
+                        "headless": True,
+                        "sleep_after": 3,
+                    }
+                    if chrome_bin:
+                        create_kwargs["executable_path"] = chrome_bin
+                    await api.create_sessions(**create_kwargs)
                     user = api.user(handle)
                     async for video in user.videos(count=max_videos):
                         videos.append(video.as_dict)
@@ -235,12 +249,19 @@ class TikTokScraper(BaseScraper):
         async def _fetch() -> dict[str, Any]:
             try:
                 async with TikTokApi() as api:
-                    await api.create_sessions(
-                        ms_tokens=[ms_token] if ms_token else [],
-                        num_sessions=1,
-                        headless=True,
-                        sleep_after=3,
-                    )
+                    # CHROME_BIN del Dockerfile multi-stage apunta al chromium
+                    # del sistema (/usr/bin/chromium); evita el download del
+                    # bundle de Playwright que el container ya no incluye.
+                    chrome_bin = os.environ.get("CHROME_BIN")
+                    create_kwargs: dict[str, Any] = {
+                        "ms_tokens": [ms_token] if ms_token else [],
+                        "num_sessions": 1,
+                        "headless": True,
+                        "sleep_after": 3,
+                    }
+                    if chrome_bin:
+                        create_kwargs["executable_path"] = chrome_bin
+                    await api.create_sessions(**create_kwargs)
                     user = api.user(handle)
                     return await user.info()
             except Exception as exc:

@@ -41,4 +41,11 @@ class User(Base):
 
     # relationships
     organizacion = relationship("Organizacion", lazy="selectin")
-    dirigente = relationship("Dirigente", lazy="selectin")
+    # `foreign_keys` explícito · Phase B agregó `Dirigente.pesos_last_modified_by`
+    # como segundo FK de Dirigente → User. Sin esto SQLAlchemy lanza
+    # AmbiguousForeignKeysError al inicio de la app.
+    dirigente = relationship(
+        "Dirigente",
+        lazy="selectin",
+        foreign_keys="User.dirigente_id",
+    )

@@ -1,0 +1,74 @@
+{
+  "dirigente": {
+    "nombre": "Yesenia Nolasco Ramírez",
+    "cargo": "Secretaria de Movilidad (SEMOVI) Oaxaca",
+    "partido": "MORENA",
+    "estado": "Oaxaca",
+    "municipio": "Oaxaca de Juárez"
+  },
+  "ipd": {
+    "score": 3.57,
+    "scale": "0-10 (10 = presencia digital óptima)",
+    "platform_scores": {
+      "facebook": 4.56,
+      "twitter": 2.63,
+      "tiktok": 0.97,
+      "instagram": 4.12
+    },
+    "platform_coverage": "44%",
+    "posting_frequency_per_day": 2.77,
+    "interpretation": "BAJO"
+  },
+  "social_profiles": [
+    {
+      "platform": "FACEBOOK",
+      "handle": "YesNolasco",
+      "followers": 32000,
+      "posts_30d": 27,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.2607
+    },
+    {
+      "platform": "TWITTER",
+      "handle": "@Yes_Nolasco",
+      "followers": 3754,
+      "posts_30d": 18,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.4722
+    },
+    {
+      "platform": "TIKTOK",
+      "handle": "@yes_nolasco",
+      "followers": 1719,
+      "posts_30d": 6,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": null
+    },
+    {
+      "platform": "INSTAGRAM",
+      "handle": "@yes_nolasco",
+      "followers": 2029,
+      "posts_30d": 32,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.4716
+    }
+  ],
+  "sentiment_30d": {
+    "POSITIVE": 12,
+    "NEGATIVE": 2,
+    "NEUTRAL": 8
+  },
+  "top_competitors": [
+    {
+      "nombre": "Santiago Taboada Cortina",
+      "partido": "PAN",
+      "total_followers": 354000
+    },
+    {
+      "nombre": "Martí Batres Guadarrama",
+      "partido": "MORENA",
+      "total_followers": 285000
+    }
+  ],
+  "analysis_date": "2026-05-10T06:09:34.543643+00:00"
+}

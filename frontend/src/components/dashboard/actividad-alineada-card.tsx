@@ -47,14 +47,28 @@ function colorForScore(pct: number | null | undefined): string {
 export function ActividadAlineadaCard({ data }: ActividadAlineadaCardProps) {
   if (!data || data.empty_state === "no_classified") {
     return (
-      <Card>
+      <Card className="relative overflow-hidden">
+        {/* Shimmer indicador de proceso activo · 2026-05-12 */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-amber-500/20"
+        >
+          <div className="h-full w-1/3 animate-[shimmer_2s_linear_infinite] bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
+        </div>
         <CardContent className="p-4">
           <p className="text-sm text-muted-foreground">Actividad Política Alineada</p>
-          <p className="mt-1 font-heading text-xl font-bold text-muted-foreground">
-            —
-          </p>
-          <p className="mt-1 text-[10px] text-muted-foreground/70">
-            Análisis en proceso · clasificación IA pendiente
+          <div className="mt-1 flex items-baseline gap-2">
+            <p className="font-heading text-xl font-bold text-muted-foreground">—</p>
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+              </span>
+              IA procesando
+            </span>
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted-foreground/80 leading-tight">
+            Clasificación IA en proceso · revisa en 1h
           </p>
         </CardContent>
       </Card>

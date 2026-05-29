@@ -1,0 +1,74 @@
+{
+  "dirigente": {
+    "nombre": "Rafael Solano Pérez",
+    "cargo": "Miembro Comisión Estatal / Analista La Razón",
+    "partido": "MC",
+    "estado": "Ciudad de México",
+    "municipio": "CDMX"
+  },
+  "ipd": {
+    "score": 2.0,
+    "scale": "0-10 (10 = presencia digital óptima)",
+    "platform_scores": {
+      "instagram": 0.44,
+      "twitter": 3.41,
+      "tiktok": 0.02,
+      "facebook": 0.27
+    },
+    "platform_coverage": "44%",
+    "posting_frequency_per_day": 0.9,
+    "interpretation": "CRITICO"
+  },
+  "social_profiles": [
+    {
+      "platform": "INSTAGRAM",
+      "handle": "@rafasolanoperez",
+      "followers": 636,
+      "posts_30d": 3,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": -0.6789
+    },
+    {
+      "platform": "TWITTER",
+      "handle": "@rafasolanoperez",
+      "followers": 7926,
+      "posts_30d": 22,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.0078
+    },
+    {
+      "platform": "TIKTOK",
+      "handle": "@rafasolanoperez",
+      "followers": 168,
+      "posts_30d": 0,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": null
+    },
+    {
+      "platform": "FACEBOOK",
+      "handle": "RafaSolanoPerez",
+      "followers": 0,
+      "posts_30d": 2,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": null
+    }
+  ],
+  "sentiment_30d": {
+    "POSITIVE": 1,
+    "NEGATIVE": 2,
+    "NEUTRAL": 8
+  },
+  "top_competitors": [
+    {
+      "nombre": "Santiago Taboada Cortina",
+      "partido": "PAN",
+      "total_followers": 354000
+    },
+    {
+      "nombre": "Martí Batres Guadarrama",
+      "partido": "MORENA",
+      "total_followers": 285000
+    }
+  ],
+  "analysis_date": "2026-05-10T06:09:34.411872+00:00"
+}

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import Role, hash_password
 from app.models.user import User
 from tests.conftest import auth_headers
-
 
 # ---------------------------------------------------------------------------
 # Login

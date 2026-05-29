@@ -23,16 +23,16 @@ Columna NULLABLE: inserts futuros deben poblarla; el índice parcial excluye NUL
 para no inflar cuando se queda vacía.
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers
 revision: str = "ds03_sc_data_source"
-down_revision: Union[str, None] = "ds02_social_profile_snapshots"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "ds02_social_profile_snapshots"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

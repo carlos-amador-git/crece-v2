@@ -11,8 +11,8 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import text
 
-from app.workers.celery_app import celery_app
 from app.core.database import sync_session_factory
+from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 

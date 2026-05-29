@@ -28,3 +28,25 @@ export function useAceptacionOverview() {
     staleTime: 60_000,
   });
 }
+
+export interface PlatformFantasmaRow {
+  platform: string;
+  followers: number;
+  unique_commenters: number;
+  pct_activados: number;
+  pct_fantasma: number;
+}
+
+export interface DirigentePlatformFantasmas {
+  dirigente_id: number;
+  full_name: string;
+  platforms: PlatformFantasmaRow[];
+}
+
+export function useFantasmasPorPlataforma() {
+  return useQuery({
+    queryKey: ["aceptacion", "fantasmas-plataforma"],
+    queryFn: () => api.get<DirigentePlatformFantasmas[]>("/social/aceptacion/fantasmas-por-plataforma"),
+    staleTime: 60_000,
+  });
+}

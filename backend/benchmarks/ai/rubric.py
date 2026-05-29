@@ -123,7 +123,7 @@ def _score_factual(text: str, context: dict[str, Any]) -> tuple[float, list[str]
 
     NOTE: We extract COMPLETE numeric tokens including decimals (2.5, 0.0272)
     and optional thousand separators. The previous implementation used
-    `\b\d{3,}\b` which split `0.0272` into `0272` and flagged it as an unknown
+    `\b\\d{3,}\b` which split `0.0272` into `0272` and flagged it as an unknown
     number, producing false positives against decimal metrics in the context
     (engagement_rate, sentiment scores). See DECISIONS.md rubric limitations.
     """

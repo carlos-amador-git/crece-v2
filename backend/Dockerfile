@@ -13,19 +13,24 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /build
 
 # Install build dependencies for asyncpg, geoalchemy2, etc.
-RUN apt-get update && \
+# BuildKit cache mount: apt cache vive fuera de la layer, no infla el image.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
         libgeos-dev \
         libproj-dev \
         gdal-bin \
-        libgdal-dev \
-    && rm -rf /var/lib/apt/lists/*
+        libgdal-dev
 
-# Install Python dependencies
+# Install Python dependencies (backend = nlp-light: solo spaCy).
+# torch/transformers/pysentimiento NO se necesitan en el API porque ningún
+# endpoint los toca sincrónicamente — viven en celery-worker.
 COPY pyproject.toml ./
-RUN pip install --prefix=/install .[ml,nlp]
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --prefix=/install .[ml,nlp-light]
 
 # ── Stage 2: Runtime ─────────────────────────────────────────
 FROM python:3.12-slim AS runtime
@@ -38,7 +43,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install runtime libraries + Chromium for scrapers (Facebook, TikTok)
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         libpq5 \
         libgeos-c1v5 \
@@ -52,22 +59,19 @@ RUN apt-get update && \
         libdrm2 \
         libxkbcommon0 \
         libgbm1 \
-        fonts-liberation \
-    && rm -rf /var/lib/apt/lists/*
+        fonts-liberation
 
-# Configure Chromium for headless scraping (no sandbox in container)
+# Configure Chromium for headless scraping (no sandbox in container).
+# Los scrapers usan executable_path=$CHROME_BIN al lanzar Playwright,
+# por eso NO instalamos el chromium propio de Playwright (ahorra ~973MB).
 ENV CHROME_BIN=/usr/bin/chromium \
-    CHROMEDRIVER_PATH=/usr/bin/chromedriver \
-    PLAYWRIGHT_BROWSERS_PATH=/usr/lib/chromium
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 # Copy installed packages from builder
 COPY --from=builder /install /install
 
-# Download spaCy Spanish model
+# Download spaCy Spanish model (necesario para location_inference NER)
 RUN python -m spacy download es_core_news_md
-
-# Install Playwright Chromium (uses system chromium)
-RUN playwright install chromium 2>/dev/null || true
 
 # Create non-root user
 RUN groupadd -r crece && useradd -r -g crece -d /app -s /sbin/nologin crece

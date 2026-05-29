@@ -6,9 +6,8 @@ Run with: python -m scripts.seed_demo_data
 """
 from __future__ import annotations
 
-import os
-
 import asyncio
+import os
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path

@@ -11,7 +11,7 @@ import hashlib
 import os
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -94,9 +94,24 @@ async def ejercer_arco(
             text("DELETE FROM social_comments WHERE author_hash = :ah"),
             {"ah": ah},
         )
+        deleted_count = result.rowcount or 0
+        # S8 audit log · solicitud ARCO cancelación (LFPDPPP art. 32)
+        if deleted_count > 0:
+            from app.core.audit_listeners import log_destructive_op
+            await log_destructive_op(
+                db,
+                action="DELETE",
+                model="social_comments",
+                record_id=None,
+                changes_summary={
+                    "rows_deleted": deleted_count,
+                    "source": "privacy_arco.cancelacion",
+                    "folio_partial": ah[:16],
+                },
+            )
         await db.commit()
         return ARCOCancelResponse(
-            deleted=result.rowcount or 0,
+            deleted=deleted_count,
             message=(
                 "Comentarios eliminados del sistema. "
                 "Las métricas agregadas (ej. IA scores) pueden persistir sin asociación individual. "

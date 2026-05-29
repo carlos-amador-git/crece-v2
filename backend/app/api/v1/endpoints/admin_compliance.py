@@ -28,7 +28,7 @@ Schema purgado (honesto, sin counts simulados):
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import UTC
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -169,6 +169,24 @@ async def purge_by_hash(
     )
     db.add(audit)
     await db.flush()
+
+    # S8 audit log centralizado · trazabilidad cruzada. NO duplicamos el
+    # author_hash (ya vive en compliance_purge_audit para ARCO). Solo
+    # registramos la op y el ID del audit ARCO para vincular.
+    if rows_comments > 0:
+        from app.core.audit_listeners import log_destructive_op
+        await log_destructive_op(
+            db,
+            action="DELETE",
+            model="social_comments",
+            record_id=None,  # bulk delete, no single row
+            changes_summary={
+                "rows_deleted": rows_comments,
+                "source": "admin_compliance.purge_by_hash",
+                "linked_compliance_audit_id": audit.id,
+            },
+        )
+
     await db.commit()
     await db.refresh(audit)
 

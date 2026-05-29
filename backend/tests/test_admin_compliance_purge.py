@@ -21,7 +21,6 @@ from app.models.dirigente import Dirigente
 from app.models.social import Platform, PostType, SocialPost, SocialProfile
 from tests.conftest import auth_headers
 
-
 # `social_comments` no está modelada en SQLAlchemy (drift intencional doc. en
 # migración 402acb98d2d4 + s1m1_sprint_s1_schema). `Base.metadata.create_all()`
 # del conftest NO la crea, así que la creamos aquí por SQL directo — una vez

@@ -1,0 +1,13 @@
+# Local secrets pulled via `vercel env pull` · nunca subir al build
+.env.vercel.pulled
+.env.vercel.pulled.*
+*.vercel.pulled
+*.vercel.pulled.*
+
+# Local-only envs
+.env.local
+
+# Test artifacts
+test-results/
+playwright-report/
+e2e/screenshots/

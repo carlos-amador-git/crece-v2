@@ -84,7 +84,7 @@ def classify(comment: dict) -> dict:
         return {"_err": "timeout"}
     parsed = parse_json_from_response(raw)
     if parsed is None:
-        return {"_err": f"no_json", "_raw": raw[:200]}
+        return {"_err": "no_json", "_raw": raw[:200]}
     return parsed
 
 

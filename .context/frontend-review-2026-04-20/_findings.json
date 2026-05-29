@@ -1,0 +1,177 @@
+[
+  {
+    "category": "01-tier1",
+    "route": "/dashboard/diagnostico/1 overview",
+    "notes": "console_errors=0"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B01",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B02",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B03",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B04",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B05",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B06",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B07",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B08",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B09",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B10",
+    "notes": "card capturada"
+  },
+  {
+    "category": "01-tier1",
+    "route": "B10 drilldown",
+    "notes": "drawer abierto"
+  },
+  {
+    "category": "02-tier2",
+    "route": "/dashboard/diagnostico-tier2/1 overview",
+    "notes": "console_errors=0"
+  },
+  {
+    "category": "02-tier2",
+    "route": "B11",
+    "notes": "card capturada"
+  },
+  {
+    "category": "02-tier2",
+    "route": "B12",
+    "notes": "card capturada"
+  },
+  {
+    "category": "02-tier2",
+    "route": "B13",
+    "notes": "card capturada"
+  },
+  {
+    "category": "02-tier2",
+    "route": "B14",
+    "notes": "card capturada"
+  },
+  {
+    "category": "02-tier2",
+    "route": "B15",
+    "notes": "card capturada"
+  },
+  {
+    "category": "02-tier2",
+    "route": "B16",
+    "notes": "card capturada"
+  },
+  {
+    "category": "02-tier2",
+    "route": "B17",
+    "notes": "card capturada"
+  },
+  {
+    "category": "02-tier2",
+    "route": "B18",
+    "notes": "card capturada"
+  },
+  {
+    "category": "02-tier2",
+    "route": "filtro-realidad-on",
+    "notes": "toggle activado · delta visible"
+  },
+  {
+    "category": "03-plan-ia-cliente",
+    "route": "/dashboard/recomendaciones overview",
+    "notes": "console_errors=0"
+  },
+  {
+    "category": "03-plan-ia-cliente",
+    "route": "tab-Pendientes",
+    "notes": "tab capturada"
+  },
+  {
+    "category": "03-plan-ia-cliente",
+    "route": "tab-Seguimiento",
+    "notes": "tab capturada"
+  },
+  {
+    "category": "03-plan-ia-cliente",
+    "route": "tab-Histórico",
+    "notes": "tab capturada"
+  },
+  {
+    "category": "03-plan-ia-cliente",
+    "route": "tab-Memoria",
+    "notes": "tab no visible"
+  },
+  {
+    "category": "03-plan-ia-cliente",
+    "route": "tab-Reporte",
+    "notes": "tab no visible"
+  },
+  {
+    "category": "05-onboarding",
+    "route": "step1 perfil",
+    "notes": "console_errors=0"
+  },
+  {
+    "category": "05-onboarding",
+    "route": "step2",
+    "notes": "Siguiente DISABLED (validación bloquea) · capturado"
+  },
+  {
+    "category": "06-settings",
+    "route": "/dashboard/settings",
+    "notes": "http=200"
+  },
+  {
+    "category": "06-settings",
+    "route": "/dashboard/config",
+    "notes": "http=404"
+  },
+  {
+    "category": "06-settings",
+    "route": "/dashboard/oauth",
+    "notes": "http=404"
+  },
+  {
+    "category": "06-settings",
+    "route": "/dashboard/admin/settings",
+    "notes": "http=404"
+  },
+  {
+    "category": "04-plan-ia-admin",
+    "route": "/dashboard/admin/plan-ia-review overview",
+    "notes": "console_errors=0"
+  }
+]

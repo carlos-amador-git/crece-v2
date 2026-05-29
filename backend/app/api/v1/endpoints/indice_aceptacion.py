@@ -48,6 +48,31 @@ def _require_tenant_access(user: User, post_org_id: int | None) -> None:
         )
 
 
+def _require_dirigente_access(
+    user: User, post_org_id: int | None, target_dirigente_id: int
+) -> None:
+    """Tenant access + restricción intra-tenant para roles individuales.
+
+    Reglas:
+      - admin/analyst: ven cualquier dirigente de su org (post_org_id).
+      - viewer/field_operator: si tienen user.dirigente_id asignado, solo
+        pueden ver SU dirigente_id. Cualquier otro id de la misma org → 403.
+      - viewer/field_operator sin user.dirigente_id (caso raro): solo
+        tenant access aplica (compatibilidad con cuentas viejas).
+
+    Agregado 2026-05-20 (D-VIEWER-SELF-ACCESS) tras CEO clarificó: viewer
+    solo ve lo suyo, "Por dirigente" como vista era admin-only. Cierra
+    scope leak intra-tenant detectado en sprint AUDIT-SECURITY-RBAC.
+    """
+    _require_tenant_access(user, post_org_id)
+    if user.role in ("viewer", "field_operator") and user.dirigente_id is not None:
+        if target_dirigente_id != user.dirigente_id:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "Sin acceso a otro dirigente de tu organización",
+            )
+
+
 @router.get("/posts/{post_id}/ia", response_model=IAScores)
 async def get_ia_por_post(
     post_id: int,
@@ -56,7 +81,7 @@ async def get_ia_por_post(
 ) -> IAScores:
     post_row = (await db.execute(
         text("""
-            SELECT p.id, p.platform_post_id, p.profile_id, d.org_id
+            SELECT p.id, p.platform_post_id, p.profile_id, d.org_id, sp.dirigente_id
             FROM social_posts p
             JOIN social_profiles sp ON sp.id = p.profile_id
             JOIN dirigentes d ON d.id = sp.dirigente_id
@@ -66,7 +91,7 @@ async def get_ia_por_post(
     )).first()
     if not post_row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Post no existe")
-    _require_tenant_access(current_user, post_row[3])
+    _require_dirigente_access(current_user, post_row[3], post_row[4])
 
     scores_sql = text("""
         SELECT
@@ -169,29 +194,25 @@ async def get_ia_summary_dirigente(
     )).first()
     if not d_row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Dirigente no existe")
-    _require_tenant_access(current_user, d_row[0])
+    _require_dirigente_access(current_user, d_row[0], dirigente_id)
 
+    # KPI agregados: porcentaje sobre TODOS los comments analizados — paridad
+    # con /aceptacion/overview (que también calcula así). El filtro HAVING >= 5
+    # se aplica SOLO a los rankings (top_aprobacion / top_rechazo) para evitar
+    # posts con poca señal en el ranking.
+    # Antes (D-OVERVIEW-IA-SUMMARY-MISMATCH-1, 2026-05-15): se usaba un AVG de
+    # promedios sobre posts con >=5 comments → totales no cuadraban con overview.
     sql = text("""
-        WITH post_scores AS (
-            SELECT
-                p.id AS post_id,
-                p.platform_post_id,
-                substring(p.content, 1, 80) AS snippet,
-                COUNT(c.id) AS total,
-                100.0 * COUNT(c.id) FILTER (WHERE c.nlp_polaridad = 1) / NULLIF(COUNT(c.id), 0) AS aprobacion,
-                100.0 * COUNT(c.id) FILTER (WHERE c.nlp_polaridad = -1) / NULLIF(COUNT(c.id), 0) AS rechazo
-            FROM social_posts p
-            JOIN social_profiles sp ON sp.id = p.profile_id
-            JOIN social_comments c ON c.parent_post_id = p.id AND c.nlp_model_version IS NOT NULL
-            WHERE sp.dirigente_id = :did
-            GROUP BY p.id, p.platform_post_id, p.content
-            HAVING COUNT(c.id) >= 5
-        )
         SELECT
-            COUNT(*) AS posts_con_ia,
-            COALESCE(AVG(aprobacion), 0) AS apr_avg,
-            COALESCE(AVG(rechazo), 0) AS rej_avg
-        FROM post_scores
+            COUNT(DISTINCT p.id) AS posts_con_ia,
+            COALESCE(100.0 * COUNT(c.id) FILTER (WHERE c.nlp_polaridad = 1)
+                     / NULLIF(COUNT(c.id), 0), 0) AS apr_avg,
+            COALESCE(100.0 * COUNT(c.id) FILTER (WHERE c.nlp_polaridad = -1)
+                     / NULLIF(COUNT(c.id), 0), 0) AS rej_avg
+        FROM social_posts p
+        JOIN social_profiles sp ON sp.id = p.profile_id
+        JOIN social_comments c ON c.parent_post_id = p.id AND c.nlp_model_version IS NOT NULL
+        WHERE sp.dirigente_id = :did
     """)
     summary = (await db.execute(sql, {"did": dirigente_id})).first()
 
@@ -269,11 +290,19 @@ async def get_aceptacion_overview(
 ) -> AceptacionOverview:
     """Overview agregado por dirigente: activación, fantasmas y polaridad.
 
-    Admin ve todos; non-admin solo su org.
+    Scope (Option A — paridad con /fantasmas-por-plataforma · 043a4eb):
+      - admin → sin filtro
+      - viewer con dirigente_id → solo SU dirigente
+      - resto (analyst, viewer sin dirigente) → todos los de su org
     """
     org_filter = ""
     params: dict = {}
-    if current_user.role != "admin":
+    if current_user.role == "admin":
+        pass
+    elif current_user.role == "viewer" and current_user.dirigente_id:
+        org_filter = "WHERE d.id = :dirigente_id"
+        params["dirigente_id"] = current_user.dirigente_id
+    else:
         if not current_user.org_id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin org asignada")
         org_filter = "WHERE d.org_id = :org_id"
@@ -340,3 +369,83 @@ async def get_aceptacion_overview(
             "Baseline industria: 1-3% activación saludable. Limitación: solo comments como señal, no likes."
         ),
     )
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Fantasmas-por-plataforma
+# Sister endpoint del overview: misma fórmula activados/fantasmas pero
+# desglosado por (dirigente, plataforma) en vez de agregado por dirigente.
+# Frontend: useFantasmasPorPlataforma()
+# ──────────────────────────────────────────────────────────────────────────
+class _PlatformFantasmaRow(BaseModel):
+    platform: str
+    followers: int
+    unique_commenters: int
+    pct_activados: float
+    pct_fantasma: float
+
+
+class _DirigentePlatformFantasmas(BaseModel):
+    dirigente_id: int
+    full_name: str
+    platforms: list[_PlatformFantasmaRow]
+
+
+@router.get("/aceptacion/fantasmas-por-plataforma", response_model=list[_DirigentePlatformFantasmas])
+async def get_fantasmas_por_plataforma(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[_DirigentePlatformFantasmas]:
+    """Activación/fantasmas por (dirigente, plataforma).
+
+    Mismo cálculo que /aceptacion/overview pero desagregado por plataforma.
+    Permite al UI mostrar dónde el dirigente tiene mejor/peor engagement.
+    """
+    extra_filter = ""
+    params: dict = {}
+    if current_user.role == "admin":
+        pass
+    elif current_user.role == "viewer" and current_user.dirigente_id:
+        extra_filter = "AND d.id = :dirigente_id"
+        params["dirigente_id"] = current_user.dirigente_id
+    else:
+        if not current_user.org_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin org asignada")
+        extra_filter = "AND d.org_id = :org_id"
+        params["org_id"] = current_user.org_id
+
+    sql = text(f"""
+        SELECT d.id, d.full_name, p.platform::text AS platform,
+               p.followers_count AS followers,
+               COUNT(DISTINCT sc.author_hash) AS unique_commenters
+        FROM dirigentes d
+        JOIN social_profiles p ON p.dirigente_id = d.id
+        LEFT JOIN social_posts sp ON sp.profile_id = p.id
+        LEFT JOIN social_comments sc ON sc.parent_post_id = sp.id
+            AND sc.nlp_model_version IS NOT NULL
+        WHERE p.followers_count > 0 {extra_filter}
+        GROUP BY d.id, d.full_name, p.platform, p.followers_count
+        ORDER BY d.id, p.platform
+    """)
+    rows = (await db.execute(sql, params)).fetchall()
+
+    grouped: dict[int, _DirigentePlatformFantasmas] = {}
+    for r in rows:
+        d_id, full_name, platform, followers, unique_commenters = r
+        followers = int(followers or 0)
+        unique_commenters = int(unique_commenters or 0)
+        pct_act = round(100.0 * unique_commenters / followers, 2) if followers > 0 else 0.0
+        pct_fan = round(100.0 - pct_act, 2) if followers > 0 else 0.0
+        if d_id not in grouped:
+            grouped[d_id] = _DirigentePlatformFantasmas(
+                dirigente_id=d_id, full_name=full_name, platforms=[]
+            )
+        grouped[d_id].platforms.append(_PlatformFantasmaRow(
+            platform=platform.lower(),
+            followers=followers,
+            unique_commenters=unique_commenters,
+            pct_activados=pct_act,
+            pct_fantasma=pct_fan,
+        ))
+
+    return list(grouped.values())

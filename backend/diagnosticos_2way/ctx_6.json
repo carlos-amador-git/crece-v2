@@ -1,0 +1,83 @@
+{
+  "dirigente": {
+    "nombre": "César Cravioto Romero",
+    "cargo": "Secretario de Gobierno CDMX",
+    "partido": "MORENA",
+    "estado": "Ciudad de México",
+    "municipio": "CDMX"
+  },
+  "ipd": {
+    "score": 4.85,
+    "scale": "0-10 (10 = presencia digital óptima)",
+    "platform_scores": {
+      "facebook": 5.44,
+      "twitter": 4.73,
+      "youtube": 0.0,
+      "tiktok": 7.22,
+      "instagram": 4.68
+    },
+    "platform_coverage": "56%",
+    "posting_frequency_per_day": 3.7,
+    "interpretation": "BAJO"
+  },
+  "social_profiles": [
+    {
+      "platform": "FACEBOOK",
+      "handle": "craviotocesar",
+      "followers": 48000,
+      "posts_30d": 34,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.2919
+    },
+    {
+      "platform": "TWITTER",
+      "handle": "@craviotocesar",
+      "followers": 67000,
+      "posts_30d": 13,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.3983
+    },
+    {
+      "platform": "YOUTUBE",
+      "handle": "CesarCraviotoR",
+      "followers": 26,
+      "posts_30d": 0,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": null
+    },
+    {
+      "platform": "TIKTOK",
+      "handle": "@cesar_craviotor",
+      "followers": 8860,
+      "posts_30d": 25,
+      "avg_engagement_30d": 0.6112,
+      "avg_sentiment_30d": 0.5967
+    },
+    {
+      "platform": "INSTAGRAM",
+      "handle": "@cesarcravioto",
+      "followers": 11351,
+      "posts_30d": 39,
+      "avg_engagement_30d": 0.0,
+      "avg_sentiment_30d": 0.3717
+    }
+  ],
+  "sentiment_30d": {
+    "POSITIVE": 21,
+    "NEGATIVE": 4,
+    "NEUTRAL": 23
+  },
+  "top_competitors": [
+    {
+      "nombre": "Santiago Taboada Cortina",
+      "partido": "PAN",
+      "total_followers": 354000
+    },
+    {
+      "nombre": "Martí Batres Guadarrama",
+      "partido": "MORENA",
+      "total_followers": 285000
+    }
+  ],
+  "analysis_date": "2026-05-10T06:09:34.643348+00:00"
+}

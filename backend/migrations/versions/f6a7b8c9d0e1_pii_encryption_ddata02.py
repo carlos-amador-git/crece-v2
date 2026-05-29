@@ -1,4 +1,4 @@
-"""D-DATA-02 LFPDPPP — pgcrypto encryption sobre ciudadanos_legacy + data_access_log
+r"""D-DATA-02 LFPDPPP — pgcrypto encryption sobre ciudadanos_legacy + data_access_log
 
 Revision ID: f6a7b8c9d0e1
 Revises: e5f6a7b8c9d0
@@ -31,16 +31,16 @@ env.
 """
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "f6a7b8c9d0e1"
-down_revision: Union[str, None] = "e5f6a7b8c9d0"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "e5f6a7b8c9d0"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

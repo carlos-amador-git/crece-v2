@@ -21,14 +21,39 @@ from app.core.alerting import send_discord_alert_bg
 from app.core.config import settings
 from app.core.database import engine
 from app.core.limiter import limiter
+from app.core.veda import VedaElectoralMiddleware
 
 # Bugsink error tracking (Sentry-compatible DSN)
+# 2026-04-25 audit seguridad C-02 · scrub PII antes de enviar al DSN
+_PII_HEADER_KEYS = {"authorization", "cookie", "x-api-key", "set-cookie"}
+
+
+def _scrub_event(event: dict, _hint: dict) -> dict:
+    # remove auth headers from request context
+    req = event.get("request") or {}
+    headers = req.get("headers") or {}
+    if isinstance(headers, dict):
+        for k in list(headers.keys()):
+            if k.lower() in _PII_HEADER_KEYS:
+                headers[k] = "[redacted]"
+    # truncate any long string in extra/contexts that might leak prompts
+    for section in ("extra", "contexts"):
+        sec = event.get(section) or {}
+        if isinstance(sec, dict):
+            for k, v in sec.items():
+                if isinstance(v, str) and len(v) > 1000:
+                    sec[k] = v[:200] + "...[truncated]"
+    return event
+
+
 if settings.BUGSINK_DSN:
     sentry_sdk.init(
         dsn=settings.BUGSINK_DSN,
         traces_sample_rate=0.1,
         environment=settings.APP_ENV,
         release=settings.APP_VERSION,
+        send_default_pii=False,
+        before_send=_scrub_event,
     )
 
 logging.basicConfig(
@@ -50,6 +75,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Database connection verified")
     except Exception as e:
         logger.error("Database connection failed: %s", e)
+
+    # S8 audit log · registrar event listeners SQLAlchemy (LFPDPPP art. 32)
+    try:
+        from app.core.audit_listeners import init_audit_listeners
+        init_audit_listeners()
+    except Exception as e:
+        logger.exception(f"audit_listeners init failed: {e}")
+
+    # engagement_rate · calcular al insertar/actualizar SocialPost (fix ingest 2026-05-26)
+    try:
+        from app.core.engagement_listeners import init_engagement_listeners
+        init_engagement_listeners()
+    except Exception as e:
+        logger.exception(f"engagement_listeners init failed: {e}")
 
     yield
 
@@ -112,11 +151,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 2026-04-25 audit seguridad C-01 · Veda electoral · enforcement INE
+app.add_middleware(VedaElectoralMiddleware)
+
 
 # ── HTTPS redirect fix for reverse proxies (Cloudflare tunnel) ──
 # FastAPI's trailing-slash redirects use the request's scheme, which is
 # HTTP inside the container. When behind an HTTPS proxy this produces
 # mixed-content redirects (https→http) that Safari blocks.
+# S8 audit log · ContextVar setter para SQLAlchemy event listeners
+# (LFPDPPP art. 32 — trazabilidad de DELETE/UPDATE sobre tablas con PII).
+@app.middleware("http")
+async def set_audit_context(request: Request, call_next):
+    from app.core.audit_context import current_request_path, current_user_id
+
+    # current_user_id se setea idealmente en dependency get_current_user
+    # — esto es el fallback para que request_path siempre quede en context.
+    token_path = current_request_path.set(request.url.path)
+    try:
+        response = await call_next(request)
+    finally:
+        current_request_path.reset(token_path)
+    return response
+
+
 @app.middleware("http")
 async def fix_https_redirects(request: Request, call_next):
     response = await call_next(request)

@@ -180,6 +180,8 @@ class SocialPost(Base):
     )
     emotions: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     is_political: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # spm_media1 · array URLs imágenes/videos · media_urls[0] thumbnail principal
+    media_urls: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     raw_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Sprint S1 T5 — Topic extractor Gemma 3:12b (1-3 topics del seed 12)
     topics_extracted: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
@@ -187,6 +189,12 @@ class SocialPost(Base):
     # target_politico: clasificación 4-cat IA + 'no_determinado' fallback.
     # CHECK en BD: ('oficialismo','oposicion','propio','personal','no_determinado').
     target_politico: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # tono_discurso: clasificación matriz polaridad v2 (cerrada 2026-04-13).
+    # Hoy en BD solo 'positivo'/'neutral' sobre posts del dirigente. La
+    # granularidad 5-cat (celebratorio/solidario/propositivo/critico/personal)
+    # vive en `social_comments.nlp_tono` (audiencia, no posts).
+    # Endpoint /tono-discurso-timeline (2026-05-19) consume este campo.
+    tono_discurso: Mapped[str | None] = mapped_column(String(30), nullable=True)
     nlp_model_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # clasificacion_origen: 'ai_suggested' (default · IA) · 'human_*' reservado Phase B.
     # CHECK en BD: ('ai_suggested','human_dirigente','human_admin','human_consultor').
@@ -200,6 +208,21 @@ class SocialPost(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         nullable=False,
+    )
+    # Sprint S1 Editor HITL — review tracking (migration dse_hitl_audit)
+    last_reviewed_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=False),
+        nullable=True,
+    )
+    review_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        server_default="unreviewed",
+        default="unreviewed",
     )
 
     # Relationships

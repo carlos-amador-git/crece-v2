@@ -156,10 +156,29 @@ async def compute(
     for c in contribs:
         share = c["_peso_bruto"] / suma_pesos
         c["followers_ganados"] = int(round(followers_ganados_total * share))
+        c["contribution_pct"] = round(share * 100.0, 1)
         c["peso_decay"] = c.pop("w_decay")
         c.pop("_peso_bruto")
 
     contribs.sort(key=lambda x: x["followers_ganados"], reverse=True)
+
+    # Adaptador al contrato del frontend (B07Data: delta_followers + top_posts).
+    # delta_followers se emite SOLO cuando hay variación real entre snapshots.
+    # El cron interno snapshot_all_profiles copia el followers_count estático
+    # (fuente real de followers pendiente de RADAR), así que snapshots idénticos
+    # dan delta 0 → no es señal medible → se omite para no mostrar un
+    # "+0 Estancado" falso (D-ANTI-MOCK-1). Cuando RADAR provea el timeseries
+    # real, la variación distinta de 0 enciende la métrica automáticamente.
+    has_real_variation = any(v != 0 for v in deltas_por_plataforma.values())
+    top_posts = [
+        {
+            "post_id": c["post_id"],
+            "platform": c["platform"],
+            "contribution_pct": c["contribution_pct"],
+            "published_at": c["published_at"],
+        }
+        for c in contribs[:20]
+    ]
 
     return build_ok(
         BLOQUE,
@@ -168,7 +187,9 @@ async def compute(
             "half_life_dias": HALF_LIFE_DIAS,
             "followers_ganados_total": followers_ganados_total,
             "deltas_por_plataforma": deltas_por_plataforma,
-            "contribuciones": contribs[:20],  # top 20
+            "contribuciones": contribs[:20],  # top 20 (shape interno)
+            "delta_followers": followers_ganados_total if has_real_variation else None,
+            "top_posts": top_posts if has_real_variation else [],
             "n_posts_evaluados": len(contribs),
             "model_fidelity": "T1_analytical",
             "nota": "Time-decay exponencial half_life=7d sobre engagement × reach público. T3 requiere reach-level attribution via APIs oficiales.",

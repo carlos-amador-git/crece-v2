@@ -106,7 +106,7 @@ def main() -> None:
         "runs": runs,
     }
     OUT.write_text(json.dumps(stats, indent=2, ensure_ascii=False))
-    print(f"\n=== Stats ===")
+    print("\n=== Stats ===")
     print(f"Ping p50: {stats['ping_ms']['median']:.1f}ms")
     print(f"Inference: min={stats['inference_s']['min']:.2f}s  p50={stats['inference_s']['p50']:.2f}s  p95={stats['inference_s']['p95']}s")
     print(f"Tokens/s p50: {stats['tokens_per_s']['p50']:.1f}" if stats['tokens_per_s']['p50'] else "Tokens/s: N/A")

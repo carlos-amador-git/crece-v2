@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { SocialPost } from "@/lib/api/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { PlatformIcon } from "./platform-icon";
@@ -24,15 +27,42 @@ export function PostCard({ post }: PostCardProps) {
   const platformLabel =
     PLATFORM_LABELS[post.platform?.toLowerCase() ?? ""] ??
     (post.platform ? post.platform.charAt(0).toUpperCase() + post.platform.slice(1) : "Red social");
+  const thumbnail = post.media_urls?.[0];
+  const [imgFailed, setImgFailed] = useState(false);
+  const showThumb = Boolean(thumbnail) && !imgFailed;
 
   const cardInner = (
     <CardContent className="p-4">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex flex-col items-center gap-1">
-          <PlatformIcon platform={post.platform} size={20} />
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
-            {platformLabel}
-          </span>
+        {/* Miniatura · spm_media1 · 60×60 con fallback a PlatformIcon · 2026-05-12 */}
+        <div className="relative shrink-0">
+          {showThumb ? (
+            <div className="relative h-[60px] w-[60px] overflow-hidden rounded-md border bg-muted">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={thumbnail}
+                alt=""
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={() => setImgFailed(true)}
+                className="h-full w-full object-cover"
+              />
+              {/* Mini-badge plataforma sobre la miniatura */}
+              <div className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background/90 ring-1 ring-border">
+                <PlatformIcon platform={post.platform} size={10} />
+              </div>
+            </div>
+          ) : (
+            <div
+              className="flex h-[60px] w-[60px] flex-col items-center justify-center gap-1 rounded-md border bg-muted/40"
+              aria-label={platformLabel}
+            >
+              <PlatformIcon platform={post.platform} size={20} />
+              <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground/80">
+                {platformLabel.slice(0, 5)}
+              </span>
+            </div>
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center justify-between gap-2">
@@ -49,6 +79,7 @@ export function PostCard({ post }: PostCardProps) {
             <SentimentBadge
               sentiment={post.sentiment_label}
               score={post.sentiment_score}
+              tonoDiscurso={post.tono_discurso}
             />
           </div>
           <p className="mb-3 line-clamp-3 text-sm text-foreground/90">

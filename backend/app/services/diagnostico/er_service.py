@@ -47,8 +47,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.social import SocialPost, SocialProfile
 from app.services.diagnostico._common import (
-    MATRIZ_ER_5x5,
     ZENODO_VALIDATED_CELLS,
+    MATRIZ_ER_5x5,
     build_dirigente_not_found,
     build_insufficient,
     build_ok,

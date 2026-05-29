@@ -63,11 +63,20 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
             # Run sentiment analysis
             analysis_result = sentiment_service.analyze(post.content or "")
 
+            # Normalize lowercase pysentimiento label to DB enum (POSITIVE/NEGATIVE/NEUTRAL/MIXED)
+            from app.models.social import SentimentLabel
+            def _to_enum(lbl: str) -> SentimentLabel:
+                m = {"positive": SentimentLabel.POSITIVE, "negative": SentimentLabel.NEGATIVE,
+                     "neutral": SentimentLabel.NEUTRAL, "mixed": SentimentLabel.MIXED}
+                return m.get((lbl or "").lower(), SentimentLabel.NEUTRAL)
+
+            label_enum = _to_enum(analysis_result.sentiment_label)
+
             # Convert dataclass to dict for downstream use
             result = {
                 "model": "pysentimiento",
                 "sentiment_score": analysis_result.sentiment_score,
-                "sentiment_label": analysis_result.sentiment_label,
+                "sentiment_label": label_enum.value,
                 "emotions": analysis_result.emotions,
                 "topics": analysis_result.topics,
                 "toxicity_score": analysis_result.toxicity_score,
@@ -78,13 +87,18 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
                 post_id=post_id,
                 model_used="pysentimiento",
                 sentiment_score=analysis_result.sentiment_score,
-                sentiment_label=analysis_result.sentiment_label,
+                sentiment_label=label_enum,
                 emotions=analysis_result.emotions,
                 topics={"topics": analysis_result.topics} if analysis_result.topics else None,
                 is_toxic=analysis_result.is_toxic,
                 toxicity_score=analysis_result.toxicity_score,
             )
             session.add(analysis)
+
+            # Also update the post itself so dashboard queries (Tono, B05, B03) see classification
+            post.sentiment_label = label_enum
+            post.sentiment_score = analysis_result.sentiment_score
+            post.emotions = analysis_result.emotions or None
 
             # Secondary model: sentiment-analysis-spanish (validation)
             secondary_result = sentiment_service.analyze_secondary(post.content or "")
@@ -93,7 +107,7 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
                     post_id=post_id,
                     model_used="sentiment-spanish",
                     sentiment_score=secondary_result.sentiment_score,
-                    sentiment_label=secondary_result.sentiment_label,
+                    sentiment_label=_to_enum(secondary_result.sentiment_label),
                     emotions=None,
                     topics=None,
                     is_toxic=False,
@@ -398,6 +412,56 @@ def scrape_all_profiles() -> dict:
         "snapshots": snapshots,
         "failed": failed,
     }
+
+
+@celery_app.task(name="app.workers.tasks.snapshot_all_profiles")
+def snapshot_all_profiles() -> dict:
+    """Periodic task: persist a snapshot of current followers_count + posts_count.
+
+    Difiere de ``scrape_all_profiles`` en que NO ejecuta scrapers internos. Solo
+    lee el estado actual de ``social_profiles`` (que RADAR/ingest mantienen
+    actualizado) y persiste fila en ``social_profile_snapshots``. Esto garantiza
+    que B07 (Growth Attribution · delta_followers) tenga al menos 2 mediciones
+    en distintas fechas aunque los scrapers internos fallen.
+
+    Schedule: weekly Monday 02:00 MX (D-BEAT-SNAPSHOT-WEEKLY-2026-05-25).
+    """
+    from app.models.social import SocialProfile, SocialProfileSnapshot
+
+    session = _get_sync_session()
+    snapshots = 0
+
+    skipped_orphan = 0
+    try:
+        profiles = session.query(SocialProfile).all()
+        for profile in profiles:
+            org_id = profile.dirigente.org_id if profile.dirigente else None
+            if org_id is None:
+                # Perfiles huérfanos (sin dirigente o dirigente sin org_id, p.ej.
+                # tipo NEWS sin owner) no pueden persistir snapshot por NOT NULL
+                # constraint en social_profile_snapshots.org_id.
+                skipped_orphan += 1
+                continue
+            snapshot = SocialProfileSnapshot(
+                profile_id=profile.id,
+                dirigente_id=profile.dirigente_id,
+                org_id=org_id,
+                platform=profile.platform,
+                followers_count=profile.followers_count,
+                posts_count=profile.posts_count,
+            )
+            session.add(snapshot)
+            snapshots += 1
+        session.commit()
+    finally:
+        session.close()
+
+    logger.info(
+        "snapshot_all_profiles complete: snapshots=%d skipped_orphan=%d",
+        snapshots,
+        skipped_orphan,
+    )
+    return {"status": "ok", "snapshots": snapshots, "skipped_orphan": skipped_orphan}
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -741,8 +805,8 @@ def ingest_rss_feeds() -> dict:
         else:
             session.execute(
                 text(
-                    "INSERT INTO dirigentes (full_name, cargo, partido, estado, sync_status) "
-                    "VALUES ('RSS News Bot', 'Sistema', 'SISTEMA', 'CDMX', 'ready') "
+                    "INSERT INTO dirigentes (full_name, cargo, partido, estado, sync_status, created_at, updated_at) "
+                    "VALUES ('RSS News Bot', 'Sistema', 'SISTEMA', 'CDMX', 'ready', NOW(), NOW()) "
                     "ON CONFLICT DO NOTHING"
                 )
             )
@@ -1024,3 +1088,82 @@ def ollama_prewarm() -> dict:
     }
     logger.info("ollama_prewarm completed: %s", summary)
     return {"status": "ok", "results": summary}
+
+
+# ─── S5 Sprint 2026-05-15 · Scrape mensual competidores ───────────────────
+# Disabled-by-default (no en beat_schedule todavía). CEO decide cuándo
+# activarlo agregando entry en celery_app.conf.beat_schedule.
+#
+# Diseño:
+# - time_limit=600s (10 min) — Apify run promedio 30-90s pero hay
+#   margen para queue + retry interno (Gemini gotcha: Celery default
+#   timeout < Apify run rompe la task antes de capturar resultado).
+# - Cap budget $0.50 por run. Si APIFY_TOKEN no está en env, abort.
+# - Solo competitors con platform=FACEBOOK por ahora (Apify actor
+#   facebook-pages-scraper). Otras plataformas requieren actor distinto.
+
+@celery_app.task(
+    name="app.workers.tasks.scrape_competitors_monthly",
+    bind=True,
+    max_retries=1,
+    time_limit=600,
+    soft_time_limit=540,
+)
+def scrape_competitors_monthly(self, budget_usd: float = 0.50) -> dict:  # type: ignore[no-untyped-def]
+    """S5 · Auto-refresh mensual de competitor_metrics_monthly.
+
+    Llama el script ya existente scripts/scrape_competitors_light_apify.py
+    para TODOS los competitor_profiles activos en platform=FACEBOOK.
+    Diseñado para correr el 1° de cada mes (ver beat_schedule cuando se
+    active explícitamente por CEO).
+
+    Args:
+        budget_usd: cap presupuesto Apify para este run.
+
+    Returns:
+        dict con keys: status, scraped, errors, apify_spent.
+    """
+    import os
+    import subprocess
+
+    if not os.environ.get("APIFY_TOKEN"):
+        logger.warning(
+            "scrape_competitors_monthly: APIFY_TOKEN no configurado · abort"
+        )
+        return {
+            "status": "skipped",
+            "reason": "APIFY_TOKEN not configured",
+            "scraped": 0,
+            "errors": 0,
+        }
+
+    try:
+        # Reutilizamos el script existente (validado en sesión anterior).
+        # subprocess porque el script está pensado para CLI, no como módulo.
+        result = subprocess.run(
+            [
+                "python",
+                "/app/scripts/scrape_competitors_light_apify.py",
+                "--budget",
+                str(budget_usd),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=540,  # < soft_time_limit
+        )
+        out = result.stdout + "\n" + result.stderr
+        logger.info("scrape_competitors_monthly output: %s", out[-500:])
+        return {
+            "status": "ok" if result.returncode == 0 else "failed",
+            "returncode": result.returncode,
+            "log_tail": out[-1000:],
+        }
+    except subprocess.TimeoutExpired:
+        logger.exception(
+            "scrape_competitors_monthly TIMEOUT — Apify run > 540s, "
+            "considera aumentar time_limit o reducir cohorte"
+        )
+        return {"status": "timeout", "scraped": 0}
+    except Exception as exc:
+        logger.exception("scrape_competitors_monthly failed: %s", exc)
+        return {"status": "error", "error": str(exc)}

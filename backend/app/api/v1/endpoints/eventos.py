@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.scope import assert_dirigente_access
 from app.core.security import Role, RoleChecker, get_current_user
 from app.models.evento import EstadoEvento, Evento, EventoAsistente
 from app.models.user import User
@@ -35,7 +36,7 @@ def _build_geometry_wkt(lat: float | None, lon: float | None) -> str | None:
 @router.get("/", response_model=PaginatedResponse[EventoResponse])
 async def list_eventos(
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     estado: EstadoEvento | None = None,
@@ -47,13 +48,18 @@ async def list_eventos(
     query = select(Evento)
     count_query = select(func.count(Evento.id))
 
+    # Multi-tenant scope: viewer users see only their org.
+    if current_user.role != "admin":
+        query = query.where(Evento.org_id == current_user.org_id)
+        count_query = count_query.where(Evento.org_id == current_user.org_id)
+
     if estado is not None:
         query = query.where(Evento.estado == estado)
         count_query = count_query.where(Evento.estado == estado)
     if tipo is not None:
         query = query.where(Evento.tipo == tipo)
         count_query = count_query.where(Evento.tipo == tipo)
-    if org_id is not None:
+    if org_id is not None and current_user.role == "admin":
         query = query.where(Evento.org_id == org_id)
         count_query = count_query.where(Evento.org_id == org_id)
     if search:
@@ -158,11 +164,12 @@ async def stats_roi(
 async def list_eventos_by_dirigente(
     dirigente_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> PaginatedResponse[EventoResponse]:
     """List eventos assigned to a specific dirigente."""
+    await assert_dirigente_access(db, current_user, dirigente_id)
     base_filter = Evento.dirigente_id == dirigente_id
     count_query = select(func.count(Evento.id)).where(base_filter)
     total_result = await db.execute(count_query)

@@ -13,9 +13,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 Rol = Literal["oficialismo", "oposicion", "independiente"]
 Tono = Literal[

@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.dirigente import Dirigente
 from app.models.social import DataSource, Platform, SocialProfile
 
-
 # Regex por plataforma para extracción del handle desde la URL canonizada.
 _HANDLE_PATTERNS: dict[Platform, re.Pattern[str]] = {
     Platform.INSTAGRAM: re.compile(r"instagram\.com/([^/?#]+)", re.IGNORECASE),

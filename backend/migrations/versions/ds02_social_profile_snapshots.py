@@ -18,7 +18,7 @@ RLS policy: un usuario solo ve snapshots de su ``org_id``. Idéntica a la
 política aplicada ya sobre ``social_profiles`` en migration 77bbd5e5f495.
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -34,9 +34,9 @@ platform_enum_ref = postgresql.ENUM(
 
 # revision identifiers
 revision: str = "ds02_social_profile_snapshots"
-down_revision: Union[str, None] = "ds01_data_source_enum"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "ds01_data_source_enum"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

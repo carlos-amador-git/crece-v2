@@ -15,7 +15,7 @@ import os
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import psycopg2
@@ -74,7 +74,7 @@ def ensure_post(conn, profile_id: int, platform_post_id: str) -> int:
     if row:
         cur.close()
         return row[0]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cur.execute(
         """
         INSERT INTO social_posts
@@ -140,7 +140,7 @@ def main():
         if not line: continue
         try:
             ev = json.loads(line)
-        except Exception as e:
+        except Exception:
             print(f'[bad-line] {line[:120]}'); continue
         if ev.get('type') == 'comments':
             new = 0

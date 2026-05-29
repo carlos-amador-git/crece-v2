@@ -18,10 +18,10 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.models.organizacion import Organizacion
-from app.models.user import User, Role
 from app.models.dirigente import Dirigente
-from app.models.social import SocialProfile, Platform
+from app.models.organizacion import Organizacion
+from app.models.social import Platform, SocialProfile
+from app.models.user import Role, User
 
 
 async def seed_multitenant():

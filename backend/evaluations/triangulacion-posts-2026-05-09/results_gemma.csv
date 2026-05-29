@@ -1,0 +1,61 @@
+post_id,dirigente_id,tono_gemma,target_gemma,sentimiento_gemma,razon_gemma,raw_response
+4505,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+741,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4499,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+744,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4487,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+3726,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+561,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+3736,1,propositivo,dirigente,positivo,expresa confianza y deseo de ofrecer una alternativa,
+3758,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+557,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+3733,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+3742,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+733,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4340,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+3720,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+545,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+3740,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4488,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+3948,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4484,1,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+890,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4515,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+875,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+889,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+918,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+892,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+891,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4523,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+898,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+882,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+903,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+833,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+856,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+878,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+919,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+852,2,celebratorio,ciudadania,positivo,elogia la hospitalidad de los mexicanos,
+868,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+912,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4516,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+883,2,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4459,8,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4427,8,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4204,8,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4242,8,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4385,8,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4395,8,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4452,8,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4243,8,ERROR,ERROR,ERROR,,"HTTP_ERROR (try 1/1): HTTPConnectionPool(host='163.245.208.96', port=11434): Read timed out. (read timeout=180)"
+4227,8,propositivo,movimiento,positivo,Enfatiza el trabajo en equipo y la alegría en el Movimiento Ciudadano.,
+4255,8,ataque,dirigente,negativo,Exige juicio politico y critica la omision de Rosario Piedra Ibarra.,
+4888,8,critico,diputados,negativo,Critica a los diputados por tomarse vacaciones y los acusa de falta de compromiso.,
+4228,8,critico,gobierno,negativo,Denuncia la tala de un arbol por la alcaldia.,
+4474,8,propositivo,gobierno,negativo,"Critica la jornada laboral y la falta de descanso, proponiendo cambios.",
+4304,8,critico,gobierno,negativo,Se critica la renuncia a una promesa de campaña sobre el fracking.,
+4305,8,critico,dirigente,negativo,Critica la inacción y falta de rendición de cuentas de la titular de la CDH.,
+4426,8,critico,gobierno,negativo,Denuncia de corrupcion y fallas en las Fiscalias.,
+4301,8,critico,gobierno,negativo,Critica la desviacion de la politica energetica y la continuacion de la inversion en combustibles fosiles.,
+4041,8,propositivo,gobierno,negativo,Critica la falta de descanso y propone una reforma laboral.,
+4225,8,critico,gobierno,negativo,Critica la falta de inversion y el impacto en los usuarios del Metro.,
+4077,8,critico,gobierno,negativo,Niega que la reforma sea producto de la voluntad popular.,

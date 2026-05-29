@@ -88,6 +88,7 @@ make reset-db     # Reset completo
 2. NUNCA crear mocks, stubs, o datos inventados. Si algo no funciona, reportarlo como blocker.
 3. NUNCA reimplementar lo que una librería ya resuelve. Usar la librería, wrapear si es necesario.
 4. Cada pieza de código debe probarse contra datos reales antes de hacer commit.
+5. **Anti-fallback-data en UI (D-ANTI-MOCK-1, 2026-05-11):** si un componente necesita data antes de que el endpoint backend esté listo, NO usar hardcoded fallback con números. En su lugar: `<Skeleton />` o estado vacío explícito. Cero números falsos visibles al usuario. Validado por `frontend/scripts/check-no-mocks.sh` (corre antes de commit y en CI).
 
 ### Antes de escribir código, SIEMPRE preguntarse:
 - ¿Existe una librería pip/npm que ya haga esto? → USARLA.

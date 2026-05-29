@@ -7,11 +7,11 @@ import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
+import { TonoDiscursoChart } from "@/components/charts/tono-discurso-chart";
 import { PostCard } from "@/components/social/post-card";
 import { useKpiOverview, useTopDirigentes, useSystemStatus } from "@/lib/api/hooks/use-overview";
-import { useSentimentTrend, useSocialPosts } from "@/lib/api/hooks/use-social";
-import { formatNumber, formatRelativeTime } from "@/lib/utils";
+import { useSocialPosts, useTonoDiscursoTrend, useTonoDiscursoCoverage } from "@/lib/api/hooks/use-social";
+import { formatNumber, formatRelativeTime, cn } from "@/lib/utils";
 import { CrisisAlertList } from "@/components/alerts/crisis-alert-list";
 import {
   Users,
@@ -25,7 +25,6 @@ import {
   Cpu,
 } from "lucide-react";
 import { FadeUp } from "@/components/motion/fade-up";
-import { CompetitorSnapshotCard } from "@/components/dashboard/competitor-snapshot-card";
 import { rolFromPartido, disclaimerSentimientoCrudo } from "@/lib/politica/rol";
 
 // Electoral map hidden until INE shapefiles are loaded
@@ -46,6 +45,7 @@ const DEFAULT_KPI = {
   posts_change: 0,
   alerts_change: 0,
   total_audiencia: 0,
+  audiencia_change: null as number | null,
   contactos_periodo: 0,
   tema_urgente: null as string | null,
 };
@@ -62,7 +62,10 @@ const kpiCards = [
     title: "Tu Audiencia",
     subtitle: "Personas que te siguen",
     key: "total_audiencia" as const,
-    changeKey: "posts_change" as const, // proxy — no history yet
+    // audiencia_change será null hasta que el backend compute delta real contra
+    // snapshots de followers (TODO en dashboard.py). UI muestra "—" mientras tanto.
+    // NUNCA volver a usar posts_change aquí como proxy.
+    changeKey: "audiencia_change" as const,
     icon: Users,
     format: (v: number) => formatNumber(v),
     isAlerts: false,
@@ -122,6 +125,7 @@ export default function OverviewPage() {
   const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<"today" | "7d" | "30d" | "90d">("30d");
   const [platformFilter, setPlatformFilter] = useState<"" | "twitter" | "instagram" | "facebook" | "tiktok" | "youtube">("");
+  const [recentPlatformFilter, setRecentPlatformFilter] = useState<"" | "twitter" | "instagram" | "facebook" | "tiktok" | "youtube">("");
   const [includeRts, setIncludeRts] = useState(false);
 
   useEffect(() => {
@@ -132,20 +136,31 @@ export default function OverviewPage() {
 
   const { data: kpi, isLoading: kpiLoading } = useKpiOverview(activeFilter);
   const { data: topDirigentes, isLoading: topLoading } = useTopDirigentes(10);
-  const { data: postsData, isLoading: postsLoading } = useSocialPosts({ per_page: 5 });
+  const { data: postsData, isLoading: postsLoading } = useSocialPosts({
+    per_page: 5,
+    platform: recentPlatformFilter || undefined,
+  });
   const { data: systemStatus } = useSystemStatus();
 
   // Use first dirigente's ID for sentiment trend (backend requires dirigente_id)
   const firstDirigenteId = topDirigentes?.[0]?.id;
   const filterDays: Record<typeof activeFilter, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
-  const { data: sentimentData, isLoading: sentimentLoading } = useSentimentTrend(
+  // P1 #1 (2026-05-19): migración a tono_discurso (matriz polaridad v2).
+  // D14 (2026-05-19): useSentimentTrend legacy hook ELIMINADO. Endpoint
+  // backend /social/sentiment-timeline pendiente cleanup confirm 0 consumers.
+  const { data: tonoData, isLoading: tonoLoading } = useTonoDiscursoTrend(
     filterDays[activeFilter],
     firstDirigenteId,
     { platform: platformFilter || undefined, includeRts },
   );
+  const { data: coverageData } = useTonoDiscursoCoverage(
+    firstDirigenteId,
+    filterDays[activeFilter],
+    includeRts,
+  );
 
   const kpiData = kpi ?? DEFAULT_KPI;
-  const trendData = sentimentData ?? [];
+  const tonoTimeline = tonoData ?? [];
   const posts = postsData?.items ?? [];
 
   // Aggregate followers by platform across all visible dirigentes
@@ -305,12 +320,39 @@ export default function OverviewPage() {
                           )}
                         </div>
                       ) : (
-                        <p
-                          className={`tabular-nums font-heading font-bold ${isHero ? "text-3xl" : "text-2xl"}`}
-                          data-numeric="true"
-                        >
-                          {card.format(Number(rawValue))}
-                        </p>
+                        <div className="flex flex-col">
+                          <p
+                            className={`tabular-nums font-heading font-bold ${isHero ? "text-3xl" : "text-2xl"}`}
+                            data-numeric="true"
+                          >
+                            {card.format(Number(rawValue))}
+                          </p>
+                          {card.key === "avg_ipd_score" && (
+                            <span className={cn(
+                              "text-[10px] font-bold uppercase tracking-wider mt-1 px-1.5 py-0.5 rounded border w-fit",
+                              Number(rawValue) > 7 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                              Number(rawValue) > 5 ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                              Number(rawValue) > 3 ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                              "bg-red-500/10 text-red-600 border-red-500/20"
+                            )}>
+                              {Number(rawValue) > 7 ? "Sobresaliente" :
+                               Number(rawValue) > 5 ? "Saludable" :
+                               Number(rawValue) > 3 ? "Mejorable" : "Crítico"}
+                            </span>
+                          )}
+                          {card.key === "total_audiencia" && hasChange && (
+                             <span className={cn(
+                              "text-[10px] font-bold uppercase tracking-wider mt-1 px-1.5 py-0.5 rounded border w-fit",
+                              (change as number) > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                              (change as number) === 0 ? "bg-muted text-muted-foreground border-border" :
+                              "bg-red-500/10 text-red-600 border-red-500/20"
+                            )}>
+                              {(change as number) > 5 ? "Creciendo Fuerte" :
+                               (change as number) > 0 ? "En Crecimiento" :
+                               (change as number) === 0 ? "Estable" : "En Descenso"}
+                            </span>
+                          )}
+                        </div>
                       )}
                       {!isTemaCard && (
                         hasChange ? (
@@ -450,21 +492,38 @@ export default function OverviewPage() {
             ) : (
               <div className="space-y-3">
                 {platformData.map((p) => {
+                  const isPending = p.value === 0;
                   const max = platformData[0]?.value || 1;
                   const pct = Math.max((p.value / max) * 100, 4);
                   return (
-                    <div key={p.name} className="space-y-1">
+                    <div key={p.name} className={`space-y-1 ${isPending ? "opacity-60" : ""}`}>
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-medium">{p.name}</span>
-                        <span className="tabular-nums text-muted-foreground" data-numeric="true">
-                          {formatNumber(p.value)}
-                        </span>
+                        {isPending ? (
+                          <span
+                            className="text-xs italic text-muted-foreground"
+                            title="Perfil existe pero el scraper de métricas no ha corrido"
+                          >
+                            Sin datos · sync pendiente
+                          </span>
+                        ) : (
+                          <span className="tabular-nums text-muted-foreground" data-numeric="true">
+                            {formatNumber(p.value)}
+                          </span>
+                        )}
                       </div>
                       <div className="h-2.5 w-full rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, backgroundColor: p.fill }}
-                        />
+                        {isPending ? (
+                          <div
+                            className="h-full rounded-full border border-dashed"
+                            style={{ width: "100%", borderColor: p.fill }}
+                          />
+                        ) : (
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, backgroundColor: p.fill }}
+                          />
+                        )}
                       </div>
                     </div>
                   );
@@ -488,8 +547,24 @@ export default function OverviewPage() {
             <div>
               <CardTitle>Tono Discursivo</CardTitle>
               <CardDescription>
-                Clasificación del contenido publicado · últimos 30 días{includeRts ? "" : " · sin RTs"} · &gt;20 chars
+                {/* P2 #14 (2026-05-19): "sin RTs" solo aplica a Twitter/X.
+                    Ocultar caveat si plataforma seleccionada es FB/IG/TT/YT. */}
+                Clasificación del contenido publicado · últimos 30 días
+                {!includeRts && (platformFilter === "" || platformFilter === "twitter") && " · sin RTs"}
+                {" "}· &gt;20 chars
               </CardDescription>
+              {coverageData && coverageData.total_posts > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Muestra: <span className="font-semibold tabular-nums">{coverageData.passed_filters}</span> de{" "}
+                  <span className="font-semibold tabular-nums">{coverageData.total_posts}</span> posts del período
+                  ({coverageData.coverage_pct.toFixed(0)}% clasificados).
+                  {coverageData.coverage_pct < 80 && (
+                    <span className="ml-1 text-amber-600 dark:text-amber-400">
+                      · {coverageData.total_posts - coverageData.classified} pendientes de clasificación
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -525,28 +600,55 @@ export default function OverviewPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {sentimentLoading ? (
-            <Skeleton className="h-[300px] w-full" aria-label="Cargando datos de sentimiento" />
-          ) : trendData.length === 0 ? (
-            <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground" role="status">
-              Sin datos de sentimiento disponibles
+          {tonoLoading ? (
+            <Skeleton className="h-[300px] w-full" aria-label="Cargando datos de tono discursivo" />
+          ) : tonoTimeline.length === 0 ? (
+            /* P1 #1 (2026-05-19): empty state explica matriz polaridad v2.
+               El chart usa tono_discurso (no sentiment_label legacy). */
+            <div
+              className="flex h-[300px] flex-col items-center justify-center gap-2 px-6 text-center"
+              role="status"
+            >
+              <div className="text-3xl">📊</div>
+              <p className="text-sm font-medium text-foreground">
+                Sin posts clasificados con tono_discurso
+              </p>
+              <p className="max-w-md text-xs text-muted-foreground">
+                {coverageData?.total_posts ?? 0} posts en el período.
+                {coverageData && coverageData.classified > 0
+                  ? ` ${coverageData.classified} clasificados pero no superaron filtros de calidad (>20 chars, no RT).`
+                  : " El pipeline NLP de matriz polaridad v2 aún no ha procesado posts en este período."}
+              </p>
             </div>
           ) : (
-            <SentimentLineChart data={trendData} />
+            <TonoDiscursoChart data={tonoTimeline} />
           )}
         </CardContent>
       </Card>
 
-      {/* ── Competitor Snapshot ──────────────────────────────── */}
-      <FadeUp index={0}>
-        <CompetitorSnapshotCard />
-      </FadeUp>
-
       {/* ── Bottom Row: Posts ───────────────────────────────── */}
       <section className="space-y-3" aria-label="Publicaciones recientes">
-          <h2 className="font-heading text-lg font-semibold">
-            Publicaciones Recientes
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-heading text-lg font-semibold">
+              Publicaciones Recientes
+            </h2>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="sr-only">Filtrar por red social</span>
+              <select
+                value={recentPlatformFilter}
+                onChange={(e) => setRecentPlatformFilter(e.target.value as typeof recentPlatformFilter)}
+                className="h-7 rounded-md border border-border bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Red social"
+              >
+                <option value="">Todas las redes</option>
+                <option value="twitter">Twitter/X</option>
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="tiktok">TikTok</option>
+                <option value="youtube">YouTube</option>
+              </select>
+            </label>
+          </div>
           {postsLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-28 w-full rounded-lg" />

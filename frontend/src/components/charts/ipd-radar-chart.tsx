@@ -44,7 +44,16 @@ export function IpdRadarChart({
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
+      {/* margin top/bottom para que la etiqueta "Twitter" (eje superior) no
+          choque con el borde superior del card (Gemini A1.3). outerRadius
+          reducido a 70% para compensar el espacio reservado a las labels. */}
+      <RadarChart
+        cx="50%"
+        cy="50%"
+        outerRadius="70%"
+        data={chartData}
+        margin={{ top: 20, right: 30, bottom: 16, left: 30 }}
+      >
         <PolarGrid stroke="hsl(var(--border))" />
         <PolarAngleAxis
           dataKey="axis"

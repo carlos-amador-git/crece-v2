@@ -12,7 +12,7 @@ Outputs:
 from __future__ import annotations
 
 import json
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 RESEARCH_DIR = Path("/Users/marxchavez/Projects/crece-v2/backend/research/2026-04-19")

@@ -159,7 +159,7 @@ HATE_SPEECH_KEYWORDS = [
 ]
 VIOLENCIA_GENERO_KEYWORDS = [
     "mujerzuela", "zorra", "perra", "vieja loca", "histerica", "histérica",
-    "calla putita", "feminazi", "cualquiera",
+    "calla putita", "feminazi", "una cualquiera",
     "no sirves para esto porque eres mujer", "vete a la cocina",
 ]
 AMENAZAS_KEYWORDS = [

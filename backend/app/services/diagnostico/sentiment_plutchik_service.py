@@ -46,23 +46,36 @@ from app.services.diagnostico._common import (
 
 BLOQUE = "B05"
 VENTANA_DIAS = 90
-PLUTCHIK_6 = ["trust", "anger", "joy", "fear", "sadness", "disgust"]
+# Ekman-7 lo que el NLP (pysentimiento) realmente emite. Antes el código declaraba
+# `PLUTCHIK_6` con `trust` y `anticipation` que el modelo nunca pobla — ratio_trust_anger
+# siempre era 0.0 → señal "Hostilidad" falsa. D-EKMAN-1 (2026-05-12).
+EKMAN_6 = ["joy", "anger", "sadness", "fear", "disgust", "surprise"]
+# alias retro-compat (otros servicios la importan)
+PLUTCHIK_6 = EKMAN_6
 
 UMBRAL_ANGER_ALERTA = 0.30
-UMBRAL_RATIO_TA_MIN = 1.0
+UMBRAL_RATIO_JA_MIN = 1.0
+# alias retro-compat
+UMBRAL_RATIO_TA_MIN = UMBRAL_RATIO_JA_MIN
 
 
 def _normalize_emotions(raw: dict | None) -> dict[str, float]:
-    """Normaliza el dict emotions extrayendo las 6 Plutchik (acepta claves mixtas)."""
+    """Normaliza el dict emotions extrayendo las 6 Ekman (acepta claves mixtas)."""
     if not isinstance(raw, dict):
         return {}
+    
+    # Soporte para nesting legacy Plutchik (Sprint S2 T3)
+    data = raw.get("plutchik_6") if "plutchik_6" in raw else raw
+    if not isinstance(data, dict):
+        return {}
+
     out: dict[str, float] = {}
-    for emo in PLUTCHIK_6:
-        val = raw.get(emo)
+    for emo in EKMAN_6:
+        val = data.get(emo)
         if val is None:
-            val = raw.get(emo.upper())
+            val = data.get(emo.upper())
         if val is None:
-            val = raw.get(emo.capitalize())
+            val = data.get(emo.capitalize())
         if isinstance(val, (int, float)):
             out[emo] = float(val)
     return out
@@ -117,7 +130,7 @@ async def compute(
             ],
         )
 
-    acumulado: dict[str, list[float]] = {e: [] for e in PLUTCHIK_6}
+    acumulado: dict[str, list[float]] = {e: [] for e in EKMAN_6}
     for p in posts:
         ems = _normalize_emotions(p.emotions)
         for k, v in ems.items():
@@ -128,19 +141,29 @@ async def compute(
             acumulado[k].append(v)
 
     emociones_promedio: dict[str, float] = {}
-    for emo in PLUTCHIK_6:
+    total_ekman = 0.0
+    for emo in EKMAN_6:
         values = acumulado[emo]
-        emociones_promedio[emo] = round(sum(values) / len(values), 4) if values else 0.0
+        avg = round(sum(values) / len(values), 4) if values else 0.0
+        emociones_promedio[emo] = avg
+        total_ekman += avg
 
-    trust = emociones_promedio["trust"]
+    # Normalización para visibilidad en Radar: 
+    # El usuario se queja de que solo ve joy/anger. Si others=90%, las ekman son <1%.
+    # Normalizamos el set Ekman-6 para que su distribución interna sea visible.
+    if total_ekman > 0:
+        for emo in EKMAN_6:
+            emociones_promedio[emo] = round(emociones_promedio[emo] / total_ekman, 4)
+
+    joy = emociones_promedio["joy"]
     anger = emociones_promedio["anger"]
-    ratio = round(trust / anger, 3) if anger > 0 else None
+    ratio = round(joy / anger, 3) if anger > 0 else None
 
     warnings: list[str] = []
     if anger >= UMBRAL_ANGER_ALERTA:
         warnings.append(f"anger {anger * 100:.0f}% supera umbral {UMBRAL_ANGER_ALERTA * 100:.0f}%")
-    if ratio is not None and ratio < UMBRAL_RATIO_TA_MIN:
-        warnings.append(f"ratio trust/anger {ratio} < umbral {UMBRAL_RATIO_TA_MIN}")
+    if ratio is not None and ratio < UMBRAL_RATIO_JA_MIN:
+        warnings.append(f"ratio joy/anger {ratio} < umbral {UMBRAL_RATIO_JA_MIN}")
 
     return build_ok(
         BLOQUE,
@@ -148,6 +171,8 @@ async def compute(
             "emociones_promedio": emociones_promedio,
             "n_posts_con_emotions": len(posts),
             "n_comments_con_emotions": len(analyses),
+            "ratio_joy_anger": ratio,
+            # alias retro-compat para frontend viejo durante migración
             "ratio_trust_anger": ratio,
             "warnings": warnings,
             "ventana_dias": VENTANA_DIAS,

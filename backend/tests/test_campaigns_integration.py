@@ -7,19 +7,17 @@ from typing import Any
 from unittest.mock import patch
 from uuid import UUID as UUIDType
 
-import pytest
 from httpx import AsyncClient
 from pydantic import field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.campaign_integration import Campaign
-from app.models.ciudadano import Ciudadano, IntencionVotoCiudadano, RangoEdad, Genero, NivelInteres
+from app.models.ciudadano import Ciudadano, Genero, IntencionVotoCiudadano, NivelInteres, RangoEdad
 from app.models.electoral import SeccionElectoral
 from app.models.organizacion import Organizacion, TipoOrganizacion
 from app.models.user import User
 from app.schemas.integration import CampaignResponse
 from tests.conftest import auth_headers
-
 
 # ---------------------------------------------------------------------------
 # Schema patch helper

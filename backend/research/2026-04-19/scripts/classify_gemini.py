@@ -9,7 +9,7 @@ import re
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 RESEARCH_DIR = Path("/Users/marxchavez/Projects/crece-v2/backend/research/2026-04-19")
@@ -82,7 +82,7 @@ def classify(comment: dict, template: str) -> dict:
         raw = call_gemini(prompt)
     except subprocess.TimeoutExpired:
         return {"_err": "timeout"}
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return {"_err": f"{type(e).__name__}: {e}"}
     parsed = parse_json(raw) or {}
     emocion = (parsed.get("emocion") or "").strip().lower()
@@ -117,7 +117,7 @@ def main() -> None:
             "emocion": cls.get("emocion"),
             "topics": cls.get("topics"),
             "_err": cls.get("_err"),
-            "classified_at": datetime.now(timezone.utc).isoformat(),
+            "classified_at": datetime.now(UTC).isoformat(),
         }
         with OUT_PATH.open("a") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")

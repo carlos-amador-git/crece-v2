@@ -1,71 +1,64 @@
 # HANDOVER-AI — Decisiones extraídas por Sonnet
-## Sesión: 47089 | Compactación: 2026-04-19_09:22:02
+## Sesión: 92665 | Compactación: 2026-05-28_20:26:07
 
-## Session Transcript Extraction — CRECE v2 Arco Estratégico 2026-04-19
+## Extracción estructurada · sesión 2026-05-28
 
 ---
 
 ### 1. ARCHITECTURAL DECISIONS
 
-- **D-15**: Gemma 3:12b local es el provider primario del Plan IA. Claude API actúa solo como Expert Auditor (no como default).
-- **D-16**: Provider LLM unificado — Gemma 3:12b baseline, Claude solo para auditoría experta.
-- **D-17**: Cierre de ciclo Plan IA con 4 parámetros + tabla BD + schema definido.
-- **D-18**: (Documentada en §6; detalle en MASTER v2.3).
-- **§3.6 añadido**: Human-in-the-loop obligatorio en Plan IA (no automatizar sin revisión humana).
-- **Sprint S0 redefinido**: 6 tareas con criterios binarios de aceptación (umbrales Kappa >0.75, F1 >0.72, tópicos 1-3 por comment). T0.3: pass si detecta >60% de 200 comments manuales con <15% falsos positivos (baseline ITESO).
-- **Puerta 1 + Puerta 2** formalizadas como requisito de doble aprobación (Gemini + CEO) antes de avanzar sprints.
-- **ARCO endpoint** (`POST /admin/compliance/purge-hash`) requerido en Sprint S1 para cumplimiento LFPDPPP.
-- **Commit scope B**: docs estratégicos en rama separada (`docs/master-v2-20260419`), independiente del PR #12.
+- **Gobernanza Etapa 1 (no C4/Spec Kit):** Se adoptó AGENTS.md + docs/adr/ + SESSION_HANDOFF como framework de docs. C4 y Spec Kit rechazados explícitamente — Fowler advierte que Spec Kit es excesivo para features incrementales; §1 MAPA ya pasó auditoría con formato actual, refactor invalidaría trabajo verificado. Etapa 3 (C4) queda como "futuro".
+- **Gemini = auditor independiente:** PROMPT-AUDITOR-GEMINI.md + MODELO-TRABAJO-AUDIT.md establecen Gemini como auditor externo por sección MAPA. Arquitectura governance creada en `.context/governance/`.
+- **Wrapper CRECE-side para ingest Felipe:** Shapes del export Hugo no coincidían con los adapters. Decisión: escribir wrapper one-shot en CRECE (no pedirle re-emit a Hugo). IG skip gateado por CEO.
+- **Apify FB descartado:** Para el paquete Felipe, Apify FB fue descartado por CEO. Se usó export directo de Hugo (76 FB + 7,553 rx + comments + TT 100 + IG 12).
 
 ---
 
 ### 2. REJECTED ALTERNATIVES
 
-- **Commit en `feat/eval-benchmark-v1`** (donde estaba PR #12 abierto) — rechazado porque expandiría scope del PR y ataría docs estratégicos hasta cierre del PR.
-- **Auto-ejecutar Sprint S0 sin autorización CEO** — descartado; sesión confirmó que requiere ventana de acompañamiento de 8-10h.
-- **Claude API como provider primario Plan IA** — reemplazado por Gemma 3:12b (Gemini audit #02 y CEO lo formalizaron como D-15/D-16).
+- **C4 + Spec Kit** como framework de gobernanza → rechazado (overhead excesivo para el estado del proyecto).
+- **Pedir re-emit a Hugo** cuando shapes no coincidían → rechazado (responsabilidad CRECE-side, no radar-side).
+- **IG ingest en esta sesión** → skip (gateado por CEO, sin delta esperado).
+- **Explorar adapters vía subagente Explore** → rechazado en favor de consultar directamente a Hugo (que tiene contexto fresco).
+- **Apify FB** para paquete Felipe → rechazado por CEO.
 
 ---
 
-### 3. ASSUMPTIONS MADE (a verificar)
+### 3. ASSUMPTIONS MADE (pendiente verificar)
 
-- **"T1 funciona pleno"** = post-Sprint S1, no estado actual. Nota aclaratoria añadida en §3.1, pero debe validarse en ejecución.
-- **Gemma 3:12b** apto para producción — triangulación 60 comments lo validó, pero escala no probada contra volumen real.
-- **200 comments CIB** como baseline para T0.3 — asumidos correctamente marcados. Si hay ruido en el dataset manual, el umbral 60%/<15% puede dar falsos negativos.
-- **Sprint S0 duración 8-10h** — estimación no validada contra velocidad real de cómputo con Gemma local.
-- **Mac M4 sin SPOF mitigación** — riesgo documentado en §7.1 pero sin plan de contingencia concreto todavía.
+- El merge de PR #56 a `main` (`cb2f422`) se asumió como "ya mergeado" — no verificado en esta sesión.
+- `ingestables=4` pre-fix reportado como "engañoso" — asunción validada con dry-run sintético, pero no con datos de producción completos.
+- Posts FB: dedup "25 ya existen, 60 nuevos" asumido como correcto vía `ON CONFLICT` del adapter.
 
 ---
 
 ### 4. BLOCKERS / OPEN QUESTIONS
 
-- **Sprint S0 arranque bloqueado**: requiere autorización explícita CEO + ventana de acompañamiento (estimado mañana en la mañana).
-- **PRD técnico separado**: §9.6 aclara que MASTER es estratégico; el PRD técnico detallado aún no está redactado (diferido).
-- **Reconciliación series de tiempo T1/T2 → T3** (Gemini #05): añadida nota en §4.4, pero implementación concreta pendiente de Sprint S1.
-- **3 mejoras diferidas Gemini** documentadas en §6.4: no bloqueantes para S0 pero requieren decisión antes de S2.
-- **T0.4 extender a tópicos** (Gemini crítico): T0.4 debe validar extracción 1-3 tópicos además de Plutchik — criterio añadido pero no implementado aún.
+- **B-FELIPE-FB-DUP-9** — 9 pares pfbid↔base64 duplicados en BD. Decisión pendiente CEO: ¿limpieza ahora o deuda menor?
+- **Reel Piña 3982** — 495 rx · url mismatch · Fase B pendiente luz verde CEO.
+- **NLP enrich** — +60 FB posts Felipe sin enriquecer (NLP pendiente).
+- **docs/adr/** — 5 ADRs canónicos pendientes de migrar (Sprint B.2).
+- **SESSION_HANDOFF template** — Sprint B.3 pendiente.
+- **MAPA §2-10** — arrancó §2 al cierre (2 Explore agents despachados), resto pendiente.
+- **Paquete `felipe_handoff_20260528_2133`** — marcado stale; se resolvió con paquete E2E completo posterior, pero el handoff original quedó obsoleto.
 
 ---
 
 ### 5. KEY PEER MESSAGES
 
-- **Gemini Puerta 2 (auditoría MASTER v2.2)**: 9 hallazgos. Críticos: #02 ambigüedad provider LLM, #04 falta endpoint ARCO LFPDPPP, #05 falta reconciliación series de tiempo, #08 falta human-in-the-loop, #09 T0.4 sin criterio de aceptación. Veredicto: **Aprobado con ajustes**.
-- **Gemini Puerta 2 Sprint S0**: 4 críticos + 6 mejoras. Críticos resueltos: umbral T0.3 con Kappa >0.75, T0.4 extender a tópicos, T0.5 Fidelity score. Veredicto: **Aprobar S0 con ajustes específicos**.
-- **Claude.ai (cross-audit MASTER v2.1→v2.2)**: 3 observaciones menores — nota aclaratoria §3.1, distinción MASTER vs PRD en §9.6, formalización D-15 Gemma. Todas aplicadas en v2.2.
+- **Marx (peer radar, `v7luclno`):** Entregó paquete `felipe_handoff_20260528_2133` (inicialmente stale), luego paquete E2E completo (76 FB + 7,553 rx + comments + TT 100 + IG 12). Confirmó que shapes son responsabilidad CRECE-side. Cierre bilateral: "capa audiencia completa de Felipe en un día".
+- **Hugo (peer `v7luclno`, también referenciado como RADAR):** Proveyó comandos exactos para ingest. Confirmó que el adapter de comments es responsabilidad CRECE.
 
 ---
 
-### 6. NEXT STEPS (planned, not yet executed)
+### 6. NEXT STEPS PLANNED BUT NOT YET EXECUTED
 
-1. **Merge PR #18** ✅ ejecutado — main HEAD `42378ec`.
-2. **Autorización CEO + ventana** para arrancar Sprint S0 (estimado mañana AM).
-3. **Ejecución Sprint S0** (6 tareas):
-   - T0.1: Setup entorno Gemma + dataset 200 comments
-   - T0.2: Pipeline NLP Layer 2 baseline
-   - T0.3: Validación Kappa >0.75 vs marcado manual
-   - T0.4: Extracción tópicos 1-3 + validación
-   - T0.5: Fidelity score Plan IA
-   - T0.6: Dashboard admin operativo básico
-4. **Sprint S1** — post-S0: migración recomendaciones, endpoint ARCO LFPDPPP, T1.9 con criterio de cierre explícito.
-5. **PRD técnico separado** — aún no redactado; diferido post-S0.
-6. **Plan de contingencia SPOF Mac M4** — documentar antes de S1.
+| Sprint | Tarea | Estado |
+|--------|-------|--------|
+| B.2 | Migrar 5 ADRs canónicos a `docs/adr/` | ⏸ pending |
+| B.3 | SESSION_HANDOFF template | ⏸ pending |
+| C | MAPA §2 con checklist 7 pasos + Gemini por sección | 🔄 iniciado al cierre |
+| C+ | MAPA §3-10 | ⏸ pending |
+| P4 | 3 docs gobernanza faltantes (PRODUCTO necesita slot CEO) | ⏸ pending |
+| P5 | Reel Piña 3982 Fase B | ⏸ gateado CEO |
+| NLP | Enriquecer +60 FB posts Felipe | ⏸ pending |

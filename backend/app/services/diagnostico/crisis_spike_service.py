@@ -48,8 +48,14 @@ from app.services.diagnostico._common import (
 )
 
 BLOQUE = "B06"
-VENTANA_ACTIVA_H = 2
-VENTANA_BASELINE_H = 24 * 7  # 168h
+# Ventanas extendidas 2026-05-05 para tolerar gap de scraping del piloto:
+# baseline 30d (en vez de 7d) + activa 24h (en vez de 2h). Mientras la cadencia
+# de scrape no sea diaria, ventanas chicas dan insufficient_data en todos los
+# dirigentes. La heurística (actual > baseline × 3 con ≥2 toxic activos) sigue
+# válida; solo cambia la sensibilidad — más permisiva de spikes diarios sobre
+# baseline mensual. Revertir cuando scrape diario esté operacional.
+VENTANA_ACTIVA_H = 24
+VENTANA_BASELINE_H = 24 * 30  # 720h (30d)
 UMBRAL_TOXIC_SENTIMENT = -0.4
 UMBRAL_ANGER = 0.5
 MULTIPLICADOR_SPIKE = 3.0
@@ -100,7 +106,7 @@ async def compute(
     posts = list(posts_result.scalars().all())
     if not posts:
         return build_insufficient(
-            BLOQUE, missing=[f"0 posts en últimas {VENTANA_BASELINE_H}h (7d)"]
+            BLOQUE, missing=[f"0 posts en últimas {VENTANA_BASELINE_H}h ({VENTANA_BASELINE_H // 24}d)"]
         )
 
     # Analyses por post (para fallback is_toxic)

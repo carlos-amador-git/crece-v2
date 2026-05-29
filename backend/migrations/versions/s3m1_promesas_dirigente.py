@@ -17,9 +17,8 @@ Columnas:
     - evidencia_url (VARCHAR 500, link a fuente de verdad)
     - created_at / updated_at
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 revision = "s3m1_promesas_dirigente"
 down_revision = "s1m1_sprint_s1_schema"

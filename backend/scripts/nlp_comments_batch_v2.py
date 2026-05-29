@@ -25,7 +25,6 @@ from sqlalchemy import text
 from app.core.database import async_session_factory
 from app.nlp.analyzer import NLPAnalyzer
 
-
 TONO_KEYWORDS = {
     "celebratorio": [r"\b(felicid|bravo|excelente|gracias|bien hecho|grande|genial|increíble|aplauso)\b"],
     "critico": [r"\b(pésimo|malo|horrible|decepcionante|fracaso|corrupto|mentira|fraude|chayotero|fracaso)\b"],

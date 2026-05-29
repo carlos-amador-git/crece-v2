@@ -38,7 +38,6 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.dirigente import Dirigente
 from app.models.social import SocialPost, SocialProfile
 from app.services.diagnostico._common import (
     build_dirigente_not_found,

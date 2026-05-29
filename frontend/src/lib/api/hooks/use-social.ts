@@ -3,7 +3,6 @@ import { api } from "../client";
 import type {
   SocialPost,
   SocialFilters,
-  SentimentTrend,
   SentimentDistribution,
   PaginatedResponse,
 } from "../types";
@@ -27,15 +26,32 @@ export function useSocialPosts(filters: SocialFilters = {}) {
   });
 }
 
-export interface SentimentTrendOptions {
+// D14 (2026-05-19) · sentiment legacy hooks removidos · migrado 100% a
+// useTonoDiscursoTrend + useTonoDiscursoCoverage. Endpoint backend
+// /social/sentiment-timeline diferido hasta confirmar 0 consumers externos.
+
+// ──────────────────────────────────────────────────────────────
+// Tono Discursivo · matriz polaridad v2 (2026-05-19)
+// Endpoint paralelo al sentiment legacy. Migración de Overview +
+// Dirigentes/[id] a este hook · sentiment-timeline queda para
+// cleanup en sprint posterior cuando todos consuman este.
+// ──────────────────────────────────────────────────────────────
+
+export interface TonoDiscursoTimelinePoint {
+  date: string;
+  post_count: number;
+  tonos: Record<string, number>;
+}
+
+export interface TonoDiscursoTrendOptions {
   platform?: string;
   includeRts?: boolean;
 }
 
-export function useSentimentTrend(
+export function useTonoDiscursoTrend(
   days: number = 30,
   dirigenteId?: number,
-  options: SentimentTrendOptions = {},
+  options: TonoDiscursoTrendOptions = {},
 ) {
   const params = new URLSearchParams();
   if (dirigenteId) params.set("dirigente_id", String(dirigenteId));
@@ -43,9 +59,36 @@ export function useSentimentTrend(
   if (options.includeRts) params.set("include_rts", "true");
 
   return useQuery({
-    queryKey: ["sentiment-trend", days, dirigenteId, options.platform ?? "", options.includeRts ?? false],
+    queryKey: ["tono-discurso-trend", days, dirigenteId, options.platform ?? "", options.includeRts ?? false],
     queryFn: () =>
-      api.get<SentimentTrend[]>(`/social/sentiment-timeline?${params}`),
+      api.get<TonoDiscursoTimelinePoint[]>(`/social/tono-discurso-timeline?${params}`),
+    enabled: dirigenteId != null,
+  });
+}
+
+export interface TonoDiscursoCoverage {
+  dirigente_id: number;
+  days: number;
+  total_posts: number;
+  classified: number;
+  passed_filters: number;
+  coverage_pct: number;
+  tonos_distribution: Record<string, number>;
+}
+
+export function useTonoDiscursoCoverage(
+  dirigenteId: number | undefined,
+  days: number = 30,
+  includeRts: boolean = false,
+) {
+  const params = new URLSearchParams();
+  if (dirigenteId) params.set("dirigente_id", String(dirigenteId));
+  params.set("days", String(days));
+  if (includeRts) params.set("include_rts", "true");
+
+  return useQuery({
+    queryKey: ["tono-discurso-coverage", dirigenteId, days, includeRts],
+    queryFn: () => api.get<TonoDiscursoCoverage>(`/social/tono-discurso-coverage?${params}`),
     enabled: dirigenteId != null,
   });
 }

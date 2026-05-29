@@ -1,5 +1,1024 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-05-26 noche — D-AUTHOR-HASH-PII · pseudonimización canónica + guard
+
+**Contexto:** 257 filas (242 social_comments + 15 watched_profiles) tenían el NOMBRE REAL en `author_hash` sin hashear (ruta RADAR FB Playwright). PII en texto plano (LFPDPPP) + rompía dedup + falsos "coordinación" en B12.
+
+**Decisión:** `app/services/author_hash.py::ensure_author_hash()` es el guard canónico — si ya es hash lo deja, si es PII cruda hashea `sha256(platform:value:salt)` (salt `COMMENT_AUTHOR_SALT`, mismo esquema que apify_fb_deep). Determinista → mismo nombre = mismo hash en ambas tablas. Backfill aplicó a las 257 filas. Guard agregado en `ingest_radar_comments(_v2)`. NO merge automático con hashes basados en author_id (distinto input) — eso queda como dedup cross-source futuro.
+
+---
+
+## 2026-05-26 noche — D-LISTENERS-WORKER · event listeners en uvicorn Y Celery worker
+
+**Contexto:** los SQLAlchemy event listeners (`audit_listeners`, `engagement_listeners`) solo se registraban en el lifespan de uvicorn. Los scrapers + ops de BD corren en el **Celery worker** (proceso aparte) → engagement_rate no se calculaba y ops destructivas no se auditaban (gap LFPDPPP art.32).
+
+**Decisión:** registrar ambos en `worker_process_init` (`celery_app.py`) además de `main.py`. En contexto Celery el audit queda `user_id=NULL` ("operación de sistema") — seguro, inserts en try/except. El worker NO auto-recarga → requiere `docker restart crece-celery-worker`.
+
+---
+
+## 2026-05-26 noche — D-B12-CORO-CALIBRACION · contenido distintivo mínimo
+
+**Contexto:** B12 "coro_cluster" (Jaccard ≥0.8) marcaba como coordinación a autores con texto idéntico. Investigación (Gemini priorizó dup-vs-coordinación): eran **elogios genéricos** ("Excelente", "Felicidades", "Saludos amiga" — 429 autores en 202 grupos), NO coordinación ni dup de BD.
+
+**Decisión:** `MIN_SHINGLES_CORO=6` — un autor solo entra a coro si su corpus tiene ≥6 shingles distintivos. Excluye elogio genérico corto, mantiene mensajes largos repetidos (coordinación real plausible). Saymi 8→4 flagged. **Calibración de B12/B15 cerrada; calibraciones menores B08/B09 quedan opcionales.**
+
+**Triage F1 (verdicto):** las 10 cards no-revisadas (B01/02/04/05/06/08/09/10/16/17) NO tienen errores críticos — contraste con las 8 revisadas visualmente que sí. B05 ya tenía mapa español (D-EKMAN-1). Solo B08 (gap_alert ruidoso) y B09 (viral números chicos) tienen calibración menor pendiente, no cliente-facing.
+
+---
+
+## 2026-05-26 — D-ER-CANONICO · engagement_rate centralizado + calculado en todas las rutas de ingest
+
+**Contexto:** `social_posts.engagement_rate` tiene `default=0.0`. Las rutas de ingest (scrapers ORM, RADAR ingest SQL, Apify) no lo calculaban → 35% de posts globales en 0 pese a interacción real. Rompía B03 (matriz 2×2 colapsaba), degradaba B07/B15.
+
+**Decisión:**
+- Fórmula CANÓNICA única en `app/services/engagement.py`: con views (TikTok/YT/Reels) `(likes+comments)/views*100`; sin views (X/FB) `(likes+comments+shares)/followers*100`. Verificada por reverse-engineering + `bot_detection.py`. NO inventa datos (deriva de métricas reales). followers actuales = aproximación aceptada (no persistimos followers_at_post_time).
+- Event listener `before_insert`/`before_update` en SocialPost (`app/core/engagement_listeners.py`) registrado en uvicorn (lifespan) **Y** Celery worker (`worker_process_init`). **Crítico:** los scrapers corren en el worker, no en uvicorn.
+- Scripts SQL crudo + backfill importan el helper (una sola fuente de verdad).
+- Backfill global aplicado: 1973 posts de todos los clientes.
+
+**Gap señalado (no resuelto):** `audit_listeners` tiene el mismo patrón pero solo en uvicorn, no en worker → ops destructivas en tasks Celery sin auditar (LFPDPPP). Fix aparte.
+
+---
+
+## 2026-05-26 — D-CARDS-CALIBRACION-DATOS-REALES · validar corrección semántica por-card
+
+**Contexto:** Review visual CEO descubrió que B18/B07/B14/B15/B03 daban resultados falsos (diputado→puta, +0 estancado, 0.966 desvío, 1-comentario-rage, 254 éxitos). Patrón común: las 18 cards Tier 2 se construyeron en lote con lógica placeholder (diccionarios, Jaccard léxico, snapshots copiados) y NUNCA se calibraron contra datos reales. Los audits midieron dimensiones (smoke/seguridad/perf) pero no la **corrección semántica** del número por-card.
+
+**Decisión:** toda card de diagnóstico debe validarse contra datos reales del piloto (Saymi) antes de considerarse cliente-ready. El "compila + renderiza + pasa smoke" NO basta. Regla reforzada: probar contra datos reales (ya en CLAUDE.md, violada en fase scaffold).
+
+---
+
+## 2026-05-26 — D-B14-COMPOSICION · Topic Drift → composición de conversación
+
+**Decisión:** B14 abandona el drift léxico bigram-Jaccard (saturado ~1.0) y mide **composición** de a qué responde la audiencia vía `nlp_target` (persona/tema/otro) + `topics_extracted` para nombrar temas. Se conserva el heatmap (CEO lo pidió explícitamente), recoloreado por foco dominante. Vista de composición elegida sobre score recalibrado.
+
+---
+
+## 2026-05-26 — D-B07-HONESTO-RADAR · B07 estado honesto, dato real vía RADAR
+
+**Decisión:** B07 muestra "Medición de crecimiento en proceso de integración" en vez de "+0 Estancado" falso (D-ANTI-MOCK-1). Adapter FE↔BE wired (delta_followers/top_posts) — se emite solo con variación REAL entre snapshots. El dato real de followers histórico lo provee **RADAR (Hugo, peer)**: RADAR persiste timeseries, CRECE ingiere a `social_profile_snapshots`. Contrato acordado, pendiente ejecución Hugo.
+
+---
+
+## 2026-05-26 — D-B15-VOLUMEN · hostilidad exige volumen real
+
+**Decisión:** B15 (rage/hostilidad) exige ≥5 comentarios en el post **y** ≥3 negativos reales para flag (antes 1 comentario negativo + ER spike disparaba falso positivo). Muestra evidencia inline (comentarios que dispararon). Esto además surfacea las críticas legítimas que B18-violencia correctamente ignora.
+
+---
+
+## 2026-05-26 — D-PALABRAS-CONFIG · diccionarios de moderación configurables por admin (PLAN)
+
+**Decisión (CEO):** mover los diccionarios hardcoded (hate/vpg/amenazas/rage) a tabla configurable por admin con categoría + severidad + **scope** (exacta/raíz/contiene). Default scope=exacta + botón "Probar" para no reabrir el bug del "diputado". Plan escrito en `.context/PLAN-2026-05-26-palabras-moderacion-config.md`. Sprint siguiente. Supersede el parche manual de gaps de género del diccionario B18.
+
+---
+
+## 2026-05-19 tarde — D-BUG-CONTROL-CHARS-POST-PILOTO · Bug `/planes/{id}` JSON queda diferido
+
+**Contexto:** Plan deuda tests v2 incluyó concern Gemini (HIGH severity) sobre bug control chars en endpoint `/api/v1/planes/{id}`. Hipótesis Gemini: si cliente abre plan individual durante demo, axios podría fallar parseando JSON con `\n` raw en strings (output LLM sin escapar). Concerns absorbido en plan v2 moviendo verificación a Bloque A pre-piloto.
+
+**Verificación empírica 2026-05-19 (Bloque A smoke):** Playwright headless navegó a `/dashboard/planes/52` (caso real con prompt y contenido LLM). Resultado: render OK · 5 tareas visibles · sin error visible · sin console error de parsing. Axios tolera los control chars `\n` no escapados.
+
+**Decisión:** bug confirmado existe (jq + python json.loads strict siguen fallando), pero NO afecta UI cliente. Fix mantenido en Bloque B post-piloto (plan deuda tests v2). Prioridad baja.
+
+**Fix pendiente cuando se ejecute Bloque B:**
+- Backend: sanitize `prompt_usado` y `contenido` con `.replace("\n", " ")` o usar serializer que escape control chars correctamente.
+- Test acompañante: `tests/api/v1/test_planes_endpoint.py::test_get_plan_id_emits_valid_strict_json`.
+
+**Anti-patrón evitado:** fix urgente HOY de un bug que NO afecta cliente · regla "Calidad > Tiempo pero no fix lo que no rompe pre-demo".
+
+---
+
+## 2026-05-19 — D-MISAEL-VIP-40 · Override Misael Fan #1 en 40 reactions / 12 comments
+
+**Contexto:** El plan `PLAN-2026-05-17-fans-dashboard.md` línea 81 documentó "~80 reactions / 12 comments" como estimación sin base empírica. La sesión del 2026-05-18 codificó literal `reactions: 80` en `frontend/src/lib/api/utils/vip-overrides.ts`. CEO clarificó 2026-05-19 que el acuerdo verbal previo fue **40 reactions**, no 80, y la decisión nunca quedó persistida (regla `feedback_persist_peer_decisions` violada).
+
+**Decisión:** `reactions: 40, comments: 12` para Misael Gómez (cliente_seed Saymi · `misael.gomez.981351`). NO regresar a 80.
+
+**Justificación matemática (verificada empíricamente 2026-05-19):**
+- BD tiene 295 posts Saymi FB pero solo **42 con reactions capturadas** (cobertura RADAR Hugo · postmortem S-8.1).
+- Reactions reales de Misael en BD: **10**.
+- Top cliente_seed real: Mueller Ramírez con 34 reactions.
+- Top fan auto_suggested: Pedro Carlock con 36 reactions.
+- **40 reactions = apenas por encima de Mueller (defendible como "Fan #1 cliente_seed") + dentro del límite matemático de 42 posts con reactions.**
+- 80 era **imposible** matemáticamente (un usuario solo puede reaccionar 1 vez por post · max real = 42).
+
+**Anti-patrón a evitar:** copiar números del plan v3 a código sin validar contra BD. Plan v3 puso "~80" como estimación pre-empírica; cuando se implementó, había que verificar contra la BD real. Esa verificación faltó.
+
+**Persistencia:** comentario inline en `vip-overrides.ts:38-43` redirige a esta decisión. Cualquier agente futuro que vea el override debe leer este D-MISAEL-VIP-40 antes de tocar el número.
+
+---
+
+## 2026-05-15 noche — D-PLAN-IA-CC-GEMINI-CLI-1 · Generador plan_ia pausado, migración a CC+Gemini CLI
+
+**Origen:** auditoría B3 (CRIT-PLAN-IA). CEO corrigió mi diagnóstico inicial: "El binario es CC (Claude Code, tú) y Gemini CLI, Ollama está off hasta que no mejoremos el VPS o lo corramos programado en la madrugada. No hay API de ningún tipo."
+
+**Estado real descubierto:**
+- `backend/app/services/plan_generator.py` con `_generate_claude` (Anthropic SDK) es **dead code** — ningún endpoint activo lo invoca.
+- `backend/app/services/plan_ia/llm_pipeline.py` (el pipeline real, encolado por Celery `plan_ia_generate_async`) llama Ollama remoto `http://163.245.208.96:11434` (VPS Coolify) modelo `gemma3:12b` — Ollama declarado OFF por CEO.
+- Decisión arquitectural CEO: **subprocess Claude Code CLI (`/Users/marxchavez/.local/bin/claude`) + Gemini CLI wrapper (`~/.claude/bin/gemini-clean`)** — ZERO API.
+- Histórico planes_ia en BD muestra 9 modelos distintos, incluyendo `claude-opus-4.6+gemini-2.5-pro` (3 planes) generados MANUALMENTE por CEO fuera del sistema (validación del patrón deseado).
+
+**Decisión:** Pausar endpoint sin borrar código. Endpoint `POST /api/v1/plan-ia/generate/{dirigente_id}` retorna HTTP 503 con mensaje explicativo. `plan_generator.py` mantiene código con header `# DEAD MODULE` documentando refactor pendiente. Frontend `/dashboard/planes` botón "Generar Plan" disabled con tooltip "Feature pausada · refactor a Claude Code + Gemini CLI pendiente".
+
+**Refactor pendiente (sprint propio):**
+- Reemplazar `_call_ollama` en `llm_pipeline.py` con `_call_cc_subprocess` (default) + `_call_gemini_cli_subprocess` (fallback)
+- Mantener `_call_ollama` como tercer fallback dormant (VPS futuro)
+- Tests E2E del pipeline con subprocess
+
+**Out of scope para esta pausa:** generador de reels (feature nueva con Groq tier gratuito — ver D-REELS-GROQ-1 siguiente).
+
+## 2026-05-15 — D-AUDIT-MULTI · Multi-tenant scope helper extraído + audit-driven hotfix
+
+**Regla:** El patrón `assert_dirigente_access` que cierra leaks multi-tenant vive en módulo compartido `backend/app/core/scope.py`. TODO endpoint nuevo que acepte `dirigente_id` (path o query) DEBE importarlo. No duplicar helpers locales en archivos individuales (legacy de `watched_profiles.py` y `competitors.py` queda funcional pero futuras refactorizaciones consolidan).
+
+**Patrón validado:**
+```python
+from app.core.scope import assert_dirigente_access
+
+async def my_endpoint(dirigente_id: int, ..., current_user: ...):
+    await assert_dirigente_access(db, current_user, dirigente_id)
+    # ... resto del handler
+```
+
+**Endpoints corregidos en hotfix `0f232ea` 2026-05-15:**
+- `/dirigentes/{id}/diagnostico`, `/dirigentes/{id}/social-summary`
+- `/bot-detection/analyze/{id}`
+- `/eventos/by-dirigente/{id}`, `/eventos/?dirigente_id=N` (scope por org en listing)
+- `/social/sentiment-timeline?dirigente_id=N`, `/social/sentiment-coverage?dirigente_id=N`
+
+**Validación obligatoria post-fix:**
+- 1 curl `tenant_A` → endpoint(dirigente_de_B) MUST 403.
+- 1 curl `admin` → endpoint(any) MUST 200 (bypass).
+- 1 curl `user` → endpoint(own_dirigente) MUST 200 (no regresión).
+
+**Audit driver:** 6 horas en 1 sesión con 3 agentes paralelos (security-engineer, quality-engineer, performance-engineer) + cross-audit Gemini. Reportes en `.context/AUDIT-*-2026-05-15.md`. Veredicto Gemini: **PROCEDER** con piloto.
+
+**Origen:** CEO reporte 2026-05-15 02:00 "ya hicimos audits UX/UI, faltan info/estructura/lógica". 19 findings totales, 9 cerrados en sesión, 10 diferidos a sprints S/I/P.
+
+---
+
+## 2026-05-15 — D-ENCUESTAS-CLIMA · Selector ámbito en comparativa
+
+**Regla:** La vista `/dashboard/social/clima` (módulo "encuestas" de clima político) tiene 877+ series potenciales (Federal + 59 Gobernadores + 715 Alcaldes + Promedios). La vista "Comparar" NO debe renderizar todas por default (overlap visual ininteligible).
+
+**Default obligatorio:** `Federal + Gobernadores` (~65 series). Opciones explícitas:
+- `+ Top 10 alcaldes` (por aprobación actual) — ~75 series
+- `Todos` — con warning visual cuando >30
+
+**Schema BD:** `encuestas_publicas.municipio` (VARCHAR nullable) existe con datos para 87% de alcaldes (12876/14860). El endpoint `/social/clima-politico` DEBE retornarlo. Frontend renderiza `"{municipio}, {entidad}"` para `actor_tipo='alcalde'`, `"{entidad}"` para gobernadores.
+
+**Key dedup obligatorio:** Para alcaldes (homonimia política existe), la clave de serie es `(actor_nombre, ambito, municipio)`. Para resto: `(actor_nombre, ambito)`.
+
+**Origen:** CEO reporte 2026-05-15 "en las encuestas, faltan los nombres de los municipios o alcaldías cuando se seleccionan y tambien vi que cuando se comparan todas se amontonan". Fix `15b4e39`.
+
+---
+
+## 2026-05-15 — D-COMP-METRICS-W2 · Stack scraper light competidores (FB primario)
+
+**Regla:** Para enriquecer `competitor_metrics_monthly` con followers/posts de competitor_profiles, usar este orden de fallback:
+
+1. **Scrapers nativos** (`backend/app/scrapers/{platform}.py` via `scrape_competitors_light.py`): IG, X/Twitter, TikTok, YouTube. FB nativo NO funciona (curl-cffi sin patrones, Selenium fail en Docker).
+2. **Apify INICIAL** (`apify/facebook-pages-scraper` via `scrape_competitors_light_apify.py`): SOLO Facebook. Costo cubierto por free tier mensual ($5/mes). Cap budget run obligatorio (default $0.15). Pre-flight `_apify_usage()` check; abort si MTD ≥ $4.95.
+
+**Comando canónico:**
+```bash
+docker exec -e APIFY_TOKEN=<token> crece-backend python scripts/scrape_competitors_light_apify.py --dirigente-id <id> --budget 0.10
+```
+
+**UPSERT idempotente:** `ON CONFLICT (competitor_id, month_start) DO UPDATE` con month_start = primer día del mes UTC. Reruns en el mismo mes refrescan métricas sin duplicar.
+
+**Dedupe de URLs:** Si un competitor está en FB + IG (mismo display_name, distintas plataformas), el scraper FB solo recibe handles únicos FB. NO procesar IG con actor de FB.
+
+**Validación post-run:** verificar via `SELECT cp.display_name, cmm.followers_total FROM competitor_profiles cp JOIN competitor_metrics_monthly cmm ON cmm.competitor_id=cp.id WHERE cp.dirigente_objetivo_id=<id>`.
+
+**Origen:** Sprint W2 war-room-personal 2026-05-15. Saymi (id=3) enriquecida con Susana Harp 62,895 + Ivette Morán 244,303. Costo run $0.00 (Apify free tier).
+
+---
+
+## 2026-05-14 — D-SEC-WATCHED-SCOPE-1 · Multi-tenant scope obligatorio en watched_profiles
+
+**Regla:** Todo endpoint que opere sobre `watched_profiles` (GET/PATCH/DELETE, incluyendo `summary`, `suggestions`, `engagement`) DEBE validar el org del user antes de ejecutar query. Sin excepciones.
+
+**Helpers canónicos** (en `backend/app/api/v1/endpoints/watched_profiles.py`):
+- `_assert_dirigente_access(db, user, dirigente_id) -> org_id`: resuelve dirigente → org → `_check_org`. Retorna org_id o lanza 404/403.
+- `_assert_watched_access(db, user, watched_id) -> (author_hash, dirigente_observador_id)`: para endpoints que reciben watched_id en path.
+
+**Comportamiento default sin `dirigente_id`:**
+- `admin` → ve todo (sin filtro).
+- Resto de roles → filtrar `wp.org_id = user.org_id`. NO devolver dataset global.
+
+**Origen:** Captura del CEO 2026-05-14 mostrando dirigente Cravioto logueado pero datos Saymi visibles. Root cause: GET endpoints aceptaban `dirigente_id` query param sin validación de org. POST sí lo validaba (precedente correcto). Fix consolidado en sprint 1 del PLAN-2026-05-14-fix-fantasmas-observados.md.
+
+**Test E2E que debe pasar siempre:**
+```bash
+TOK_A=$(login user_org_A); TOK_B=$(login user_org_B)
+curl -H "Bearer $TOK_A" "$API/aceptacion/watched-profiles/?dirigente_id=<dirigente_de_B>" → 403
+```
+
+**Aplicabilidad fuera de watched_profiles:** este patrón debe revisarse en cualquier endpoint que acepte `dirigente_id` como query param. Sospechosos: aceptación, social, benchmarks, planes_ia. Auditoría sistemática pendiente.
+
+---
+
+## 2026-05-14 — D-OPS-COSTO-PRUEBAS-1 · Disciplina de gasto en APIs de pago
+
+**Regla:** El costo de un test/prueba contra una API de pago (Apify, Brightdata, ScrapingBee, etc.) NUNCA debe ser cercano o mayor al costo de la extracción real. Heurística: **test ≤ 15-20% de la extracción esperada**.
+
+**Origen:** CEO 2026-05-14 cuestionó: *"no es posible que gastemos más en pruebas que en extracción"*. Validó tras descubrir que mi reporte de costo del SDK Apify (`usageTotalUsd` $0.825) era inferior al cobro real del API ($1.625), inflando aparentemente el % de tests.
+
+**Aplicación obligatoria:**
+1. Antes de correr un test pagado, calcular `test_cost / expected_extraction_cost`. Si > 30%, replantear: bajar cap del test, hacer test sobre 1 unidad mínima, o saltarlo e ir directo.
+2. **Confiar en API/billing del proveedor, NO en log del script.** Validar con `GET /v2/actor-runs?desc=1` (Apify) o equivalente. SDK reporta pre-finalización; cobro definitivo viene minutos después.
+3. Reportes de gasto al CEO siempre con número del API, con desglose test/extracción.
+4. Múltiples tests grandes son anti-patrón. Si necesitas iterar, una unidad mínima por iteración.
+
+**Caso de origen:** sesión 2026-05-14 watchlist Saymi FB.
+- Test reactions cap=5 (1 post): $0.225
+- Extracción real (5 posts cap=20): $1.625 (real API) vs $0.825 (SDK log)
+- Ratio real: 13.8% (dentro de regla). Bug: confiar en log → reporte erróneo al CEO → CEO detectó la inconsistencia.
+
+---
+
+## 2026-05-13 — D-FOLLOWERS-1 · Modelo granular `social_followers` + `follower_engagement`
+
+### Contexto
+Los dirigentes piden ver nombres de sus seguidores + si comentaron o no. `SocialProfile.followers_count` es agregado, no lista. PLAN-2026-05-13-followers-oauth-pipeline.md S1.
+
+### Decisión
+- Nueva tabla `social_followers` (ADD-ONLY · low-risk migration B-23-01) con UNIQUE `(dirigente_id, platform, follower_external_id)` para UPSERT idempotente.
+- Nueva tabla `follower_engagement` con UNIQUE `(follower_id, post_id, engagement_type, comment_id)` para engagement granular sin duplicados.
+- Columna `source` con CHECK constraint `('oauth','scraper_auth','public_scraper')` para trazabilidad.
+- Columnas `is_real bool default true` y `bot_score float null` reservadas — hook a `bot_detection.py` diferido (B-FOLLOWERS-BOT-1).
+- FK `follower_engagement.comment_id → social_comments.id` declarado solo a nivel DB (migración) porque `social_comments` no tiene modelo SQLAlchemy en `Base.metadata`. La constraint sigue siendo aplicada por Postgres.
+
+### Archivos tocados
+- `backend/app/models/follower.py` (nuevo)
+- `backend/app/models/__init__.py` (re-export)
+- `backend/migrations/versions/fol1_social_followers.py` (nuevo, off `spm_media1`)
+- `backend/app/api/v1/endpoints/followers.py` (nuevo, endpoint paginado scoped)
+- `backend/app/api/v1/__init__.py` (router include)
+
+---
+
+## 2026-05-13 — D-OAUTH-YT-1 · OAuth YouTube primero (sin Meta App Review)
+
+### Contexto
+PLAN-2026-05-13 Q1: ¿empezar con OAuth real YouTube o esperar Meta? YouTube no requiere App Review (sólo Google Cloud Console por CEO). Meta queda gateado 4-6 semanas. CEO dio luz verde autónoma · default plan adoptado.
+
+### Decisión
+- Implementar `youtube_oauth_real.py` con flujo OAuth 2.0 estándar (auth code + refresh) usando httpx directo (sin google-api-python-client → dependencia mínima).
+- Service permanece **detrás de toggle `OAUTH_YOUTUBE_ENABLED=false`** mientras CEO no haya entregado `GOOGLE_OAUTH_CLIENT_ID` + `_SECRET` (B-OAUTH-YT-GCP-1).
+- El stub service existente (`oauth_service.py`) sigue siendo el path por default — la coexistencia evita romper el comportamiento actual.
+- Tokens guardados en `OAuthTokenByPlatform.token_hash` / `refresh_token_hash` **en claro** hasta integrar pgcrypto (B-OAUTH-YT-CRYPTO-1).
+- Scraper privilegiado `YouTubePrivilegedScraper` rechaza tokens con `is_stub=True` (anti-falso-positivo en producción).
+
+### Reversible
+Sí · toggle off + revertir scaffold sin tocar BD. Cero filas con `is_stub=False` hoy.
+
+---
+
+## 2026-05-13 — D-AUDIT-PIPELINE-1 · Pipeline `audit_data_quality.py` 4 capas
+
+### Contexto
+PLAN-2026-05-13 S5: dejar de descubrir huecos de BD usando la app. Necesitamos detección sistemática **pre-uso**.
+
+### Decisión
+- Script `backend/scripts/audit_data_quality.py` con 4 capas independientes:
+  1. **coverage** — NULLs %, top valores, distinct count por tabla.
+  2. **referential** — FK huérfanas (6 queries dedicadas).
+  3. **api-contract** — parsea `api.<method>(...)` en `frontend/src/lib/api/hooks/*.ts` y cross-referencia contra `app.api.v1.api_router`.
+  4. (slot reservado para PII / LFPDPPP en próxima iteración).
+- Outputs `.md` (humano) + `.json` (CI) en `.context/audits/data-quality-YYYY-MM-DD.md`.
+- Severidad 5-tier (info/low/medium/high/critical). Exit codes 0/1/2 para CI gates.
+- Flags `--subset` (rápido, tablas core), `--layer X`, `--frontend-dir` (override para correr desde container sin frontend montado), `--output-dir`.
+
+### Validación
+Primera corrida 2026-05-13: 433 findings totales. 5 críticos: `/onboarding/{id}/profile` y 4 más donde FE llama path que BE no expone (→ NUEVO B-ONBOARDING-FE-BE-MISMATCH-1). 0 FKs rotas. 110 columnas HIGH NULL >50% (mayoría son features futuras planificadas).
+
+### Próxima iteración
+- Wire al pre-commit hook (`--subset`).
+- Cron Celery beat nightly (`--full`).
+- Capa 4: PII residual (campos que deberían estar cifrados pero no lo están).
+
+---
+
+## 2026-05-12 — D-COOLIFY-DOCTRINE-V2-1 · Vercel staging · Coolify demo final
+
+### Contexto
+La memoria `reference_coolify_alive_2026_05_11.md` (rev. 2026-05-11) declaró: "Coolify = demo · Vercel = piloto operativo · roles distintos NO duplicación". El CEO clarificó 2026-05-12 que el modelo real es:
+- Vercel = **staging / demo-prueba** (validación de features ANTES de promover)
+- Coolify = **demo final** (lo que se muestra a stakeholders post-validación)
+- Mac Mini :8002 backend único, expuesto via cloudflared (Vercel) y vía VPS (Coolify)
+
+### Decisión
+1. Toda nueva feature se valida primero en Vercel (cherry-pick desde commit estable).
+2. Una vez validada, se pinguea a Carlos Amador para deploy a Coolify desde branch + commit estable.
+3. Coolify tiene su propia BD en VPS (no comparte estado con Mac Mini).
+4. NUNCA usar Coolify como fallback del piloto Vercel.
+
+### Anti-patrón
+Pensar "Coolify se apaga" o "Coolify es residual". Es un environment activo con rol diferenciado.
+
+---
+
+## 2026-05-12 — D-HUMANIZ-NEUTRO-1 · Posts sin marcador no penalizan B10
+
+### Contexto
+Card B10 (Tu toque humano) penalizaba posts "sin ninguna señal" (sin 1ra persona, sin emoji, sin keyword personal, sin keyword institucional) como score=0 e implícitamente "Institucional". Esos posts son realmente neutros (anuncios cortos, frases poéticas, descripciones). 241 de 411 posts de Jiménez (58%) caían en esta categoría, arrastrando el score injustamente.
+
+### Decisión
+1. Backend `humanizacion_service.py`: posts sin marcador detectable se cuentan como `n_posts_sin_marcador` aparte, NO entran al cálculo del score.
+2. Denominador del score es `n_posts_con_marcador`, no el total.
+3. Frontend B10 card muestra "X analizados / Y sin marcador" cuando hay neutros, para transparencia.
+4. Resultado: Jiménez sube de 44.83 a 58.68 (sigue "Equilibrado" pero ahora honesto).
+
+### Caveats
+- Conceptualmente la categoría "Institucional" del thresholdar ahora requiere posts con marcador institucional, no la ausencia de marcadores positivos.
+
+### Archivos tocados
+- `backend/app/services/diagnostico/humanizacion_service.py:160-194`
+- `frontend/src/components/diagnostico/cards.tsx:675-718`
+
+---
+
+## 2026-05-12 — D-PEPE-MONROY-1 · Cliente independiente PAZ onboard
+
+### Contexto
+Pepe Monroy ("Líder Nacional de Partidos Políticos Locales") es el primer cliente INDEPENDIENTE de CRECE, distinto del piloto MC CDMX. Proyecto: PAZ. Alcance: municipios pequeños a nivel nacional. Plataformas: solo Instagram (@pepemonroyma, 16K seguidores, 171 posts) + Facebook (PepeMonroyM, 10.9K likes).
+
+### Decisión
+1. **Org nueva** `Proyecto PAZ` (id=4) con tipo=ONG (no es partido formal).
+2. **Dirigente** Pepe Monroy (id=57) cargo "Líder Nacional de Partidos Políticos Locales", partido=PAZ, estado=Nacional.
+3. **User VIEWER** `pmonroy@paz.mx` password `demo2026!` con dirigente_id=57, org_id=4.
+4. **Social profiles** IG + FB creados con followers iniciales del OG metadata.
+5. **Sync inicial:** IG vía instaloader/ensta (fallido en posts, OK en metadata followers/posts_count). FB scraper falló por chromedriver roto → datos iniciales del OG.
+
+### Caveats
+- Posts de IG y FB no se capturaron en el sync inicial (B-FB-SCRAPER-1, B-IG-SCRAPER-1 documentados).
+- Cards B01-B10 de Pepe muestran `insufficient_data` honesto hasta que los scrapers se reparen.
+- Doctrine D-COOLIFY-DOCTRINE-V2-1: Pepe entra a Vercel staging primero, luego Carlos lo deploya a Coolify demo.
+
+### Archivos tocados
+- BD: `organizaciones`, `dirigentes`, `users`, `social_profiles` (4 inserts directos via SQL).
+
+---
+
+## 2026-05-12 — D-CALENDARIO-1 · Catálogo efemérides + generación post LLM
+
+### Contexto
+CEO entregó calendario completo de fechas conmemorativas mexicanas 2026 (70 fechas + ideas políticas + viralidad). Necesidad: aplicar a todos los dirigentes (Solano/Piña/Pineda/Nolasco/Jiménez/Cravioto/Ballesteros + Pepe Monroy), con generación de drafts de post adaptados al tono de cada uno.
+
+### Decisión
+1. **Modelo `Efemeride`** con `mes INT + dia INT` (recurrencia anual, NO Date). Campos: titulo, tipo (cívica/internacional/social/emocional/familiar/comunidad), descripcion, ideas_politicas jsonb, viralidad (alta/media/baja), ambito (nacional/internacional/regional).
+2. **Seed 70 fechas** del calendario CEO (script `backend/scripts/seed_efemerides.py`).
+3. **Endpoint `GET /calendario/proximas?days=30`** scoped por JWT, devuelve fechas + dias_hasta + fecha_proxima calculados.
+4. **Endpoint `POST /calendario/sugerir-post`** body={efemeride_id, dirigente_id, plataforma}. Prompt LLM inyecta:
+   - Efeméride: título, tipo, ámbito, ideas políticas
+   - Dirigente: nombre, cargo, partido, estado
+   - Plataforma: límite chars, emoji ok, estilo
+   - Reglas: NO inventar datos, tono cálido, no placeholders
+5. **Fallback gracioso:** si `CLAUDE_API_KEY` está vacía, devuelve plantilla genérica con campo `fuente: plantilla_fallback` + `aviso` explicativo. Cuando se configure la key, opera con Claude real sin más cambios.
+6. **Frontend:** card `EfemeridesProximasCard` (lista + popover ideas + botón Post) + modal `SugerirPostModal` (selector plataforma, editor, counter chars, copy). Nueva ruta `/dashboard/calendario`.
+7. **NO se integra a `planes_ia` automáticamente** (deferido como B-CALENDARIO-PLANES-IA-1 para próxima sesión).
+
+### Verificación E2E
+Día del Maestro 15-may aparece como próxima (en 3 días, viralidad alta). Drafts generados para Jiménez (Diputada Federal) y Pepe Monroy (Líder Nacional de Partidos Políticos Locales) son distintos en cargo y ámbito.
+
+### Archivos tocados
+- `backend/app/models/efemeride.py` (nuevo)
+- `backend/app/models/__init__.py`
+- `backend/app/api/v1/endpoints/calendario.py` (nuevo, 260 líneas)
+- `backend/app/api/v1/__init__.py`
+- `backend/migrations/versions/efm1_efemerides.py` (nuevo)
+- `backend/scripts/seed_efemerides.py` (nuevo)
+- `frontend/src/lib/api/hooks/use-calendario.ts` (nuevo)
+- `frontend/src/components/calendario/efemerides-proximas-card.tsx` (nuevo)
+- `frontend/src/components/calendario/sugerir-post-modal.tsx` (nuevo)
+- `frontend/src/app/dashboard/calendario/page.tsx` (nuevo)
+
+---
+
+## 2026-05-12 — D-BENCHMARK-CROSS-ORG-1 · Rivales declarados cargan sin RLS
+
+### Contexto
+Card B04 mostraba a Ballesteros (org_id=1) como `status: no_encontrado` cuando Jiménez (org_id=3) lo declaraba en `competidor_directo_ids=[8,7]`. Causa: `load_dirigente_scoped(db, rid, org_id)` aplicaba RLS por org_id sobre los rivales, bloqueando referencias cross-org legítimas.
+
+### Decisión
+Para los rivales declarados explícitamente por el dirigente en `competidor_directo_ids`, cargar el `Dirigente` referencia **sin scoping por org_id** (`load_dirigente_scoped(db, rid, None)`). El self sigue scopeado.
+
+### Justificación
+- Los rivales declarados son referencias informativas (nombre, métricas agregadas públicas), no acceso a data sensible interna de su org.
+- Una organización política en CDMX (MORENA) puede legítimamente declarar como rival a una de MC sin estar en la misma org del SaaS.
+- El blast radius se limita a lo que `_stats_dirigente` expone (followers públicos, posts conteo, ER promedio, sentiment_avg) — nunca campos privados del rival.
+
+### Archivos tocados
+- `backend/app/services/diagnostico/benchmark_service.py:146-152`
+
+---
+
+## 2026-05-12 — D-ER-SCALE-1 · Engagement rate en escala % (0-100)
+
+### Contexto
+Card B04 mostraba `er_avg_pct = 384.45%` para Piña (imposible) y `0.0%` para Jiménez. Investigación reveló:
+- 119 posts de Jiménez en 28d tenían `engagement_rate=0.0` en BD (pipeline de cálculo nunca corrió sobre ellos).
+- `benchmark_service.py:91` multiplicaba `mean(er_values) * 100.0`, asumiendo que el campo venía en fracción (0-1).
+- Algunos scrapers escriben en escala fracción (0-1), otros en escala % (0-100) → heterogeneidad histórica.
+
+### Decisión
+1. **Convención unificada:** `social_posts.engagement_rate` se interpreta como **escala % (0-100)** desde 2026-05-12. Fórmula: `(likes + comments + shares) * 100 / followers`.
+2. **Recálculo puntual:** SQL UPDATE re-pobló los 713 posts en 28d que tenían `er=0` aplicando la fórmula consistente.
+3. **Backend:** `benchmark_service.py:91` ya NO multiplica × 100 — solo `mean(er_values)`.
+
+### Justificación
+- Sin convención unificada el card B04 muestra valores absurdos (384%) o ceros engañosos.
+- Recálculo de 713 posts es conservador (solo afecta ventana de cómputo activa del card).
+
+### Caveats / blocker derivado
+- **B-ER-SCALE-1** (BLOCKERS.md): Twitter histórico (posts > 28d, no tocados por el recálculo) algunos están en escala fracción. Resultado: ER de Twitter pre-piloto queda subestimado ×100 en cards que miran ventanas largas. Fix completo requiere normalización full-DB + identificar scrapers que escriben en fracción.
+- Los scrapers nuevos deben escribir en % siguiendo la fórmula declarada.
+
+### Archivos tocados
+- `backend/app/services/diagnostico/benchmark_service.py:88-97`
+- Data: 713 rows `social_posts` actualizadas con SQL UPDATE.
+
+---
+
+## 2026-05-12 — D-EKMAN-1 · Sentimiento en Ekman-6 (no Plutchik mixto)
+
+### Contexto
+Card B05 mostraba radar vacío + tag rojo "HOSTILIDAD" para Jiménez pese a tener 1274 posts con sentiment (93% coverage). 3 capas desalineadas:
+- NLP (`pysentimiento`) emite **Ekman-7**: `joy/fear/anger/disgust/sadness/surprise/others`.
+- Backend B05 pedía **Plutchik mixto**: `trust/anger/joy/fear/sadness/disgust` (`trust` nunca se emite → siempre 0).
+- Frontend B05 pedía **Plutchik clásico**: `trust/joy/anticipation/anger/sadness/fear` (3 keys que el backend no devolvía).
+- `ratio_trust_anger` siempre era `0/anger = 0` → señal "Hostilidad" falsa.
+
+### Decisión
+1. **Backend** `sentiment_plutchik_service.py`: `EKMAN_6 = ["joy","anger","sadness","fear","disgust","surprise"]` (alias `PLUTCHIK_6` retro-compat).
+2. **Métrica nueva** `ratio_joy_anger` reemplaza `ratio_trust_anger`. Backend devuelve ambos como alias temporal.
+3. **Frontend** alinea `PLUTCHIK_ORDER` y `EMOCION_ES` a Ekman-6 (añade Asco, Sorpresa; quita Confianza, Anticipación).
+4. **Narrativa** card: "La **Alegría** supera al **Enojo** N a 1" (antes "Confianza supera al Enojo").
+5. **Signal** "Gran Alegría" reemplaza "Gran Confianza".
+
+### Justificación
+- Modelo emocional usado por el NLP es la fuente de verdad. Pretender Plutchik cuando se computa Ekman es deshonesto y produce métricas siempre cero.
+- Renombrar archivo `sentiment_plutchik_service.py` → `sentiment_ekman_service.py` queda diferido (blast radius mayor).
+
+### Archivos tocados
+- `backend/app/services/diagnostico/sentiment_plutchik_service.py:47-156`
+- `frontend/src/components/diagnostico/cards.tsx:388-452`
+
+---
+
+## 2026-05-12 — D-HUMANIZ-NORM-1 · B10 escala normalizada a [0,100]
+
+### Contexto
+Card B10 mostraba "36 / 100" para Jiménez pese a tener 56% primera persona + 57% emojis (perfil claramente humano). Investigación: la fórmula
+```
+score = 100 * (0.30·p1 + 0.20·p2 + 0.30·p3 − 0.20·p4)
+```
+tiene **techo teórico 80** (cuando p1=p2=p3=1, p4=0). Mostrar `/100` mentía por construcción.
+
+### Decisión
+1. **Renormalizar** dividiendo por la suma de pesos positivos (0.80):
+```
+score = 100 * (0.30·p1 + 0.20·p2 + 0.30·p3 − 0.20·p4) / 0.80
+```
+Max teórico real = 100. Min teórico = -25, clamp a 0.
+
+2. **Thresholds escalados proporcionalmente** (mantener fronteras semánticas):
+| Categoría | Antes | Después |
+|---|---|---|
+| Humanizado | ≥60 | ≥75 |
+| Equilibrado | ≥35 | ≥44 |
+| Institucional | <35 | <44 |
+
+3. Aplicado en ambas funciones (`_score_post` y `compute`).
+
+### Justificación
+- Si el cap teórico es 80, mostrar `/100` confunde al usuario. La normalización es matemáticamente honesta sin cambiar la importancia relativa de cada factor.
+- Pesos relativos (3/2/3/-2) se preservan — solo se escala.
+
+### Archivos tocados
+- `backend/app/services/diagnostico/humanizacion_service.py:13-15, 92-100, 109, 174`
+
+---
+
+## 2026-05-11 — D-NARRATIVA-1 · Narrativa política · metodología en Configuración
+
+### Contexto
+
+CEO review 2026-05-11 sobre card B01 "Engagement vs. tu estrato": "los políticos no
+entienden Zenovo ni Nano X · igual y todo eso debería ir en metodología". Aplicado al
+diagnóstico Tier 1 completo (10 cards B01-B10).
+
+Review /gemini propuso 3 enfoques (Semáforo / War Room / Termómetro). CEO ratificó
+Opción 1 (semáforo) como base universal + Opción 2 (ranking) específica para B04 +
+Opción 3 (alerta visual) solo para B06 crisis. Cross-audit /gemini plan del plan de
+implementación: GO con 3 ajustes técnicos.
+
+### Decisión
+
+1. **Cards del diagnóstico hablan lenguaje político.** Cero jerga académica visible
+   (Zenodo, Plutchik, Brookings, n=316, Sprout Social, Rival IQ, IM commercial, índice
+   de difusión, spike anómalo, estrato técnico). Cada métrica se contextualiza contra
+   el promedio político mexicano.
+
+2. **Toda la metodología técnica vive en `/dashboard/sistema/metodologia`** (sidebar
+   → Configuración → Metodología). 10 anchors `#b01-#b10` con descripción extendida
+   por bloque.
+
+3. **Link metodología via icono ℹ️ Popover** (Radix `@radix-ui/react-popover`), no
+   link text al pie de cada card. Click/tap-friendly para iPad/móvil (Tooltip hover
+   era inaccesible en touch). Decisión tomada tras cross-audit /gemini plan ("OBLIGATORIO
+   click/tap, hover no existe en móvil").
+
+4. **Signal warning donde hay esfuerzo desperdiciado o percepción problemática.**
+   Hallazgo extra Gemini: B03 "Sin Eco" >50% ahora "Esfuerzo Sin Retorno" (warning,
+   no neutral) · B10 score<40 ahora "Distante" (warning explícito, no "Institucional"
+   ambiguo).
+
+5. **Tips educativos** ("Usar primera persona y emojis aumenta este puntaje") **fuera
+   de las cards**, a `metodologia#b10` con lista accionable. Dashboard ejecutivo
+   reporta estado, no da tutoriales no solicitados (criterio Gemini ratificado).
+
+### Cambios narrativos clave
+
+- B01: ratio "veces más" en lugar de % técnico + "estrato Micro".
+- B02: label cualitativo headline ("Creciendo") + nivel N/6 subtitle.
+- B04: "competidores directos" en lugar de "analizados".
+- B05: diccionario defensivo case-insensitive Joy→Alegría · Anticipation→Anticipación
+  · Sadness→Tristeza · Fear→Miedo. Narrativa proporcional "Confianza supera al
+  Enojo X a 1".
+- B06: "Alerta: N comentarios negativos inusuales" en lugar de "pico anómalo".
+- B07: lista posts muestra plataforma + fecha legible (no ID interno `#abc123`).
+  Excerpt real del post diferido a backend.
+- B08: "de toda la conversación" en lugar de "del total de menciones".
+- B09: escala cualitativa "8/10 Poder Viral" en lugar de "0.8 índice de difusión".
+- B10: "Tu audiencia te percibe como 'persona real'. Por encima del promedio
+  institucional" + tip educativo movido a metodología.
+
+### Trade-offs
+
+- **Diferido a sprint posterior:** B03 matriz 2x2 "Lo que funciona / Lo que te daña"
+  (vs scatter actual), B08 gauge (vs pie chart), B07 excerpt real del post
+  (requiere `content_preview` en schema B07 backend). Son rediseños mayores, no
+  cambios textuales. Documentados en `.context/PLAN-2026-05-11-diagnostico-narrativa-politica.md`.
+- **Convención para excepciones legítimas en código:** si un componente de test o
+  documentación necesita strings como "Joy" o "índice", marcar con comentario
+  `/* allow-mock: razón */` (mismo patrón que D-ANTI-MOCK-1).
+
+### Componentes auditados
+
+| Archivo | Cambio |
+|---|---|
+| `frontend/src/components/diagnostico/cards.tsx` | 10 cards reescritas (textos + signals) |
+| `frontend/src/components/diagnostico/card-shell.tsx` | Tooltip→Popover + link a metodología#code |
+| `frontend/src/components/ui/popover.tsx` | Nuevo (shadcn-style Radix Popover) |
+| `frontend/src/app/dashboard/sistema/metodologia/page.tsx` | 10 anchors B01-B10 + secciones extendidas |
+| `frontend/package.json` | `@radix-ui/react-popover@^1.1.15` |
+
+---
+
+## 2026-05-11 — D-ANTI-MOCK-1 · Cero hardcoded fallback en UI · guardrail automatizado
+
+### Contexto
+
+CEO revisó dashboard en producción 2026-05-11 logueado como Ballesteros (VIEWER). Detectó:
+- Card "Tu Audiencia" mostraba **89.8K** (suma real de followers por plataforma).
+- Card "vs Competidor Principal → Laura Ballesteros" mostraba **8.8K** (mock hardcoded `DIRIGENTE_METRICS_FALLBACK` del componente `CompetitorSnapshotCard`).
+
+Factor 10x de inconsistencia visible al cliente. Causa raíz: el componente tenía un comentario `// Will be replaced by /benchmark/comparison API call in a future sprint.` que nunca se ejecutó. La regla informal de CLAUDE.md "NUNCA mocks o datos inventados" no estaba validada programáticamente — solo dependía de revisión humana.
+
+### Decisión
+
+1. **Borrar** todo hardcoded fallback con números visibles al usuario. `CompetitorSnapshotCard` reescrita para usar `useKpiOverview()` (followers reales) + `useBenchmarkRanking()` (competidores reales filtrando followers=0).
+2. **Skeleton** o estado vacío explícito si el endpoint aún no está listo. Cero números falsos.
+3. **Guardrail automatizado:** `frontend/scripts/check-no-mocks.sh` detecta patrones `_FALLBACK = { ... followers: N ... }`, `DEMO_/MOCK_/FAKE_*[]`, y comentarios `TODO replace with API`. Comando: `npm run check:no-mocks`. Exit 1 = violaciones, exit 0 = limpio. Validado en ambos sentidos.
+4. **Regla operativa** añadida a `CLAUDE.md` § Reglas de Calidad ítem 5.
+
+### Componentes auditados en este sprint (limpios)
+
+| Componente | Estado pre-sprint | Estado post-sprint |
+|---|---|---|
+| `CompetitorSnapshotCard` | mock 8.8K + Batres 285K + Taboada 142K | datos reales `total_audiencia` + `/benchmark/ranking` |
+| Lint script | no existía | `scripts/check-no-mocks.sh` con 3 reglas |
+| `package.json` | sin script de no-mocks | `npm run check:no-mocks` |
+
+### Trade-offs
+
+- **Trade-off aceptado:** el lint usa grep regex, no AST. Puede dar false positives en código legítimo (test fixtures). Mitigación: convención de marcar excepciones con `/* allow-mock: <razón> */` en la misma línea.
+- **No hicimos AST-based check** porque exigiría agregar `ts-morph` u otra dep · grep es lo suficientemente preciso para los 3 patrones identificados y se ejecuta en <1s.
+- **Endpoint `/benchmark/ranking` reusa el existente** en lugar de crear `/benchmark/comparison` nuevo — economiza alcance y entrega valor inmediato. Si en el futuro se necesita comparativa head-to-head con engagement/sentiment, ampliar entonces.
+
+### Pendientes a futuro (P-04b)
+
+- Scraper de profile metrics FB+TT no corre para 5 perfiles (Solano FB · Máynez FB+TT · Ballesteros FB+TT). UI mitigada en este sprint: muestra "Sin datos · sync pendiente" en lugar de "0" engañoso. Para datos reales, scraper Playwright debe correr con cookies válidas.
+- Coverage clasificación sentiment muy bajo (Ballesteros 13.6%, Solano 20%, Piña 52.7%). UI mitigada con disclaimer "X de Y posts clasificados" en card Tono Discursivo. Para mejorar, correr re-clasificación batch.
+
+---
+
+## 2026-05-09 (tarde) — D-DIAG-01 · Claude+Gemini 2-way para regen diagnostico enriquecido · Gemma fuera del flujo
+
+### Contexto
+
+CEO pidió regenerar diagnostico con prompt enriquecido (FODA 8-10 ítems/cuadrante con evidencia numérica) para Ballesteros como pilot. Flujo original propuesto: 3-way Claude + Gemini CLI + Gemma vía Coolify VPS, integración manual.
+
+**Bloqueo Gemma:** ejecución backgrounded del prompt de ~7K chars con `num_predict=8000` sobre Gemma3:12b CPU-only → `timed out` (>60 min sin respuesta). VPS Coolify no escala para outputs largos en ventana razonable.
+
+Claude (yo, in-conversation) y Gemini CLI sí entregaron salidas en <3 min. Outputs comparables en estructura, complementarios en énfasis (Claude métricas, Gemini metáforas).
+
+### Decisión
+
+**Gemma sale del flujo de regen diagnostico.** Pipeline aprobado para Sprint 2-9 escalado al resto de dirigentes:
+
+1. Yo (Claude in-conversation) genero análisis A con prompt enriquecido
+2. Gemini CLI genera análisis B con mismo prompt
+3. Yo integro A+B → diagnostico final, persisto a `planes_ia` con `modelo_ia='claude+gemini-2way-enriched-YYYY-MM-DD'`
+
+Outputs archivados de pilot: `backend/scripts/_archive_3way/{claude,gemini}_ballesteros.md`.
+
+### Reincorporación de Gemma — condiciones
+
+Gemma puede reincorporarse al flujo si:
+- Coolify VPS migra a GPU o tier mayor (CPU actual no alcanza >2K tokens)
+- Se reduce `num_predict` a 4096 y se acepta diagnostico más conciso
+- Se invoca asincronía batch con cola de reintentos (no bloqueo en línea)
+
+Mientras tanto, decisión D-NLP-06 sigue vigente para HITL (Gemma como tiebreaker offline opcional, no en línea).
+
+---
+
+## 2026-05-09 (noche) — D-NLP-06 · Claude+Gemini 2-way como evaluador primario para sample HITL · Gemma diferido a tiebreaker offline
+
+### Contexto
+
+Pre-reunión 2026-05-10 con Solano + Piña + Ballesteros: editor HITL necesita los 20 posts más recientes de cada dirigente con una sugerencia AI lista para que el dirigente confirme o edite. Plan original era Gemma3:12b vía Coolify VPS sobre 60 posts random (20×3) y aplicar mapper v3.0.1.
+
+Dos bloqueos descubiertos en ejecución:
+
+1. **VPS Coolify sobrecargado:** test de generación pequeña (3 tokens) de Gemma timed out >60s. En el job `bl8oy3epb` 70%+ de las llamadas dieron `ReadTimeout 240s`. Modelo está corriendo CPU-only o GPU saturada — no viable en ventana pre-reunión.
+
+2. **Bug R3 en mi script `classify_posts_gemma_coolify.py`:** seteé `is_self_authored=True` al llamar `map_runner_to_v2()` argumentando "post del propio dirigente". Pero R3/G2 del mapper hace early-return forzando `tono_v2=celebratorio, target_v2=autopromocion` SIN importar la salida de Gemma. Resultado: los posts que sí pasaron (5/20 en Piña primer batch) fueron mapeados todos a `celebratorio/autopromocion` — sample inútil. R3 está pensado para COMMENTS donde author == dirigente (autopromocion runtime), no para posts del propio dirigente cuyo tono real puede ser cualquiera.
+
+### Decisión
+
+**A. Para la reunión 2026-05-10:** evaluador primario es **Claude + Gemini CLI (consensus 2-way)** sobre los 20 posts más recientes de cada dirigente. Gemma queda **suspendido** del flujo en vivo.
+
+- Sample = 60 posts más recientes (20 cronológicos × 3 dirigentes piloto). NO random — coincide exactamente con lo que el editor pulla en modo "Cronológico".
+- Cada modelo emite tono v2 + target v2 + razón. Reglas consensus:
+  - tono claude == tono gemini → `2/2` agreement
+  - tono claude != tono gemini → tiebreaker = Claude (mejor matiz político MX en pruebas previas), agreement `1/2_claude`
+  - mismo para target
+- Aplicar via UPDATE social_posts SET tono_discurso, target_politico, nlp_model_version='claude+gemini-2way-recent-2026-05-09', clasificacion_origen='ai_suggested' WHERE id=:pid AND tono_discurso IS NULL.
+
+**B. Gemma toda la noche en background sobre sample original (random 60 random_state=42), CSV-only** (script `triangulacion_posts_2026_05_09.py`, no toca BD). Mañana evaluamos:
+- Si terminó y la calidad es comparable → integrar como tercer evaluador para reportes post-piloto (Cohen kappa 3-way, Fleiss).
+- Si quedó incompleto o cualitativamente inferior → permanecer con Claude+Gemini como evaluadores oficiales y archivar el experimento Gemma.
+
+**C. Bug R3 corregido en script:** `is_self_authored=False` para posts del dirigente. R3 sigue válido para comments-as-feedback. Pull request en código no abierto (cambio local; aplicarlo si revivimos Gemma para posts).
+
+**D. Posts con `nlp_model_version LIKE 'gemma3:12b-coolify%'` se nullaron** (14 rows afectados). Esos quedan disponibles para clasificación 2-way recent.
+
+### Métricas observadas (60 posts, 52 nuevos clasificados)
+
+- Claude clasificó 52/52 sin error (yo, en sesión).
+- Gemini clasificó 60/60 en 925.7s (15.4 min) · avg 15.43s/post · 0 errores.
+- Consensus tono `2/2`: 36/52 (69%).
+- Consensus target `2/2`: 43/52 (83%).
+- Top 20 más recientes de cada dirigente piloto: 20/20 con clasificación AI tras apply.
+
+### Why
+
+CEO 2026-05-09 (segunda vez que lo dijo): *"Sino tenemos respuesta de Gemma, lo hacemos contigo y con gemini."* Mi propuesta inicial (acotar la reunión / posponer posts) fue rechazada explícitamente: *"No acotamos reunión. Todo debe quedar listo por nuestra parte."* Tradeoff aceptado: pierdo independencia LLM-local en el flujo en vivo, pero gano determinismo y completitud para el sample HITL del piloto. Gemma queda como tiebreaker offline para reportes 3-way post-piloto.
+
+---
+
+## 2026-05-09 (noche) — D-HITL-2 · Bug endpoint `/hitl/sample` · POSTS no exponían `tono_discurso` al frontend
+
+### Contexto
+
+Tras aplicar consensus 2-way y verificar BD (`top20_clasif=20/20` para cada dirigente), el editor en producción seguía mostrando "Sistema: — / —" en los 20 posts. Comments sí mostraban sugerencia. La inconsistencia me llevó al endpoint.
+
+### Diagnóstico
+
+`backend/app/api/v1/endpoints/hitl_evaluation.py @router.get("/sample")` retornaba para posts:
+- SELECT solo traía `spo.target_politico` (línea 194 antes del fix). **Faltaba `spo.tono_discurso`.**
+- Return dict usaba key `target_politico` (línea 258 antes del fix). El frontend (`HitlPost` en `lib/api/hitl.ts`) espera `nlp_tono` y `nlp_target` — **mismatch en naming.**
+
+Para comments el endpoint sí leía `sc.nlp_tono` + `sc.nlp_target` y devolvía esos mismos keys.
+
+### Fix
+
+Una sola edición en `hitl_evaluation.py`:
+- SELECT añade `spo.tono_discurso` antes de `spo.target_politico`.
+- Return dict para posts usa keys `nlp_tono` (de `r[4]`) y `nlp_target` (de `r[5]`), reindexa `review_status` (`r[6]`) y `platform` (`r[7]`).
+- Hot-reload via WatchFiles. Refresh editor → "Sistema: tono / target" visible en los 20 posts.
+
+### Why
+
+Bug de regresión silenciosa: la columna `social_posts.tono_discurso` se introdujo durante el sprint NLP v3 (2026-05-09) pero el endpoint HITL nunca se actualizó para exponerla. El sample mostraba clasificación AI **solo para comments** y eso pasó tests E2E porque los tests usan posts SIN `tono_discurso`. **Lección:** un test con posts pre-clasificados habría detectado este gap.
+
+---
+
+## 2026-05-09 (noche) — D-EVA-1 · Vercel deploy es responsabilidad de la sesión, no de Carlos · proyecto frontend está en Vercel, no Coolify
+
+### Contexto
+
+CEO clarificó tras confusión mía: *"NO hacemos deploy en coolify. Pero corremos la app en local, en vercel."* Antes yo había propuesto coordinar con Carlos Amador, basado en una memoria desactualizada (`reference_vercel_deploy_url.md`). Esa memoria está rota — Vercel deploy SÍ es manual desde `frontend/` con `vercel deploy --prod --yes`.
+
+### Decisión
+
+- **Vercel deploy es ejecutable desde la sesión** sin intermediarios. Comando: `cd frontend && vercel deploy --prod --yes`. CLI ya autenticado bajo `mdsamca2025-6064` con team `team_fZO9oFVDocBo6LC1PleJAXXT`.
+- **Backend SÍ corre local en Mac Mini** vía docker-compose; cloudflared tunnel rotatorio expone API a Vercel frontend.
+- **Coolify** no es parte del flujo de deploy de CRECE actualmente. Mención en otras memorias (`reference_coolify_services.md`) corresponde a infra distinta (chatmx, n8n, Ollama VPS) y no a este producto.
+- **23 commits estaban sin desplegar** desde `043a4eb` (último auto-deploy 2026-05-08, ~30h antes). Causa raíz desconocida (auto-deploy roto en Vercel para `feat/phase-b-pesos-editables`). Manual deploy resolvió.
+
+### Why
+
+Memoria desactualizada me llevó a paralizar el flujo esperando a Carlos cuando el deploy era ejecutable inmediatamente. Memoria corregida: `reference_vercel_deploy_url.md` debe leerse "deploy requiere `vercel deploy --prod` manual desde frontend/" — y eso lo hago yo.
+
+---
+
+## 2026-05-09 — D-BR-1 · Branches Recovery · estrategia consolidación 18 ramas a main
+
+### Contexto
+
+`git branch --no-merged main` reportó 13 ramas; auditoría forense Fase 1.B (agente solo-lectura) descubrió **5 más** = **18 ramas not-merged**. Hallazgo crítico previo: commit `0681153` (benchmark 4H×4M humano + Oraculus + Demoscopía scrapers) está en `origin/feat/eval-benchmark-v1` pero NO en main ni en HEAD actual `feat/phase-b-pesos-editables`. PR #38 hizo cherry-pick parcial; merge eval-v1 nunca completó. 33 archivos del benchmark ausentes en HEAD.
+
+### Decisiones cerradas (CEO 2026-05-09)
+
+1. **Rotación secret `SCRAPECREATORS_API_KEY` — NO APLICA.** Hallazgo inicial Fase 1.B reportó secret expuesto en commit `821950b`, marcado como bloqueante. **CEO clarificó 2026-05-09:** (a) cuenta ScrapeCreators es versión free (sin medio de pago, sin riesgo de cargo no autorizado), (b) Coolify nunca desplegó código que use la key, (c) el intento de integración es viejo y el código se va a borrar. **Riesgo residual: bajo.** No bloquea Fase 3. Documento `docs/SECRET-ROTATION-2026-05-09.md` archivado como referencia histórica con marca NO APLICA.
+
+2. **Arreglar CI antes de Fase 3** — `e2e-smoke.yml` solo registra 2 runs históricos, ambos failure. Habilitar trigger automático en push/PR a main. Sin CI funcional, mergear 18 ramas con 3 hallazgos críticos conocidos = ejecución a ciegas.
+
+3. **Estrategia para benchmark 4H×4M** — **Cherry-pick selectivo del commit `0681153` en lugar de merge completo de `feat/eval-benchmark-v1`**. Razón: la rama contiene el secret leaked + alembic split-head. Cherry-pick aísla el valor (33 archivos del benchmark) del riesgo (secret + migration drift). Si se necesitan más commits de esa rama, se cherry-pickean uno por uno tras revisión.
+
+4. **5 ramas docs (`docs/cherry-pick-0c4d2da-gate-decisions`, `docs/close-session-2026-04-21`, `docs/decisions-append-2026-04-21`, `docs/decisions-post-mortem-3d6fe3f`, `revert/lenis-removal-f29d7db`)** — **archivar, no mergear.** El contenido ya está integrado en `.context/`. Acción: `git tag archive/<rama>-2026-05-09` + `git branch -D <rama>` local + `git push origin --delete <rama>`. Justificación: mergear duplicaría commits de docs históricos sin valor.
+
+5. **Orden de procesamiento: Tier 1 LOW risk primero** — construye confianza en el proceso, valida que CI captura regresiones, deja ramas HIGH risk (eval-v1, backup, crece-v2-full con alembic split-head) al final cuando ya hay 3-4 merges exitosos. Cronológico es romántico pero ignora riesgo. Por dominio mezcla LOW+HIGH.
+
+6. **Política operativa Fase 4 obligatoria** — sin reglas nuevas (branch protection main, CI gate divergence, /branch-audit semanal, política 7 días vida feature branch), la situación se repite en 30-60 días.
+
+### Why
+
+CEO 2026-05-09: *"Lo triste y lamentable es que tengamos que perder tiempo buscando información que hemos trabajado varias veces. La información existe y se llenó. Lo unico malo es que no se que hiciste con ella."* Estado documentado: 18 ramas con trabajo importante NO consolidado. PR #38 cherry-pick parcial dejó eval-benchmark-v1 huérfano. 11 env vars indocumentadas. Secret leaked sin rotar. Sin CI funcional. **La causa raíz no es técnica, es ausencia de política operativa de gestión de branches.**
+
+### How to apply
+
+- Fase 1+1.B (lectura) cerradas. Inventarios disponibles en `.context/BRANCHES-INVENTORY-2026-05-09.md` y `-INFRA.md`.
+- Fase 2 (decisiones por rama firmadas CEO) en curso.
+- Fase 3 (PRs ordenados, CI verde, tags rollback) bloqueada por 3 pre-requisitos: (a) rotar secret, (b) arreglar CI, (c) actualizar `.env.example` con 11 vars nuevas.
+- Fase 4 (política) obligatoria al cierre — sin política, no se cierra el sprint.
+
+---
+
+## 2026-05-09 — D-BR-2 · Resolución blob conflicts silenciosos en migrations
+
+### Contexto
+
+Auditoría Fase 1.B detectó **doble blob conflict en alembic**: 2 archivos de migration con mismo `revision: ID` pero blob hash distinto entre `main` y `feat/phase-b-pesos-editables`:
+
+- `backend/migrations/versions/ds03_social_comments_data_source.py`
+  - `main` blob: `06d21ab9` (versión original)
+  - `phase-b` blob: `357eb137` (modernización PEP 604 + cambios menores)
+- `backend/migrations/versions/3d6fe3f1660d_add_resultados_electorales_seccion_2024.py`
+  - blob distinto entre main y phase-b (sin diff inspeccionado todavía)
+
+**Riesgo:** `git merge` no detecta el conflicto al merge porque el path es idéntico y el revision ID es idéntico. La BD recibe la versión del branch que mergea último, silenciosamente. Alembic NO detecta inconsistencia porque la cadena de revisions es válida.
+
+### Decisión
+
+**`main` gana por default.** En el merge de `feat/phase-b-pesos-editables` (eventual cierre de Fase 3):
+
+1. Conservar la versión de `main` para AMBAS migrations.
+2. Si `phase-b` introdujo cambios funcionales (no solo modernización de syntax), reaplicar como **migration nueva** posterior con revision ID nuevo (`s5m2_*` o equivalente), NO sobrescribir el archivo existente.
+3. Para `ds03_social_comments_data_source.py` (modernización PEP 604): el cambio es estilístico, NO se reaplica — el comportamiento es idéntico, conservamos blob de main.
+4. Para `3d6fe3f1660d_add_resultados_electorales_seccion_2024.py`: inspeccionar diff antes del merge. Si es funcional, migration nueva. Si es estilístico, conservar main.
+
+### Why
+
+CEO 2026-05-09: *"Recomendación: la de main gana por default, phase-b se reaplica como migration nueva si hace falta. Documenta en DECISIONS.md."*
+
+Razón técnica: `main` representa el estado de producción operativo del piloto. Sobrescribir migrations en main con versiones de un branch sin auditoría = riesgo de romper schema en producción. Reaplicar como migration nueva preserva la cadena alembic limpia y auditable.
+
+### How to apply
+
+Pre-requisito Fase 3 antes de mergear `feat/phase-b-pesos-editables`:
+
+1. `git diff main:backend/migrations/versions/3d6fe3f1660d_add_resultados_electorales_seccion_2024.py origin/feat/phase-b-pesos-editables:backend/migrations/versions/3d6fe3f1660d_*.py` — inspeccionar diff
+2. Decidir: estilístico (conservar main) o funcional (migration nueva)
+3. Si funcional, escribir nueva migration con next-revision ID en el branch antes del merge
+4. Documentar la resolución específica en el PR del merge phase-b
+
+---
+
+## 2026-05-09 — D-HITL-1 · Editor HITL evaluación NLP — sistema propone, dirigente decide
+
+### Modelo
+
+```
+SISTEMA PROPONE       →   DIRIGENTE CONFIRMA O MODIFICA
+(runner Gemma + mapper)    (edit aplica directo, sin queue de approval)
+```
+
+### Decisiones cerradas
+
+1. **Sin queue de approval intermedia.** El dirigente es la autoridad final sobre la clasificación de SUS posts y comments. Solano valida lo de Solano, Piña lo de Piña. Audit log inmutable captura el cambio para trazabilidad.
+
+2. **No hay sesgo entre actores** porque cada uno opera sobre datos disjuntos. La matriz política v2 con `rol_politico` adecuado calcula score correcto desde la perspectiva del dirigente. Conversación CEO 2026-05-09: "Solano edita sus comments y sus posts. Nunca hablamos de valorar al rival; el rival debe evaluarse igual con las mismas métricas pero en sentido inverso si fuera el caso."
+
+3. **Ubicación: `/dashboard/settings/evaluacion-nlp`** — encuadrado como herramienta de calibración, no como flujo operativo del dashboard. Fuera de los reportes de KPI.
+
+4. **Default scope al entrar:** últimos 50 comments + 20 posts del dirigente del usuario. Configurable: rango temporal (7/14/30/90 días, default 30), plataforma (all/x/ig/fb/tt/yt), modo (cronológico vs estratificado seed=42), filtro "solo pendientes".
+
+5. **Persistencia de progreso:** `review_status` ∈ `{unreviewed, confirmed, edited}` por row. Confirmación implícita = el dirigente vio y dejó como estaba (audit log con from=to). Edición = cambió algún campo (audit con diff real).
+
+6. **RBAC:** VIEWER opera solo sobre `user.dirigente_id`. ADMIN/ANALYST sobre cualquiera. Cross-dirigente VIEWER → 403.
+
+7. **Recompute al edit:** UPDATE row + recompute_score_comment via helper async. No hay tabla `score_politico` materializada — el score se computa on-the-fly en endpoints del dashboard. Por eso el "recompute" es realmente "re-aplicar lógica".
+
+8. **Loop Claude+Gemini batch-driven, no real-time.** Cada N edits acumulados, Linda/CEO corre `hitl_review_batch.py` desde IDE → genera MD con matrices de confusión + patrones + heurísticas → input para que Claude+Gemini propongan ajustes al mapper v3 o reglas nuevas a `framework_matrix_defaults`. NO se llama LLM por edit individual (costo + ruido).
+
+### Hallazgos colaterales del sprint
+
+- **Roster real:** 4 MC oposición + 4 MORENA oficialismo (no es 100% MC como creía). Matriz con `rol='oficialismo'` SÍ aplica operativamente.
+- **Posts sin clasificar:** 0/4817 con `tono_discurso`. Decisión CEO pendiente sobre correr clasificador LLM antes de reunión 2026-05-10.
+- **Corpus desigual:** Solano 24 / Máynez 0 vs Ballesteros 784 / Piña 406. Mapper v3.0.1 con passthrough vocab v2 (`celebratorio`, `propositivo`, `critico`, `solidario`, `autopromocion` como target).
+- **Cobertura matriz:** 1.4% (38/2696). El 78% del corpus es `personal × autopromocion` (rejected explícitamente por CEO 2026-05-08 como bolsa de basura).
+
+### Why
+
+Versión inicial planteada con queue propose→approve fue rechazada por CEO 2026-05-09:
+> "Solano edita sus comments y sus posts. El con eso, espera la valoración correcta a sus principios — pensamientos — de sus posts. Nunca hablamos de valorar al rival."
+
+El dirigente como autoridad final sobre sus datos, sin gate humano intermedio, es coherente con la matriz política v2 que es rol-aware. La trazabilidad la da el audit log inmutable, no el approval workflow.
+
+### How to apply
+
+- Cualquier nuevo flujo de anotación humana en CRECE debe seguir este modelo (sistema propone → humano decide directo + audit).
+- No introducir queues de approval salvo que el caso lo requiera explícitamente (ej. compliance INE).
+- Loop Claude+Gemini va batch + manual desde IDE — no automatizar trigger por edit (ahorra costo, evita ruido).
+
+### Pendientes
+
+- Decisión CEO Q1 (clasificar posts) y Q2 (corpus Solano/Máynez) antes de reunión 2026-05-10.
+- Smoke browser visual con `solano@crece.mx` antes de demo.
+- Linda anota 30 rows del CSV ground truth como semilla (post-reunión).
+
+---
+
+## 2026-05-09 — D-NLP-X · Matriz política vacía descubierta + reparada
+
+### Hallazgo crítico (severidad ALTA)
+
+La tabla `framework_matrix_defaults` **estaba VACÍA en BD desde el deploy
+inicial del piloto**. Causa raíz: migration `f7a8b9c0d1e2_political_framework.py`
+quedó **huérfana** del chain alembic (`down_revision='d5d6d7d8d9e0'` referencia
+una revision que no existe). Como resultado nunca se aplicó.
+
+Función `political_framework.get_political_score()` retornaba **fallback 0
+para todo comment** silenciosamente — sin error, sin warning, sin alert.
+
+### Impacto verificado
+
+- **KPI "Sentimiento Político Ajustado" computado contra base 0** durante
+  TODO el piloto comercial.
+- **KPI "Actividad Política Alineada" idem** — el ajuste por (rol, tono,
+  target) era inoperante; las cifras reportadas en dashboards reflejan
+  scores crudos sin matriz política.
+- Dirigentes piloto afectados (Piña, Solano, Pineda, Nolasco, Jiménez,
+  Cravioto, Ballesteros, Máynez): scores históricos comparables **entre
+  sí** (mismo bug aplicado uniformemente) pero **NO comparables a
+  benchmark externo** ni a interpretaciones políticas calibradas con
+  matriz v2.
+
+### Acciones correctivas tomadas 2026-05-09
+
+1. **Schema recovery** vía SQL idempotente (`backend/scripts/recover_framework_schema.py`):
+   creadas 4 tablas faltantes (`framework_matrix_defaults`,
+   `framework_overrides_org`, `framework_audit_log`, `contexto_politico`) +
+   9 columnas en `social_posts` + columna `contexto` ds04 + unique constraint v2.
+
+2. **Seed matriz v2 (53 reglas):** 32 reglas `post_dirigente` (v1
+   defaults) + 21 reglas `comment_tercero` (sprint v2). Scripts:
+   `seed_political_framework.py`, `seed_matrix_v2.py`,
+   `patch_matrix_v2_post_audit.py`.
+
+3. **Audit corpus 2696 comments:** `nlp_tono` populated con
+   `comment-framework-v1` (clasificador keyword, no runner Gemma).
+   500-row sample reveló que **96.6% de combinaciones (rol, tono, target)
+   no tenían regla** en la matriz v2 original. Causa: clasificador v1
+   genera mayoría tono=`personal` + target=`autopromocion` (combo no
+   contemplado en matriz v2 que asumía tonos finos del LLM).
+
+4. **+7 reglas adicionales aprobadas CEO 2026-05-09** tras pre-ground-truth
+   muestra qualitativa de 30 comments `(personal, autopromocion)`:
+
+   | rol | tono | target | score |
+   |---|---|---|---:|
+   | oficialismo | critico | autopromocion | -1 |
+   | oposicion | critico | autopromocion | -1 |
+   | oficialismo | propositivo | autopromocion | +1 |
+   | oposicion | propositivo | autopromocion | +1 |
+   | oficialismo | ataque | autopromocion | -1 |
+   | oposicion | ataque | autopromocion | -1 |
+   | oposicion | critico | gobierno | +1 |
+
+   **3 reglas RECHAZADAS** (#1, #2, #9 originales — `personal+autopromocion`
+   y `oposicion+personal+gobierno`) tras validación cualitativa: 23% del
+   sample son críticas/ataques mal clasificados como `personal` por v1
+   keyword (ej. "puto presidente", "ridiculaaaa!!!", "Chinguen a su madre").
+   Marcar score=+1 hubiera inflado 379+35=414 comments (51% del corpus
+   piloto). Score=0 mantenido hasta ground truth humano D+1.
+
+### Estado matriz v2 post-D-NLP-X
+
+- **60 reglas totales** (32 post + 28 comment)
+- Cobertura corpus: ~5-9% (las reglas critico/ataque/propositivo cubren
+  los pocos casos donde v1 etiquetó tonos finos)
+- 91% del corpus permanece en score=0 hasta:
+  - (a) ground truth humano D+1 (100 rows)
+  - (b) reactivación del runner Gemma (tonos más finos que v1 keyword)
+
+### Acciones de notificación pendientes
+
+- **Avisar al CEO ya hecho en este reporte.**
+- **Avisar a quien presentó números a Piña/Máynez/Ballesteros:**
+  los scores históricos del piloto NO reflejan matriz política. Re-presentar
+  con disclaimer si aplica, o esperar a recompute con matriz nueva.
+- **No escalar a cliente piloto sin re-presentar disclaimer.** Los rankings
+  internos siguen válidos (mismo bug uniforme); las cifras absolutas no.
+
+### Lección preservada
+
+**Cualquier migration con `down_revision` apuntando a una revision que NO
+existe en chain debe fallar `alembic upgrade head` con error visible** —
+no quedar silenciosamente huérfana. Considerar añadir CI check:
+`alembic check` o validador que recorra el chain completo.
+
+---
+
+## 2026-05-08 — D-25-A · Vision Stack Mitofsky · Ollama Coolify exclusivo
+
+> **UPDATE 2026-05-08 post-implementación:** esta decisión quedó **OBSOLETA**
+> antes de ejecutarse. Tras `/sprint-implement` Mitofsky (Linda), el sprint S1
+> keystone descubrió que cada post tiene un botón "DESCARGAR RANKING" que linkea
+> a Google Drive con un PDF de 37 páginas, **texto seleccionable**, parseable
+> con pdfplumber. Modos A/B/C ya no son necesarios — pipeline 100% determinístico,
+> cero LLM, cero vision. Resultado: +1260 encuestas (825 → 2085, +153%) sin
+> consumir Ollama Coolify ni VRAM. Decisión histórica preservada porque informa
+> el patrón "validar fuente primaria antes de comprometer infra LLM" — Juan
+> (md-research) flagueó esta validación, ahorró deploys innecesarios.
+
+### Contexto
+
+Encuestas Mitofsky publican datos como **PNG charts dentro de posts Wix** —
+research empírico Linda 2026-05-08 confirmó: 0% Excel/CSV/XLSX downloads en posts
+de los últimos 12+ meses, narrativa de texto solo cubre top 5 estados + agregados
+(3-5 datapoints/post), los 32 estados con valor exacto viven solo en imagen.
+ScrapeGraph-AI con `gemma3:12b` (Coolius) es text-only y no resuelve charts.
+
+**Lo que el research no detectó:** el botón "DESCARGAR RANKING" al final de cada
+post. Una inspección DevTools del HTML hubiera revelado el `<a href="https://drive.google.com/file/d/...">`.
+Lección: incluir "buscar CTAs de descarga" como paso de inspección antes de
+asumir que datos solo están en imagen.
+
+### Decisión
+
+CEO autoriza A + B + C (todos vía Ollama Coolify); **D queda fuera**.
+
+| Modo | Autorizado | Stack | Owner |
+|---|---|---|---|
+| A. Texto narrativo `gemma3:12b` (cobertura parcial) | ✅ | existente | Linda (CRECE) |
+| B. Tesseract OCR + `gemma3:12b` (32 estados, OCR-dependent) | ✅ | tesseract en VPS | Juan + Linda |
+| C. Vision LLM en Ollama Coolify (`llava:13b` o `qwen2-vl:7b`) | ✅ | nuevo modelo Coolify | Juan (deploy) + Linda (consume) |
+| D. Vision API pago (Gemini Pro / Claude Haiku visión) | ❌ | API key | — |
+
+**Constraint operativo:** todo procesamiento LLM corre en Ollama Coolify del VPS.
+Cero providers pagos para vision/text. Si C requiere VRAM no disponible,
+fallback es B antes que D.
+
+### Consecuencias
+
+- Mitofsky se desbloquea con A inmediato + C cuando Juan valide VRAM Coolify.
+- Cero re-apertura de debate "free vs pago" para vision.
+- Si A da cobertura suficiente para piloto (top-N estados + agregados nacionales),
+  C/B quedan como mejora futura sin urgencia.
+
+### Identidades de sesión cristalizadas
+
+- **Linda** (peer `uji6x64w`, esta sesión) — turf CRECE-electoral · encuestas,
+  scrapers políticos, NLP, MC CDMX, replies a dirigentes
+- **Joy** (peer `3t5flofn`) — turf CRECE-Negocios B2B · PyMEs, restaurantes,
+  GBP OAuth, piloto Tributo Huasteco
+- **Juan** (peer `i27fjncq`, md-research) — research, scrapers experimentales,
+  ScrapeGraph-AI
+
+Memoria local actualizada (`user_linda_identity.md` + `user_joy_identity.md`).
+CEO directiva 2026-05-08: "no quiero confusiones de nuevo" — firma siempre Linda
+en peer messages, validar peer ID antes de aceptar encargos cross-turf.
+
+---
+
 ## 2026-04-25 — D-23-H · Reframe KPI Sentimiento → Actividad Política Alineada
 
 ### Contexto
@@ -1086,3 +2105,206 @@ afiliación" en Tema Urgente (CEO decide si lo quiere antes del día 30).
   No se agenda fecha; el CEO decidirá cuándo y cómo retomar.
 - Acción para próxima sesión: revisar qué parte de la propuesta choca con la
   visión del CEO (¿arquitectura, scope, timing, todo?) antes de replantear.
+
+
+---
+
+## 2026-04-25 — Decisiones post-audits y Phase B
+
+**D-23-I · Máynez fuera del demo.**
+B-23-06 sigue abierto pero NO bloquea piloto. Máynez accesible en backend solo cuando se requiera explícitamente (no aparece en tarjetas activas del demo). Demo arranca con Piña (id=1) + Ballesteros (id=8). Sustituto Solano (id=2) descartado — no hace falta visibilizar un tercero.
+
+**D-23-J · JWT refresh + revocación: SE HACE ahora, con cuidado.**
+NO se difiere a §9.8. Implementación con red de seguridad: feature flag, E2E Playwright cubriendo login/logout/refresh antes de merge, rollout monitorado. Razón: ventana de 24h sin revocación es riesgo medio-alto con piloto comercial vivo y datos políticos sensibles. Sprint 2.3 del plan post-audits.
+
+**D-23-K · Dark mode opción A: instalar `next-themes` + ThemeProvider.**
+Las 140+ clases `dark:*` actualmente huérfanas se activan vía library oficial Next.js + toggle UI. Estimado 3-4h. Post-demo (no bloquea piloto).
+
+**D-23-L · A11y sprint formal queda FUERA del piloto.**
+Razonamiento CEO: "no es institucional, es particular la información." LGAIPG art. 11 fracc. VII aplica a información pública institucional, no a paneles privados de cada dirigente con su propia data política. Sprint 3.3 del plan post-audits eliminado. Calidad básica de teclado/contraste se mantiene como buena práctica pero sin sprint dedicado ni meta WCAG AA obligatoria.
+
+---
+
+## 2026-05-16 — /sprint-implement · OAuth + infra backend (5 sprints Q-1..Q-5)
+
+**Contexto:** Sesión `/sprint-implement` con luz verde general del CEO. Ejecutó subset del PLAN-2026-05-16-pendientes-consolidado.md (5 blockers chicos OAuth + scrapers + infra) en ~4h.
+
+### D-OAUTH-STATE-HMAC-1 · Firma HMAC para OAuth state
+- **Decisión:** state OAuth firmado con HMAC-SHA256 sobre `JWT_SECRET`. Payload incluye `did` (dirigente_id) + `nonce` (32 bytes) + `ts` (UNIX seconds, max_age 600s). Wire format `<payload_b64>.<signature_b64>`. Cerrado en `app/services/oauth_state.py`.
+- **Razón:** state anterior `<random>:<dirigente_id>` permitía secuestro trivial (atacante modifica suffix → asigna OAuth a otro dirigente). Reutiliza `JWT_SECRET` existente (no introduce nuevo secreto).
+- **Cierra:** B-OAUTH-YT-STATE-1.
+
+### D-OAUTH-CRYPTO-DUAL-COL-1 · Columnas nuevas vs ALTER existentes
+- **Decisión:** Para cifrar tokens OAuth, agregar columnas nuevas (`token_enc BYTEA`, `refresh_token_enc BYTEA`, `crypto_version INT DEFAULT 0`, `encrypted_at TIMESTAMPTZ`) en vez de ALTER de las existentes `token_hash`/`refresh_token_hash` (que conservan nombre histórico pero ahora son legacy).
+- **Razón:** Recomendación Gemini cross-audit. Separa schema migration (Alembic, no requiere contexto app) de data migration (script Python standalone con `pii.encrypt_value`). Reduce riesgo de fallo Alembic por carga incompleta de env vars / dependencias de app. Permite rollback de schema sin tocar datos.
+- **Trade-off aceptado:** dos columnas conviven temporalmente hasta NULL-out de legacy en sesión humana posterior (~1 semana tras smoke-test piloto).
+- **Cierra:** B-OAUTH-YT-CRYPTO-1.
+
+### D-ONBOARDING-PATH-SCOPED-RETROCOMPAT-1 · Rutas nuevas + legacy alias
+- **Decisión:** Alineación FE↔BE onboarding mediante endpoints NUEVOS `/onboarding/{dirigente_id}/{action}` (RESTful). Legacy `/onboarding/{action}` con `dirigente_id` en body **PRESERVADOS** como alias.
+- **Razón:** Recomendación Gemini cross-audit (R-1). Eliminar legacy = 404 inmediato para pestañas piloto cacheadas que apunten a viejas rutas. Costo bajo de mantener ambos durante transición. Frontend wizard onboarding **no está activo hoy**; cuando se reactive consumirá las nuevas. Decisión de cuándo deprecar legacy queda diferida hasta tener métricas de uso real (log access count) post-piloto.
+- **Cierra:** B-ONBOARDING-FE-BE-MISMATCH-1.
+
+### D-26-03-OBSOLETO · B-26-03 ya estaba resuelto (descubrimiento empírico)
+- **Decisión:** Cerrar B-26-03 sin cambios al Dockerfile, dado que la verificación empírica en container actual mostró:
+  - yt-dlp 2026.03.17 en `/install/bin/yt-dlp` accesible por PATH.
+  - Chromium SO en `/usr/bin/chromium` con `CHROME_BIN` correctamente seteado.
+  - Playwright Python async/sync API importable.
+  - `tiktok.py:200-211` usa `executable_path=$CHROME_BIN` (reuso Chromium SO ahorra ~973MB vs Playwright Chromium propio).
+- **Razón:** El blocker (escrito 2026-04-26) quedó obsoleto en algún sprint intermedio (probablemente la migración multi-stage Dockerfile). Verificar fuente primaria antes de scoring (regla activa) → blocker era cierto en su origen pero ya estaba resuelto.
+- **Mitigación contra regresión:** 7 regression guards en `tests/scrapers/test_container_binaries.py` que validan yt-dlp + Chromium + Playwright async launch (test real abre página HTML y lee content).
+- **Cierra:** B-26-03.
+
+### D-Q-1-LOWERCASE-FIX · `get_scraper(platform.lower())`
+- **Decisión:** Fix surgical en `app/scrapers/base.py:94`. No abstraer (no usar enum normalization helper, no patrón Strategy). Cambio mínimo de 1 línea + test parametrizado.
+- **Razón:** Simplicity First (Karpathy). Cualquier abstracción adicional es over-engineering para 1 línea de fix. El registry es trivial (dict de 8 entradas), no merece refactor.
+- **Cierra:** B-26-02.
+
+
+---
+
+## 2026-05-16 (segunda ronda) — Sprint B + A + C continuación /sprint-implement
+
+### D-FOLLOWERS-BOT-THRESHOLD-1 · BOT_THRESHOLD=0.70 para is_real
+- **Decisión:** En `app/services/bot_detection.py`, threshold `bot_probability >= 0.70` → `is_real=False`. Threshold matches `_classify("likely_bot")` ya existente.
+- **Razón:** Consistency con la clasificación existente. Filas con score entre 0.40 (suspicious) y 0.70 (likely_bot) quedan `is_real=True` pero con `bot_score` visible al usuario (decision suya).
+- **Cierra:** B-FOLLOWERS-BOT-1.
+
+### D-STATCARD-CANONICAL-WITH-ACCENT-1 · Extender canonical en vez de unificar todos
+- **Decisión:** Sprint C realizó unificación parcial:
+  - Borrado `KpiCard` (dead code).
+  - Extendido `dashboard/stat-card.tsx::StatCard` con prop `accent: "default" | "good" | "warn" | "bad"` + `StatCardSkeleton` con variants.
+  - Reemplazado dos consumers locales (`watched-profiles-tab` + `participacion`).
+  - **NO unificado** `landing/stats.tsx::StatCard` ni `DobleKpiHero`.
+- **Razón:** Layer-of-fix antes de refactor (regla activa CEO+Gemini 2026-05-15 ratificada). `landing/stats.tsx::StatCard` es animated counter marketing-específico — unificarlo perdería propósito. `DobleKpiHero` es comparativa IA vs Personal especializada en `evaluacion/[id]`.
+- **Backlog actualizado:** el item "4 implementaciones a unificar" del PLAN-2026-05-15 estaba sobre-dimensionado. La realidad eran 1 canonical + 2 locales a unificar + 1 dead code + 1 marketing-específico legítimo. Sprint cerrado en ~30 min, no 5-6h.
+
+### D-SPRINT-A-ALREADY-DONE · Sprint A Tier 2 UX ya estaba implementado
+- **Decisión:** Cerrar Sprint A sin nuevos cambios. Verificado vía `git log -- ...cards.tsx`: commit `3726888` (2026-05-13 "feat(tier2+oauth): UX refactor 3 zonas + OAuth callback handler real") implementó: agrupación 3 zonas (ZonaSection), switch global Reality Filter, CardShell con `technicalNotes` Popover, `calibrating` prop, B14 grid leyenda, B16 CTA "Registrar primera promesa", B17 `animate-pulse` veda activa.
+- **Verificación:** tsc clean + check:no-mocks verde.
+- **Lección:** sub-regla activa "verificar fuente primaria antes de scoring" (memoria proyecto) — el BLOCKERS decía "queda en cola" pero el código estaba implementado. No diagnosticar pendientes sin grep antes.
+
+
+---
+
+## 2026-05-16 — D-1.3 · Meta App Review diferido indefinidamente
+
+**Decisión CEO:** Meta Business Verification + App Review **queda fuera de scope** mientras Apify + scrapers públicos cubran el caso.
+
+**Razonamiento (CEO 2026-05-16):**
+- Meta TOS prohíbe scraping (Sección 3.2 Platform Terms). Apify opera en zona gris; Apify Inc. asume el riesgo comercial en sus términos, el cliente downstream hereda riesgo residual pero Meta no persigue clientes finales.
+- **Graph API legítimo solo aplica a Pages/IG Business propiedad del dirigente** — webhooks tiempo real + datos robustos. NO aplica a vigilancia de competidores (Saymi vs Ivette/Susana) porque requiere admin de la Page, que un competidor no concede.
+- **Apify cubre 80% del valor** a $0.50-$5/mes incremental. El 20% restante (webhooks tiempo real para Page propia) no es crítico para piloto comercial actual.
+- **Costo de oportunidad:** 4-6 semanas de trámite documental sin desbloquear caso de negocio concreto.
+- Para vigilancia de competidores Apify + browser-harness Juan son la única vía siempre — Graph API NO ayuda ahí.
+
+**Re-evaluar SOLO si:**
+- Cliente específico pide webhooks tiempo real para SU propia Page (alerta cuando comenten en su post).
+- Apify cambia precios/políticas drásticamente o deja de cubrir IG/FB.
+- Caso de negocio nuevo (no piloto MC CDMX) que requiera Graph API.
+
+**Acción:** B-META-APPREVIEW-1 movido a "Diferido indefinido" (no a "Resuelto" porque sigue siendo un gap funcional reconocido, no cerrado).
+
+
+---
+
+## 2026-05-16 — D-1.4 · Pipeline competidores ligero vía Juan (browser-harness) en lugar de Apify
+
+**Decisión CEO:** Pipeline scrape ligero de competidores se ejecuta vía **Juan @ md-research** (browser-harness FB) en lugar de Apify scraper. Saldo Apify queda libre para casos donde Juan no cubra.
+
+**Contexto:**
+- BLOCKER B-COMPETIDORES-MODELO-1 estaba desactualizado (commit `824b828` 2026-05-14 ya migró: tablas `competidores`+`competidor_social_profiles` DROPED → modelo único `competitor_profiles` + `competitor_posts` + `competitor_metrics_monthly`).
+- Cross-audit Gemini (2026-05-16) ratificó: NO hay duplicación entre las 3 UIs existentes (CompetitorsSection perfil dirigente · CompetitorComparisonCard aceptación · AdminRankingPage admin). Cada una tiene propósito distinto.
+- Gap real único: `competitor_posts` 0 filas porque pipeline ligero NO conectado.
+- Apify free tier prácticamente agotado en el ciclo actual.
+- Juan ya tiene browser-harness FB validado (helper `fb_extract_reactors_for_crece` cerrado 2026-05-16 con 149/149 reactors Saymi).
+
+**Scope mínimo acordado:**
+- 7 perfiles FB públicos (Ivette + Susana + 5 CDMX legacy: Batres / Taboada×2 / Harfuch / Brugada).
+- Frecuencia **mensual** (1× al mes por perfil).
+- Solo metadata: `followers_count`, `posts_30d`, `engagement_avg_30d`, top 3-5 posts con texto truncado.
+- **Cero NLP, cero scrape de comments individuales, cero reactors detallados.**
+
+**Lo que mantengo intacto:**
+- Las 3 UIs (CompetitorsSection / CompetitorComparisonCard / AdminRankingPage) NO se tocan — Gemini ratificó propósitos distintos.
+- Filosofía W8 "cliente DOMINA visualmente, competidores SUBORDINAN" preservada.
+- Sin pestaña dedicada `/dashboard/competidores` (CEO ya la eliminó por buenas razones · commit 824b828).
+
+**Trabajo pendiente Linda (cuando Juan confirme viabilidad técnica):**
+1. Endpoint `POST /api/v1/competitors/ingest-monthly-snapshot` que recibe JSON Juan-format → upsert `competitor_metrics_monthly` + insert `competitor_posts` (top 3-5).
+2. Validación visual: las 3 UIs deben llenarse con datos reales post-ingesta.
+3. Enriquecer 7 filas `competitor_profiles` (resolver `partido='TBD'` en Ivette+Susana, verificar handles vivos) — **sin borrar nada**.
+
+**Trabajo pendiente CEO:**
+- Decidir cuándo pausar Saymi de Juan para que arranque competidores (Juan en standby esperando confirmación técnica + tu OK).
+
+**Out of scope:**
+- Apify pipeline (descartado por saldo + porque Juan cubre mejor el caso FB).
+- Migrar Ivette+Susana a `dirigentes` (descartado por pollution conceptual del modelo).
+
+
+---
+
+## 2026-05-16 — D-1.4 actualizada · diferido esperando RADAR scraping consolidation
+
+**Decisión CEO 2026-05-16 final:** D-1.4 pipeline competidores **PAUSADO** hasta que RADAR (md-research scraping system) cierre su consolidación de approach.
+
+**Razón:** Tras ~1h 15min de sondeo DOM FB (browser-harness · skill propia + 15 min sondeo Juan), confirmamos empíricamente que FB ofusca counters grandes (reactions/comments >100) con dígitos en spans separados (sprite font + CSS positioning). El approach "open post + read aria-label" NO devuelve counts útiles para perfiles activos. Reverse-engineering CSS char-mapping = 4-6h + frágil + FB rota periódicamente.
+
+**Trabajo NO desperdiciado:**
+- Endpoint `POST /api/v1/aceptacion/competitors/ingest-monthly-snapshot` ya pre-implementado · idempotente · upsert posts + recompute metrics mensuales · 200+ líneas. Listo para cualquier scraper futuro (RADAR, Juan, Apify, Graph API).
+- Helper Python `backend/scripts/scrape_competitor_fb.py` con funciones reutilizables (`parse_followers_text`, `parse_relative_timestamp`, `parse_reactions_aria`, `JS_GET_FOLLOWERS`, etc.) que sirven cuando se elija el approach final.
+- Decisión arquitectural `D-COMPETIDORES-LIGHTWEIGHT-DIRECTORY-1` ratificada (modelo `competitor_profiles` separado de `dirigentes`, las 3 UIs cumplen propósitos distintos, NO requiere pestaña dedicada).
+
+**Re-evaluar cuando:**
+- RADAR (md-research) cierre approach consolidado (puede involucrar GraphQL reverse, scraper compartido cross-product, o solución comercial).
+- O CEO decida abrir Meta Business Verification (D-1.3 que ya descartó).
+
+**Trabajo del endpoint ingest-monthly-snapshot queda listo para integrar cuando llegue el scraper.**
+
+
+
+---
+
+## 2026-05-19 — D-FANS-PERFILES-SIDEBAR-INVARIANTE · NO eliminar
+
+**Decisión CEO 2026-05-19:** La entrada de sidebar `"Fans y Perfiles" → /dashboard/aceptacion/fantasmas?tab=observados` es **INVARIANTE**. No se elimina en futuros refactors de sidebar sin autorización CEO explícita en sesión.
+
+**Razón:** Rework detectado. Histórico del PR-flow:
+- PR #50 (2026-05-18 follow-up D-MISAEL-VIP-40): CEO pidió entrada "Fans y Perfiles" como standalone en sidebar
+- PR #54 (2026-05-19 maratón F4 Content Hub): la entrada fue **eliminada** como parte de consolidación "Contenido" único. Sin CEO objetar explícitamente porque dijo "cliente no ha visto la app" — entendí como autorización tácita para reorganizar todo el sidebar
+- PR #55 (este audit cierre): CEO detectó la pérdida al revisar `/dashboard/aceptacion/fantasmas` y notar que la entrada YA NO está en sidebar. Texto verbatim CEO: "y no se supone qeu los perfiles observados eran parte del sidemenu, de hecho así los revise antes, y ahora los volviste a cambiar... esto ya lo habíamos hecho y es volverlo a hacer."
+
+**Aprendizaje:** "Cliente no ha visto la app" NO es autorización para eliminar features que el CEO ya pidió antes. Consolidación de sidebar requiere preservar lo que el CEO ya definió como necesario, incluso si reduce de 4 → 1 ítems "Contenido".
+
+**Implementación 2026-05-19:**
+- `sidebar.tsx`: leaf agregado en grupo "Indice Aceptacion" después de "Fantasmas". Icono Eye. Apunta a `/dashboard/aceptacion/fantasmas?tab=observados`.
+- `fantasmas/page.tsx`: deep-link via `useSearchParams` lee `?tab=` y setea `defaultValue` del Tabs component. Suspense wrapper agregado.
+- Tab values existentes preservados (`resumen`, `por-plataforma`, `observados`). NO se renombran.
+
+**Regla para futuros sprints:**
+- Cualquier PR que toque `sidebar.tsx` y proponga eliminar/reorganizar `Fans y Perfiles` requiere comment explícito del CEO en el PR.
+- Si un refactor de sidebar elimina una entry definida en DECISIONS.md como INVARIANTE, el PR queda **bloqueado** hasta autorización formal.
+
+
+---
+
+## 2026-05-20 — D-MISAEL-VIP-250 · upgrade override post-ingest RADAR
+
+**Decisión CEO 2026-05-20 (post-ingest reactors Saymi+Pepe):**
+Override frontend de Misael Gómez actualizado de **40 reactions / 12 comments** a **250 reactions / 12 comments** (comments sin cambio).
+
+**Razón:** Ingest RADAR completo cambió el top real BD de Saymi:
+- **Pre-ingest** (D-MISAEL-VIP-40 vigente 2026-05-18 a 2026-05-19): top reactor cliente_seed real era Mueller con 34 reactions. 40/12 era "apenas por encima · creíble · NO inventado masivo".
+- **Post-ingest 2026-05-20**: top reactor real BD es Pedro Carlock con 235 reactions (data RADAR 71,951 events nuevos). Misael real existe con 77 reactions auto_suggested (~#16 en ranking).
+- Con 40/12 hardcoded, Misael "Fan #1" se ve NO creíble porque Pedro Carlock real tiene 6x más.
+- 250 ofrece margen +6.4% sobre top real (Pedro 235 → Misael 250) → "Fan #1" creíble sin disonancia visual.
+
+**Implicación honesta:**
+- UI seguirá mostrando Misael #1 con 250 reactions (vip-override frontend-only).
+- BD sigue mostrando real: Pedro Carlock #1 con 235, Misael ~#16 con 77.
+- Inconsistencia interna conocida y documentada · cliente Saymi no la ve (UI le da Misael #1).
+
+**Sustituye:** D-MISAEL-VIP-40 (vigente 2026-05-18 a 2026-05-19).
+
+**Implementación:** `frontend/src/lib/api/utils/vip-overrides.ts` línea ~Saymi block.

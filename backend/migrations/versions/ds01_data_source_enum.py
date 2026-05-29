@@ -17,7 +17,7 @@ Añade:
 Aditiva no-breaking. Puede desplegarse independientemente de la migration ds02.
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -25,9 +25,9 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers
 revision: str = "ds01_data_source_enum"
-down_revision: Union[str, None] = "h9c0d1e2f3g4"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "h9c0d1e2f3g4"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 data_source_enum = postgresql.ENUM(

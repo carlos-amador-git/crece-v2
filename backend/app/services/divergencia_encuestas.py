@@ -11,11 +11,10 @@ político capturado por Parametría/Oraculus, algo está mal.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 THRESHOLD_PCT = 30.0
 
@@ -52,13 +51,15 @@ async def compute_divergencia(
         1,
     )
 
-    # CRECE: avg sentimiento_politico_ajustado for dirigentes in this ambito
-    # Map ambito + entidad → dirigente filter
-    dirigente_filter = ""
+    # CRECE: avg sentimiento_politico_ajustado for dirigentes in this ambito.
+    # SQL injection fix (F-ALTO-01 AUDIT-SECURITY-RBAC-2026-05-15):
+    # `entidad` was interpolated via f-string. Now bound via bindparam.
+    params: dict = {"mes_start": mes_referencia, "mes_end": mes_siguiente}
     if ambito == "federal":
-        dirigente_filter = "d.cargo ILIKE '%diputad%federal%' OR d.cargo ILIKE '%senador%'"
+        dirigente_filter = "(d.cargo ILIKE '%diputad%federal%' OR d.cargo ILIKE '%senador%')"
     elif ambito == "estatal" and entidad:
-        dirigente_filter = f"d.estado = '{entidad}'"
+        dirigente_filter = "d.estado = :entidad_filter"
+        params["entidad_filter"] = entidad
     else:
         dirigente_filter = "1=1"
 
@@ -71,7 +72,8 @@ async def compute_divergencia(
             WHERE p.published_at >= :mes_start AND p.published_at < :mes_end
               AND p.sentimiento_politico_ajustado IS NOT NULL
               AND ({dirigente_filter})
-        """).bindparams(mes_start=mes_referencia, mes_end=mes_siguiente)
+        """),
+        params,
     )
     crece_row = crece_result.fetchone()
     crece_avg = crece_row[0]  # -1 to 1

@@ -11,10 +11,9 @@ D-NLP-01: 3-layer architecture for political sentiment.
 - dirigentes.rol_politico: derived (oficialismo|oposicion|independiente)
 - social_posts: add tono_discurso, target_politico, sentimiento_politico_ajustado
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
-
 
 revision = 'f7a8b9c0d1e2'
 down_revision = 'd5d6d7d8d9e0'

@@ -27,7 +27,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -135,9 +134,7 @@ def _compact_bloque(raw: dict) -> dict:
     data = raw.get("data") or {}
     compact: dict = {}
     for k, v in data.items():
-        if isinstance(v, int | float | bool):
-            compact[k] = v
-        elif isinstance(v, str) and len(v) < 100:
+        if isinstance(v, int | float | bool) or (isinstance(v, str) and len(v) < 100):
             compact[k] = v
         elif isinstance(v, list):
             compact[k] = f"list[{len(v)}]"

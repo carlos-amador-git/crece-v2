@@ -173,7 +173,7 @@ async def main():
             text("SELECT id FROM users WHERE role='ADMIN' LIMIT 1")
         )).scalar_one()
 
-        for did in range(1, 7):
+        for did in [1, 2, 3, 5, 8, 57, 60]:
             dirigente = (await session.execute(
                 text("SELECT id, full_name, cargo, partido, rol_politico FROM dirigentes WHERE id = :id"),
                 {"id": did},

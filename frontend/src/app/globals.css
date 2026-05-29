@@ -62,7 +62,8 @@
   --secondary-foreground: 212 52% 15%;
 
   --muted: 212 18% 94%;
-  --muted-foreground: 212 16% 47%;
+  /* C8 WCAG AA (2026-05-19) · 47% → 38% Lightness · contraste ~6.4:1 sobre bg-card white */
+  --muted-foreground: 212 18% 38%;
 
   /* Warm Amber — #d4a853 */
   --accent: 40 62% 58%;
@@ -109,7 +110,8 @@
   --secondary-foreground: 210 20% 90%;
 
   --muted: 212 30% 14%;
-  --muted-foreground: 212 16% 56%;
+  /* C8 WCAG AA dark mode · 56% → 68% sobre bg-card dark · contraste ~7:1 */
+  --muted-foreground: 212 18% 68%;
 
   --accent: 40 62% 58%;
   --accent-foreground: 212 50% 6%;
@@ -299,6 +301,12 @@ p {
 
 .skeleton-animate {
   animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── Shimmer · barra de progreso indeterminada ─────────────── */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
 }
 
 /* ── Stat card smooth transitions ─────────────────────────── */

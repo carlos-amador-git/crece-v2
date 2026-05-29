@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import worker_process_init
 
 from app.core.config import settings
 
@@ -86,7 +87,31 @@ celery_app.conf.update(
             "task": "app.workers.tasks.plan_ia_reporte_semanal",
             "schedule": crontab(hour=9, minute=0, day_of_week=1),
         },
+        # D-BEAT-SNAPSHOT-WEEKLY-2026-05-25 · destrabra B07 delta_followers
+        # Lunes 02:00 America/Mexico_City (timezone configurada en este module).
+        "snapshot-all-profiles-weekly": {
+            "task": "app.workers.tasks.snapshot_all_profiles",
+            "schedule": crontab(hour=2, minute=0, day_of_week=1),
+        },
     },
 )
 
 celery_app.autodiscover_tasks(["app.workers"])
+
+
+@worker_process_init.connect
+def _init_orm_event_listeners(**_kwargs) -> None:
+    """Registra los event listeners de SQLAlchemy en cada proceso worker.
+
+    Los scrapers insertan/actualizan posts vía ORM dentro del worker Celery, NO
+    en el proceso uvicorn (que registra los listeners en su lifespan). Sin esto,
+    engagement_rate no se calcularía en la ruta de ingest automática, y las ops
+    destructivas en tasks (delete/update de modelos auditados) no se registrarían
+    en audit_log (gap LFPDPPP art. 32). En contexto Celery el audit queda con
+    user_id=NULL ("operación de sistema") — comportamiento esperado y seguro.
+    """
+    from app.core.audit_listeners import init_audit_listeners
+    from app.core.engagement_listeners import init_engagement_listeners
+
+    init_engagement_listeners()
+    init_audit_listeners()

@@ -1,0 +1,3809 @@
+[
+  {
+    "layer": "api_contract",
+    "severity": "critical",
+    "type": "fe_orphan",
+    "method": "POST",
+    "path": "/onboarding/{var}/profile",
+    "file": "tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts",
+    "message": "FE llama POST /onboarding/{var}/profile (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "critical",
+    "type": "fe_orphan",
+    "method": "POST",
+    "path": "/onboarding/{var}/accounts-manual",
+    "file": "tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts",
+    "message": "FE llama POST /onboarding/{var}/accounts-manual (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "critical",
+    "type": "fe_orphan",
+    "method": "POST",
+    "path": "/onboarding/{var}/confirm-accounts",
+    "file": "tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts",
+    "message": "FE llama POST /onboarding/{var}/confirm-accounts (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "critical",
+    "type": "fe_orphan",
+    "method": "POST",
+    "path": "/onboarding/{var}/competidores",
+    "file": "tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts",
+    "message": "FE llama POST /onboarding/{var}/competidores (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "critical",
+    "type": "fe_orphan",
+    "method": "POST",
+    "path": "/onboarding/{var}/promesas",
+    "file": "tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts",
+    "message": "FE llama POST /onboarding/{var}/promesas (tmp/fe-snapshot/src/lib/api/hooks/use-onboarding.ts) pero NO existe en BE"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/admin/classification/batch",
+    "message": "BE POST /admin/classification/batch no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/admin/compliance/purge-hash",
+    "message": "BE POST /admin/compliance/purge-hash no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/admin/promesas",
+    "message": "BE POST /admin/promesas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/api-keys",
+    "message": "BE POST /api-keys no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/arco/exercise",
+    "message": "BE POST /arco/exercise no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/auth/forgot-password",
+    "message": "BE POST /auth/forgot-password no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/auth/impersonate/{var}",
+    "message": "BE POST /auth/impersonate/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/auth/login",
+    "message": "BE POST /auth/login no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/auth/register",
+    "message": "BE POST /auth/register no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/benchmark/competidores",
+    "message": "BE POST /benchmark/competidores no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/blindaje/audit",
+    "message": "BE POST /blindaje/audit no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/blindaje/bot-check/{var}",
+    "message": "BE POST /blindaje/bot-check/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/blindaje/gastos",
+    "message": "BE POST /blindaje/gastos no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/blindaje/gastos/import",
+    "message": "BE POST /blindaje/gastos/import no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/calendario/efemerides/{var}/convertir-recomendacion",
+    "message": "BE POST /calendario/efemerides/{var}/convertir-recomendacion no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/calendario/sugerir-post",
+    "message": "BE POST /calendario/sugerir-post no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/campaigns",
+    "message": "BE POST /campaigns no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/campaigns/segment",
+    "message": "BE POST /campaigns/segment no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/campanas",
+    "message": "BE POST /campanas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/campanas/webhook/delivery",
+    "message": "BE POST /campanas/webhook/delivery no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/campanas/{var}/enviar",
+    "message": "BE POST /campanas/{var}/enviar no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/campanas/{var}/preparar",
+    "message": "BE POST /campanas/{var}/preparar no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/campanas/{var}/segmentos",
+    "message": "BE POST /campanas/{var}/segmentos no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/canvassing/optimize",
+    "message": "BE POST /canvassing/optimize no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/ciudadanos",
+    "message": "BE POST /ciudadanos no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/contenido/generate",
+    "message": "BE POST /contenido/generate no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/contenido/generate/stream",
+    "message": "BE POST /contenido/generate/stream no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/content/generate",
+    "message": "BE POST /content/generate no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/content/generate/stream",
+    "message": "BE POST /content/generate/stream no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/content/pieces/{var}/approve",
+    "message": "BE POST /content/pieces/{var}/approve no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/crm/interactions",
+    "message": "BE POST /crm/interactions no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/dirigentes",
+    "message": "BE POST /dirigentes no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/dirigentes/onboard",
+    "message": "BE POST /dirigentes/onboard no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/electoral/intencion-voto",
+    "message": "BE POST /electoral/intencion-voto no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/encuestas",
+    "message": "BE POST /encuestas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/eventos",
+    "message": "BE POST /eventos no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/eventos/{var}/asistentes",
+    "message": "BE POST /eventos/{var}/asistentes no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/framework/matrix/reset",
+    "message": "BE POST /framework/matrix/reset no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/hitl/comments/{var}/confirm",
+    "message": "BE POST /hitl/comments/{var}/confirm no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/hitl/posts/{var}/confirm",
+    "message": "BE POST /hitl/posts/{var}/confirm no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/metricas-sociales",
+    "message": "BE POST /metricas-sociales no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/oauth/callback/{var}",
+    "message": "BE POST /oauth/callback/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/onboarding/accounts/manual",
+    "message": "BE POST /onboarding/accounts/manual no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/onboarding/activate/{var}",
+    "message": "BE POST /onboarding/activate/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/onboarding/competidores",
+    "message": "BE POST /onboarding/competidores no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/onboarding/confirm-accounts",
+    "message": "BE POST /onboarding/confirm-accounts no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/onboarding/profile",
+    "message": "BE POST /onboarding/profile no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/onboarding/promesas",
+    "message": "BE POST /onboarding/promesas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/onboarding/search",
+    "message": "BE POST /onboarding/search no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/onboarding/validate-account",
+    "message": "BE POST /onboarding/validate-account no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/organizaciones",
+    "message": "BE POST /organizaciones no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/osint/sherlock",
+    "message": "BE POST /osint/sherlock no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/participacion",
+    "message": "BE POST /participacion no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/participacion/webhook/chatwoot",
+    "message": "BE POST /participacion/webhook/chatwoot no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/participacion/{var}/asignar",
+    "message": "BE POST /participacion/{var}/asignar no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/participacion/{var}/responder",
+    "message": "BE POST /participacion/{var}/responder no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/plan-ia/generate/{var}",
+    "message": "BE POST /plan-ia/generate/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/planes/generar",
+    "message": "BE POST /planes/generar no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/planes/generar/stream",
+    "message": "BE POST /planes/generar/stream no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/planes/{var}/tareas/{var}/complete",
+    "message": "BE POST /planes/{var}/tareas/{var}/complete no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/programas",
+    "message": "BE POST /programas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/programas/{var}/beneficiarios",
+    "message": "BE POST /programas/{var}/beneficiarios no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/social/scrape/{var}",
+    "message": "BE POST /social/scrape/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/voter-scoring/run",
+    "message": "BE POST /voter-scoring/run no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/voter-scoring/train",
+    "message": "BE POST /voter-scoring/train no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "POST",
+    "path": "/webhooks/chatwoot",
+    "message": "BE POST /webhooks/chatwoot no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/admin/classification/pending",
+    "message": "BE GET /admin/classification/pending no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/admin/classification/prompt",
+    "message": "BE GET /admin/classification/prompt no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/admin/classification/stats",
+    "message": "BE GET /admin/classification/stats no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/admin/compliance/purge-audit",
+    "message": "BE GET /admin/compliance/purge-audit no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/admin/overview",
+    "message": "BE GET /admin/overview no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/admin/promesas/{var}",
+    "message": "BE GET /admin/promesas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/alerts",
+    "message": "BE GET /alerts no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/api-keys",
+    "message": "BE GET /api-keys no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/auth/me",
+    "message": "BE GET /auth/me no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/benchmark/competidores",
+    "message": "BE GET /benchmark/competidores no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/benchmark/competidores/{var}",
+    "message": "BE GET /benchmark/competidores/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/benchmark/ranking",
+    "message": "BE GET /benchmark/ranking no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/blindaje/alertas",
+    "message": "BE GET /blindaje/alertas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/blindaje/gastos",
+    "message": "BE GET /blindaje/gastos no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/blindaje/reporte/{var}",
+    "message": "BE GET /blindaje/reporte/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/bot-detection/analyze/{var}",
+    "message": "BE GET /bot-detection/analyze/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/calendario/proximas",
+    "message": "BE GET /calendario/proximas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/campaigns",
+    "message": "BE GET /campaigns no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/campaigns/{var}",
+    "message": "BE GET /campaigns/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/campanas",
+    "message": "BE GET /campanas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/campanas/{var}",
+    "message": "BE GET /campanas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/campanas/{var}/analytics",
+    "message": "BE GET /campanas/{var}/analytics no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/canvassing/geo",
+    "message": "BE GET /canvassing/geo no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/canvassing/geo-stats",
+    "message": "BE GET /canvassing/geo-stats no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/canvassing/nearby",
+    "message": "BE GET /canvassing/nearby no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/canvassing/routes",
+    "message": "BE GET /canvassing/routes no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/canvassing/routes/{var}",
+    "message": "BE GET /canvassing/routes/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/canvassing/routes/{var}/progress",
+    "message": "BE GET /canvassing/routes/{var}/progress no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/ciudadanos",
+    "message": "BE GET /ciudadanos no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/ciudadanos-legacy",
+    "message": "BE GET /ciudadanos-legacy no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/ciudadanos-legacy/{var}/pii",
+    "message": "BE GET /ciudadanos-legacy/{var}/pii no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/ciudadanos/by-seccion/{var}",
+    "message": "BE GET /ciudadanos/by-seccion/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/ciudadanos/promotores",
+    "message": "BE GET /ciudadanos/promotores no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/ciudadanos/stats/by-seccion/{var}",
+    "message": "BE GET /ciudadanos/stats/by-seccion/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/ciudadanos/{var}",
+    "message": "BE GET /ciudadanos/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/contenido",
+    "message": "BE GET /contenido no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/contenido/temas-sugeridos/{var}",
+    "message": "BE GET /contenido/temas-sugeridos/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/contenido/{var}",
+    "message": "BE GET /contenido/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/content/pieces",
+    "message": "BE GET /content/pieces no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/content/pieces/{var}",
+    "message": "BE GET /content/pieces/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/crm/interactions",
+    "message": "BE GET /crm/interactions no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/crm/scores",
+    "message": "BE GET /crm/scores no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/crm/scores/{var}",
+    "message": "BE GET /crm/scores/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dashboard/overview",
+    "message": "BE GET /dashboard/overview no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dashboard/status",
+    "message": "BE GET /dashboard/status no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/foda/{var}",
+    "message": "BE GET /diagnostico/foda/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}",
+    "message": "BE GET /diagnostico/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/benchmark",
+    "message": "BE GET /diagnostico/{var}/benchmark no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/breakout_scale",
+    "message": "BE GET /diagnostico/{var}/breakout_scale no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/crisis_spike",
+    "message": "BE GET /diagnostico/{var}/crisis_spike no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/er_normalizado",
+    "message": "BE GET /diagnostico/{var}/er_normalizado no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/growth_attribution",
+    "message": "BE GET /diagnostico/{var}/growth_attribution no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/humanizacion",
+    "message": "BE GET /diagnostico/{var}/humanizacion no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/humanizacion/examples",
+    "message": "BE GET /diagnostico/{var}/humanizacion/examples no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/matriz_2x2",
+    "message": "BE GET /diagnostico/{var}/matriz_2x2 no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/sentiment_plutchik",
+    "message": "BE GET /diagnostico/{var}/sentiment_plutchik no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/share_like_ratio",
+    "message": "BE GET /diagnostico/{var}/share_like_ratio no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico/{var}/sov",
+    "message": "BE GET /diagnostico/{var}/sov no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico_tier2/{var}",
+    "message": "BE GET /diagnostico_tier2/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico_tier2/{var}/cib_detector",
+    "message": "BE GET /diagnostico_tier2/{var}/cib_detector no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico_tier2/{var}/cross_partisan",
+    "message": "BE GET /diagnostico_tier2/{var}/cross_partisan no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico_tier2/{var}/filtro_realidad",
+    "message": "BE GET /diagnostico_tier2/{var}/filtro_realidad no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico_tier2/{var}/promesas",
+    "message": "BE GET /diagnostico_tier2/{var}/promesas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico_tier2/{var}/rage_click",
+    "message": "BE GET /diagnostico_tier2/{var}/rage_click no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico_tier2/{var}/topic_drift",
+    "message": "BE GET /diagnostico_tier2/{var}/topic_drift no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico_tier2/{var}/veda_compliance",
+    "message": "BE GET /diagnostico_tier2/{var}/veda_compliance no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/diagnostico_tier2/{var}/violencia_politica",
+    "message": "BE GET /diagnostico_tier2/{var}/violencia_politica no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dirigentes",
+    "message": "BE GET /dirigentes no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dirigentes/{var}",
+    "message": "BE GET /dirigentes/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dirigentes/{var}/crecimiento",
+    "message": "BE GET /dirigentes/{var}/crecimiento no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dirigentes/{var}/diagnostico",
+    "message": "BE GET /dirigentes/{var}/diagnostico no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dirigentes/{var}/flash-analysis",
+    "message": "BE GET /dirigentes/{var}/flash-analysis no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dirigentes/{var}/followers",
+    "message": "BE GET /dirigentes/{var}/followers no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dirigentes/{var}/onboarding-progress",
+    "message": "BE GET /dirigentes/{var}/onboarding-progress no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/dirigentes/{var}/social-summary",
+    "message": "BE GET /dirigentes/{var}/social-summary no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/electoral/mapa/mvt/{var}/{var}/{var}.pbf",
+    "message": "BE GET /electoral/mapa/mvt/{var}/{var}/{var}.pbf no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/electoral/secciones",
+    "message": "BE GET /electoral/secciones no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/electoral/secciones/{var}/intencion-voto",
+    "message": "BE GET /electoral/secciones/{var}/intencion-voto no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/encuestas",
+    "message": "BE GET /encuestas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/encuestas/resumen/by-periodo/{var}",
+    "message": "BE GET /encuestas/resumen/by-periodo/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/encuestas/resumen/by-seccion/{var}",
+    "message": "BE GET /encuestas/resumen/by-seccion/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/encuestas/{var}",
+    "message": "BE GET /encuestas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/eventos",
+    "message": "BE GET /eventos no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/eventos/by-dirigente/{var}",
+    "message": "BE GET /eventos/by-dirigente/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/eventos/stats/roi",
+    "message": "BE GET /eventos/stats/roi no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/eventos/upcoming",
+    "message": "BE GET /eventos/upcoming no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/eventos/{var}",
+    "message": "BE GET /eventos/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/eventos/{var}/asistentes",
+    "message": "BE GET /eventos/{var}/asistentes no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/framework/audit",
+    "message": "BE GET /framework/audit no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/framework/matrix",
+    "message": "BE GET /framework/matrix no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/geo/tiles/{var}/{var}/{var}.mvt",
+    "message": "BE GET /geo/tiles/{var}/{var}/{var}.mvt no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/health/db",
+    "message": "BE GET /health/db no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/health/redis",
+    "message": "BE GET /health/redis no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/hitl/audit/{var}",
+    "message": "BE GET /hitl/audit/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/hitl/sample",
+    "message": "BE GET /hitl/sample no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/legal/privacidad",
+    "message": "BE GET /legal/privacidad no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/metricas-sociales/by-profile/{var}",
+    "message": "BE GET /metricas-sociales/by-profile/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/metricas-sociales/trends/{var}",
+    "message": "BE GET /metricas-sociales/trends/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/oauth/init/{var}",
+    "message": "BE GET /oauth/init/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/oauth/status/{var}",
+    "message": "BE GET /oauth/status/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/onboarding/profile/{var}",
+    "message": "BE GET /onboarding/profile/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/ops/llm/health",
+    "message": "BE GET /ops/llm/health no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/organizaciones",
+    "message": "BE GET /organizaciones no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/organizaciones/{var}",
+    "message": "BE GET /organizaciones/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/participacion",
+    "message": "BE GET /participacion no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/participacion/dashboard",
+    "message": "BE GET /participacion/dashboard no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/participacion/heatmap",
+    "message": "BE GET /participacion/heatmap no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/participacion/{var}",
+    "message": "BE GET /participacion/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/plan-ia/generate/status/{var}",
+    "message": "BE GET /plan-ia/generate/status/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/plan-ia/memoria/{var}",
+    "message": "BE GET /plan-ia/memoria/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/plan-ia/recomendaciones",
+    "message": "BE GET /plan-ia/recomendaciones no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/plan-ia/reporte/{var}",
+    "message": "BE GET /plan-ia/reporte/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/plan-ia/{var}/seguimiento",
+    "message": "BE GET /plan-ia/{var}/seguimiento no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/planes",
+    "message": "BE GET /planes no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/planes/{var}",
+    "message": "BE GET /planes/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/planes/{var}/progreso",
+    "message": "BE GET /planes/{var}/progreso no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/planes/{var}/tareas",
+    "message": "BE GET /planes/{var}/tareas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/posts/{var}/topics",
+    "message": "BE GET /posts/{var}/topics no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/programas",
+    "message": "BE GET /programas no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/programas/by-seccion/{var}",
+    "message": "BE GET /programas/by-seccion/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/programas/{var}",
+    "message": "BE GET /programas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/programas/{var}/beneficiarios",
+    "message": "BE GET /programas/{var}/beneficiarios no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/social/aceptacion/fantasmas-por-plataforma",
+    "message": "BE GET /social/aceptacion/fantasmas-por-plataforma no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/social/aceptacion/overview",
+    "message": "BE GET /social/aceptacion/overview no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/social/clima-politico",
+    "message": "BE GET /social/clima-politico no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/social/comments",
+    "message": "BE GET /social/comments no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/social/dirigentes/{var}/ia-summary",
+    "message": "BE GET /social/dirigentes/{var}/ia-summary no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/social/posts",
+    "message": "BE GET /social/posts no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/social/posts/{var}/ia",
+    "message": "BE GET /social/posts/{var}/ia no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/social/sentiment-coverage",
+    "message": "BE GET /social/sentiment-coverage no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/social/sentiment-timeline",
+    "message": "BE GET /social/sentiment-timeline no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/trends/alcaldias",
+    "message": "BE GET /trends/alcaldias no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/trends/geo",
+    "message": "BE GET /trends/geo no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/voter-scoring/by-seccion",
+    "message": "BE GET /voter-scoring/by-seccion no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/voter-scoring/by-seccion/{var}",
+    "message": "BE GET /voter-scoring/by-seccion/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/voter-scoring/segments",
+    "message": "BE GET /voter-scoring/segments no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "GET",
+    "path": "/voter-scoring/{var}",
+    "message": "BE GET /voter-scoring/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "DELETE",
+    "path": "/api-keys/{var}",
+    "message": "BE DELETE /api-keys/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "DELETE",
+    "path": "/benchmark/competidores/{var}",
+    "message": "BE DELETE /benchmark/competidores/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "DELETE",
+    "path": "/campanas/{var}",
+    "message": "BE DELETE /campanas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "DELETE",
+    "path": "/ciudadanos-legacy/{var}/erase",
+    "message": "BE DELETE /ciudadanos-legacy/{var}/erase no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "DELETE",
+    "path": "/ciudadanos/{var}",
+    "message": "BE DELETE /ciudadanos/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "DELETE",
+    "path": "/contenido/{var}",
+    "message": "BE DELETE /contenido/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "DELETE",
+    "path": "/eventos/{var}",
+    "message": "BE DELETE /eventos/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "DELETE",
+    "path": "/organizaciones/{var}",
+    "message": "BE DELETE /organizaciones/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "DELETE",
+    "path": "/programas/{var}",
+    "message": "BE DELETE /programas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/alerts/{var}/status",
+    "message": "BE PATCH /alerts/{var}/status no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/benchmark/competidores/{var}",
+    "message": "BE PATCH /benchmark/competidores/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/blindaje/alertas/{var}/resolver",
+    "message": "BE PATCH /blindaje/alertas/{var}/resolver no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/blindaje/gastos/{var}",
+    "message": "BE PATCH /blindaje/gastos/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/blindaje/gastos/{var}/aprobar",
+    "message": "BE PATCH /blindaje/gastos/{var}/aprobar no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/campanas/{var}",
+    "message": "BE PATCH /campanas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/canvassing/routes/{var}/punto/{var}",
+    "message": "BE PATCH /canvassing/routes/{var}/punto/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/ciudadanos/{var}",
+    "message": "BE PATCH /ciudadanos/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/contenido/{var}/estado",
+    "message": "BE PATCH /contenido/{var}/estado no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/dirigentes/{var}",
+    "message": "BE PATCH /dirigentes/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/dirigentes/{var}/pesos",
+    "message": "BE PATCH /dirigentes/{var}/pesos no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/encuestas/{var}",
+    "message": "BE PATCH /encuestas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/eventos/{var}",
+    "message": "BE PATCH /eventos/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/eventos/{var}/completar",
+    "message": "BE PATCH /eventos/{var}/completar no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/framework/matrix/cell",
+    "message": "BE PATCH /framework/matrix/cell no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/hitl/comments/{var}",
+    "message": "BE PATCH /hitl/comments/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/hitl/posts/{var}",
+    "message": "BE PATCH /hitl/posts/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/organizaciones/{var}",
+    "message": "BE PATCH /organizaciones/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/participacion/{var}",
+    "message": "BE PATCH /participacion/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/planes/{var}/aprobar",
+    "message": "BE PATCH /planes/{var}/aprobar no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/planes/{var}/tareas/{var}",
+    "message": "BE PATCH /planes/{var}/tareas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PATCH",
+    "path": "/programas/{var}",
+    "message": "BE PATCH /programas/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PUT",
+    "path": "/content/pieces/{var}/variant/{var}",
+    "message": "BE PUT /content/pieces/{var}/variant/{var} no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PUT",
+    "path": "/plan-ia/{var}/estado",
+    "message": "BE PUT /plan-ia/{var}/estado no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PUT",
+    "path": "/plan-ia/{var}/post-ejecutor",
+    "message": "BE PUT /plan-ia/{var}/post-ejecutor no es llamado desde FE hooks"
+  },
+  {
+    "layer": "api_contract",
+    "severity": "info",
+    "type": "be_unused",
+    "method": "PUT",
+    "path": "/plan-ia/{var}/veredicto",
+    "message": "BE PUT /plan-ia/{var}/veredicto no es llamado desde FE hooks"
+  },
+  {
+    "layer": "coverage",
+    "table": "alcaldias_cdmx",
+    "severity": "info",
+    "type": "row_count",
+    "total": 16,
+    "message": "alcaldias_cdmx: 16 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "alembic_version",
+    "severity": "info",
+    "type": "row_count",
+    "total": 1,
+    "message": "alembic_version: 1 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "alertas_compliance",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'alertas_compliance' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "alertas_crisis",
+    "severity": "info",
+    "type": "row_count",
+    "total": 14,
+    "message": "alertas_crisis: 14 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "api_keys",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'api_keys' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "campaigns",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'campaigns' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "campana_mensajes",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'campana_mensajes' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "campana_segmentos",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'campana_segmentos' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "campanas",
+    "column": "fecha_envio",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 1,
+    "total": 1,
+    "null_pct": 100.0,
+    "message": "campanas.fecha_envio: 100.0% NULL (1/1)"
+  },
+  {
+    "layer": "coverage",
+    "table": "campanas",
+    "column": "fecha_completada",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 1,
+    "total": 1,
+    "null_pct": 100.0,
+    "message": "campanas.fecha_completada: 100.0% NULL (1/1)"
+  },
+  {
+    "layer": "coverage",
+    "table": "campanas",
+    "column": "dirigente_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 1,
+    "total": 1,
+    "null_pct": 100.0,
+    "message": "campanas.dirigente_id: 100.0% NULL (1/1)"
+  },
+  {
+    "layer": "coverage",
+    "table": "campanas",
+    "severity": "info",
+    "type": "row_count",
+    "total": 1,
+    "message": "campanas: 1 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "column": "direccion",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 203,
+    "total": 205,
+    "null_pct": 99.02,
+    "message": "ciudadanos.direccion: 99.0% NULL (203/205)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "column": "email",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 104,
+    "total": 205,
+    "null_pct": 50.73,
+    "message": "ciudadanos.email: 50.7% NULL (104/205)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "column": "notas",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 205,
+    "total": 205,
+    "null_pct": 100.0,
+    "message": "ciudadanos.notas: 100.0% NULL (205/205)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "column": "intencion_voto",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 205,
+    "total": 205,
+    "null_pct": 100.0,
+    "message": "ciudadanos.intencion_voto: 100.0% NULL (205/205)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "column": "programas_sociales",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 205,
+    "total": 205,
+    "null_pct": 100.0,
+    "message": "ciudadanos.programas_sociales: 100.0% NULL (205/205)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "column": "ubicacion",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 205,
+    "total": 205,
+    "null_pct": 100.0,
+    "message": "ciudadanos.ubicacion: 100.0% NULL (205/205)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "column": "codigo_postal",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 205,
+    "total": 205,
+    "null_pct": 100.0,
+    "message": "ciudadanos.codigo_postal: 100.0% NULL (205/205)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "column": "foto_ine_url",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 205,
+    "total": 205,
+    "null_pct": 100.0,
+    "message": "ciudadanos.foto_ine_url: 100.0% NULL (205/205)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "column": "org_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 205,
+    "total": 205,
+    "null_pct": 100.0,
+    "message": "ciudadanos.org_id: 100.0% NULL (205/205)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos",
+    "severity": "info",
+    "type": "row_count",
+    "total": 205,
+    "message": "ciudadanos: 205 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "alcaldia_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.alcaldia_id: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "edad",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 5761,
+    "total": 9723,
+    "null_pct": 59.25,
+    "message": "ciudadanos_legacy.edad: 59.3% NULL (5761/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "identidad_de_genero",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.identidad_de_genero: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "numero_interior",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 5440,
+    "total": 9723,
+    "null_pct": 55.95,
+    "message": "ciudadanos_legacy.numero_interior: 55.9% NULL (5440/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "direccion_libre",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.direccion_libre: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "manzana",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.manzana: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "latitud",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.latitud: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "longitud",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.longitud: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "origen_ciudadano",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 7460,
+    "total": 9723,
+    "null_pct": 76.73,
+    "message": "ciudadanos_legacy.origen_ciudadano: 76.7% NULL (7460/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "ocupacion",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 7721,
+    "total": 9723,
+    "null_pct": 79.41,
+    "message": "ciudadanos_legacy.ocupacion: 79.4% NULL (7721/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "nivel_educativo",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 8283,
+    "total": 9723,
+    "null_pct": 85.19,
+    "message": "ciudadanos_legacy.nivel_educativo: 85.2% NULL (8283/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "nivel_participacion",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9121,
+    "total": 9723,
+    "null_pct": 93.81,
+    "message": "ciudadanos_legacy.nivel_participacion: 93.8% NULL (9121/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "disposicion_tiempo",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9106,
+    "total": 9723,
+    "null_pct": 93.65,
+    "message": "ciudadanos_legacy.disposicion_tiempo: 93.7% NULL (9106/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "temas_de_interes",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9436,
+    "total": 9723,
+    "null_pct": 97.05,
+    "message": "ciudadanos_legacy.temas_de_interes: 97.0% NULL (9436/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "red_social_descripcion",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9466,
+    "total": 9723,
+    "null_pct": 97.36,
+    "message": "ciudadanos_legacy.red_social_descripcion: 97.4% NULL (9466/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "residencia_si_no",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 8229,
+    "total": 9723,
+    "null_pct": 84.63,
+    "message": "ciudadanos_legacy.residencia_si_no: 84.6% NULL (8229/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "contactado",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.contactado: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "respuesta",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.respuesta: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "lista",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.lista: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "aprobado",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9299,
+    "total": 9723,
+    "null_pct": 95.64,
+    "message": "ciudadanos_legacy.aprobado: 95.6% NULL (9299/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "procesado",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 8650,
+    "total": 9723,
+    "null_pct": 88.96,
+    "message": "ciudadanos_legacy.procesado: 89.0% NULL (8650/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "observaciones",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 8588,
+    "total": 9723,
+    "null_pct": 88.33,
+    "message": "ciudadanos_legacy.observaciones: 88.3% NULL (8588/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "raw_data",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.raw_data: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "deleted_at",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.deleted_at: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "email_hmac",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.email_hmac: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "column": "clave_electoral_hmac",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9723,
+    "total": 9723,
+    "null_pct": 100.0,
+    "message": "ciudadanos_legacy.clave_electoral_hmac: 100.0% NULL (9723/9723)"
+  },
+  {
+    "layer": "coverage",
+    "table": "ciudadanos_legacy",
+    "severity": "info",
+    "type": "row_count",
+    "total": 9723,
+    "message": "ciudadanos_legacy: 9723 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "competidor_social_profiles",
+    "severity": "info",
+    "type": "row_count",
+    "total": 3,
+    "message": "competidor_social_profiles: 3 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "competidores",
+    "severity": "info",
+    "type": "row_count",
+    "total": 5,
+    "message": "competidores: 5 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "compliance_purge_audit",
+    "severity": "info",
+    "type": "row_count",
+    "total": 1,
+    "message": "compliance_purge_audit: 1 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "contenido_piezas",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'contenido_piezas' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "contenidos_generados",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'contenidos_generados' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "contexto_politico",
+    "column": "vigente_hasta",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 5,
+    "total": 5,
+    "null_pct": 100.0,
+    "message": "contexto_politico.vigente_hasta: 100.0% NULL (5/5)"
+  },
+  {
+    "layer": "coverage",
+    "table": "contexto_politico",
+    "severity": "info",
+    "type": "row_count",
+    "total": 5,
+    "message": "contexto_politico: 5 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "crm_interacciones",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'crm_interacciones' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "dirigentes",
+    "column": "seccion_electoral",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 8,
+    "total": 10,
+    "null_pct": 80.0,
+    "message": "dirigentes.seccion_electoral: 80.0% NULL (8/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "dirigentes",
+    "column": "sync_task_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "dirigentes.sync_task_id: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "dirigentes",
+    "column": "sync_error",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "dirigentes.sync_error: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "dirigentes",
+    "column": "sync_updated_at",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9,
+    "total": 10,
+    "null_pct": 90.0,
+    "message": "dirigentes.sync_updated_at: 90.0% NULL (9/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "dirigentes",
+    "column": "perfil_1_5",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9,
+    "total": 10,
+    "null_pct": 90.0,
+    "message": "dirigentes.perfil_1_5: 90.0% NULL (9/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "dirigentes",
+    "column": "pesos_last_modified_by",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9,
+    "total": 10,
+    "null_pct": 90.0,
+    "message": "dirigentes.pesos_last_modified_by: 90.0% NULL (9/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "dirigentes",
+    "column": "pesos_last_modified_at",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 9,
+    "total": 10,
+    "null_pct": 90.0,
+    "message": "dirigentes.pesos_last_modified_at: 90.0% NULL (9/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "dirigentes",
+    "severity": "info",
+    "type": "row_count",
+    "total": 10,
+    "message": "dirigentes: 10 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "efemerides",
+    "column": "descripcion",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 70,
+    "total": 70,
+    "null_pct": 100.0,
+    "message": "efemerides.descripcion: 100.0% NULL (70/70)"
+  },
+  {
+    "layer": "coverage",
+    "table": "efemerides",
+    "severity": "info",
+    "type": "row_count",
+    "total": 70,
+    "message": "efemerides: 70 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas",
+    "column": "problematicas_detectadas",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 139,
+    "total": 139,
+    "null_pct": 100.0,
+    "message": "encuestas.problematicas_detectadas: 100.0% NULL (139/139)"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas",
+    "column": "ubicacion_captura",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 139,
+    "total": 139,
+    "null_pct": 100.0,
+    "message": "encuestas.ubicacion_captura: 100.0% NULL (139/139)"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas",
+    "column": "duracion_minutos",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 139,
+    "total": 139,
+    "null_pct": 100.0,
+    "message": "encuestas.duracion_minutos: 100.0% NULL (139/139)"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas",
+    "column": "notas",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 139,
+    "total": 139,
+    "null_pct": 100.0,
+    "message": "encuestas.notas: 100.0% NULL (139/139)"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas",
+    "severity": "info",
+    "type": "row_count",
+    "total": 139,
+    "message": "encuestas: 139 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas_publicas",
+    "column": "valor_delta_vs_anterior",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 19419,
+    "total": 19419,
+    "null_pct": 100.0,
+    "message": "encuestas_publicas.valor_delta_vs_anterior: 100.0% NULL (19419/19419)"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas_publicas",
+    "column": "tamanyo_muestra",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 19419,
+    "total": 19419,
+    "null_pct": 100.0,
+    "message": "encuestas_publicas.tamanyo_muestra: 100.0% NULL (19419/19419)"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas_publicas",
+    "column": "margen_error",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 18683,
+    "total": 19419,
+    "null_pct": 96.21,
+    "message": "encuestas_publicas.margen_error: 96.2% NULL (18683/19419)"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas_publicas",
+    "column": "url_fuente",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 14897,
+    "total": 19419,
+    "null_pct": 76.71,
+    "message": "encuestas_publicas.url_fuente: 76.7% NULL (14897/19419)"
+  },
+  {
+    "layer": "coverage",
+    "table": "encuestas_publicas",
+    "severity": "info",
+    "type": "row_count",
+    "total": 19419,
+    "message": "encuestas_publicas: 19419 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "evento_asistentes",
+    "severity": "info",
+    "type": "row_count",
+    "total": 4,
+    "message": "evento_asistentes: 4 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "eventos",
+    "column": "asistentes_reales",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 3,
+    "total": 4,
+    "null_pct": 75.0,
+    "message": "eventos.asistentes_reales: 75.0% NULL (3/4)"
+  },
+  {
+    "layer": "coverage",
+    "table": "eventos",
+    "column": "recursos",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4,
+    "total": 4,
+    "null_pct": 100.0,
+    "message": "eventos.recursos: 100.0% NULL (4/4)"
+  },
+  {
+    "layer": "coverage",
+    "table": "eventos",
+    "column": "nuevos_simpatizantes",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4,
+    "total": 4,
+    "null_pct": 100.0,
+    "message": "eventos.nuevos_simpatizantes: 100.0% NULL (4/4)"
+  },
+  {
+    "layer": "coverage",
+    "table": "eventos",
+    "column": "costo_total",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4,
+    "total": 4,
+    "null_pct": 100.0,
+    "message": "eventos.costo_total: 100.0% NULL (4/4)"
+  },
+  {
+    "layer": "coverage",
+    "table": "eventos",
+    "column": "costo_por_adquisicion",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4,
+    "total": 4,
+    "null_pct": 100.0,
+    "message": "eventos.costo_por_adquisicion: 100.0% NULL (4/4)"
+  },
+  {
+    "layer": "coverage",
+    "table": "eventos",
+    "column": "org_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4,
+    "total": 4,
+    "null_pct": 100.0,
+    "message": "eventos.org_id: 100.0% NULL (4/4)"
+  },
+  {
+    "layer": "coverage",
+    "table": "eventos",
+    "column": "notas",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4,
+    "total": 4,
+    "null_pct": 100.0,
+    "message": "eventos.notas: 100.0% NULL (4/4)"
+  },
+  {
+    "layer": "coverage",
+    "table": "eventos",
+    "severity": "info",
+    "type": "row_count",
+    "total": 4,
+    "message": "eventos: 4 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "follower_engagement",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'follower_engagement' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "framework_audit_log",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'framework_audit_log' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "framework_matrix_defaults",
+    "severity": "info",
+    "type": "row_count",
+    "total": 60,
+    "message": "framework_matrix_defaults: 60 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "framework_overrides_org",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'framework_overrides_org' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "gastos_electorales",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'gastos_electorales' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "hitl_edits_log",
+    "column": "from_tono",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 1,
+    "total": 1,
+    "null_pct": 100.0,
+    "message": "hitl_edits_log.from_tono: 100.0% NULL (1/1)"
+  },
+  {
+    "layer": "coverage",
+    "table": "hitl_edits_log",
+    "column": "to_tono",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 1,
+    "total": 1,
+    "null_pct": 100.0,
+    "message": "hitl_edits_log.to_tono: 100.0% NULL (1/1)"
+  },
+  {
+    "layer": "coverage",
+    "table": "hitl_edits_log",
+    "column": "reason",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 1,
+    "total": 1,
+    "null_pct": 100.0,
+    "message": "hitl_edits_log.reason: 100.0% NULL (1/1)"
+  },
+  {
+    "layer": "coverage",
+    "table": "hitl_edits_log",
+    "severity": "info",
+    "type": "row_count",
+    "total": 1,
+    "message": "hitl_edits_log: 1 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "ia_content_registry",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'ia_content_registry' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "intencion_voto",
+    "severity": "info",
+    "type": "row_count",
+    "total": 5,
+    "message": "intencion_voto: 5 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "llm_health_log",
+    "severity": "info",
+    "type": "row_count",
+    "total": 4,
+    "message": "llm_health_log: 4 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "metricas_sociales",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'metricas_sociales' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "oauth_tokens_by_platform",
+    "column": "refresh_token_hash",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 1,
+    "total": 1,
+    "null_pct": 100.0,
+    "message": "oauth_tokens_by_platform.refresh_token_hash: 100.0% NULL (1/1)"
+  },
+  {
+    "layer": "coverage",
+    "table": "oauth_tokens_by_platform",
+    "column": "last_refreshed_at",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 1,
+    "total": 1,
+    "null_pct": 100.0,
+    "message": "oauth_tokens_by_platform.last_refreshed_at: 100.0% NULL (1/1)"
+  },
+  {
+    "layer": "coverage",
+    "table": "oauth_tokens_by_platform",
+    "severity": "info",
+    "type": "row_count",
+    "total": 1,
+    "message": "oauth_tokens_by_platform: 1 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "organizaciones",
+    "column": "logo_url",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4,
+    "total": 4,
+    "null_pct": 100.0,
+    "message": "organizaciones.logo_url: 100.0% NULL (4/4)"
+  },
+  {
+    "layer": "coverage",
+    "table": "organizaciones",
+    "severity": "info",
+    "type": "row_count",
+    "total": 4,
+    "message": "organizaciones: 4 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "plan_tareas",
+    "column": "metrica_valor_real",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 83,
+    "total": 83,
+    "null_pct": 100.0,
+    "message": "plan_tareas.metrica_valor_real: 100.0% NULL (83/83)"
+  },
+  {
+    "layer": "coverage",
+    "table": "plan_tareas",
+    "column": "completado_at",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 83,
+    "total": 83,
+    "null_pct": 100.0,
+    "message": "plan_tareas.completado_at: 100.0% NULL (83/83)"
+  },
+  {
+    "layer": "coverage",
+    "table": "plan_tareas",
+    "severity": "info",
+    "type": "row_count",
+    "total": 83,
+    "message": "plan_tareas: 83 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "planes_ia",
+    "column": "datos_entrada",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 24,
+    "total": 41,
+    "null_pct": 58.54,
+    "message": "planes_ia.datos_entrada: 58.5% NULL (24/41)"
+  },
+  {
+    "layer": "coverage",
+    "table": "planes_ia",
+    "severity": "info",
+    "type": "row_count",
+    "total": 41,
+    "message": "planes_ia: 41 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "programa_beneficiarios",
+    "severity": "info",
+    "type": "row_count",
+    "total": 7,
+    "message": "programa_beneficiarios: 7 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "programas_sociales",
+    "column": "presupuesto_anual",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 3,
+    "total": 3,
+    "null_pct": 100.0,
+    "message": "programas_sociales.presupuesto_anual: 100.0% NULL (3/3)"
+  },
+  {
+    "layer": "coverage",
+    "table": "programas_sociales",
+    "severity": "info",
+    "type": "row_count",
+    "total": 3,
+    "message": "programas_sociales: 3 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "promesas_dirigente",
+    "column": "fecha_realizada",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 12,
+    "total": 12,
+    "null_pct": 100.0,
+    "message": "promesas_dirigente.fecha_realizada: 100.0% NULL (12/12)"
+  },
+  {
+    "layer": "coverage",
+    "table": "promesas_dirigente",
+    "column": "evidencia_url",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 12,
+    "total": 12,
+    "null_pct": 100.0,
+    "message": "promesas_dirigente.evidencia_url: 100.0% NULL (12/12)"
+  },
+  {
+    "layer": "coverage",
+    "table": "promesas_dirigente",
+    "severity": "info",
+    "type": "row_count",
+    "total": 12,
+    "message": "promesas_dirigente: 12 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "promotores_legacy",
+    "column": "alcaldia_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 45,
+    "total": 45,
+    "null_pct": 100.0,
+    "message": "promotores_legacy.alcaldia_id: 100.0% NULL (45/45)"
+  },
+  {
+    "layer": "coverage",
+    "table": "promotores_legacy",
+    "column": "enabled",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 45,
+    "total": 45,
+    "null_pct": 100.0,
+    "message": "promotores_legacy.enabled: 100.0% NULL (45/45)"
+  },
+  {
+    "layer": "coverage",
+    "table": "promotores_legacy",
+    "column": "mega_promotor",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 45,
+    "total": 45,
+    "null_pct": 100.0,
+    "message": "promotores_legacy.mega_promotor: 100.0% NULL (45/45)"
+  },
+  {
+    "layer": "coverage",
+    "table": "promotores_legacy",
+    "column": "super_promotor_cdmx",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 32,
+    "total": 45,
+    "null_pct": 71.11,
+    "message": "promotores_legacy.super_promotor_cdmx: 71.1% NULL (32/45)"
+  },
+  {
+    "layer": "coverage",
+    "table": "promotores_legacy",
+    "column": "distrito_federal",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 45,
+    "total": 45,
+    "null_pct": 100.0,
+    "message": "promotores_legacy.distrito_federal: 100.0% NULL (45/45)"
+  },
+  {
+    "layer": "coverage",
+    "table": "promotores_legacy",
+    "column": "distritos",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 45,
+    "total": 45,
+    "null_pct": 100.0,
+    "message": "promotores_legacy.distritos: 100.0% NULL (45/45)"
+  },
+  {
+    "layer": "coverage",
+    "table": "promotores_legacy",
+    "column": "distrito_local",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 45,
+    "total": 45,
+    "null_pct": 100.0,
+    "message": "promotores_legacy.distrito_local: 100.0% NULL (45/45)"
+  },
+  {
+    "layer": "coverage",
+    "table": "promotores_legacy",
+    "severity": "info",
+    "type": "row_count",
+    "total": 45,
+    "message": "promotores_legacy: 45 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "puntos_ruta",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'puntos_ruta' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "recomendaciones_plan_ia",
+    "column": "post_ejecutor_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 64,
+    "total": 66,
+    "null_pct": 96.97,
+    "message": "recomendaciones_plan_ia.post_ejecutor_id: 97.0% NULL (64/66)"
+  },
+  {
+    "layer": "coverage",
+    "table": "recomendaciones_plan_ia",
+    "column": "metricas_predichas",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 64,
+    "total": 66,
+    "null_pct": 96.97,
+    "message": "recomendaciones_plan_ia.metricas_predichas: 97.0% NULL (64/66)"
+  },
+  {
+    "layer": "coverage",
+    "table": "recomendaciones_plan_ia",
+    "column": "metricas_observadas",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 64,
+    "total": 66,
+    "null_pct": 96.97,
+    "message": "recomendaciones_plan_ia.metricas_observadas: 97.0% NULL (64/66)"
+  },
+  {
+    "layer": "coverage",
+    "table": "recomendaciones_plan_ia",
+    "column": "veredicto",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 64,
+    "total": 66,
+    "null_pct": 96.97,
+    "message": "recomendaciones_plan_ia.veredicto: 97.0% NULL (64/66)"
+  },
+  {
+    "layer": "coverage",
+    "table": "recomendaciones_plan_ia",
+    "column": "veredicto_original",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 64,
+    "total": 66,
+    "null_pct": 96.97,
+    "message": "recomendaciones_plan_ia.veredicto_original: 97.0% NULL (64/66)"
+  },
+  {
+    "layer": "coverage",
+    "table": "recomendaciones_plan_ia",
+    "column": "notas_cliente",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 48,
+    "total": 66,
+    "null_pct": 72.73,
+    "message": "recomendaciones_plan_ia.notas_cliente: 72.7% NULL (48/66)"
+  },
+  {
+    "layer": "coverage",
+    "table": "recomendaciones_plan_ia",
+    "severity": "info",
+    "type": "row_count",
+    "total": 66,
+    "message": "recomendaciones_plan_ia: 66 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "resultados_electorales_seccion",
+    "column": "municipio",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 8103,
+    "total": 8103,
+    "null_pct": 100.0,
+    "message": "resultados_electorales_seccion.municipio: 100.0% NULL (8103/8103)"
+  },
+  {
+    "layer": "coverage",
+    "table": "resultados_electorales_seccion",
+    "severity": "info",
+    "type": "row_count",
+    "total": 8103,
+    "message": "resultados_electorales_seccion: 8103 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "rutas_canvassing",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'rutas_canvassing' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "secciones_electorales",
+    "severity": "info",
+    "type": "row_count",
+    "total": 8169,
+    "message": "secciones_electorales: 8169 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "seguimiento_solicitudes",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'seguimiento_solicitudes' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "sentiment_analyses",
+    "column": "propaganda_labels",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 859,
+    "total": 859,
+    "null_pct": 100.0,
+    "message": "sentiment_analyses.propaganda_labels: 100.0% NULL (859/859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "sentiment_analyses",
+    "severity": "info",
+    "type": "row_count",
+    "total": 859,
+    "message": "sentiment_analyses: 859 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_comments",
+    "column": "parent_comment_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 2830,
+    "total": 2830,
+    "null_pct": 100.0,
+    "message": "social_comments.parent_comment_id: 100.0% NULL (2830/2830)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_comments",
+    "column": "es_follower",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 2830,
+    "total": 2830,
+    "null_pct": 100.0,
+    "message": "social_comments.es_follower: 100.0% NULL (2830/2830)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_comments",
+    "column": "last_reviewed_by",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 2830,
+    "total": 2830,
+    "null_pct": 100.0,
+    "message": "social_comments.last_reviewed_by: 100.0% NULL (2830/2830)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_comments",
+    "column": "last_reviewed_at",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 2830,
+    "total": 2830,
+    "null_pct": 100.0,
+    "message": "social_comments.last_reviewed_at: 100.0% NULL (2830/2830)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_comments",
+    "severity": "info",
+    "type": "row_count",
+    "total": 2830,
+    "message": "social_comments: 2830 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_followers",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'social_followers' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "raw_data",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 2606,
+    "total": 4859,
+    "null_pct": 53.63,
+    "message": "social_posts.raw_data: 53.6% NULL (2606/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "topics_extracted",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4791,
+    "total": 4859,
+    "null_pct": 98.6,
+    "message": "social_posts.topics_extracted: 98.6% NULL (4791/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "nlp_model_version",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4265,
+    "total": 4859,
+    "null_pct": 87.78,
+    "message": "social_posts.nlp_model_version: 87.8% NULL (4265/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "sentimiento_politico_ajustado",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4859,
+    "total": 4859,
+    "null_pct": 100.0,
+    "message": "social_posts.sentimiento_politico_ajustado: 100.0% NULL (4859/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "controversy_score",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4859,
+    "total": 4859,
+    "null_pct": 100.0,
+    "message": "social_posts.controversy_score: 100.0% NULL (4859/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "toxicity_score",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4859,
+    "total": 4859,
+    "null_pct": 100.0,
+    "message": "social_posts.toxicity_score: 100.0% NULL (4859/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "topics_jsonb",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4859,
+    "total": 4859,
+    "null_pct": 100.0,
+    "message": "social_posts.topics_jsonb: 100.0% NULL (4859/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "platform_adjusted_sentiment",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4859,
+    "total": 4859,
+    "null_pct": 100.0,
+    "message": "social_posts.platform_adjusted_sentiment: 100.0% NULL (4859/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "llm_razon",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4707,
+    "total": 4859,
+    "null_pct": 96.87,
+    "message": "social_posts.llm_razon: 96.9% NULL (4707/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "llm_modelo",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4859,
+    "total": 4859,
+    "null_pct": 100.0,
+    "message": "social_posts.llm_modelo: 100.0% NULL (4859/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "llm_processed_at",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4859,
+    "total": 4859,
+    "null_pct": 100.0,
+    "message": "social_posts.llm_processed_at: 100.0% NULL (4859/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "last_reviewed_by",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4858,
+    "total": 4859,
+    "null_pct": 99.98,
+    "message": "social_posts.last_reviewed_by: 100.0% NULL (4858/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "last_reviewed_at",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4858,
+    "total": 4859,
+    "null_pct": 99.98,
+    "message": "social_posts.last_reviewed_at: 100.0% NULL (4858/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "column": "media_urls",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 4833,
+    "total": 4859,
+    "null_pct": 99.46,
+    "message": "social_posts.media_urls: 99.5% NULL (4833/4859)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_posts",
+    "severity": "info",
+    "type": "row_count",
+    "total": 4859,
+    "message": "social_posts: 4859 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_profile_snapshots",
+    "column": "data_origin_checkpoint",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 31,
+    "total": 31,
+    "null_pct": 100.0,
+    "message": "social_profile_snapshots.data_origin_checkpoint: 100.0% NULL (31/31)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_profile_snapshots",
+    "severity": "info",
+    "type": "row_count",
+    "total": 31,
+    "message": "social_profile_snapshots: 31 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_profiles",
+    "column": "last_manual_update",
+    "severity": "medium",
+    "type": "high_null_ratio",
+    "null_count": 34,
+    "total": 47,
+    "null_pct": 72.34,
+    "message": "social_profiles.last_manual_update: 72.3% NULL (34/47)"
+  },
+  {
+    "layer": "coverage",
+    "table": "social_profiles",
+    "severity": "info",
+    "type": "row_count",
+    "total": 47,
+    "message": "social_profiles: 47 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "column": "ciudadano_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "solicitudes_ciudadanas.ciudadano_id: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "column": "seccion_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "solicitudes_ciudadanas.seccion_id: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "column": "ubicacion",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "solicitudes_ciudadanas.ubicacion: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "column": "direccion",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "solicitudes_ciudadanas.direccion: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "column": "asignado_a_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "solicitudes_ciudadanas.asignado_a_id: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "column": "dirigente_responsable_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "solicitudes_ciudadanas.dirigente_responsable_id: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "column": "respuesta",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "solicitudes_ciudadanas.respuesta: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "column": "fecha_respuesta",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "solicitudes_ciudadanas.fecha_respuesta: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "column": "chatwoot_conversation_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 10,
+    "total": 10,
+    "null_pct": 100.0,
+    "message": "solicitudes_ciudadanas.chatwoot_conversation_id: 100.0% NULL (10/10)"
+  },
+  {
+    "layer": "coverage",
+    "table": "solicitudes_ciudadanas",
+    "severity": "info",
+    "type": "row_count",
+    "total": 10,
+    "message": "solicitudes_ciudadanas: 10 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "spatial_ref_sys",
+    "severity": "info",
+    "type": "row_count",
+    "total": 8500,
+    "message": "spatial_ref_sys: 8500 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "topic_trends",
+    "column": "growth_rate_24h",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 6,
+    "total": 6,
+    "null_pct": 100.0,
+    "message": "topic_trends.growth_rate_24h: 100.0% NULL (6/6)"
+  },
+  {
+    "layer": "coverage",
+    "table": "topic_trends",
+    "column": "topic_embedding",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 6,
+    "total": 6,
+    "null_pct": 100.0,
+    "message": "topic_trends.topic_embedding: 100.0% NULL (6/6)"
+  },
+  {
+    "layer": "coverage",
+    "table": "topic_trends",
+    "severity": "info",
+    "type": "row_count",
+    "total": 6,
+    "message": "topic_trends: 6 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "unidades_territoriales",
+    "column": "alcaldia_id",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 5552,
+    "total": 5552,
+    "null_pct": 100.0,
+    "message": "unidades_territoriales.alcaldia_id: 100.0% NULL (5552/5552)"
+  },
+  {
+    "layer": "coverage",
+    "table": "unidades_territoriales",
+    "column": "nivel_socioeconomico_resumen",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 5552,
+    "total": 5552,
+    "null_pct": 100.0,
+    "message": "unidades_territoriales.nivel_socioeconomico_resumen: 100.0% NULL (5552/5552)"
+  },
+  {
+    "layer": "coverage",
+    "table": "unidades_territoriales",
+    "column": "grado_promedio_estudios",
+    "severity": "high",
+    "type": "high_null_ratio",
+    "null_count": 5552,
+    "total": 5552,
+    "null_pct": 100.0,
+    "message": "unidades_territoriales.grado_promedio_estudios: 100.0% NULL (5552/5552)"
+  },
+  {
+    "layer": "coverage",
+    "table": "unidades_territoriales",
+    "severity": "info",
+    "type": "row_count",
+    "total": 5552,
+    "message": "unidades_territoriales: 5552 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "users",
+    "severity": "info",
+    "type": "row_count",
+    "total": 11,
+    "message": "users: 11 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "voter_scores",
+    "severity": "info",
+    "type": "row_count",
+    "total": 205,
+    "message": "voter_scores: 205 rows"
+  },
+  {
+    "layer": "coverage",
+    "table": "voter_scores_integration",
+    "severity": "low",
+    "type": "empty_table",
+    "message": "Tabla 'voter_scores_integration' est\u00e1 vac\u00eda (0 rows)"
+  },
+  {
+    "layer": "referential",
+    "severity": "info",
+    "type": "fk_clean",
+    "message": "social_comments.parent_post_id \u2192 social_posts.id: 0 hu\u00e9rfanos \u2713"
+  },
+  {
+    "layer": "referential",
+    "severity": "info",
+    "type": "fk_clean",
+    "message": "social_profiles.dirigente_id \u2192 dirigentes.id: 0 hu\u00e9rfanos \u2713"
+  },
+  {
+    "layer": "referential",
+    "severity": "info",
+    "type": "fk_clean",
+    "message": "social_posts.profile_id \u2192 social_profiles.id: 0 hu\u00e9rfanos \u2713"
+  },
+  {
+    "layer": "referential",
+    "severity": "info",
+    "type": "fk_clean",
+    "message": "oauth_tokens_by_platform.dirigente_id \u2192 dirigentes.id: 0 hu\u00e9rfanos \u2713"
+  },
+  {
+    "layer": "referential",
+    "severity": "info",
+    "type": "fk_clean",
+    "message": "follower_engagement.follower_id \u2192 social_followers.id: 0 hu\u00e9rfanos \u2713"
+  },
+  {
+    "layer": "referential",
+    "severity": "info",
+    "type": "fk_clean",
+    "message": "follower_engagement.post_id \u2192 social_posts.id: 0 hu\u00e9rfanos \u2713"
+  }
+]

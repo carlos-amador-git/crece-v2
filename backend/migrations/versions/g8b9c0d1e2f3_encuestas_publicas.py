@@ -8,9 +8,8 @@ Tabla para almacenar encuestas de aprobación scrapeadas de Oraculus,
 Parametría, Enkoll, Mitofsky, Reforma, El Financiero. Se usan como
 ancla para detectar divergencia del sentiment CRECE vs realidad externa.
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 revision = 'g8b9c0d1e2f3'
 down_revision = 'f7a8b9c0d1e2'

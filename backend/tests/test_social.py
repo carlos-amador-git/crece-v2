@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import Role
 from app.models.dirigente import Dirigente
 from app.models.social import (
     Platform,
@@ -20,7 +18,6 @@ from app.models.social import (
 )
 from app.models.user import User
 from tests.conftest import auth_headers
-
 
 # ---------------------------------------------------------------------------
 # Helpers

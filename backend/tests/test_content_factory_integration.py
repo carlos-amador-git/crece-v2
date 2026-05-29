@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import patch
 from uuid import UUID as UUIDType
 
-import pytest
 from httpx import AsyncClient
 from pydantic import field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +18,6 @@ from app.models.organizacion import Organizacion, TipoOrganizacion
 from app.models.user import User
 from app.schemas.integration import ContentPieceResponse
 from tests.conftest import auth_headers
-
 
 # ---------------------------------------------------------------------------
 # Schema patch helper
@@ -181,7 +179,7 @@ async def test_generate_content_mock(
         prompt_usado="Test prompt",
         estado="borrador",
     )
-    fake_pieza.created_at = datetime.now(timezone.utc)
+    fake_pieza.created_at = datetime.now(UTC)
 
     async def _fake_generate_content(**kwargs):
         return fake_pieza

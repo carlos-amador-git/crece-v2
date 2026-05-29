@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 // import dynamic from "next/dynamic";
 import { useDirigente, useDirigenteCrecimiento } from "@/lib/api/hooks/use-dirigentes";
-import { useSentimentTrend } from "@/lib/api/hooks/use-social";
+import { useTonoDiscursoTrend } from "@/lib/api/hooks/use-social";
 import { usePlanes } from "@/lib/api/hooks/use-planes";
 import { TendenciaPorRedWidget } from "@/components/charts/tendencia-por-red-widget";
 import { SemaforoCrecimiento } from "@/components/dashboard/semaforo-crecimiento";
@@ -13,13 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ProfileHeader } from "@/components/dirigentes/profile-header";
+import { CompetitorsSection } from "@/components/dirigentes/competitors-section";
 import { IpdRadarChart } from "@/components/charts/ipd-radar-chart";
-import { SentimentLineChart } from "@/components/charts/sentiment-line-chart";
+import { TonoDiscursoChart } from "@/components/charts/tono-discurso-chart";
 import { EngagementBarChart } from "@/components/charts/engagement-bar-chart";
 import { PostCard } from "@/components/social/post-card";
 // SentimentBadge ya no se usa en ficha dirigente · D-23-G' KPI hero ahora es ActividadAlineadaCard.
 // El componente se preserva para PostCard y otras vistas (no se borra del bundle · decisión CEO 2026-04-25).
-import { formatNumber, formatDate } from "@/lib/utils";
+import { formatNumber, formatDate, cn } from "@/lib/utils";
 import { ArrowLeft, MessageSquare, Users, Brain } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -36,14 +37,17 @@ export default function DirigenteDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { data: dirigente, isLoading, isError } = useDirigente(id);
-  const { data: sentimentTrendData } = useSentimentTrend(30, dirigente?.id);
+  // P1 #1 (2026-05-19): migración tono_discurso. Hook legacy queda en backend pero ya no consumido aquí.
+  const { data: tonoTrendData } = useTonoDiscursoTrend(30, dirigente?.id);
   const { data: planesData } = usePlanes(undefined, 1);
   const { data: crecimiento } = useDirigenteCrecimiento(id);
 
-  const sentimentTrend = sentimentTrendData ?? [];
-  // Filter plans for this dirigente
+  const sentimentTrend = tonoTrendData ?? [];
+  // Filter plans for this dirigente, including only updated AI Plans (Estrategia and Contenido)
   const dirigentePlans = (planesData?.items ?? []).filter(
-    (p) => p.dirigente_id === Number(id)
+    (p) =>
+      p.dirigente_id === Number(id) &&
+      (p.tipo === "CONSOLIDACION" || p.tipo === "CONTENIDO")
   );
 
   if (isLoading) {
@@ -114,7 +118,14 @@ export default function DirigenteDetailPage() {
           </CardContent>
         </Card>
         {/* D-23-G' · KPI hero reformulado · 2026-04-24 · reemplaza Sentimiento Prom. flipeado */}
-        <ActividadAlineadaCard data={dirigente.stats?.actividad_alineada} />
+        {/* D-23-H · Phase B · 2026-04-25 · click ingresa al panel editable de evaluación */}
+        <Link
+          href={`/dashboard/evaluacion/${dirigente.id}`}
+          className="block transition hover:ring-2 hover:ring-primary/30 rounded-lg"
+          aria-label="Ajustar pesos de evaluación"
+        >
+          <ActividadAlineadaCard data={dirigente.stats?.actividad_alineada} />
+        </Link>
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Crecimiento (30d)</p>
@@ -137,31 +148,105 @@ export default function DirigenteDetailPage() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Indice de Penetracion Digital</CardTitle>
+            <Card className="relative overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div>
+                  <CardTitle>Indice de Penetracion Digital</CardTitle>
+                  <p className="text-xs text-muted-foreground">Fortaleza relativa por plataforma (0-10)</p>
+                </div>
+                {(() => {
+                  const values = Object.values(dirigente.ipd_breakdown ?? {});
+                  const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+                  const signal = avg > 7 ? { label: "Sobresaliente", class: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" } :
+                                avg > 5 ? { label: "Saludable", class: "bg-blue-500/10 text-blue-600 border-blue-500/20" } :
+                                avg > 3 ? { label: "Bajo Impacto", class: "bg-amber-500/10 text-amber-600 border-amber-500/20" } :
+                                { label: "Crítico", class: "bg-red-500/10 text-red-600 border-red-500/20" };
+                  return (
+                    <Badge variant="outline" className={cn("font-bold uppercase tracking-wider", signal.class)}>
+                      {signal.label}
+                    </Badge>
+                  );
+                })()}
               </CardHeader>
               <CardContent>
                 <IpdRadarChart data={dirigente.ipd_breakdown ?? { twitter: 0, instagram: 0, facebook: 0, tiktok: 0, youtube: 0, engagement: 0 }} />
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="flex flex-col">
               <CardHeader>
-                <CardTitle>Sentimiento (30 dias)</CardTitle>
+                <CardTitle>Resumen de Desempeño</CardTitle>
+                <p className="text-xs text-muted-foreground">Análisis contextual de los últimos 30 días</p>
               </CardHeader>
-              <CardContent>
-                <SentimentLineChart data={sentimentTrend} />
+              <CardContent className="flex-1 space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Fortalezas detectadas</p>
+                  <ul className="space-y-1.5 text-xs text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      Dominio destacado en {Object.entries(dirigente.ipd_breakdown ?? {}).sort(([,a],[,b]) => b-a)[0]?.[0]}
+                    </li>
+                    {dirigente.stats?.total_engagement_7d > 5000 && (
+                      <li className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        Engagement superior al benchmark del estrato
+                      </li>
+                    )}
+                  </ul>
+                </div>
+                <div className="space-y-2 pt-2 border-t border-dashed">
+                  <p className="text-sm font-medium">Oportunidades de mejora</p>
+                  <ul className="space-y-1.5 text-xs text-muted-foreground">
+                    {Object.entries(dirigente.ipd_breakdown ?? {}).some(([,v]) => v < 3) && (
+                      <li className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        Presencia digital insuficiente en redes secundarias
+                      </li>
+                    )}
+                    {dirigente.stats?.total_engagement_7d === 0 && (
+                      <li className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                        Señal de estancamiento en la conversación activa
+                      </li>
+                    )}
+                  </ul>
+                </div>
+                <div className="mt-auto pt-4 flex justify-end">
+                   <Button asChild variant="outline" size="sm" className="text-[10px] uppercase font-bold tracking-widest h-8">
+                     <Link href={`/dashboard/diagnostico?dirigente=${dirigente.id}`}>Ver Diagnóstico Full →</Link>
+                   </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Competidores · Sprint W8 war-room-personal */}
+          <CompetitorsSection
+            dirigenteId={dirigente.id}
+            dirigenteFollowers={
+              dirigente.social_accounts?.reduce((acc, sa) => acc + (sa.followers ?? 0), 0) ?? 0
+            }
+            dirigenteFirstName={dirigente.full_name?.split(" ")[0]}
+          />
+
           <div>
-            <h3 className="mb-3 font-heading text-lg font-semibold">
-              Publicaciones Recientes
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-heading text-lg font-semibold">
+                Publicaciones recientes
+              </h3>
+              <TabsList className="bg-transparent h-auto p-0">
+                <TabsTrigger value="social" className="text-xs text-muted-foreground hover:text-foreground p-0 h-auto bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:underline">
+                  Ver todo el timeline →
+                </TabsTrigger>
+              </TabsList>
+            </div>
             <div className="space-y-3">
-              {(dirigente.recent_posts ?? []).map((post) => (
+              {(dirigente.recent_posts ?? []).slice(0, 3).map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
+              {(dirigente.recent_posts ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground italic text-center py-8">Sin publicaciones recientes.</p>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -174,7 +259,7 @@ export default function DirigenteDetailPage() {
                 <CardTitle>Sentimiento en el Tiempo</CardTitle>
               </CardHeader>
               <CardContent>
-                <SentimentLineChart data={sentimentTrend} />
+                <TonoDiscursoChart data={sentimentTrend} />
               </CardContent>
             </Card>
             <Card>
@@ -310,8 +395,17 @@ export default function DirigenteDetailPage() {
                 day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
               });
 
+              const targetHref =
+                plan.tipo === "CONSOLIDACION"
+                  ? `/dashboard/planes?dirigente=${dirigente.id}&tab=estrategia`
+                  : plan.tipo === "CONTENIDO"
+                  ? `/dashboard/planes?dirigente=${dirigente.id}&tab=contenido`
+                  : plan.tipo === "DIAGNOSTICO"
+                  ? `/dashboard/diagnostico/${dirigente.id}/foda`
+                  : `/dashboard/planes?dirigente=${dirigente.id}`;
+
               return (
-                <Link key={plan.id} href={`/dashboard/planes/${plan.id}`}>
+                <Link key={plan.id} href={targetHref}>
                   <Card className="cursor-pointer transition-shadow hover:shadow-md">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">

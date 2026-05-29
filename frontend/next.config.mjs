@@ -10,6 +10,60 @@ const nextConfig = {
       },
     ],
   },
+  // F4 Content Hub (2026-05-19) · redirects 308 de las 4 rutas viejas al
+  // workspace unificado /dashboard/hub. Rollback: remover este bloque + las
+  // rutas viejas siguen funcionando (NO se eliminaron del codebase).
+  async redirects() {
+    return [
+      {
+        source: "/dashboard/social",
+        destination: "/dashboard/hub?tab=feed",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/social/comentarios",
+        destination: "/dashboard/hub?tab=comentarios",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/content/top",
+        destination: "/dashboard/hub?tab=top",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/aceptacion/fans",
+        destination: "/dashboard/hub?tab=fans",
+        permanent: true,
+      },
+      // D12 (2026-05-19) · colisión label "Contenido" sidebar (Content Factory
+      // vs Hub). Renombrado a /content-factory.
+      {
+        source: "/dashboard/contenido",
+        destination: "/dashboard/content-factory",
+        permanent: true,
+      },
+      // D-FANS-PERFILES-INDEPENDENT-ROUTE (2026-05-20) · sacar Perfiles
+      // Observados del tab de Fantasmas a ruta propia.
+      {
+        source: "/dashboard/aceptacion/fantasmas",
+        has: [{ type: "query", key: "tab", value: "observados" }],
+        destination: "/dashboard/aceptacion/fans-y-perfiles",
+        permanent: true,
+      },
+      // D-ACEPTACION-DEDUPE-2026-05-20 · rutas eliminadas porque eran 100%
+      // duplicadas de /aceptacion adaptive. Redirects 308 para back-compat.
+      {
+        source: "/dashboard/aceptacion/dirigentes",
+        destination: "/dashboard/aceptacion",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/aceptacion/fantasmas",
+        destination: "/dashboard/aceptacion",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

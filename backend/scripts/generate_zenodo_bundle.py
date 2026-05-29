@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import async_session_factory
 from app.models.dirigente import Dirigente
-from app.models.social import Platform, SocialPost, SocialProfile, SocialProfileSnapshot
+from app.models.social import Platform, SocialPost, SocialProfile
 
 ESTRATOS = ("Nano", "Micro", "Mid", "Macro", "Mega")
 PLATAFORMAS = ("X", "Instagram", "Facebook", "TikTok", "YouTube")
@@ -191,7 +191,7 @@ async def main(args: argparse.Namespace) -> None:
     }
     log_path.write_text(json.dumps(log_entry, indent=2, ensure_ascii=False))
 
-    print(f"\n=== Bundle generado ===")
+    print("\n=== Bundle generado ===")
     print(f"  CSV: {csv_path}")
     print(f"  Log: {log_path}")
     print(f"  Celdas VALIDATED: {validated}/25")

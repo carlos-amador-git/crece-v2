@@ -77,6 +77,35 @@ async def generate_plan_ia(
         description="Admin-only bypass del rate limit 24h. Ignorado si no es admin.",
     ),
 ) -> dict[str, Any]:
+    """⚠️ FEATURE PAUSADA 2026-05-15 ⚠️
+
+    El pipeline actual llama a Ollama remoto (VPS Coolify) declarado OFF por
+    CEO 2026-05-15. La decisión arquitectural es migrar a subprocess Claude
+    Code CLI + Gemini CLI (zero API). Mientras se completa el refactor, el
+    endpoint retorna HTTP 503.
+
+    Para reactivar: completar refactor en `app/services/plan_ia/llm_pipeline.py`
+    reemplazando `_call_ollama` por subprocess CC + Gemini CLI según patrón
+    documentado en DECISIONS.md D-PLAN-IA-CC-GEMINI-CLI-1.
+
+    Reels (feature nueva paralela): ver `/api/v1/reels/*` para generación de
+    guiones con Groq Llama 3.3 70B (tier gratuito).
+    """
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail={
+            "error": "feature_paused",
+            "message": (
+                "Generador de plan IA pausado por refactor a subprocess CC + Gemini CLI. "
+                "Ver DECISIONS.md D-PLAN-IA-CC-GEMINI-CLI-1. Para generación de "
+                "contenido reciente, usar /reels/generate-script."
+            ),
+            "since": "2026-05-15",
+            "alternative": "/api/v1/reels/generate-script",
+        },
+    )
+
+    # ⬇ Código debajo es el flujo ORIGINAL · preservado para refactor futuro ⬇
     """Encola pipeline Plan IA en Celery worker y espera hasta 180s.
 
     Flujo:
@@ -307,6 +336,7 @@ async def list_recomendaciones(
             "criterio_exito": r.criterio_exito,
             "principio_conductual": r.principio_conductual,
             "evidencia_respaldo": r.evidencia_respaldo,
+            "plataformas_destino": r.plataformas_destino,
             "estado": r.estado,
             "post_ejecutor_id": r.post_ejecutor_id,
             "metricas_predichas": r.metricas_predichas,
@@ -376,9 +406,9 @@ async def transicionar_estado(
 
     # Aplicar cambios
     r.estado = nuevo_estado
-    if "accion_texto" in payload and payload["accion_texto"]:
+    if payload.get("accion_texto"):
         r.accion_texto = payload["accion_texto"]
-    if "criterio_exito" in payload and payload["criterio_exito"]:
+    if payload.get("criterio_exito"):
         r.criterio_exito = payload["criterio_exito"]
     if "ventana_duracion_dias" in payload:
         r.ventana_duracion_dias = int(payload["ventana_duracion_dias"])

@@ -10,6 +10,9 @@ COPY package.json package-lock.json* ./
 RUN npm ci --prefer-offline 2>/dev/null || npm install
 
 # ── Stage: Dev (used by docker-compose.yml) ───────────────────
+# Dev stage runs as root by design — hot-reload via bind-mount needs FS write
+# perms on host-owned files. Production stage uses USER nextjs (line 55).
+# nosemgrep: missing-user
 FROM node:20-alpine AS dev
 
 WORKDIR /app

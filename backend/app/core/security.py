@@ -102,6 +102,10 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found or inactive",
             )
+        # S8 audit log · setear ContextVar para que SQLAlchemy event
+        # listeners puedan asociar ops de BD con este user (LFPDPPP art. 32).
+        from app.core.audit_context import current_user_id
+        current_user_id.set(user.id)
         return user
 
     # ── Path 2: X-API-Key header ────────────────────────────
@@ -129,6 +133,8 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User associated with API key is inactive",
             )
+        from app.core.audit_context import current_user_id
+        current_user_id.set(user.id)
         return user
 
     # ── No credentials provided ─────────────────────────────

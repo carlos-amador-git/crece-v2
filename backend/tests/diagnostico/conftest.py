@@ -12,7 +12,6 @@ from app.models.social import (
     DataSource,
     Platform,
     PostType,
-    SentimentAnalysis,
     SocialPost,
     SocialProfile,
     SocialProfileSnapshot,

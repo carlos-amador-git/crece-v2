@@ -1,24 +1,37 @@
 """Sección 7 · Seed competidores (D-22).
 
 El cliente declara 3-5 competidores directos en el wizard. Se usan para:
-- Bloque #04 benchmark vs competidores (antes bloqueado)
+- Bloque #04 benchmark vs competidores
 - Cálculo de quintiles comparativos
 - Seguimiento de share of voice
 
-Arquitectura D-22 opción B (confirmada en SPRINT-S5-SCOPING):
-    No se crean dirigentes con flag · se usa la tabla ``competidores`` existente
-    (models.benchmark). Además se popula ``dirigentes.competidor_directo_ids``
-    con los IDs persistidos para consumo rápido desde el dashboard.
+Arquitectura final (2026-05-14, post war-room-personal · D-MODEL-WAR-ROOM-1):
+    `competidores` legacy fue deprecada. Se usa `competitor_profiles` con
+    `dirigente_objetivo_id` apuntando al cliente. Esta tabla soporta el
+    pipeline light (sin NLP) y conecta directamente con la UI war-room.
+
+    `dirigentes.competidor_directo_ids` queda como referencia agregada
+    (array de competitor_profiles.id) para queries rápidas del benchmark service.
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.benchmark import Competidor
+from app.models.competitor_profile import CompetitorProfile
 from app.models.dirigente import Dirigente
+
+
+def _slugify_external_id(nombre: str) -> str:
+    """Genera un profile_external_id placeholder cuando el wizard no provee handle real.
+
+    Format: `wizard:<slug>` para distinguir de external_ids reales scrapeados.
+    """
+    slug = "".join(c if c.isalnum() else "_" for c in nombre.lower())[:80]
+    return f"wizard:{slug}"
 
 
 async def seed_competidores(
@@ -58,31 +71,41 @@ async def seed_competidores(
         if not nombre or not cargo:
             continue
 
-        # Dedupe por nombre + cargo
+        external_id = _slugify_external_id(nombre)
+
+        # Dedupe por (org_id, platform=FACEBOOK default, profile_external_id)
+        # vía unique constraint `uq_competitor_org_platform_external`.
         q = await db.execute(
-            select(Competidor).where(
-                Competidor.nombre == nombre,
-                Competidor.cargo == cargo,
+            select(CompetitorProfile).where(
+                CompetitorProfile.org_id == dirigente.org_id,
+                CompetitorProfile.profile_external_id == external_id,
             )
         )
         existing = q.scalar_one_or_none()
         if existing is not None:
             competidor_ids.append(existing.id)
-            reused.append({"id": existing.id, "nombre": existing.nombre})
+            reused.append({"id": existing.id, "nombre": existing.display_name})
             continue
 
-        new = Competidor(
-            nombre=nombre,
-            cargo=cargo,
+        new = CompetitorProfile(
+            org_id=dirigente.org_id,
+            dirigente_objetivo_id=dirigente_id,
+            display_name=nombre,
             partido=partido,
-            es_rival=True,
+            cargo=cargo,
+            platform="FACEBOOK",  # default — wizard no captura plataforma todavía
+            profile_external_id=external_id,
+            verified=False,
+            notes=item.get("url_ref"),
+            tags=[],
         )
         db.add(new)
         await db.flush()
         competidor_ids.append(new.id)
-        created.append({"id": new.id, "nombre": new.nombre, "cargo": new.cargo})
+        created.append({"id": new.id, "nombre": new.display_name, "cargo": new.cargo})
 
     # Persistir array de IDs en dirigentes.competidor_directo_ids
+    # (ahora apuntan a competitor_profiles.id, no a competidores legacy)
     dirigente.competidor_directo_ids = competidor_ids
     await db.commit()
 

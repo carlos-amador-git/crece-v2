@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -22,7 +23,11 @@ _YT_DLP_TIMEOUT = 120  # Seconds before yt-dlp subprocess is killed.
 
 
 def _yt_dlp_path() -> str:
-    """Resolve the yt-dlp binary co-located with the current Python interpreter."""
+    """Resolve the yt-dlp binary path. Prefer PATH lookup (multi-stage Docker
+    leaves yt-dlp in /install/bin while python is in /usr/local/bin)."""
+    found = shutil.which("yt-dlp")
+    if found:
+        return found
     return os.path.join(os.path.dirname(sys.executable), "yt-dlp")
 
 

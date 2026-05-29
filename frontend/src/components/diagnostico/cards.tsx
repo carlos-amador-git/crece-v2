@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Bar,
   BarChart,
@@ -21,7 +22,7 @@ import {
   Pie,
   PieChart,
 } from "recharts";
-import { CheckCircle2, AlertCircle, Flame, Minus, TrendingUp, Users2, Info, ExternalLink } from "lucide-react";
+import { CheckCircle2, AlertCircle, Flame, Minus, TrendingUp, Users2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CardShell, EmptyMetric } from "./card-shell";
 import {
@@ -70,46 +71,60 @@ const tooltipStyle = {
 };
 
 // Benchmark empírico MX D-19 · Zenodo v1 (p25-p75 política mexicana)
-// Nano X: 0.013-0.213% · Nano IG: 0.296-1.134% · Nano FB: 0.094-0.611% · Nano TT: 0.318-1.070%
-// n=316 (Nano X, celda con mayor muestra). Otras celdas: n=150-200.
 const BENCHMARK_MX_RANGE_LABEL = "0.01%–1.1%";
-const BENCHMARK_MX_N_OBS = 316;
-const ZENODO_METHODOLOGY_URL =
-  "https://github.com/MarxCha/crece-v2/blob/main/backend/data/zenodo/v1/methodology.md";
+
+type SignalVariant = "positive" | "negative" | "warning" | "neutral";
 
 // ========================================================================
-// B01 — ER Normalizado por Estrato
+// B01 — Conexión con tu audiencia
 // ========================================================================
 export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } }) {
   const d = bloque.data;
   const platforms = d?.er_por_plataforma ? Object.entries(d.er_por_plataforma) : [];
 
   const chartData = platforms.map(([platform, p]) => ({
-    platform: platform.slice(0, 3),
+    platform: platform.toUpperCase(),
     actual: Number(p.er_actual_pct ?? 0),
     min: Number(p.er_esperado_rango_pct?.[0] ?? 0),
   }));
 
-  // headline = promedio actual vs promedio mínimo esperado
-  const avgActual = platforms.length
-    ? platforms.reduce((acc, [, p]) => acc + (p.er_actual_pct ?? 0), 0) / platforms.length
+  // B01 floor (A+C): un ER% calculado sobre <500 seguidores es estadísticamente
+  // ruidoso (un puñado de likes dispara el %). Esas redes NO entran al headline ni
+  // al tier "Sobresaliente"; se reportan aparte con banda de confianza baja.
+  const AUDIENCIA_MINIMA = 500;
+  const reliable = platforms.filter(([, p]) => (p.followers ?? 0) >= AUDIENCIA_MINIMA);
+  const excluidasBajaAudiencia = platforms.length - reliable.length;
+  const sinAudienciaConfiable = platforms.length > 0 && reliable.length === 0;
+
+  const avgActual = reliable.length
+    ? reliable.reduce((acc, [, p]) => acc + (p.er_actual_pct ?? 0), 0) / reliable.length
     : null;
-  const avgMin = platforms.length
-    ? platforms.reduce((acc, [, p]) => acc + (p.er_esperado_rango_pct?.[0] ?? 0), 0) /
-      platforms.length
+  const avgMin = reliable.length
+    ? reliable.reduce((acc, [, p]) => acc + (p.er_esperado_rango_pct?.[0] ?? 0), 0) /
+      reliable.length
     : null;
-  const anyUnvalidated = platforms.some(([, p]) => p.zenodo_validated === false);
-  const allUnvalidated = platforms.length > 0 && platforms.every(([, p]) => p.zenodo_validated === false);
+
+  let signal: { label: string; variant: SignalVariant } | undefined;
+  if (avgActual != null && avgMin != null && avgMin > 0) {
+    const ratio = avgActual / avgMin;
+    if (ratio >= 1.5) signal = { label: "Sobresaliente", variant: "positive" };
+    else if (ratio >= 1.0) signal = { label: "Saludable", variant: "positive" };
+    else if (ratio >= 0.7) signal = { label: "Bajo", variant: "warning" };
+    else signal = { label: "Crítico", variant: "negative" };
+  } else if (sinAudienciaConfiable) {
+    signal = { label: "Audiencia insuficiente", variant: "neutral" };
+  }
 
   return (
     <CardShell
       code="B01"
-      title="Engagement vs. tu estrato"
-      pregunta="¿Mi Engagement Rate está en el rango esperado para mi estrato y plataforma?"
+      title="Conexión con tu audiencia"
+      pregunta="¿Qué tanto interactúa la gente con tus publicaciones comparado con otros políticos de tu tamaño?"
       fidelity="T1"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b01"
+      signal={signal}
     >
       <div className="flex items-baseline gap-3" data-testid="b01-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
@@ -117,97 +132,55 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
         </span>
         {avgMin != null && (
           <span className="text-xs text-muted-foreground">
-            vs piso {fmtPct(avgMin)}
+            vs {fmtPct(avgMin)} promedio
           </span>
         )}
       </div>
-      <p className="text-[11px] text-muted-foreground">
-        Estrato <span className="font-medium text-foreground">{d?.estrato ?? "—"}</span>
-        {d?.n_posts_total != null && <> · {d.n_posts_total} posts / {d.ventana_dias_analizada}d</>}
+      <p className="text-[11px] text-muted-foreground leading-tight">
+        {avgActual != null && avgMin != null && avgMin > 0 ? (
+          <>
+            Generas{" "}
+            <span className="font-medium text-foreground">
+              {(avgActual / avgMin).toFixed(1)} veces
+            </span>{" "}
+            más interacción que otros políticos con tu mismo alcance.
+            {excluidasBajaAudiencia > 0 && (
+              <span className="mt-1 block text-amber-600 dark:text-amber-500">
+                {excluidasBajaAudiencia} red{excluidasBajaAudiencia > 1 ? "es" : ""} con menos de{" "}
+                {AUDIENCIA_MINIMA} seguidores excluida{excluidasBajaAudiencia > 1 ? "s" : ""} del
+                cálculo (muestra muy pequeña, ER no confiable).
+              </span>
+            )}
+          </>
+        ) : sinAudienciaConfiable ? (
+          <>
+            Audiencia por debajo de {AUDIENCIA_MINIMA} seguidores en todas las redes — muestra
+            insuficiente para un benchmark confiable.
+          </>
+        ) : (
+          <>Aún no hay suficientes posts para comparar contra el promedio político.</>
+        )}
       </p>
 
-      {/* Contexto explicativo D-19 — T0.6 */}
-      <div
-        className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-[11px] space-y-1"
-        data-testid="b01-contexto-benchmark"
-      >
-        <p className="text-muted-foreground leading-snug">
-          Tu ER <span className="font-medium text-foreground">{avgActual != null ? fmtPct(avgActual) : "—"}</span>
-          {" · "}Rango empírico MX política{" "}
-          <span className="font-medium text-foreground">{BENCHMARK_MX_RANGE_LABEL}</span>
-          {" "}(Zenodo v1 · n={BENCHMARK_MX_N_OBS} Nano X)
-        </p>
-        <p className="text-muted-foreground leading-snug">
-          El benchmark comercial (Sprout Social · Rival IQ · IM commercial) mostraba
-          rangos <span className="font-medium text-foreground">3–7%</span> que
-          sobre-estimaban el ER político mexicano hasta{" "}
-          <span className="font-medium text-foreground">~100×</span>.
-        </p>
-        {anyUnvalidated && (
-          <p
-            className="text-[10px] text-amber-700 dark:text-amber-500 leading-snug pt-0.5"
-            data-testid="b01-tbd-warning"
-          >
-            {allUnvalidated ? "⚠️" : "ℹ️"} {allUnvalidated ? "Estrato sin data empírica Zenodo v1 — rangos extrapolados (calibración en curso)" : "Algunas plataformas sin data empírica aún — rangos extrapolados"}
-          </p>
-        )}
-        <div className="flex items-center gap-2 pt-0.5">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Explicación del benchmark ER"
-                  className="flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" aria-hidden="true" />
-                  <span className="text-muted-foreground hover:text-foreground transition-colors">¿Por qué es más bajo que Sprout Social?</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                className="max-w-xs text-[11px] leading-snug"
-              >
-                <p>
-                  Dictamen externo 2026-04-19 (D-19 CRECE v2) demostró que las tablas
-                  comerciales de Influencer Marketing sobre-estiman el ER político mexicano
-                  por factor 3-100×. Ver metodología reproducible en bundle Zenodo v1.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <a
-            href={ZENODO_METHODOLOGY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-            aria-label="Ver metodología en GitHub (abre en nueva pestaña)"
-          >
-            <ExternalLink className="h-3 w-3" aria-hidden="true" />
-            <span>Ver metodología</span>
-          </a>
-        </div>
-      </div>
-
-      <div className="h-32 w-full">
+      <div className="h-28 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="platform"
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
               axisLine={false}
               tickLine={false}
               width={32}
             />
             <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v.toFixed(2)}%`} />
-            <Bar dataKey="actual" fill="hsl(var(--chart-accent))" name="ER actual" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="min" fill="hsl(var(--chart-neutral))" name="Piso esperado" radius={[3, 3, 0, 0]} opacity={0.5} />
+            <Bar dataKey="actual" fill="hsl(var(--chart-accent))" name="Tu conexión" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="min" fill="hsl(var(--chart-neutral))" name="Promedio" radius={[3, 3, 0, 0]} opacity={0.5} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -216,66 +189,60 @@ export function CardB01({ bloque }: { bloque: BloqueBase & { data?: B01Data } })
 }
 
 // ========================================================================
-// B02 — Breakout Scale (Brookings 1-6)
+// B02 — Alcance fuera de tu red
 // ========================================================================
-const CAT_EMOJIS = ["·", "▪", "▲", "⬢", "✦", "★", "☀"]; // 0..6
-const CAT_LABELS = ["—", "Baseline", "Amplificado", "Breakout", "Viral", "Nacional", "Global"];
+const CAT_LABELS = ["Inactivo", "Base", "Creciendo", "Viral", "Tendencia", "Nacional", "Global"];
 
 export function CardB02({ bloque }: { bloque: BloqueBase & { data?: B02Data } }) {
   const d = bloque.data;
   const cat = d?.max_categoria ?? 0;
   const label = CAT_LABELS[Math.min(cat, 6)] ?? "—";
-  const icon = CAT_EMOJIS[Math.min(cat, 6)] ?? "·";
   const pct = d?.views_breakout_pct ?? 0;
+
+  let signal: { label: string; variant: SignalVariant } | undefined;
+  if (cat >= 4) signal = { label: "Alta Viralidad", variant: "positive" };
+  else if (cat >= 2) signal = { label: "Creciendo", variant: "positive" };
+  else signal = { label: "Limitado", variant: "neutral" };
 
   return (
     <CardShell
       code="B02"
-      title="Escalón de viralidad"
-      pregunta="¿Crucé fronteras algorítmicas hacia audiencia no-seguidora?"
+      title="Alcance fuera de tu red"
+      pregunta="¿Tus publicaciones están llegando a personas que aún no te siguen?"
       fidelity={d?.fidelity || "T1"}
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b02"
+      signal={signal}
     >
-      <div className="flex items-center gap-3" data-testid="b02-headline">
-        <span className="font-heading text-5xl font-bold tabular-nums" aria-hidden="true">
-          {icon}
+      <div className="flex flex-col gap-1" data-testid="b02-headline">
+        <span className="font-heading text-3xl font-bold leading-tight">
+          {label}
         </span>
-        <div className="flex flex-col">
-          <span className="font-heading text-2xl font-bold tabular-nums">
-            Cat {d ? cat : "—"}
-          </span>
-          <span className="text-xs text-muted-foreground">{label}</span>
-        </div>
+        <span className="text-xs font-medium text-muted-foreground">Nivel {cat} de 6</span>
       </div>
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <div className="flex justify-between text-[11px]">
-          <span className="text-muted-foreground">Progreso hacia Cat 6</span>
-          <span className="font-medium tabular-nums">{Math.min((cat / 6) * 100, 100).toFixed(0)}%</span>
+          <span className="text-muted-foreground">Progreso hacia impacto nacional</span>
+          <span className="font-medium tabular-nums">{Math.min((cat / 5) * 100, 100).toFixed(0)}%</span>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-[hsl(var(--chart-accent))] transition-all"
-            style={{ width: `${Math.min((cat / 6) * 100, 100)}%` }}
+            style={{ width: `${Math.min((cat / 5) * 100, 100)}%` }}
             role="progressbar"
-            aria-valuenow={cat}
-            aria-valuemin={1}
-            aria-valuemax={6}
           />
         </div>
-        {d && (
-          <p className="text-[11px] text-muted-foreground pt-1">
-            {d.n_posts_evaluados} posts evaluados · {pct.toFixed(1)}% views breakout
-          </p>
-        )}
+        <p className="text-[11px] text-muted-foreground pt-1 leading-snug">
+          El <span className="font-medium text-foreground">{pct.toFixed(1)}%</span> de tus visualizaciones vienen de personas que <span className="underline decoration-dotted underline-offset-2">no son tus seguidores</span>.
+        </p>
       </div>
     </CardShell>
   );
 }
 
 // ========================================================================
-// B03 — Matriz 2x2 de contenido
+// B03 — Salud de tus publicaciones
 // ========================================================================
 const CUADRANTE_COLORS: Record<string, string> = {
   INSIGNIA: "hsl(var(--chart-positive))",
@@ -287,7 +254,17 @@ const CUADRANTE_COLORS: Record<string, string> = {
 export function CardB03({ bloque }: { bloque: BloqueBase & { data?: B03Data } }) {
   const d = bloque.data;
   const conteo = d?.conteo_cuadrantes ?? {};
-  // sample max 60 posts para scatter
+  
+  let signal: { label: string; variant: SignalVariant } | undefined;
+  const insignia = conteo.INSIGNIA ?? 0;
+  const crisis = conteo.CRISIS ?? 0;
+  const muerta = conteo.MUERTA ?? 0;
+  const total = insignia + crisis + (conteo.VANIDAD ?? 0) + muerta;
+  if (crisis > insignia) signal = { label: "Riesgo Alto", variant: "negative" };
+  else if (total > 0 && muerta / total > 0.5) signal = { label: "Esfuerzo Sin Retorno", variant: "warning" };
+  else if (insignia > crisis * 2) signal = { label: "Contenido Fuerte", variant: "positive" };
+  else signal = { label: "Mezclado", variant: "warning" };
+
   const scatterData = (d?.posts ?? []).slice(0, 60).map((p) => ({
     x: p.engagement_rate,
     y: p.sentiment_score,
@@ -297,76 +274,66 @@ export function CardB03({ bloque }: { bloque: BloqueBase & { data?: B03Data } })
   return (
     <CardShell
       code="B03"
-      title="Calidad de tu contenido"
-      pregunta="¿Qué posts amplificar (Insignia) y cuáles evitar (Crisis/Muerta)?"
+      title="Salud de tus publicaciones"
+      pregunta="Clasificación de tus posts según su impacto y el sentimiento de la gente."
       fidelity="T1"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b03"
+      signal={signal}
     >
       <div className="grid grid-cols-2 gap-1.5 text-[11px]" data-testid="b03-headline">
-        {(["INSIGNIA", "CRISIS", "VANIDAD", "MUERTA"] as const).map((k) => (
+        {[
+          { key: "INSIGNIA", label: "Éxitos" },
+          { key: "CRISIS", label: "Riesgos" },
+          { key: "VANIDAD", label: "Neutros" },
+          { key: "MUERTA", label: "Sin Eco" }
+        ].map((item) => (
           <div
-            key={k}
+            key={item.key}
             className="rounded-md border border-border/50 bg-card px-2 py-1.5"
-            style={{ borderLeft: `3px solid ${CUADRANTE_COLORS[k]}` }}
+            style={{ borderLeft: `3px solid ${CUADRANTE_COLORS[item.key]}` }}
           >
             <div className="font-heading text-lg font-bold tabular-nums leading-none">
-              {conteo[k] ?? 0}
+              {conteo[item.key] ?? 0}
             </div>
-            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-              {k}
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">
+              {item.label}
             </div>
           </div>
         ))}
       </div>
-      {scatterData.length > 0 && (
-        <div className="h-24 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-              <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
-              <XAxis
-                type="number"
-                dataKey="x"
-                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                type="number"
-                dataKey="y"
-                domain={[-1, 1]}
-                tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false}
-                tickLine={false}
-                width={28}
-              />
-              <ReferenceLine x={d?.umbral_engagement ?? 0} stroke="hsl(var(--border))" strokeDasharray="2 2" />
-              <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="2 2" />
-              <Scatter data={scatterData}>
-                {scatterData.map((p, i) => (
-                  <Cell key={i} fill={CUADRANTE_COLORS[p.cuadrante] || "hsl(var(--chart-neutral))"} />
-                ))}
-              </Scatter>
-            </ScatterChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      <div className="h-20 w-full opacity-60">
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+            <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
+            <XAxis type="number" dataKey="x" hide />
+            <YAxis type="number" dataKey="y" domain={[-1, 1]} hide />
+            <ReferenceLine x={d?.umbral_engagement ?? 0} stroke="hsl(var(--border))" strokeDasharray="2 2" />
+            <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="2 2" />
+            <Scatter data={scatterData}>
+              {scatterData.map((p, i) => (
+                <Cell key={i} fill={CUADRANTE_COLORS[p.cuadrante] || "hsl(var(--chart-neutral))"} />
+              ))}
+            </Scatter>
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
     </CardShell>
   );
 }
 
 // ========================================================================
-// B04 — Benchmark vs competidores
+// B04 — ¿Cómo vas frente a la competencia?
 // ========================================================================
 export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } }) {
   const d = bloque.data;
   const self = d?.self;
   const rivales = d?.rivales ?? [];
-  // Demo mode: proxies S2 OR rivales configurados que no resuelven (no_encontrado / sin_profiles / todos sin data)
   const isProxiesDemo = d?.origen_competidores === "proxies_s2";
   const rivalesSinData = rivales.length > 0 && rivales.every((r) => r.status !== "ok");
   const isDemo = isProxiesDemo || rivalesSinData;
+
   const rows = self
     ? [
         { name: "Tú", er: self.er_avg_pct ?? 0, isSelf: true },
@@ -375,59 +342,61 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
           er: r.er_avg_pct ?? 0,
           isSelf: false,
         })),
-      ]
+      ].sort((a, b) => b.er - a.er)
     : [];
 
+  const myRank = rows.findIndex(r => r.isSelf) + 1;
+  const allZeroEr = rows.length > 0 && rows.every((r) => !r.er);
+  let signal: { label: string; variant: SignalVariant } | undefined;
+  if (allZeroEr || rivalesSinData) {
+    signal = { label: "Sin datos suficientes", variant: "warning" };
+  } else if (myRank === 1) {
+    signal = { label: "Líder", variant: "positive" };
+  } else if (myRank <= 3) {
+    signal = { label: "Top 3", variant: "positive" };
+  } else {
+    signal = { label: "Rezagado", variant: "warning" };
+  }
+
   const demoBanner = isDemo ? (
-    <div
-      className="rounded-md border border-amber-300/60 dark:border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/30 px-3 py-1.5 text-[11px] leading-snug"
-      data-testid="b04-demo-banner"
-    >
-      <p className="text-amber-800 dark:text-amber-300">
-        <span className="font-medium">Competidores de demostración.</span>{" "}
-        Configura tus rivales reales en{" "}
-        <a
-          href="/dashboard/onboarding?step=competidores"
-          className="underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-        >
-          Onboarding · paso Competidores
-        </a>.
-      </p>
+    <div className="rounded-md border border-amber-300/60 bg-amber-50/60 px-3 py-1.5 text-[10px] text-amber-800 leading-tight">
+      <span className="font-bold uppercase tracking-wider">Modo Demo:</span> Rivalidades de ejemplo.
     </div>
   ) : null;
 
   return (
     <CardShell
       code="B04"
-      title="Benchmark vs competidores"
-      pregunta="¿Cómo me comparo con mis rivales directos en ER?"
+      title="Comparativa con rivales"
+      pregunta="Cómo te va frente a otros políticos de tu mismo tamaño de audiencia."
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b04"
       persistentBanner={demoBanner}
+      signal={signal}
     >
-      <div className="flex items-baseline gap-3" data-testid="b04-headline">
+      <div className="flex items-baseline gap-2" data-testid="b04-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
-          {self ? fmtPct(self.er_avg_pct) : <EmptyMetric />}
+          #{myRank}
         </span>
-        <span className="text-xs text-muted-foreground">ER tuyo · últimos {d?.ventana_dias ?? 28}d</span>
+        <span className="text-sm font-medium text-muted-foreground">
+          entre tus {rows.length - 1} rivales directos
+        </span>
       </div>
-      <div className="h-28 w-full">
+      <div className="h-28 w-full mt-1">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={rows} layout="vertical" margin={{ top: 2, right: 24, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+          <BarChart data={rows} layout="vertical" margin={{ top: 0, right: 24, left: 0, bottom: 0 }}>
             <XAxis type="number" hide />
             <YAxis
               type="category"
               dataKey="name"
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))", fontWeight: 500 }}
               axisLine={false}
               tickLine={false}
-              width={60}
+              width={50}
             />
-            <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v.toFixed(2)}%`} />
-            <Bar dataKey="er" radius={[0, 3, 3, 0]}>
+            <Bar dataKey="er" radius={[0, 2, 2, 0]} barSize={12}>
               {rows.map((r, i) => (
                 <Cell
                   key={i}
@@ -443,58 +412,82 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
 }
 
 // ========================================================================
-// B05 — Sentiment Plutchik
+// B05 — Sentimiento de la audiencia
 // ========================================================================
-const PLUTCHIK_ORDER = ["trust", "joy", "anticipation", "anger", "sadness", "fear"] as const;
+// Ekman-6 alineado a lo que el NLP (pysentimiento) realmente emite.
+// Antes el frontend pedía `trust` y `anticipation` que el modelo nunca pobla → radar
+// colapsaba al centro y la señal "Hostilidad" venía de ratio_trust_anger=0/anger.
+// D-EKMAN-1 (2026-05-12).
+const PLUTCHIK_ORDER = ["joy", "anger", "sadness", "fear", "disgust", "surprise"] as const;
+
+// Diccionario defensivo case-insensitive con fallback al label original
+const EMOCION_ES: Record<string, string> = {
+  joy: "Alegría",
+  anger: "Enojo",
+  sadness: "Tristeza",
+  fear: "Miedo",
+  disgust: "Asco",
+  surprise: "Sorpresa",
+};
+function emocionLabel(k: string): string {
+  const lower = String(k ?? "").toLowerCase();
+  return EMOCION_ES[lower] ?? (k.charAt(0).toUpperCase() + k.slice(1).toLowerCase());
+}
 
 export function CardB05({ bloque }: { bloque: BloqueBase & { data?: B05Data } }) {
   const d = bloque.data;
   const em = d?.emociones_promedio ?? {};
-  const chart = PLUTCHIK_ORDER.map((k) => ({
-    emocion: k.charAt(0).toUpperCase() + k.slice(1),
-    valor: Number(em[k] ?? 0),
-  }));
+  const chart = PLUTCHIK_ORDER.map((k) => {
+    const val = Number(em[k] ?? 0);
+    // Visual boost: usas sqrt para que emociones de 1-5% sean visibles frente a picos de 80-90%
+    // Sin esto, la gráfica parece una línea recta al centro.
+    const boosted = Math.sqrt(val);
+    return {
+      emocion: emocionLabel(k),
+      valor: boosted,
+      original: val, // guardamos el real por si el tooltip lo necesita
+    };
+  });
 
-  const ratio = d?.ratio_trust_anger;
-  const positivo = (ratio ?? 0) >= 1;
+  // D-EKMAN-1: ratio joy/anger (antes trust/anger; trust no se emite por el NLP).
+  // Backend devuelve ambos campos como alias durante migración.
+  const ratio = (d as { ratio_joy_anger?: number | null })?.ratio_joy_anger ?? d?.ratio_trust_anger;
+  let signal: { label: string; variant: SignalVariant } | undefined;
+  if (ratio != null) {
+    if (ratio >= 2) signal = { label: "Gran Alegría", variant: "positive" };
+    else if (ratio >= 1) signal = { label: "Positivo", variant: "positive" };
+    else if (ratio >= 0.5) signal = { label: "Tenso", variant: "warning" };
+    else signal = { label: "Hostilidad", variant: "negative" };
+  }
 
   return (
     <CardShell
       code="B05"
-      title="Emociones que provoca tu contenido"
-      pregunta="¿Qué siente mi audiencia — confianza o enojo predominante?"
+      title="Qué siente tu audiencia"
+      pregunta="Análisis de las principales emociones que la gente expresa en tus comentarios."
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
-      warnings={bloque.warnings}
       testId="card-b05"
+      signal={signal}
     >
-      <div className="flex items-baseline gap-3" data-testid="b05-headline">
-        <span
-          className={cn(
-            "font-heading text-3xl font-bold tabular-nums",
-            ratio != null && (positivo ? "text-[hsl(var(--chart-positive))]" : "text-[hsl(var(--chart-negative))]"),
-          )}
-        >
-          {ratio != null ? fmtNum(ratio, 2) : <EmptyMetric />}
-        </span>
-        <span className="text-xs text-muted-foreground">trust / anger</span>
+      <div className="flex items-baseline gap-2" data-testid="b05-headline">
+        {ratio != null ? (
+          <p className="text-sm leading-snug text-foreground">
+            La <span className="font-semibold">Alegría</span> supera al{" "}
+            <span className="font-semibold">Enojo</span>{" "}
+            <span className="font-heading text-xl font-bold tabular-nums">{ratio.toFixed(1)}</span> a 1.
+          </p>
+        ) : (
+          <EmptyMetric />
+        )}
       </div>
-      <div className="h-32 w-full">
+      <div className="h-28 w-full mt-1">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="82%" data={chart}>
+          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chart}>
             <PolarGrid stroke="hsl(var(--border))" />
-            <PolarAngleAxis
-              dataKey="emocion"
-              tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-            />
-            <PolarRadiusAxis angle={90} tick={false} axisLine={false} />
-            <Radar
-              dataKey="valor"
-              stroke="hsl(var(--chart-accent))"
-              fill="hsl(var(--chart-accent))"
-              fillOpacity={0.35}
-            />
+            <PolarAngleAxis dataKey="emocion" tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))" }} />
+            <Radar dataKey="valor" stroke="hsl(var(--chart-accent))" fill="hsl(var(--chart-accent))" fillOpacity={0.4} />
           </RadarChart>
         </ResponsiveContainer>
       </div>
@@ -503,177 +496,171 @@ export function CardB05({ bloque }: { bloque: BloqueBase & { data?: B05Data } })
 }
 
 // ========================================================================
-// B06 — Crisis Spike detector
+// B06 — Semáforo de crisis
 // ========================================================================
 export function CardB06({ bloque }: { bloque: BloqueBase & { data?: B06Data } }) {
   const d = bloque.data;
   const spike = d?.spike_detected ?? false;
   const severity = d?.severity ?? 0;
 
-  const level =
-    !spike ? "verde" : severity >= 0.7 ? "rojo" : severity >= 0.4 ? "amarillo" : "verde";
+  const level = !spike ? "verde" : severity >= 0.7 ? "rojo" : severity >= 0.4 ? "amarillo" : "verde";
   const styles = {
-    verde: {
-      bg: "bg-[hsl(var(--chart-positive))]/10",
-      border: "border-[hsl(var(--chart-positive))]/40",
-      text: "text-[hsl(var(--chart-positive))]",
-      Icon: CheckCircle2,
-      label: "Estable",
-    },
-    amarillo: {
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/40",
-      text: "text-amber-600",
-      Icon: AlertCircle,
-      label: "Vigilar",
-    },
-    rojo: {
-      bg: "bg-[hsl(var(--chart-negative))]/10",
-      border: "border-[hsl(var(--chart-negative))]/40",
-      text: "text-[hsl(var(--chart-negative))]",
-      Icon: Flame,
-      label: "Crisis detectada",
-    },
+    verde: { variant: "positive" as const, label: "Todo en orden", text: "text-[hsl(var(--chart-positive))]" },
+    amarillo: { variant: "warning" as const, label: "Vigilancia", text: "text-amber-600" },
+    rojo: { variant: "negative" as const, label: "CRISIS ACTIVA", text: "text-[hsl(var(--chart-negative))]" },
   }[level];
-  const Icon = styles.Icon;
 
   return (
     <CardShell
       code="B06"
-      title="Detector de crisis"
-      pregunta="¿Hay picos anómalos de toxicidad/enojo en ventana de 2h?"
+      title="Alerta de crisis"
+      pregunta="Detección automática de ataques o picos de toxicidad en tiempo real."
       fidelity="T1"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b06"
+      signal={{ label: styles.label, variant: styles.variant }}
     >
-      <div
-        className={cn(
-          "flex items-center gap-3 rounded-md border p-3",
-          styles.bg,
-          styles.border,
-        )}
-        data-testid="b06-headline"
-      >
-        <Icon className={cn("h-6 w-6 shrink-0", styles.text)} aria-hidden="true" />
-        <div className="flex flex-col">
-          <span className={cn("font-heading text-base font-bold leading-tight", styles.text)}>
-            {styles.label}
-          </span>
-          <span className="text-[11px] text-muted-foreground">
-            Severity {fmtNum(severity)} · {d?.posts_toxicos_2h ?? 0} post(s) tóxicos 2h
+      <div className="flex flex-col gap-2 rounded-md border border-border/50 bg-muted/20 p-3 mt-1">
+        <div className="flex items-center gap-2">
+          {spike ? <Flame className={cn("h-5 w-5", styles.text)} /> : <CheckCircle2 className={cn("h-5 w-5", styles.text)} />}
+          <span className={cn("font-heading text-lg font-bold", styles.text)}>
+            {level === "verde" ? "Estable" : level === "amarillo" ? "Alerta Leve" : "Impacto Alto"}
           </span>
         </div>
+        <p className="text-[11px] text-muted-foreground leading-tight">
+          {spike
+            ? `Alerta: ${d?.posts_toxicos_2h ?? 0} comentarios negativos inusuales en las últimas 2 horas.`
+            : "No se detectan ataques organizados ni comentarios negativos fuera de lo normal."}
+        </p>
       </div>
-      <p className="text-[11px] text-muted-foreground">
-        Baseline: {fmtNum(d?.posts_toxicos_baseline_hora, 3)}/h · actual {fmtNum(d?.tasa_actual_hora, 3)}/h
-      </p>
     </CardShell>
   );
 }
 
 // ========================================================================
-// B07 — Growth attribution
+// B07 — De dónde viene tu crecimiento
 // ========================================================================
 export function CardB07({ bloque }: { bloque: BloqueBase & { data?: B07Data } }) {
   const d = bloque.data;
   const top = d?.top_posts ?? [];
+  // delta_followers solo es real si el backend lo provee con historial de
+  // seguidores medido. Hoy la fuente real (timeseries por plataforma) está en
+  // integración con RADAR; sin ella no mostramos un "+0 Estancado" falso
+  // (D-ANTI-MOCK-1).
+  const hasRealDelta = d?.delta_followers != null;
+  const delta = d?.delta_followers ?? 0;
 
   return (
     <CardShell
       code="B07"
-      title="De dónde viene tu crecimiento"
-      pregunta="¿Qué posts generaron el crecimiento de mis seguidores?"
+      title="Publicaciones que atraen gente"
+      pregunta="¿Qué publicaciones están atrayendo a más personas a seguirte?"
       fidelity="T3"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b07"
+      signal={
+        hasRealDelta
+          ? delta > 0
+            ? { label: "Creciendo", variant: "positive" }
+            : { label: "Estancado", variant: "neutral" }
+          : undefined
+      }
     >
-      <div className="flex items-baseline gap-3" data-testid="b07-headline">
+      {!hasRealDelta ? (
+        <p
+          className="text-[11px] text-muted-foreground italic leading-snug"
+          data-testid="b07-pending"
+        >
+          Medición de crecimiento de seguidores en proceso de integración.
+        </p>
+      ) : (
+        <>
+      <div className="flex items-baseline gap-2" data-testid="b07-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
-          {d?.delta_followers != null ? (d.delta_followers >= 0 ? "+" : "") + d.delta_followers : <EmptyMetric />}
+          {delta >= 0 ? "+" : ""}{delta}
         </span>
-        <span className="text-xs text-muted-foreground">
-          <Users2 className="inline h-3 w-3 mr-0.5" aria-hidden="true" />
-          followers 14d
-        </span>
+        <span className="text-xs text-muted-foreground">seguidores en 14 días</span>
       </div>
       {top.length > 0 ? (
-        <ol className="space-y-1.5 text-[11px]">
-          {top.slice(0, 3).map((p, i) => (
-            <li key={p.post_id} className="flex items-center gap-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted font-heading text-[10px] font-bold">
-                {i + 1}
-              </span>
-              <span className="flex-1 truncate text-muted-foreground">
-                {p.platform} #{p.post_id}
-              </span>
-              <span className="font-medium tabular-nums">{fmtPct(p.contribution_pct, 0)}</span>
-            </li>
-          ))}
-        </ol>
+        <div className="space-y-2 mt-2">
+          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Posts con más impacto:</p>
+          <ol className="space-y-1.5 text-[11px]">
+            {top.slice(0, 3).map((p, i) => {
+              const platformLabel = p.platform
+                ? p.platform.charAt(0).toUpperCase() + p.platform.slice(1).toLowerCase()
+                : "—";
+              const fecha = p.published_at
+                ? new Date(p.published_at).toLocaleDateString("es-MX", {
+                    day: "numeric",
+                    month: "short",
+                  })
+                : "";
+              return (
+                <li key={p.post_id} className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted font-heading text-[10px] font-bold">
+                    {i + 1}
+                  </span>
+                  <span className="flex-1 truncate text-muted-foreground">
+                    Post en <span className="font-medium text-foreground">{platformLabel}</span>
+                    {fecha && <span className="text-muted-foreground/70"> · {fecha}</span>}
+                  </span>
+                  <span className="font-bold text-[hsl(var(--chart-positive))]">{fmtPct(p.contribution_pct, 0)}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       ) : (
-        <p className="text-[11px] text-muted-foreground">Sin posts con contribución registrada</p>
+        <p className="text-[11px] text-muted-foreground italic">Sin datos de publicaciones individuales.</p>
+      )}
+        </>
       )}
     </CardShell>
   );
 }
 
 // ========================================================================
-// B08 — Share of Voice
+// B08 — Tu peso en la conversación
 // ========================================================================
 export function CardB08({ bloque }: { bloque: BloqueBase & { data?: B08Data } }) {
   const d = bloque.data;
   const self = d?.self_pct ?? null;
-  const rivales = d?.rivales_pct ?? {};
   const data = self != null
     ? [
         { name: "Tú", value: self, fill: "hsl(var(--chart-accent))" },
-        ...Object.entries(rivales)
-          .slice(0, 4)
-          .map(([name, value]) => ({
-            name,
-            value: Number(value),
-            fill: "hsl(var(--chart-neutral))",
-          })),
+        { name: "Otros", value: 100 - self, fill: "hsl(var(--chart-neutral))" }
       ]
     : [];
 
   return (
     <CardShell
       code="B08"
-      title="Share of Voice"
-      pregunta="¿Qué % del espacio ocupo en mis temas clave vs rivales?"
+      title="Qué tanto se habla de ti"
+      pregunta="Tu peso en la conversación digital sobre temas relevantes para tu campaña."
       fidelity="T2"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b08"
+      signal={self && self > 20 ? { label: "Relevante", variant: "positive" } : { label: "Baja Voz", variant: "neutral" }}
     >
-      <div className="flex items-baseline gap-3" data-testid="b08-headline">
+      <div className="flex items-baseline gap-2" data-testid="b08-headline">
         <span className="font-heading text-3xl font-bold tabular-nums">
           {self != null ? fmtPct(self, 0) : <EmptyMetric />}
         </span>
-        <span className="text-xs text-muted-foreground">
-          {d?.topic_principal ? `en "${d.topic_principal}"` : "del topic principal"}
+        <span className="text-[11px] text-muted-foreground leading-snug">
+          de toda la conversación sobre{" "}
+          <span className="font-medium text-foreground">"{d?.topic_principal ?? "tu tema principal"}"</span>.
         </span>
       </div>
       {data.length > 0 && (
-        <div className="h-24 w-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-24 w-full flex justify-center mt-1">
+          <ResponsiveContainer width="60%" height="100%">
             <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                innerRadius={24}
-                outerRadius={40}
-                paddingAngle={2}
-                strokeWidth={0}
-              >
-                {data.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
+              <Pie data={data} dataKey="value" innerRadius={20} outerRadius={35} strokeWidth={0}>
+                {data.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
               </Pie>
-              <RTooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v.toFixed(1)}%`} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -683,73 +670,114 @@ export function CardB08({ bloque }: { bloque: BloqueBase & { data?: B08Data } })
 }
 
 // ========================================================================
-// B09 — Share/Like Ratio
+// B09 — Poder de movilización
 // ========================================================================
-const SEMAFORO_COLORS = {
-  VERDE: { text: "text-[hsl(var(--chart-positive))]", bg: "bg-[hsl(var(--chart-positive))]", label: "Alta movilización" },
-  AMARILLO: { text: "text-amber-600", bg: "bg-amber-500", label: "Moderada" },
-  ROJO: { text: "text-[hsl(var(--chart-negative))]", bg: "bg-[hsl(var(--chart-negative))]", label: "Pasiva" },
+const SEMAFORO_MOVL = {
+  VERDE: { variant: "positive" as const, label: "Viralizador" },
+  AMARILLO: { variant: "warning" as const, label: "Activo" },
+  ROJO: { variant: "negative" as const, label: "Pasivo" },
 } as const;
 
 export function CardB09({ bloque }: { bloque: BloqueBase & { data?: B09Data } }) {
   const d = bloque.data;
   const semaforo = d?.semaforo;
-  const cfg = semaforo ? SEMAFORO_COLORS[semaforo] : null;
+  const cfg = semaforo ? SEMAFORO_MOVL[semaforo] : null;
   const ratio = d?.ratio_promedio;
-
-  // gauge: normalize ratio to 0-1 where 0.1 = viral = 100%
   const pct = ratio != null ? Math.min((ratio / 0.1) * 100, 100) : 0;
 
   return (
     <CardShell
       code="B09"
-      title="Qué tan compartible es tu contenido"
-      pregunta="¿Mi contenido se propaga o solo recibe likes pasivos?"
-      fidelity={d?.nota_fidelity?.includes("parcial") ? "T2" : "T1"}
+      title="Poder de movilización"
+      pregunta="¿Tu gente solo da 'likes' o realmente comparte tu mensaje?"
+      fidelity="T1"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b09"
+      signal={cfg ? { label: cfg.label, variant: cfg.variant } : undefined}
     >
-      <div className="flex items-baseline gap-3" data-testid="b09-headline">
-        <span className={cn("font-heading text-3xl font-bold tabular-nums", cfg?.text)}>
-          {ratio != null ? ratio.toFixed(4) : <EmptyMetric />}
-        </span>
-        {cfg && (
-          <span className={cn("text-xs font-medium", cfg.text)}>
-            {cfg.label}
-          </span>
+      <div className="flex items-baseline gap-2 mt-1" data-testid="b09-headline">
+        {ratio != null ? (
+          <>
+            <span className="font-heading text-3xl font-bold tabular-nums">
+              {Math.max(1, Math.min(10, Math.round(pct / 10)))}
+            </span>
+            <span className="text-sm font-medium text-muted-foreground">/ 10 Poder Viral</span>
+          </>
+        ) : (
+          <EmptyMetric />
         )}
       </div>
-      <div className="space-y-1">
-        <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className={cn("h-full transition-all", cfg?.bg || "bg-muted-foreground/30")}
-            style={{ width: `${pct}%` }}
-            role="progressbar"
-            aria-valuenow={pct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Semáforo share/like"
-          />
+      <div className="space-y-1.5 mt-2">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-full bg-[hsl(var(--chart-accent))] transition-all" style={{ width: `${pct}%` }} />
         </div>
-        <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
-          <span>0</span>
-          <span>0.05</span>
-          <span>0.1 viral</span>
-        </div>
-      </div>
-      {d?.n_posts != null && (
-        <p className="text-[11px] text-muted-foreground">
-          {d.n_posts} posts · {d.posts_virales?.length ?? 0} virales · estrato {d.estrato ?? "—"}
+        <p className="text-[10px] text-muted-foreground leading-tight italic">
+          Mide qué tanto tu gente comparte tu contenido, no solo lo lee. Alto = crecimiento orgánico sin pagar publicidad.
         </p>
-      )}
+      </div>
     </CardShell>
   );
 }
 
 // ========================================================================
-// B10 — Humanización Score — con drill-down drawer (T0.5)
+// B10 — Tu toque humano
 // ========================================================================
+export function CardB10({ bloque }: { bloque: BloqueBase & { data?: B10Data } }) {
+  const d = bloque.data;
+  const score = d?.score_0_100;
+  const interp = d?.interpretacion ?? "—";
+  // D-HUMANIZ-NEUTRO-1: posts sin marcador detectable se reportan aparte
+  const nConMarcador = (d as { n_posts_con_marcador?: number })?.n_posts_con_marcador;
+  const nSinMarcador = (d as { n_posts_sin_marcador?: number })?.n_posts_sin_marcador;
+  const nTotal = d?.n_posts;
+
+  let signal: { label: string; variant: SignalVariant } | undefined;
+  let benchmarkText: string | undefined;
+  if (score != null) {
+    if (score >= 70) {
+      signal = { label: "Muy Humano", variant: "positive" };
+      benchmarkText = "muy por encima del promedio";
+    } else if (score >= 40) {
+      signal = { label: "Equilibrado", variant: "positive" };
+      benchmarkText = "por encima del promedio institucional";
+    } else {
+      signal = { label: "Distante", variant: "warning" };
+      benchmarkText = "por debajo del promedio · se percibe acartonado";
+    }
+  }
+
+  return (
+    <CardShell
+      code="B10"
+      title="Conexión humana"
+      pregunta="¿Qué tan 'persona real' se percibe tu comunicación frente a un estilo político tradicional?"
+      fidelity="T1"
+      status={bloque.status}
+      missing={bloque.missing}
+      testId="card-b10"
+      signal={signal}
+    >
+      <div className="space-y-1" data-testid="b10-headline">
+        <p className="text-sm leading-snug text-foreground">
+          Tu audiencia te percibe como{" "}
+          <span className="font-semibold italic">{interp}</span>.
+        </p>
+        {benchmarkText && (
+          <p className="text-[11px] text-muted-foreground leading-tight">
+            {benchmarkText}.
+          </p>
+        )}
+        {nConMarcador != null && nSinMarcador != null && nTotal != null && nSinMarcador > 0 && (
+          <p className="text-[10px] text-muted-foreground/80 leading-tight italic">
+            Calculado sobre {nConMarcador} de {nTotal} posts con marcador detectable
+            {" "}({nSinMarcador} neutros sin clasificar).
+          </p>
+        )}
+      </div>
+    </CardShell>
+  );
+}
 
 interface HumanizacionDrawerProps {
   dirigenteId: number | string;
@@ -770,192 +798,45 @@ function HumanizacionDrawer({ dirigenteId }: HumanizacionDrawerProps) {
 
   if (isError || !data) {
     return (
-      <div
-        className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-destructive text-[12px]"
-        role="alert"
-        data-testid="b10-drawer-error"
-      >
-        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
-        <span>No se pudieron cargar los ejemplos. Intenta de nuevo más tarde.</span>
+      <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-destructive text-[12px]">
+        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+        <span>No se pudieron cargar los ejemplos.</span>
       </div>
     );
   }
 
   if (data.status === "insufficient_data") {
     return (
-      <p className="text-[12px] text-muted-foreground py-4 text-center" data-testid="b10-drawer-empty">
+      <p className="text-[12px] text-muted-foreground py-4 text-center">
         Datos insuficientes para mostrar ejemplos.
-        {data.missing && data.missing.length > 0 && (
-          <span className="block text-[11px] mt-1 font-mono">{data.missing.join(" · ")}</span>
-        )}
       </p>
     );
   }
 
   return (
     <div className="space-y-5" data-testid="b10-drawer-content">
-      {/* Two columns: institucional | humanizante */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {/* Institucional */}
         <div className="space-y-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Mas institucional (penaliza)
-          </h3>
-          {data.top_institucional.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground">Sin posts institucionales detectados</p>
-          ) : (
-            data.top_institucional.map((post) => (
-              <div
-                key={post.post_id}
-                className="rounded-md border border-border/60 bg-card p-2.5 space-y-1.5"
-                data-testid="b10-post-institucional"
-              >
-                <p className="text-[11px] leading-snug text-foreground line-clamp-3">
-                  {post.content_preview}
-                </p>
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="font-heading text-[11px] font-bold text-muted-foreground tabular-nums">
-                    Score: {post.score}
-                  </span>
-                  {post.factores.map((f, i) => (
-                    <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-4">
-                      {f}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Más Institucional</h3>
+          {data.top_institucional.map((post) => (
+            <div key={post.post_id} className="rounded-md border border-border/60 bg-card p-2.5 text-[11px]">
+              {post.content_preview}
+            </div>
+          ))}
         </div>
-
-        {/* Humanizante */}
         <div className="space-y-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Mas humanizante (potenciar)
-          </h3>
-          {data.top_humanizante.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground">Sin posts humanizantes detectados</p>
-          ) : (
-            data.top_humanizante.map((post) => (
-              <div
-                key={post.post_id}
-                className="rounded-md border border-[hsl(var(--chart-positive))]/30 bg-[hsl(var(--chart-positive))]/5 p-2.5 space-y-1.5"
-                data-testid="b10-post-humanizante"
-              >
-                <p className="text-[11px] leading-snug text-foreground line-clamp-3">
-                  {post.content_preview}
-                </p>
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="font-heading text-[11px] font-bold text-[hsl(var(--chart-positive))] tabular-nums">
-                    Score: {post.score}
-                  </span>
-                  {post.factores.map((f, i) => (
-                    <Badge key={i} variant="outline" className="text-[9px] px-1 py-0 h-4 border-[hsl(var(--chart-positive))]/40 text-[hsl(var(--chart-positive))]">
-                      {f}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-[hsl(var(--chart-positive))]">Más Humano</h3>
+          {data.top_humanizante.map((post) => (
+            <div key={post.post_id} className="rounded-md border border-[hsl(var(--chart-positive))]/30 bg-[hsl(var(--chart-positive))]/5 p-2.5 text-[11px]">
+              {post.content_preview}
+            </div>
+          ))}
         </div>
       </div>
-
-      {/* Keywords usadas por el heurístico */}
-      {data.keywords_usadas && (
-        <div
-          className="rounded-md border border-border/40 bg-muted/20 p-3 space-y-2"
-          data-testid="b10-keywords"
-        >
-          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Keywords del heurístico (transparencia metodológica)
-          </h3>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-[11px]">
-            <div>
-              <p className="font-medium text-foreground mb-1">1ra persona (+)</p>
-              <p className="text-muted-foreground font-mono leading-relaxed">
-                {data.keywords_usadas.primera_persona.join(", ")}
-              </p>
-            </div>
-            <div>
-              <p className="font-medium text-foreground mb-1">Emojis humanos (+)</p>
-              <p className="text-muted-foreground leading-relaxed">
-                {data.keywords_usadas.emojis_humanos.join(" ")}
-              </p>
-            </div>
-            <div>
-              <p className="font-medium text-foreground mb-1">Institucional (−)</p>
-              <p className="text-muted-foreground font-mono leading-relaxed">
-                {data.keywords_usadas.institucional.slice(0, 8).join(", ")}...
-              </p>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            {data.n_posts_analizados} posts analizados · ventana {data.ventana_dias}d
-          </p>
-        </div>
-      )}
     </div>
   );
 }
 
-export function CardB10({ bloque }: { bloque: BloqueBase & { data?: B10Data } }) {
-  const d = bloque.data;
-  const score = d?.score_0_100;
-  const interp = d?.interpretacion ?? "—";
-
-  const tone =
-    interp === "Humano"
-      ? "text-[hsl(var(--chart-positive))]"
-      : interp === "Institucional"
-        ? "text-muted-foreground"
-        : "text-[hsl(var(--chart-accent))]";
-
-  // Derive a numeric dirigente_id from bloque if possible — we pass it via the card prop
-  // The drawer needs it; we use a data attribute set on the card shell.
-  // Since BloqueBase does not include dirigente_id, CardB10 receives it separately.
-  // We expose a separate export that accepts dirigenteId for the drill-down.
-  // This base component is kept for backward compat without drill-down.
-
-  return (
-    <CardShell
-      code="B10"
-      title="Qué tan humano suena tu contenido"
-      pregunta="¿Mi perfil se percibe humano o corporativo/institucional?"
-      fidelity="T1"
-      status={bloque.status}
-      missing={bloque.missing}
-      testId="card-b10"
-    >
-      <div className="flex items-baseline gap-3" data-testid="b10-headline">
-        <span className={cn("font-heading text-5xl font-bold tabular-nums leading-none", tone)}>
-          {score != null ? score.toFixed(0) : <EmptyMetric />}
-        </span>
-        <div className="flex flex-col">
-          <span className="text-xs text-muted-foreground">/100</span>
-          <span className={cn("text-xs font-medium", tone)}>{interp}</span>
-        </div>
-      </div>
-      {d?.factores && (
-        <div className="space-y-1 text-[11px]">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">1ra persona</span>
-            <span className="font-medium tabular-nums">{fmtPct(d.factores.primera_persona_pct ?? 0, 0)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Emojis</span>
-            <span className="font-medium tabular-nums">{fmtPct(d.factores.emojis_pct ?? 0, 0)}</span>
-          </div>
-        </div>
-      )}
-    </CardShell>
-  );
-}
-
-/**
- * CardB10WithDrilldown — versión con botón "Ver ejemplos" y Dialog.
- * Usar esta en la página de diagnóstico cuando se disponga del dirigenteId.
- */
 export function CardB10WithDrilldown({
   bloque,
   dirigenteId,
@@ -968,69 +849,43 @@ export function CardB10WithDrilldown({
   const interp = d?.interpretacion ?? "—";
   const [open, setOpen] = useState(false);
 
-  const tone =
-    interp === "Humano"
-      ? "text-[hsl(var(--chart-positive))]"
-      : interp === "Institucional"
-        ? "text-muted-foreground"
-        : "text-[hsl(var(--chart-accent))]";
+  let signal: { label: string; variant: SignalVariant } | undefined;
+  if (score != null) {
+    if (score >= 70) signal = { label: "Muy Humano", variant: "positive" };
+    else if (score >= 40) signal = { label: "Equilibrado", variant: "positive" };
+    else signal = { label: "Institucional", variant: "warning" };
+  }
 
   return (
     <CardShell
       code="B10"
-      title="Qué tan humano suena tu contenido"
-      pregunta="¿Mi perfil se percibe humano o corporativo/institucional?"
+      title="Conexión humana"
+      pregunta="¿Qué tan 'persona real' se percibe tu comunicación frente a un estilo político tradicional?"
       fidelity="T1"
       status={bloque.status}
       missing={bloque.missing}
       testId="card-b10"
+      signal={signal}
     >
-      <div className="flex items-baseline gap-3" data-testid="b10-headline">
-        <span className={cn("font-heading text-5xl font-bold tabular-nums leading-none", tone)}>
+      <div className="flex items-baseline gap-2" data-testid="b10-headline">
+        <span className="font-heading text-4xl font-bold tabular-nums leading-none">
           {score != null ? score.toFixed(0) : <EmptyMetric />}
         </span>
-        <div className="flex flex-col">
-          <span className="text-xs text-muted-foreground">/100</span>
-          <span className={cn("text-xs font-medium", tone)}>{interp}</span>
-        </div>
+        <span className="text-sm font-medium text-muted-foreground">/ 100</span>
       </div>
-      {d?.factores && (
-        <div className="space-y-1 text-[11px]">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">1ra persona</span>
-            <span className="font-medium tabular-nums">{fmtPct(d.factores.primera_persona_pct ?? 0, 0)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Emojis</span>
-            <span className="font-medium tabular-nums">{fmtPct(d.factores.emojis_pct ?? 0, 0)}</span>
-          </div>
-        </div>
-      )}
+      <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+        Tu perfil se percibe principalmente como <span className="font-bold text-foreground italic">{interp}</span>.
+      </p>
 
-      {/* Drill-down trigger */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <button
-            type="button"
-            className="mt-1 w-full rounded-md border border-border/60 bg-muted/30 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            data-testid="b10-ver-ejemplos-btn"
-          >
-            Ver ejemplos
+          <button type="button" className="mt-2 w-full rounded border border-border/60 bg-muted/30 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-muted/60 transition-colors">
+            Ver ejemplos reales
           </button>
         </DialogTrigger>
-        <DialogContent
-          className="max-w-2xl max-h-[85vh] overflow-y-auto"
-          data-testid="b10-drawer"
-        >
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-heading text-base">
-              B10 Humanización — ejemplos de posts
-              {score != null && (
-                <span className={cn("ml-2 text-sm font-normal", tone)}>
-                  Score global: {score.toFixed(0)} · {interp}
-                </span>
-              )}
-            </DialogTitle>
+            <DialogTitle className="font-heading">Ejemplos de Humanización</DialogTitle>
           </DialogHeader>
           <HumanizacionDrawer dirigenteId={dirigenteId} />
         </DialogContent>
@@ -1039,21 +894,12 @@ export function CardB10WithDrilldown({
   );
 }
 
-// ========================================================================
-// Skeleton para loading state (replica card shell)
-// ========================================================================
 export function CardSkeleton() {
   return (
-    <div className="card-elevated flex h-[240px] flex-col gap-3 rounded-lg border border-border/60 bg-card p-4 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div className="space-y-1.5">
-          <div className="h-3 w-8 animate-pulse rounded bg-muted" />
-          <div className="h-4 w-40 animate-pulse rounded bg-muted" />
-        </div>
-        <div className="h-6 w-6 animate-pulse rounded bg-muted" />
-      </div>
-      <div className="h-10 w-32 animate-pulse rounded bg-muted" />
-      <div className="mt-auto h-24 w-full animate-pulse rounded bg-muted" />
+    <div className="flex h-[240px] flex-col gap-3 rounded-lg border border-border/60 bg-card p-4 animate-pulse">
+      <div className="h-4 w-1/3 bg-muted rounded" />
+      <div className="h-8 w-1/2 bg-muted rounded" />
+      <div className="flex-1 bg-muted/50 rounded" />
     </div>
   );
 }

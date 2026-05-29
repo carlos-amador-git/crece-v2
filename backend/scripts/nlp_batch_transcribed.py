@@ -111,5 +111,5 @@ def main():
 
 
 if __name__ == "__main__":
-    import psycopg2.extras  # noqa: F811
+    import psycopg2.extras
     main()

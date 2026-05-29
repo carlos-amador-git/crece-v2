@@ -47,28 +47,27 @@ async def rotate_key(old_key: str, new_key: str, dry_run: bool = False) -> dict[
 
     stats: dict[str, int] = {}
 
-    async with async_session() as db:
-        async with db.begin():
-            for col in ENC_COLUMNS:
-                # Count rows that have data in this column
-                count_result = await db.execute(
-                    text(f"SELECT COUNT(*) FROM ciudadanos_legacy WHERE {col} IS NOT NULL")
-                )
-                total = count_result.scalar() or 0
+    async with async_session() as db, db.begin():
+        for col in ENC_COLUMNS:
+            # Count rows that have data in this column
+            count_result = await db.execute(
+                text(f"SELECT COUNT(*) FROM ciudadanos_legacy WHERE {col} IS NOT NULL")
+            )
+            total = count_result.scalar() or 0
 
-                if total == 0:
-                    logger.info("Column %s: 0 rows, skipping", col)
-                    stats[col] = 0
-                    continue
+            if total == 0:
+                logger.info("Column %s: 0 rows, skipping", col)
+                stats[col] = 0
+                continue
 
-                if dry_run:
-                    logger.info("Column %s: %d rows (DRY RUN, no changes)", col, total)
-                    stats[col] = total
-                    continue
+            if dry_run:
+                logger.info("Column %s: %d rows (DRY RUN, no changes)", col, total)
+                stats[col] = total
+                continue
 
-                # Decrypt with old key, re-encrypt with new key in a single UPDATE
-                result = await db.execute(
-                    text(f"""
+            # Decrypt with old key, re-encrypt with new key in a single UPDATE
+            result = await db.execute(
+                text(f"""
                         UPDATE ciudadanos_legacy
                         SET {col} = pgp_sym_encrypt(
                             pgp_sym_decrypt(CAST({col} AS bytea), :old_key),
@@ -76,32 +75,32 @@ async def rotate_key(old_key: str, new_key: str, dry_run: bool = False) -> dict[
                         )
                         WHERE {col} IS NOT NULL
                     """),
-                    {"old_key": old_key, "new_key": new_key},
-                )
-                rotated = result.rowcount or 0
-                logger.info("Column %s: %d/%d rows rotated", col, rotated, total)
-                stats[col] = rotated
+                {"old_key": old_key, "new_key": new_key},
+            )
+            rotated = result.rowcount or 0
+            logger.info("Column %s: %d/%d rows rotated", col, rotated, total)
+            stats[col] = rotated
 
-            # Verify: sample decrypt with new key
-            if not dry_run:
-                verify_result = await db.execute(
-                    text("""
+        # Verify: sample decrypt with new key
+        if not dry_run:
+            verify_result = await db.execute(
+                text("""
                         SELECT pgp_sym_decrypt(CAST(email_enc AS bytea), :key)
                         FROM ciudadanos_legacy
                         WHERE email_enc IS NOT NULL
                         LIMIT 1
                     """),
-                    {"key": new_key},
-                )
-                sample = verify_result.scalar()
-                if sample:
-                    logger.info("Verification OK: sample decrypt with new key = '%s...'", sample[:5])
-                else:
-                    logger.warning("Verification: no email_enc rows to verify (may be OK)")
+                {"key": new_key},
+            )
+            sample = verify_result.scalar()
+            if sample:
+                logger.info("Verification OK: sample decrypt with new key = '%s...'", sample[:5])
+            else:
+                logger.warning("Verification: no email_enc rows to verify (may be OK)")
 
-            if dry_run:
-                logger.info("DRY RUN complete — no changes committed")
-                await db.rollback()
+        if dry_run:
+            logger.info("DRY RUN complete — no changes committed")
+            await db.rollback()
 
     await engine.dispose()
     return stats

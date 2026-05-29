@@ -20,7 +20,6 @@ Heurística:
 from __future__ import annotations
 
 import csv
-import json
 from collections import Counter
 from pathlib import Path
 

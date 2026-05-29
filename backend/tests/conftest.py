@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
-from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -67,7 +66,8 @@ async def setup_database() -> AsyncGenerator[None, None]:
     engine = _get_test_engine()
 
     # On first run, create schema. Subsequent runs just truncate data.
-    from sqlalchemy import text, inspect as sa_inspect
+    from sqlalchemy import inspect as sa_inspect
+    from sqlalchemy import text
 
     async with engine.begin() as conn:
         has_tables = await conn.run_sync(

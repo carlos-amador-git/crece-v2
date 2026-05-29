@@ -15,6 +15,8 @@ import {
   type EstadoTarea,
 } from "@/lib/api/hooks/use-planes";
 import { CheckCircle2, Circle, Clock, Edit3, Target, TrendingUp } from "lucide-react";
+import { mapPlataforma, parseFodaTag, detechnicalize, mapMetrica, mapResponsable } from "@/lib/labels";
+import { renderRichText } from "@/components/render-rich";
 
 const ESTADO_LABEL: Record<EstadoTarea, { label: string; color: string; icon: typeof Circle }> = {
   TODO: { label: "Pendiente", color: "bg-muted text-muted-foreground", icon: Circle },
@@ -99,19 +101,32 @@ function TareaItem({ planId, tarea }: { planId: number | string; tarea: PlanTare
                 <span className="text-xs font-semibold text-muted-foreground">
                   #{tarea.orden}
                 </span>
-                <h3 className="font-heading text-sm font-semibold">{tarea.titulo}</h3>
+                <h3 className="font-heading text-sm font-semibold">{renderRichText(detechnicalize(tarea.titulo))}</h3>
                 <Badge variant="outline" className={`text-xs ${estadoInfo.color}`}>
                   {estadoInfo.label}
                 </Badge>
                 {tarea.plataforma && (
                   <Badge variant="outline" className="text-xs">
-                    {tarea.plataforma}
+                    {mapPlataforma(tarea.plataforma)}
                   </Badge>
                 )}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                {tarea.descripcion}
-              </p>
+              {(() => {
+                const { foda, descripcion } = parseFodaTag(tarea.descripcion);
+                return (
+                  <>
+                    {foda && (
+                      <Badge variant="outline" className={`mt-1.5 text-[11px] font-medium ${foda.colorClass}`}>
+                        <span className="mr-1">{foda.icon}</span>
+                        {foda.label}
+                      </Badge>
+                    )}
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      {renderRichText(detechnicalize(descripcion))}
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -120,7 +135,7 @@ function TareaItem({ planId, tarea }: { planId: number | string; tarea: PlanTare
           <div className="space-y-1.5 rounded-md bg-muted/40 p-3">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Target className="h-3 w-3" /> {tarea.metrica_objetivo}
+                <Target className="h-3 w-3" /> {mapMetrica(tarea.metrica_objetivo)}
               </span>
               <button
                 onClick={() => setEditing(!editing)}
@@ -195,7 +210,7 @@ function TareaItem({ planId, tarea }: { planId: number | string; tarea: PlanTare
         {(tarea.frecuencia || tarea.responsable || tarea.deadline) && (
           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             {tarea.frecuencia && <span>🔁 {tarea.frecuencia}</span>}
-            {tarea.responsable && <span>👤 {tarea.responsable}</span>}
+            {tarea.responsable && <span>👤 {mapResponsable(tarea.responsable)}</span>}
             {tarea.deadline && (
               <span>
                 📅 {new Date(tarea.deadline).toLocaleDateString("es-MX")}

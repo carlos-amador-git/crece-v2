@@ -20,11 +20,10 @@ SLOs (from coolify_failover_smoke.md):
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Literal
 
 import httpx

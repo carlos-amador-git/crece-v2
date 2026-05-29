@@ -107,8 +107,8 @@ def upsert_comments(conn, results: list[dict], dry_run: bool) -> dict:
     insert_sql_basic = """
         INSERT INTO social_comments
             (parent_post_id, platform_comment_id, content, author_hash,
-             likes, published_at, data_source, is_reply_to_comment)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, false)
+             likes, published_at, data_source, is_reply_to_comment, commenter_handle)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, false, %s)
     """
     for r in results:
         if 'error' in r:
@@ -125,6 +125,11 @@ def upsert_comments(conn, results: list[dict], dry_run: bool) -> dict:
             if dry_run:
                 stats['inserted'] += 1
                 continue
+            # Sprint C: handle público IG (no PII directa, LFPDPPP OK).
+            handle = c.get('owner_username') or c.get('username') or c.get('author_username') or None
+            handle = handle.strip().lstrip('@') if handle else None
+            if handle and len(handle) > 255:
+                handle = handle[:255]
             cur.execute(
                 insert_sql_basic,
                 (
@@ -135,6 +140,7 @@ def upsert_comments(conn, results: list[dict], dry_run: bool) -> dict:
                     c.get('likes', 0),
                     c.get('published_at'),
                     DATA_SOURCE,
+                    handle,
                 ),
             )
             stats['inserted'] += 1

@@ -121,8 +121,9 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       MINIO_ENDPOINT: minio:9000
       AI_PROVIDER: ollama
-      # D-21: Mac M4 primario (GPU) · Coolify 163.245.208.96:11434 es failover
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      # 2026-04-25 · CEO decisión · Ollama remoto Coolify libera RAM Mac Mini.
+      # Cold-start medido: load 34s + inferencia ~16s · plan completo ~3-7min.
+      OLLAMA_BASE_URL: http://163.245.208.96:11434
       OLLAMA_MODEL: "gemma3:12b"
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -158,9 +159,9 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       MINIO_ENDPOINT: minio:9000
-      # S5 T0 — worker LLM calls via Mac M4 GPU (gemma3:12b GPU-resident)
-      # Coolify VPS 163.245.208.96 es CPU-only → failover lento (>540s).
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      # 2026-04-25 · CEO decisión · Worker también usa Coolify para liberar Mac Mini RAM.
+      # Trade-off: CPU Coolify es más lento que GPU Mac M4 pero no compromete memoria local.
+      OLLAMA_BASE_URL: http://163.245.208.96:11434
       OLLAMA_MODEL: "gemma3:12b"
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -183,6 +184,14 @@ services:
       celery -A app.workers.celery_app beat
         -l info
         --schedule=/tmp/celerybeat-schedule
+    # Override del healthcheck heredado del backend Dockerfile (curl :8000)
+    # — beat NO es servidor HTTP, solo scheduler. Validamos con pgrep.
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'celery.*beat' > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
     environment:
       DATABASE_URL: postgresql+asyncpg://crece:crece_dev@db:5432/crece
       DATABASE_URL_SYNC: postgresql://crece:crece_dev@db:5432/crece

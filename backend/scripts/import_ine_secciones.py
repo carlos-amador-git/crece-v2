@@ -206,9 +206,9 @@ def main(entidad_key: str) -> int:
         )
         return 1
 
-    from sqlalchemy import create_engine  # noqa: WPS433
+    from sqlalchemy import create_engine
 
-    from app.core.config import settings  # noqa: WPS433
+    from app.core.config import settings
 
     pg_dsn = settings.DATABASE_URL_SYNC.replace("postgresql+psycopg2://", "postgresql://")
 

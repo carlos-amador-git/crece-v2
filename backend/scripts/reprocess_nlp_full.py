@@ -105,7 +105,7 @@ def main():
         conn.commit()
 
     elapsed = (datetime.now() - stats["start"]).total_seconds()
-    print(f"\n=== Results ===")
+    print("\n=== Results ===")
     print(f"  Success: {stats['success']}")
     print(f"  Failed:  {stats['fail']}")
     print(f"  Time:    {elapsed/60:.1f} min ({stats['success']/max(elapsed,1):.1f} posts/sec)")

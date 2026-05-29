@@ -11,7 +11,6 @@ from httpx import AsyncClient
 from app.models.dirigente import Dirigente
 from app.models.organizacion import Organizacion
 
-
 pytestmark = pytest.mark.anyio
 
 

@@ -42,6 +42,10 @@ class KpiOverviewResponse(BaseModel):
     alerts_change: float
     # ── political KPIs ──
     total_audiencia: int  # sum of followers across scoped profiles
+    audiencia_change: float | None  # delta % vs. previous window. NULL hasta que
+    #   exista history de follower snapshots; jamás usar posts_change como proxy
+    #   (bug histórico Saymi 2026-05-15 — el card mostraba -86.8% por confundir
+    #   delta de posts monitoreados con delta de followers).
     contactos_periodo: int  # CRM interactions (WhatsApp/canvassing/events) in window
     tema_urgente: str | None  # most recent active crisis alert title, or None
 
@@ -55,7 +59,7 @@ class SystemStatusResponse(BaseModel):
 
 @router.get("/overview", response_model=KpiOverviewResponse)
 async def get_overview(
-    request: "Request",
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     period: Annotated[
@@ -164,16 +168,30 @@ async def get_overview(
     posts_prev_result = await db.execute(posts_prev_query)
     posts_prev = posts_prev_result.scalar() or 0
 
-    # Active alerts
+    # Active alerts — scoped por dirigente/org (fix B-CROSS-LEAK-ALERTS-1 · 2026-05-12)
+    def _scope_alerts(q):
+        """Filtra alertas por dirigente (vía perfil_id→social_profiles) u org."""
+        if user_dirigente_id:
+            return q.join(SocialProfile, AlertaCrisis.perfil_id == SocialProfile.id).where(
+                SocialProfile.dirigente_id == user_dirigente_id
+            )
+        if effective_org_id is not None:
+            return q.where(AlertaCrisis.org_id == effective_org_id)
+        return q
+
     alerts_result = await db.execute(
-        select(func.count(AlertaCrisis.id)).where(AlertaCrisis.created_at >= last_7d)
+        _scope_alerts(
+            select(func.count(AlertaCrisis.id)).where(AlertaCrisis.created_at >= last_7d)
+        )
     )
     active_alerts = alerts_result.scalar() or 0
 
     alerts_prev_result = await db.execute(
-        select(func.count(AlertaCrisis.id)).where(
-            AlertaCrisis.created_at >= prev_7d,
-            AlertaCrisis.created_at < last_7d,
+        _scope_alerts(
+            select(func.count(AlertaCrisis.id)).where(
+                AlertaCrisis.created_at >= prev_7d,
+                AlertaCrisis.created_at < last_7d,
+            )
         )
     )
     alerts_prev = alerts_prev_result.scalar() or 0
@@ -212,7 +230,7 @@ async def get_overview(
     except Exception:
         contactos_periodo = 0
 
-    # tema_urgente: most recent active crisis alert title
+    # tema_urgente: most recent active crisis alert title (scoped · B-CROSS-LEAK-ALERTS-1)
     tema_urgente: str | None = None
     try:
         tema_query = (
@@ -221,6 +239,7 @@ async def get_overview(
             .order_by(AlertaCrisis.created_at.desc())
             .limit(1)
         )
+        tema_query = _scope_alerts(tema_query)
         tema_row = (await db.execute(tema_query)).scalar_one_or_none()
         if tema_row is not None:
             tema_urgente = getattr(tema_row, "descripcion", None) or getattr(
@@ -239,6 +258,9 @@ async def get_overview(
         posts_change=pct_change(posts_24h, posts_prev),
         alerts_change=pct_change(active_alerts, alerts_prev),
         total_audiencia=int(total_audiencia),
+        audiencia_change=None,  # TODO: implementar contra social_profile_snapshots
+        #   o social_followers cuando exista history N días. Mientras tanto: null
+        #   honesto (UI muestra "—" en lugar de proxy falso).
         contactos_periodo=int(contactos_periodo),
         tema_urgente=tema_urgente,
     )

@@ -16,10 +16,7 @@ import hashlib
 import json
 import os
 import subprocess
-import sys
-import tempfile
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 import psycopg2
 
@@ -71,7 +68,7 @@ def run_ytdlp(video_id: str, max_comments: int) -> list[dict]:
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
     except subprocess.TimeoutExpired:
-        print(f'    [timeout]', flush=True)
+        print('    [timeout]', flush=True)
         return []
     if r.returncode != 0:
         err = r.stderr.strip().split('\n')[-1][:150]
@@ -113,7 +110,7 @@ def insert_comment(conn, parent_id: int, c: dict) -> bool:
             c.get('like_count') or 0,
             DATA_SOURCE,
             bool(c.get('parent') and c.get('parent') != 'root'),
-            (datetime.fromtimestamp(c['timestamp'], timezone.utc) if c.get('timestamp') else None),
+            (datetime.fromtimestamp(c['timestamp'], UTC) if c.get('timestamp') else None),
         ),
     )
     cur.close()
