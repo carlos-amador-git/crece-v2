@@ -1,0 +1,65 @@
+name: governance-gate
+
+# Gate de gobernanza mecánico de CRECE v2 (ver docs/adr/0006).
+# Convierte reglas duras "de papel" en checks ejecutables. Corre el mismo
+# governance_check.py que el pre-commit local, pero sobre TODO el tree (--all):
+# secretos hardcoded + paths PII/dump + comandos destructivos en archivos (warn).
+#
+# NO porta el Sign-off RFC 2119 de cfdi-platform (CRECE no tiene sops/*.sop.md).
+#
+# Modelo: detección (no bloquea merge a nivel GitHub). El gate primario es el
+# pre-commit local. Branch protection NO se usa (no se paga plan Team — igual que
+# RADAR). Opción futura: si se paga Team, marcar este check "Required" en
+# Settings -> Branches -> main lo vuelve bloqueo de merge. Ver docs/adr/0006.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (con historia para el diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Calcular archivos cambiados (diff del PR/push)
+        id: diff
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+          fi
+          # before puede venir vacío/all-zeros en el primer push de una rama.
+          # Con fetch-depth:0 el base normalmente existe; si no, cae al primer parent.
+          if [ -z "$base" ] || ! git cat-file -e "$base" 2>/dev/null; then
+            base="$(git rev-parse "${head}^" 2>/dev/null || echo "$head")"
+          fi
+          git diff --name-only --diff-filter=ACM "$base" "$head" > changed.txt
+          echo "Archivos en el diff:"; cat changed.txt
+
+      # governance_check.py usa solo stdlib (re, subprocess, pathlib) → sin pip install.
+      # En CI no hay .env local → el scan cae a patrones de alta confianza. Escanea
+      # SOLO el diff (no --all) para no bloquear por secretos históricos preexistentes
+      # en .context/ (deuda documentada en docs/adr/0006; el CEO no rota/filter-repo).
+      - name: governance_check (diff del PR)
+        run: |
+          mapfile -t FILES < changed.txt
+          if [ "${#FILES[@]}" -eq 0 ]; then echo "Sin archivos en el diff."; exit 0; fi
+          python backend/scripts/governance_check.py --files "${FILES[@]}"

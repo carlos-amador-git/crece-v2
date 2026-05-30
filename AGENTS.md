@@ -16,6 +16,7 @@ Reemplaza sistema Oracle APEX anterior. Cliente: ConsultoríaMD (relación de 4+
 - **Rama default:** `main`
 - **Rama activa actual:** ver `git branch --show-current` (no asumir)
 - **Doc de gobernanza:** `.context/governance/README.md` (orden de los 5 docs)
+- **Perímetro autónomo + gates mecánicos:** `AUTONOMY-RULES.md` (qué puede el agente sin pedir luz verde + enforcement git/runtime/harness · `docs/adr/0006`). Activar: `bash scripts/install-hooks.sh`.
 
 ## 2. Stack (versiones congeladas)
 

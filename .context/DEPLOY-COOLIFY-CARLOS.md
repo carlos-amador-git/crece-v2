@@ -133,25 +133,55 @@ En Cloudflare (mdconsultoria-ti.org), agregar 2 registros A:
 
 ### Orden de arranque (automático):
 ```
-db (PostgreSQL) → redis → minio → backend (+ alembic migrate) → celery-worker → celery-beat → frontend
+db (PostgreSQL) → redis → minio → backend (uvicorn) → celery-worker → celery-beat → frontend
 ```
+
+> ⚠️ **El backend NO corre migraciones automáticamente.** El `command` en
+> `docker-compose.prod.yml` y el `CMD` del Dockerfile son solo `uvicorn` — no hay
+> `alembic upgrade head` ni entrypoint que lo ejecute. Las migraciones se aplican a
+> mano en el PASO 8.0 (abajo). Corregido 2026-05-30 tras verificar Dockerfile + compose
+> + main.py.
 
 ---
 
 ## PASO 8: Post-Deploy (una sola vez)
 
-### 8.1 Seed de datos iniciales
+### 8.0 Aplicar migraciones (manual — NO es automático)
 
-En Coolify → servicio `backend` → **Terminal** (o Execute Command):
+En Coolify → servicio `backend` → **Terminal**:
 
+```bash
+alembic upgrade head
+```
+
+Sin esto la BD queda sin schema y todo lo demás falla. Verificar:
+`SELECT version_num FROM alembic_version;` → debe dar `oc1`.
+
+### 8.1 Datos: elegir UNA de dos vías
+
+**Vía A — Data REAL operativa (lo que normalmente quieres para demo/piloto):**
+Restaurar el snapshot de la BD local. Trae 13 dirigentes reales, perfiles, ~7k posts,
+~8k comments y NLP. Ver runbook completo:
+`.context/RUNBOOK-coolify-data-restore-2026-05-30.md`.
+
+```bash
+# snapshot publicado como GitHub Release (repo privado)
+gh release download data-snapshot-2026-05-30 -R MarxCha/crece-v2 -p 'crece-data-20260530.dump'
+docker cp crece-data-20260530.dump <postgres-container>:/tmp/
+docker exec <postgres-container> pg_restore --clean --if-exists --no-owner --no-privileges \
+  -U <POSTGRES_USER> -d <POSTGRES_DB> /tmp/crece-data-20260530.dump
+```
+> El dump trae el schema, así que si usas la Vía A puedes saltarte el PASO 8.0.
+> Requiere Postgres ≥16 con **postgis + pgvector**. Contiene PII → borrar el asset tras restaurar.
+
+**Vía B — Seed sintético mínimo (solo si no quieres data real):**
 ```bash
 python scripts/seed.py
 ```
-
-Esto crea:
-- Admin: `admin@consultoriamd.com` / `crece2026!`
-- 2 dirigentes de prueba (Piña y Solano) con perfiles sociales
-- Datos de benchmark y competidores
+Crea: Admin `admin@consultoriamd.com` / `crece2026!`, 2 dirigentes de prueba
+(Piña y Solano) con perfiles, y datos de benchmark/competidores.
+> ⚠️ `seed.py` está congelado desde 2026-04-25 (6 dirigentes, posts sintéticos). No
+> refleja la BD real. Para demo/piloto usa la Vía A.
 
 ### 8.2 Crear usuarios demo por dirigente
 
@@ -249,11 +279,13 @@ sqlalchemy.exc.OperationalError: connection refused
 ### CORS errors en browser
 → Verificar que `CORS_ORIGINS` en el docker-compose incluye el dominio exacto del frontend (ya configurado como `https://crece.mdconsultoria-ti.org`).
 
-### Alembic migration falla
-→ Primera vez es normal que diga "database is empty". El command del backend ya incluye `alembic upgrade head` antes de arrancar uvicorn.
+### Backend arranca pero la BD está vacía / errores de tabla inexistente
+→ El backend NO corre migraciones solo. Ejecutar `alembic upgrade head` a mano
+  (PASO 8.0), o restaurar el dump de la Vía A (que trae el schema).
 
 ### Frontend muestra "Sin datos"
-→ Ejecutar seed.py (paso 8.1). Sin seed no hay dirigentes ni perfiles sociales.
+→ Falta cargar datos (PASO 8.1). Vía A (restore data real) o Vía B (seed sintético).
+  Sin esto no hay dirigentes ni perfiles sociales.
 
 ---
 
