@@ -30,6 +30,7 @@ que despache analyze_sentiment o un backfill de sentiment. Confirmar con datos r
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -37,6 +38,13 @@ from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 PYTHON = sys.executable
+
+# Guard de recursos (capa runtime del enforcement · docs/adr/0006).
+sys.path.insert(0, str(SCRIPTS_DIR))
+from _guard_resources import guard_heavy_job  # noqa: E402
+
+# SLO de cobertura de enriquecimiento (regla e · warn primero). Umbral configurable.
+SLO_MIN_COVERAGE = float(os.environ.get("CRECE_SLO_MIN_COVERAGE", "0.70"))
 
 
 def _step(label: str, script: str, extra: list[str], dirigente_id: int, dry_run: bool) -> tuple[str, bool]:
@@ -51,12 +59,58 @@ def _step(label: str, script: str, extra: list[str], dirigente_id: int, dry_run:
     return label, ok
 
 
+def _report_slo(did: int) -> None:
+    """SLO de cobertura post-enrich (regla e · warn). Mide cobertura TOTAL del
+    dirigente (no del delta) — auditoría Gemini: en un delta chico la cobertura
+    absoluta sigue siendo la métrica correcta. Defensivo: si no hay psycopg2 ni
+    DATABASE_URL_SYNC en este entorno, avisa y sigue (no rompe el host CLI)."""
+    url = os.environ.get("DATABASE_URL_SYNC")
+    if not url:
+        print("ℹ️  SLO: DATABASE_URL_SYNC no seteada en este entorno → no verificable aquí.")
+        return
+    try:
+        import psycopg2  # type: ignore
+    except ImportError:
+        print("ℹ️  SLO: psycopg2 no disponible → cobertura no verificable aquí.")
+        return
+    try:
+        conn = psycopg2.connect(url)
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT count(*) FILTER (WHERE tono_discurso IS NOT NULL), count(*) "
+                "FROM social_posts sp JOIN social_profiles spr ON sp.profile_id = spr.id "
+                "WHERE spr.dirigente_id = %s", (did,))
+            enriched, total = cur.fetchone()
+        conn.close()
+    except Exception as exc:  # noqa: BLE001
+        print(f"ℹ️  SLO: no se pudo medir cobertura ({exc}).")
+        return
+    if not total:
+        print(f"ℹ️  SLO: dirigente {did} sin posts → nada que medir.")
+        return
+    cov = enriched / total
+    flag = "✓" if cov >= SLO_MIN_COVERAGE else "⚠️ "
+    msg = (f"{flag} SLO cobertura tono_discurso dir {did}: {enriched}/{total} "
+           f"({cov:.0%}) · umbral {SLO_MIN_COVERAGE:.0%}")
+    print(msg)
+    if cov < SLO_MIN_COVERAGE:
+        print("   ⚠️  Cobertura bajo umbral — re-correr el enrich (idempotente) o "
+              "investigar filas sin enriquecer. (warn, no bloquea · regla e)")
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="Cadena de enriquecimiento NLP por dirigente")
     p.add_argument("--dirigente-id", type=int, required=True)
     p.add_argument("--limit", type=int, default=2000, help="límite por paso")
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--allow-unattended", action="store_true",
+                   help="permite correr sin TTY (background/cron). El crash RAM "
+                        "2026-05-27 fue unattended — úsalo a conciencia.")
     args = p.parse_args()
+
+    # Guard de recursos al arranque (RAM available macOS-aware + check unattended).
+    if not args.dry_run:
+        guard_heavy_job("post_ingest_enrich", allow_unattended=args.allow_unattended)
 
     did = args.dirigente_id
     lim = ["--limit", str(args.limit)]
@@ -78,6 +132,9 @@ def main() -> int:
         print(f"  {'✓' if ok else '✗'} {lbl}")
         all_ok = all_ok and ok
     print(f"{'='*60}")
+    if not args.dry_run:
+        print()
+        _report_slo(did)
     if not all_ok:
         print("Algún paso falló — re-correr es seguro (idempotente, salta lo ya hecho).")
         return 1
