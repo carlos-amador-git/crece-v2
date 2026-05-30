@@ -55,6 +55,21 @@ para que el cumplimiento no dependa de la buena voluntad de la sesión.
 ### Cambios estructurales / externos
 - ❌ `git push` a cualquier branch remoto. **Requiere OK escrito explícito del CEO
   en la sesión actual.** NO se infiere de instrucciones laterales ("push tras tu OK").
+
+#### Alcance del OK de push (regla añadida 2026-05-30)
+El OK de push del CEO **aplica solo a los commits que existían al momento de
+aprobarlo**. Un commit creado *después* de la aprobación NO está cubierto:
+- **Regla:** ante un commit nuevo (que no existía al aprobar), **REPORTA antes de
+  pushear** y espera OK.
+- **Única excepción:** el commit es el **fix mínimo indispensable para cumplir un
+  objetivo que el CEO ya aprobó explícitamente en el mismo intercambio** (p.ej.
+  arreglar el CI que el propio push aprobado dejó rojo). En ese caso se puede
+  pushear, pero **se declara explícitamente en el reporte** como decisión autónoma.
+- **No abusar de la excepción:** features, refactors o cambios de alcance NUNCA
+  califican como "fix mínimo indispensable". Ante duda, reportar y esperar.
+- **Origen:** incidente 2026-05-30 — pusheé `48b60dc` (fix de `fetch-depth` del
+  CI) sin que existiera al aprobar el push; era el fix indispensable para el
+  "CI verde" pedido, pero faltó codificar el criterio. Esto lo codifica.
 - ❌ Migrar stack, onboardear tenants productivos, llamadas de pago (Apify/PAC/etc.).
 - ❌ Comunicación con cliente final (MC CDMX) — pasa por el CEO.
 
