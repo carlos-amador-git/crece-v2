@@ -24,8 +24,10 @@ jobs:
   governance:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (con historia para el diff)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -43,8 +45,11 @@ jobs:
             head="${{ github.sha }}"
           fi
           # before puede venir vacío/all-zeros en el primer push de una rama.
-          if ! git cat-file -e "$base" 2>/dev/null; then base="$(git rev-parse HEAD~1 2>/dev/null || echo HEAD)"; fi
-          git diff --name-only --diff-filter=ACM "$base" "$head" > changed.txt || git diff --name-only HEAD~1 HEAD > changed.txt
+          # Con fetch-depth:0 el base normalmente existe; si no, cae al primer parent.
+          if [ -z "$base" ] || ! git cat-file -e "$base" 2>/dev/null; then
+            base="$(git rev-parse "${head}^" 2>/dev/null || echo "$head")"
+          fi
+          git diff --name-only --diff-filter=ACM "$base" "$head" > changed.txt
           echo "Archivos en el diff:"; cat changed.txt
 
       # governance_check.py usa solo stdlib (re, subprocess, pathlib) → sin pip install.

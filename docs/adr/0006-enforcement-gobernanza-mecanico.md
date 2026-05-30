@@ -89,6 +89,15 @@ commiteado es irreversible). Destructivo-en-archivos = warn. `git commit --no-ve
 siempre disponible. **Pendiente decisión CEO:** ¿confirmar este híbrido o forzar todo
 a warn el primer sprint?
 
+## Branch protection (aplica a CRECE, a diferencia de RADAR)
+CRECE trabaja con **PRs a `main`** → el gate de CI bloquea de verdad solo si
+`governance-gate` se marca **Required** en Settings → Branches → Branch protection
+rules → main. **Decisión CEO 2026-05-30: sí aplica** (se paga plan Team para
+habilitar branch protection en repo privado). Contraste con RADAR, que opera
+**push-directo a main** (sin PRs) → ahí el gate vive solo en pre-commit local + CI
+informativo, branch protection no aplica. Marcar el check como Required es **acción
+del CEO** (requiere permisos de admin del repo).
+
 ## Consequences
 **+** Reglas duras dejan de depender de la buena voluntad de la sesión.
 **+** graphify deja de ser invisible (versionado).
