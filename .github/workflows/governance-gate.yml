@@ -7,8 +7,10 @@ name: governance-gate
 #
 # NO porta el Sign-off RFC 2119 de cfdi-platform (CRECE no tiene sops/*.sop.md).
 #
-# Para bloqueo efectivo de merge: marcar este check como "Required" en
-# Settings -> Branches -> Branch protection rules -> main.
+# Modelo: detección (no bloquea merge a nivel GitHub). El gate primario es el
+# pre-commit local. Branch protection NO se usa (no se paga plan Team — igual que
+# RADAR). Opción futura: si se paga Team, marcar este check "Required" en
+# Settings -> Branches -> main lo vuelve bloqueo de merge. Ver docs/adr/0006.
 
 on:
   push:

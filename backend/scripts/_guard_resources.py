@@ -24,7 +24,8 @@ Uso en un script:
     from _guard_resources import guard_heavy_job
     guard_heavy_job("post_ingest_enrich", allow_unattended=args.allow_unattended)
 
-No bloquea por defecto en modo "warn" si se exporta CRECE_GUARD_MODE=warn.
+Default warn (híbrido docs/adr/0006): avisa pero no aborta. Subir a block:
+export CRECE_GUARD_MODE=block.
 """
 from __future__ import annotations
 
@@ -48,8 +49,11 @@ def _available_ram_mb() -> float | None:
 
 
 def _mode() -> str:
-    """'warn' (no aborta, solo avisa) o 'block' (aborta). Default block."""
-    return os.environ.get("CRECE_GUARD_MODE", "block").strip().lower()
+    """'warn' (no aborta, solo avisa) o 'block' (aborta). Default warn: el híbrido
+    de gobernanza (docs/adr/0006) deja los guards de runtime en warn — el blocking
+    día-1 es para harness (safe-ops-guard) y secret-scan (governance_check), no para
+    RAM/SLO. Subir a block: export CRECE_GUARD_MODE=block."""
+    return os.environ.get("CRECE_GUARD_MODE", "warn").strip().lower()
 
 
 def guard_heavy_job(name: str, *, allow_unattended: bool = False,

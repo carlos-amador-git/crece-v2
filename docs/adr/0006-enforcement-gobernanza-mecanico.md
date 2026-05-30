@@ -1,7 +1,7 @@
 ---
 adr: 0006
 title: Enforcement de gobernanza mecánico · 3 capas (git/runtime/harness)
-status: Proposed
+status: Accepted
 date: 2026-05-30
 author: AGENTE claude-opus-4-8
 deciders: [ceo]
@@ -18,7 +18,9 @@ cross_audit: Gemini CLI (Puerta 2) · 2026-05-30
 ADR-0006 · Enforcement de gobernanza mecánico — 3 capas (git / runtime / harness)
 
 ## Status
-Proposed — perímetro aprobado por el CEO 2026-05-30; arranque gradual non-blocking.
+Accepted (2026-05-30). Modelo adoptado: **pre-commit como gate primario + CI como
+detección**, SIN branch protection (no se paga plan Team — igual que RADAR). Híbrido
+non-blocking aplicado: blocking día-1 en harness + secret-scan; warn en RAM + SLO.
 
 ## Context
 CRECE tiene gobernanza masiva **en papel** (`CLAUDE.md`, `AGENTS.md` 15K,
@@ -80,23 +82,26 @@ Hallazgos **NO** adoptados ahora (anotados como deuda, no forzados):
   propio porque la tarea/patrón cfdi-radar lo especifica; se mitiga el "cartón"
   manteniéndolo mínimo y enlazado.
 
-## Non-blocking primero (con matiz del cross-audit)
-El CEO aprobó "warn 1 sprint → blocking". Gemini advirtió **warn-blindness** y deuda
-acumulada al encender blocking. **Híbrido adoptado:** los guards de **runtime**
-(RAM/SLO) arrancan en `CRECE_GUARD_MODE=warn`; el gate **git de secretos/PII**
-arranca **bloqueante desde día 1** (scope reducido, alta confianza: un secreto
-commiteado es irreversible). Destructivo-en-archivos = warn. `git commit --no-verify`
-siempre disponible. **Pendiente decisión CEO:** ¿confirmar este híbrido o forzar todo
-a warn el primer sprint?
+## Híbrido non-blocking — CONFIRMADO Y APLICADO (CEO 2026-05-30)
+Gemini advirtió **warn-blindness** y deuda al encender blocking. Híbrido **final**:
+- **Blocking día-1** (alta confianza, fallo irreversible): **harness** (safe-ops-guard
+  → exit 2) + **secret-scan** (governance_check → FAIL en secretos/paths PII).
+- **Warn** (riesgo de falso positivo / no irreversible): **RAM-guard** y **SLO**
+  (`CRECE_GUARD_MODE` default **warn**, verificado en `_guard_resources.py`).
+- Destructivo-en-archivos = warn. `git commit --no-verify` siempre disponible.
 
-## Branch protection (aplica a CRECE, a diferencia de RADAR)
-CRECE trabaja con **PRs a `main`** → el gate de CI bloquea de verdad solo si
-`governance-gate` se marca **Required** en Settings → Branches → Branch protection
-rules → main. **Decisión CEO 2026-05-30: sí aplica** (se paga plan Team para
-habilitar branch protection en repo privado). Contraste con RADAR, que opera
-**push-directo a main** (sin PRs) → ahí el gate vive solo en pre-commit local + CI
-informativo, branch protection no aplica. Marcar el check como Required es **acción
-del CEO** (requiere permisos de admin del repo).
+## Branch protection — NO se adopta (igual que RADAR)
+**Decisión CEO 2026-05-30 (final):** NO se paga plan Team → NO se usa branch
+protection. El modelo es **pre-commit local como gate primario + CI
+`governance-gate` como detección** (corre y reporta, pero no bloquea merge a nivel
+GitHub). Mismo modelo que RADAR. El secret-scan bloquea de verdad en el pre-commit
+del desarrollador antes de que el secreto entre al commit; el CI es la red de
+seguridad que lo detecta si alguien commitea con `--no-verify` o sin hooks
+instalados.
+
+**Opción futura (no requisito pendiente):** si algún día se paga plan Team, marcar
+`governance-gate` como **Required** en Settings → Branches → main convierte el CI en
+bloqueo de merge efectivo. Queda documentado como mejora opcional, no como deuda.
 
 ## Consequences
 **+** Reglas duras dejan de depender de la buena voluntad de la sesión.
