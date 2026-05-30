@@ -17,9 +17,36 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
 git config core.hooksPath .githooks
-chmod +x .githooks/* 2>/dev/null || true
+chmod +x .githooks/* scripts/safe-ops-guard.sh 2>/dev/null || true
 
-echo "✅ Hooks activados: core.hooksPath -> .githooks"
+# Capa harness: registrar el hook PreToolUse(Bash) -> safe-ops-guard.sh en
+# .claude/settings.json. NB: .claude/ está en .gitignore (config local por máquina),
+# por eso el hook NO viaja en git y se (re)instala aquí, idempotente. Ver docs/adr/0006.
+python3 - <<'PY'
+import json, pathlib
+p = pathlib.Path(".claude/settings.json")
+p.parent.mkdir(exist_ok=True)
+data = {}
+if p.exists():
+    try:
+        data = json.loads(p.read_text() or "{}")
+    except Exception:
+        data = {}
+hooks = data.setdefault("hooks", {}).setdefault("PreToolUse", [])
+cmd = 'bash "$CLAUDE_PROJECT_DIR/scripts/safe-ops-guard.sh"'
+already = any(
+    h.get("matcher") == "Bash" and any(cmd in (x.get("command", "")) for x in h.get("hooks", []))
+    for h in hooks if isinstance(h, dict)
+)
+if not already:
+    hooks.append({"matcher": "Bash", "hooks": [{"type": "command", "command": cmd}]})
+    p.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    print("   + hook harness (safe-ops-guard) registrado en .claude/settings.json")
+else:
+    print("   · hook harness ya presente en .claude/settings.json")
+PY
+
+echo "✅ Hooks activados: core.hooksPath -> .githooks + guard harness"
 echo "   pre-commit    · governance_check + anti-mock"
 echo "   post-commit   · graphify rebuild (ahora versionado)"
 echo "   post-checkout · graphify rebuild en branch switch"
