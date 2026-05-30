@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+#
+# pre-commit — gate local de gobernanza de CRECE v2 (ver docs/adr/0006).
+#
+# Capa GIT del enforcement. Corre sobre el stage:
+#   1. governance_check.py  → secretos hardcoded + paths PII/dump (BLOQUEA) +
+#      comandos destructivos en archivos (warn). Adaptado de MarxCha/radar D-045.
+#   2. anti-mock guardrail   → adelantado desde CI (e2e-smoke.yml). Solo si el
+#      stage toca frontend/. (D-ANTI-MOCK-1)
+#
+# Instalación (NO se versiona .git/hooks/): una vez
+#     bash scripts/install-hooks.sh        # setea core.hooksPath .githooks
+#
+# Bypass de emergencia (queda en el reflog, úsalo con criterio):
+#     git commit --no-verify
+#
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Preferir el venv del backend; si no, python3 del sistema.
+PY="python3"
+if [ -x "backend/.venv/bin/python" ]; then
+  PY="backend/.venv/bin/python"
+elif [ -x ".venv/bin/python" ]; then
+  PY=".venv/bin/python"
+elif ! command -v python3 >/dev/null 2>&1; then
+  echo "pre-commit: python no encontrado; salto el gate (revisa tu entorno)." >&2
+  exit 0
+fi
+
+# 1. Gate de secretos / PII / destructivo.
+if ! "$PY" backend/scripts/governance_check.py --check-staged; then
+  echo "" >&2
+  echo "⛔ pre-commit: governance_check FAIL. Commit abortado." >&2
+  echo "   Secretos → muévelos a .env. PII/dumps → fuera del stage." >&2
+  echo "   Bypass de emergencia: git commit --no-verify (queda en el reflog)." >&2
+  exit 1
+fi
+
+# 2. Anti-mock — solo si el stage toca el frontend (D-ANTI-MOCK-1).
+if git diff --cached --name-only --diff-filter=ACM | grep -q '^frontend/'; then
+  if [ -f frontend/scripts/check-no-mocks.sh ]; then
+    echo "pre-commit: anti-mock guardrail (frontend tocado)…"
+    if ! ( cd frontend && npm run --silent check:no-mocks ); then
+      echo "" >&2
+      echo "⛔ pre-commit: anti-mock FAIL. Commit abortado (D-ANTI-MOCK-1)." >&2
+      echo "   Usa <Skeleton/> o estado vacío, no números hardcoded." >&2
+      echo "   Bypass de emergencia: git commit --no-verify." >&2
+      exit 1
+    fi
+  fi
+fi
+
+exit 0
