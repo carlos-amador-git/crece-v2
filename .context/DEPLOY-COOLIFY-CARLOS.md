@@ -73,6 +73,11 @@ JWT_SECRET=<valor-generado-paso-3>
 CLAUDE_API_KEY=sk-ant-PEDIR_A_MARX
 CLAUDE_MODEL=claude-sonnet-4-20250514
 
+# ── Groq · Llama 3.3 70B (tier gratuito · pedir a Marx) ──
+# Usado por /api/v1/reels/generate-script (D-REELS-GROQ-1). Sin esta var,
+# reels responde "groq_not_configured". Registro: console.groq.com (30 req/min).
+GROQ_API_KEY=gsk_PEDIR_A_MARX
+
 # ── MinIO Storage ──
 MINIO_ROOT_USER=crece-minio
 MINIO_ROOT_PASSWORD=<valor-generado-paso-3>
@@ -81,7 +86,7 @@ MINIO_ROOT_PASSWORD=<valor-generado-paso-3>
 N8N_WEBHOOK_SECRET=<valor-generado-paso-3>
 ```
 
-**NOTA:** La `CLAUDE_API_KEY` la proporciona Marx por canal seguro. El resto se auto-configura en el docker-compose.
+**NOTA:** `CLAUDE_API_KEY` y `GROQ_API_KEY` las proporciona Marx por canal seguro. El resto se auto-configura en el docker-compose.
 
 ---
 
