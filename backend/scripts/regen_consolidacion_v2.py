@@ -100,7 +100,7 @@ OUTPUT: ÚNICAMENTE JSON. Sin markdown, sin comentarios."""
 def fetch_context(dirigente_id: int, dirigente_email: str) -> dict:
     r = requests.post(
         f"{BACKEND_URL}/api/v1/auth/login",
-        data={"username": dirigente_email, "password": "demo2026!"},
+        data={"username": dirigente_email, "password": os.environ.get("DIRIGENTE_PASSWORD", "demo2026!")},
         timeout=10,
     )
     r.raise_for_status()
