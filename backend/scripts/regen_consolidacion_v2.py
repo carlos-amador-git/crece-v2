@@ -100,7 +100,7 @@ OUTPUT: ÚNICAMENTE JSON. Sin markdown, sin comentarios."""
 def fetch_context(dirigente_id: int, dirigente_email: str) -> dict:
     r = requests.post(
         f"{BACKEND_URL}/api/v1/auth/login",
-        data={"username": dirigente_email, "password": "demo2026!"},
+        data={"username": dirigente_email, "password": os.environ.get("DIRIGENTE_PASSWORD", "demo2026!")},
         timeout=10,
     )
     r.raise_for_status()
@@ -108,7 +108,7 @@ def fetch_context(dirigente_id: int, dirigente_email: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
 
     # Overview
-    ov = requests.get(f"{BACKEND_URL}/api/v1/aceptacion/overview", headers=headers, timeout=10).json()
+    ov = requests.get(f"{BACKEND_URL}/api/v1/social/aceptacion/overview", headers=headers, timeout=10).json()
     diri = next((d for d in ov.get("dirigentes", []) if d.get("dirigente_id") == dirigente_id), None)
 
     # Diagnóstico vigente (último plan tipo DIAGNOSTICO)

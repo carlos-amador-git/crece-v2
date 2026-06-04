@@ -73,6 +73,11 @@ JWT_SECRET=<valor-generado-paso-3>
 CLAUDE_API_KEY=sk-ant-PEDIR_A_MARX
 CLAUDE_MODEL=claude-sonnet-4-20250514
 
+# ── Groq · Llama 3.3 70B (tier gratuito · pedir a Marx) ──
+# Usado por /api/v1/reels/generate-script (D-REELS-GROQ-1). Sin esta var,
+# reels responde "groq_not_configured". Registro: console.groq.com (30 req/min).
+GROQ_API_KEY=gsk_PEDIR_A_MARX
+
 # ── MinIO Storage ──
 MINIO_ROOT_USER=crece-minio
 MINIO_ROOT_PASSWORD=<valor-generado-paso-3>
@@ -81,7 +86,7 @@ MINIO_ROOT_PASSWORD=<valor-generado-paso-3>
 N8N_WEBHOOK_SECRET=<valor-generado-paso-3>
 ```
 
-**NOTA:** La `CLAUDE_API_KEY` la proporciona Marx por canal seguro. El resto se auto-configura en el docker-compose.
+**NOTA:** `CLAUDE_API_KEY` y `GROQ_API_KEY` las proporciona Marx por canal seguro. El resto se auto-configura en el docker-compose.
 
 ---
 
@@ -160,19 +165,47 @@ Sin esto la BD queda sin schema y todo lo demás falla. Verificar:
 ### 8.1 Datos: elegir UNA de dos vías
 
 **Vía A — Data REAL operativa (lo que normalmente quieres para demo/piloto):**
-Restaurar el snapshot de la BD local. Trae 13 dirigentes reales, perfiles, ~7k posts,
-~8k comments y NLP. Ver runbook completo:
-`.context/RUNBOOK-coolify-data-restore-2026-05-30.md`.
+Restaurar el snapshot **`data-snapshot-2026-06-04`** (el más reciente). Trae los 7
+dirigentes con cadena completa: ~8,111 posts, ~10,005 comments, NLP (tono/emotions/
+topics), reactors, followers, FODA + planes (consolidación + contenido). pg_dump v16
+`-Fc`, 27 MB, 72 tablas + extensiones. Runbook: `.context/RUNBOOK-coolify-data-restore-2026-05-30.md`.
+
+**Procedimiento SEGURO (cross-auditado Gemini 2026-06-04 — no saltarse pasos):**
 
 ```bash
-# snapshot publicado como GitHub Release (repo privado)
-gh release download data-snapshot-2026-05-30 -R MarxCha/crece-v2 -p 'crece-data-20260530.dump'
-docker cp crece-data-20260530.dump <postgres-container>:/tmp/
-docker exec <postgres-container> pg_restore --clean --if-exists --no-owner --no-privileges \
-  -U <POSTGRES_USER> -d <POSTGRES_DB> /tmp/crece-data-20260530.dump
+# 0. PRE-VUELO: verificar que Coolify tenga las extensiones (si faltan, el restore rompe)
+docker exec <pg-coolify> psql -U <USER> -d <DB> -c \
+  "SELECT name, installed_version FROM pg_available_extensions WHERE name IN ('postgis','vector');"
+# Si installed_version es NULL → instalar/habilitar ANTES de continuar.
+
+# 1. BACKUP PREVIO de lo que hay HOY en Coolify (rollback · SIN esto el riesgo de pérdida es 100% ante fallo)
+docker exec <pg-coolify> pg_dump -U <USER> -d <DB> -Fc > pre_restore_safety_$(date +%F).dump
+
+# 2. Descargar el snapshot (repo privado)
+gh release download data-snapshot-2026-06-04 -R MarxCha/crece-v2 -p 'crece-data-20260604.dump'
+docker cp crece-data-20260604.dump <pg-coolify>:/tmp/
+
+# 3. DETENER el container de la app (backend) — conexiones activas rompen el restore con --clean
+#    (en Coolify: parar el servicio backend temporalmente)
+
+# 4. Restore — Opción A (la más segura): a BD NUEVA, luego swap
+docker exec <pg-coolify> psql -U <USER> -c "CREATE DATABASE crece_new;"
+docker exec -i <pg-coolify> pg_restore -U <USER> -d crece_new --no-owner --no-privileges < /tmp/crece-data-20260604.dump
+#    Opción B (misma BD): pg_restore -d <DB> --clean --if-exists --no-owner --no-privileges --disable-triggers
 ```
-> El dump trae el schema, así que si usas la Vía A puedes saltarte el PASO 8.0.
-> Requiere Postgres ≥16 con **postgis + pgvector**. Contiene PII → borrar el asset tras restaurar.
+> Si usas Vía A, puedes saltarte el PASO 8.0 (el dump trae schema). Requiere Postgres ≥16
+> con **postgis + pgvector**. Contiene PII → **borrar el Release tras restore confirmado**.
+
+**5. Smoke test post-restore (Carlos reporta ANTES de dar OK):**
+```sql
+SELECT count(*) FROM dirigentes;        -- esperado: 7+ (los reales)
+SELECT count(*) FROM social_posts;      -- esperado: ~8111
+SELECT count(*) FROM social_comments;   -- esperado: ~10005
+SELECT postgis_full_version();          -- postgis vivo
+SELECT count(*) FROM planes_ia WHERE created_at >= '2026-06-03';  -- ~21 (FODA+planes de hoy)
+```
+> ⚠️ Verificar `df -h` (espacio) en el VPS. Si Coolify es Postgres alpine y local debian,
+> puede haber discrepancias menores en postgis — el pre-vuelo (paso 0) las detecta.
 
 **Vía B — Seed sintético mínimo (solo si no quieres data real):**
 ```bash
