@@ -108,7 +108,7 @@ def fetch_context(dirigente_id: int, dirigente_email: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
 
     # Overview
-    ov = requests.get(f"{BACKEND_URL}/api/v1/aceptacion/overview", headers=headers, timeout=10).json()
+    ov = requests.get(f"{BACKEND_URL}/api/v1/social/aceptacion/overview", headers=headers, timeout=10).json()
     diri = next((d for d in ov.get("dirigentes", []) if d.get("dirigente_id") == dirigente_id), None)
 
     # Diagnóstico vigente (último plan tipo DIAGNOSTICO)
