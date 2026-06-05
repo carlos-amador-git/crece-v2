@@ -345,6 +345,18 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
       ].sort((a, b) => b.er - a.er)
     : [];
 
+  // Cobertura parcial (2026-06-04 · CEO): un rival con muy pocos posts en la
+  // ventana de 28d produce una barra ~0 que NO refleja su performance real —
+  // es muestra chica, no dato faltante. Se etiqueta con honestidad (n posts)
+  // para no leer la barra vacía como "sin presencia". Umbral 10 posts/28d.
+  const MUESTRA_MIN_28D = 10;
+  const rivalesParciales = rivales
+    .filter((r) => r.status === "ok" && r.posts_28d < MUESTRA_MIN_28D)
+    .map((r) => ({
+      nombre: r.full_name?.split(" ")[0] ?? `Rival ${r.dirigente_id}`,
+      posts: r.posts_28d,
+    }));
+
   const myRank = rows.findIndex(r => r.isSelf) + 1;
   const allZeroEr = rows.length > 0 && rows.every((r) => !r.er);
   let signal: { label: string; variant: SignalVariant } | undefined;
@@ -407,6 +419,15 @@ export function CardB04({ bloque }: { bloque: BloqueBase & { data?: B04Data } })
           </BarChart>
         </ResponsiveContainer>
       </div>
+      {rivalesParciales.length > 0 && (
+        <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
+          Cobertura parcial:{" "}
+          {rivalesParciales
+            .map((r) => `${r.nombre} (${r.posts} ${r.posts === 1 ? "post" : "posts"}/28d)`)
+            .join(" · ")}
+          . Comparación referencial — muestra chica.
+        </p>
+      )}
     </CardShell>
   );
 }

@@ -85,8 +85,8 @@ export interface B04RivalItem {
   n_plataformas: number;
   posts_28d: number;
   posts_semana: number;
-  er_avg_pct: number;
-  sentiment_avg: number;
+  er_avg_pct: number | null;
+  sentiment_avg: number | null;
   status: string;
 }
 export interface B04Data {
