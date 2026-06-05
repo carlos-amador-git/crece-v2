@@ -1,13 +1,13 @@
 ---
 adr: 0005
 title: Misael VIP override · 250 reactions / 12 comments
-status: Accepted
+status: Superseded by ADR-0007
 date: 2026-05-20
 author: HUMAN ceo
 deciders: [ceo]
 informed: [linda, joy]
 supersedes: null
-superseded_by: null
+superseded_by: ADR-0007
 legacy_id: D-MISAEL-VIP-250
 legacy_path: .context/DECISIONS.md:2292
 related_adr: [0002]
@@ -19,7 +19,8 @@ ADR-0005 · Misael VIP override · 250 reactions / 12 comments
 
 ## Status
 
-Accepted (2026-05-20)
+Superseded by ADR-0007 (2026-06-04). Valor 250 quedó por debajo del top real (Pedro
+Carlock 378 post-ingest 7-clientes) → ADR-0007 lo sube a 400 (< techo 765 posts FB).
 
 ## Context
 

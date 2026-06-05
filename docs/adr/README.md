@@ -24,7 +24,10 @@ Ver `AGENTS.md` §7 raíz repo para el contrato completo.
 | [0002](0002-vip-overrides-mockup-frontend.md) | VIP overrides como mockup frontend-only (BD jamás se toca) | Accepted | 2026-05-19 | HUMAN ceo |
 | [0003](0003-anti-fallback-data-ui.md) | Anti-fallback data en UI · guardrail automatizado | Accepted | 2026-05-11 | HUMAN ceo |
 | [0004](0004-fans-perfiles-sidebar-invariante.md) | Fans y Perfiles sidebar invariante · NO eliminar | Accepted | 2026-05-19 | HUMAN ceo |
-| [0005](0005-misael-vip-override-250-12.md) | Misael VIP override 250/12 · supersedes ADR-NNNN inicial 40/12 | Accepted | 2026-05-20 | HUMAN ceo |
+| [0005](0005-misael-vip-override-250-12.md) | Misael VIP override 250/12 · supersedes ADR-NNNN inicial 40/12 | Superseded by ADR-0007 | 2026-05-20 | HUMAN ceo |
+| [0006](0006-enforcement-gobernanza-mecanico.md) | Enforcement gobernanza mecánico (git/runtime/harness) | Accepted | 2026-05-30 | HUMAN ceo |
+| [0007](0007-misael-vip-override-400-12.md) | Misael VIP override 400/12 · supersedes ADR-0005 | Accepted | 2026-06-04 | HUMAN ceo |
+| [0008](0008-nlp-routing-token-eficiente.md) | NLP routing token-eficiente · textual local + político LLM batcheado | Proposed | 2026-06-04 | AGENT linda |
 
 ## Migración legacy
 

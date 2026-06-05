@@ -28,7 +28,7 @@ import {
   type TopFanEntry,
   type WatchedSource,
 } from "@/lib/api/hooks/use-watched-profiles";
-import { applyVipOverrides, type FanRankingEntry } from "@/lib/api/utils/vip-overrides";
+import { applyVipOverrides, computeScore, type FanRankingEntry } from "@/lib/api/utils/vip-overrides";
 import { formatNumber } from "@/lib/utils";
 
 interface TopFansRankingProps {
@@ -59,6 +59,41 @@ function rankDecor(idx: number) {
   return null;
 }
 
+/**
+ * Dedupe de fans por NOMBRE — capa de presentación (FEEDBACK-CEO-2026-05-20 §76 +
+ * D-AUTHOR-HASH-PII). La misma persona puede tener varias filas en watched_profiles
+ * (cliente_seed + auto_suggested, o esquemas de hash viejo/nuevo, o FB+IG). Se agrupan
+ * por display_name normalizado y se COMBINAN reacciones+comments en UNA entrada.
+ * BD INTACTA — re-hashear rompería el join con comments históricos (Gemini 2026-06-05).
+ * Colisión de homónimos aceptada (tradeoff documentado en D-AUTHOR-HASH-PII).
+ *
+ * Corre DESPUÉS de applyVipOverrides: si el grupo contiene la entrada VIP (Misael), se
+ * CONSERVA la VIP intacta (su valor es fijo por ADR-0007) y se absorben las demás filas
+ * del mismo nombre → garantiza UN solo Misael (evita el doble-Misael del bug 2026-05-20).
+ * Para grupos no-VIP, combina reacciones y recomputa score.
+ */
+function dedupeRankedFansByName(entries: FanRankingEntry[]): FanRankingEntry[] {
+  const byName = new Map<string, FanRankingEntry>();
+  for (const e of entries) {
+    const key = (e.display_name || e.external_id || "").trim().toLowerCase();
+    if (!key) continue;
+    const existing = byName.get(key);
+    if (!existing) {
+      byName.set(key, { ...e });
+      continue;
+    }
+    if (existing.isVip) continue; // VIP es autoritativo (valor fijo) — absorbe sin sumar
+    if (e.isVip) {
+      byName.set(key, { ...e }); // la VIP reemplaza y manda
+      continue;
+    }
+    existing.reactions += e.reactions;
+    existing.comments += e.comments;
+    existing.score = computeScore(existing.reactions, existing.comments);
+  }
+  return Array.from(byName.values());
+}
+
 export function TopFansRanking({ dirigenteId, limit = 20, platform }: TopFansRankingProps) {
   const [sourceFilter, setSourceFilter] = useState<WatchedSource | "all">("all");
   const [query, setQuery] = useState("");
@@ -81,15 +116,16 @@ export function TopFansRanking({ dirigenteId, limit = 20, platform }: TopFansRan
       comments: p.n_comments,
     }));
     const withVip = applyVipOverrides(dirigenteId, raw);
+    const deduped = dedupeRankedFansByName(withVip);
     const q = query.trim().toLowerCase();
     const filtered = q
-      ? withVip.filter(
+      ? deduped.filter(
           (e) =>
             (e.display_name?.toLowerCase().includes(q) ?? false) ||
             (e.handle?.toLowerCase().includes(q) ?? false) ||
             e.external_id.toLowerCase().includes(q)
         )
-      : withVip;
+      : deduped;
     return filtered.slice(0, limit);
   }, [topFans, dirigenteId, query, limit]);
 

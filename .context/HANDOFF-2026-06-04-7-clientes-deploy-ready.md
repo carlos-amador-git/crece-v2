@@ -63,3 +63,41 @@ El monitoreo activo (Monitor tool por job) reemplazó el "espero pasivo".
 - SessionStart carga STATUS/DECISIONS/BLOCKERS/PLAN + este handoff.
 - Si CEO pide eficiencia NLP → ese es el pendiente #1.
 - Si Carlos reporta el redeploy → verificar smoke test (counts del runbook) y borrar el Release PII.
+
+---
+
+## Actualización post-cierre (deploy verificado + override + blocker dedup)
+
+### Estado de las apps desplegadas (medido, no asumido)
+- **Vercel** (`frontend-zeta-sepia-46.vercel.app`) = la que usamos **nosotros + Carlos para VER**.
+  Apunta al **backend LOCAL** vía túnel persistente (LaunchAgent `com.mdconsultoria.crece-tunnel.plist`
+  → `start-crece-tunnel.sh` → quick-tunnel a `:8002`, auto-sincroniza URL a Vercel cada hora).
+  **Tiene la data de HOY** (verificado: FODA Saymi id=122/06-03). **Depende de que el LOCAL esté ARRIBA.**
+- **Coolify** (`crece.mdconsultoria-ti.org`, backend `api-crece...`) = demo de Carlos, instancia
+  separada. **Tiene data VIEJA** (FODA id=96/05-27). Carlos restauró un snapshot anterior al `06-04`.
+  → Carlos debe re-restaurar el Release **`data-snapshot-2026-06-04`** (runbook ya apunta ahí).
+- **CRECE local quedó ARRIBA** a propósito (si se pausa, la Vercel pierde la vista de hoy).
+
+### Override Misael re-impuesto (CEO 2026-06-04)
+- Pedro Carlock (top real Saymi FB) creció a **378** post-ingest → override 320 quedó debajo.
+- Subido a **400** en `vip-overrides.ts` (>378 real, <**765** techo de posts FB — defendible, NO pasa el techo).
+- **ADR-0007** creado (supersedes ADR-0005, que quedó `Superseded`). Desplegado a Vercel (`vercel deploy --prod`).
+
+### 🔴 BLOCKER NUEVO: posts duplicados mismo-plataforma (B-SAYMI-DUP / patrón B-FELIPE-FB-DUP-9)
+- Las cards "Recepción del público" muestran posts 2× (ej. 12-may Mundial) por **duplicados reales en BD**.
+- Confirmados ejemplos cross-scheme same-platform: `5609/5314` (FB-FB), `7531/9697` (IG-IG).
+- **Magnitud NO confirmada:** conteo por prefijo de contenido da ~228 filas, pero **over-cuenta**
+  (posts legítimos que comparten prefijo). El dup REAL = mismo post bajo `platform_post_id` distinto.
+- **NO borrar a ciegas.** Sprint dedicado: (1) análisis preciso cross-scheme por `platform_post_id`,
+  (2) distinguir dup-real vs prefijo-colisión vs cross-plataforma (legítimo IG+FB), (3) backup, (4) OK CEO, (5) DELETE redundantes (keep 1).
+- Cross-plataforma (mismo contenido IG+FB) NO es dup — son posts distintos, no tocar.
+
+### Commits de la sesión (todos en origin/main)
+`7125452` Groq · `613adef` followers+SOP · `bdf71af` password env · `89a6c2e` runbook ·
+`feat(vip)` Misael 400+ADR-0007 · `docs(handoff)` este archivo.
+
+### Pendientes actualizados (orden de prioridad)
+1. **NLP eficiente en tokens** (CEO) — el grueso del gasto del día.
+2. **Dedup posts duplicados** (blocker nuevo, arriba) — afecta cards de recepción.
+3. **Coolify de Carlos:** restaurar Release `06-04` (su cancha).
+4. SOP de ingest pendiente de audit Gemini formal.

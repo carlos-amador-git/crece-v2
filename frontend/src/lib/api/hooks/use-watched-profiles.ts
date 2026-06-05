@@ -87,6 +87,7 @@ export interface TopPostItem {
   avg_polaridad: number | null;
   sample_quotes: TopPostSampleQuote[];
   post_url: string | null;
+  platform: string | null;
 }
 
 export interface InteractionsSummary {
