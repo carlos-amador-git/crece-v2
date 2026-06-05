@@ -28,9 +28,26 @@ from typing import Any
 
 import asyncpg
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from app.services.author_hash import ensure_author_hash  # noqa: E402
+
 DEFAULT_JSON = "/host/radar-reactors-saymi-fb-7days-2026-05-21.json"
 DIRIGENTE_ID = int(os.environ.get("DIRIGENTE_ID", "3"))  # default Saymi, override via env
 PLATFORM = os.environ.get("PLATFORM", "FACEBOOK")  # FB default · IG vía env
+
+# D-AUTHOR-HASH-PII (2026-05-26 + fix 2026-06-05): la identidad canónica de un fan es
+# sha256 del NOMBRE vía ensure_author_hash — NO el reactor_id numérico crudo (eso rompía
+# el join con social_comments + violaba LFPDPPP). El string de plataforma debe coincidir
+# con el que usan los adapters de comments para que el join matchee:
+# comments_payload.py usa "RADAR" (FB/X/TT/YT) · ingest_radar_ig.py usa "INSTAGRAM".
+COMMENT_PLATFORM_STR = {"FACEBOOK": "RADAR", "INSTAGRAM": "INSTAGRAM",
+                        "TWITTER": "RADAR", "TIKTOK": "RADAR", "YOUTUBE": "RADAR"}
+
+
+def _canon_hash(r: dict) -> str:
+    """author_hash canónico por NOMBRE (no por reactor_id numérico)."""
+    name = (r.get("author_display_name") or "").strip()
+    return ensure_author_hash(name, COMMENT_PLATFORM_STR.get(PLATFORM, PLATFORM))
 
 
 async def main(json_path: Path, commit: bool) -> int:
@@ -132,15 +149,21 @@ async def main(json_path: Path, commit: bool) -> int:
     org_id = org_row["org_id"] if org_row else None
     print(f"[map] dirigente_id={DIRIGENTE_ID} org_id={org_id}")
 
-    # 3) UPSERT watched_profiles por author_hash (extracción set)
-    unique_authors = {r["author_hash"]: r["author_display_name"] for r in reactors}
+    # 3) UPSERT watched_profiles. profile_external_id = reactor_id numérico (id estable);
+    # author_hash = hash CANÓNICO de nombre (D-AUTHOR-HASH-PII) para que una el join con
+    # social_comments. {ext_id: (display_name, canon_hash)}.
+    unique_authors: dict[str, tuple[Any, str]] = {}
+    for r in reactors:
+        ext = str(r.get("author_hash") or "")
+        if ext:
+            unique_authors[ext] = (r.get("author_display_name"), _canon_hash(r))
     print(f"[wp] processing {len(unique_authors)} unique authors")
 
     counters: Counter[str] = Counter()
 
     if commit:
         # Crear/actualizar watched_profiles
-        for author_hash, display_name in unique_authors.items():
+        for ext_id, (display_name, canon) in unique_authors.items():
             await conn.execute(
                 """
                 INSERT INTO watched_profiles (
@@ -157,14 +180,14 @@ async def main(json_path: Path, commit: bool) -> int:
                 DIRIGENTE_ID,
                 org_id,
                 PLATFORM,
-                author_hash,
+                ext_id,
                 display_name,
                 "auto_suggested",
-                author_hash,
+                canon,
             )
             counters["wp_upserts"] += 1
 
-        # Cachear author_hash → watched_profile_id
+        # Cachear author_hash(canónico) → watched_profile_id
         wp_rows = await conn.fetch(
             """
             SELECT id, author_hash FROM watched_profiles
@@ -173,7 +196,7 @@ async def main(json_path: Path, commit: bool) -> int:
             """,
             DIRIGENTE_ID,
             PLATFORM,
-            list(unique_authors.keys()),
+            [c for _d, c in unique_authors.values()],
         )
         ah_to_wp = {r["author_hash"]: r["id"] for r in wp_rows}
 
@@ -199,7 +222,7 @@ async def main(json_path: Path, commit: bool) -> int:
             if not post_id:
                 counters["events_skipped_no_post"] += 1
                 continue
-            ah = r["author_hash"]
+            ah = _canon_hash(r)  # canónico de nombre (alinea con author_hash en BD)
             wp_id = ah_to_wp.get(ah)
             if not wp_id:
                 counters["events_skipped_no_wp"] += 1
