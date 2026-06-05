@@ -1,4 +1,5 @@
-ACTIVE: PLAN-2026-05-27-nlp-reingest-enrich.md (re-ingest 3 MC desde radar_db :5453 + enrich RAM-safe · Sonnet+medium · attended · post crash RAM 2026-05-27)
+ACTIVE: PLAN-2026-06-04-3-fixes-cards.md (3 fixes cards Saymi en autónomo: dedup misma-red + platform label · B01 peso por red · B04 competidoras asimétricas · layer-of-fix, NO DELETE BD)
+PREV-ACTIVE: PLAN-2026-05-27-nlp-reingest-enrich.md (re-ingest 3 MC desde radar_db :5453 + enrich RAM-safe · Sonnet+medium · attended · post crash RAM 2026-05-27)
 PREV-ACTIVE: PLAN-2026-05-26-cierre-pendientes-diagnostico.md (F0+F1 CERRADOS 2026-05-26 noche vía /sprint-implement · pendiente F2-opcional/F3.2/F4/F5/F6 · ver STATUS para detalle)
 RECENT-CLOSED 2026-05-25 tarde: PLAN-2026-05-25-sprint-cierre-audit.md (9/10 items audit-full) + PLAN-2026-05-25-sprint-multi.md (5 bugs UI + B07 beat + B08 rivales + TT mapper)
 RECENT-CLOSED 2026-05-25: PLAN-2026-05-22-recovery.md (F3.0-F3.3 cerradas · 5/5 G-criteria verdes · batch único 670 OK 0 fails 30min)

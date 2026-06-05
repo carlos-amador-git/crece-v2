@@ -642,6 +642,7 @@ class TopPostItem(BaseModel):
     avg_polaridad: float | None
     sample_quotes: list[TopPostSampleQuote]
     post_url: str | None
+    platform: str | None = None
 
 
 class InteractionsSummary(BaseModel):
@@ -755,7 +756,28 @@ async def watched_top_posts(
     params: dict = {"did": dirigente_id, "days": str(days), "limit": limit}
     if platform:
         params["platform"] = platform
+    # Dedup misma-red (2026-06-04 · layer-of-fix, NO DELETE BD): un mismo post IG/FB
+    # entra 2× cuando RADAR lo exportó bajo dos esquemas de platform_post_id
+    # (IG mediapk vs mediapk_userid · FB numeric vs base64). Colapsa por llave
+    # canónica = post_url (idéntico entre esquemas), fallback content+fecha. Conserva
+    # la fila con más comments (no perder los clasificados). Cross-plataforma NO se
+    # colapsa: la partición incluye sps.platform.
     rows = (await db.execute(text(f"""
+        WITH deduped AS (
+          SELECT sp.id,
+            ROW_NUMBER() OVER (
+              PARTITION BY sps.platform,
+                COALESCE(NULLIF(sp.raw_data->>'url', ''), md5(sp.content || sp.published_at::text))
+              ORDER BY (SELECT count(*) FROM social_comments x WHERE x.parent_post_id=sp.id) DESC,
+                       sp.likes DESC, sp.id ASC
+            ) AS rn
+          FROM social_posts sp
+          JOIN social_profiles sps ON sp.profile_id=sps.id
+          WHERE sps.dirigente_id=:did
+            {platform_clause}
+            AND sp.published_at >= NOW() - (:days || ' days')::interval
+            AND sp.likes >= 1
+        )
         SELECT
           sp.id AS post_id,
           sp.published_at,
@@ -764,15 +786,14 @@ async def watched_top_posts(
           COUNT(sc.id) AS n_comments,
           COUNT(sc.id) FILTER (WHERE sc.nlp_polaridad IS NOT NULL) AS n_classified,
           AVG(sc.nlp_polaridad)::float AS avg_pol,
-          sp.raw_data->>'url' AS url
-        FROM social_posts sp
+          sp.raw_data->>'url' AS url,
+          sps.platform AS platform
+        FROM deduped d
+        JOIN social_posts sp ON sp.id=d.id
         JOIN social_profiles sps ON sp.profile_id=sps.id
         LEFT JOIN social_comments sc ON sc.parent_post_id=sp.id
-        WHERE sps.dirigente_id=:did
-          {platform_clause}
-          AND sp.published_at >= NOW() - (:days || ' days')::interval
-          AND sp.likes >= 1
-        GROUP BY sp.id
+        WHERE d.rn=1
+        GROUP BY sp.id, sps.platform
         HAVING COUNT(sc.id) FILTER (WHERE sc.nlp_polaridad IS NOT NULL) >= 3
           AND {polarity_filter}
         ORDER BY AVG(sc.nlp_polaridad) {order}, sp.likes DESC
@@ -804,6 +825,7 @@ async def watched_top_posts(
                 TopPostSampleQuote(text=q[0].strip(), polaridad=q[1]) for q in quotes
             ],
             post_url=r[7],
+            platform=r[8],
         ))
     return out
 

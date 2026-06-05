@@ -54,6 +54,26 @@ function fmtDate(iso: string) {
   return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
 }
 
+/** Etiqueta corta de red — permite distinguir dup-real (misma red) de
+ *  repetición cross-red legítima (mismo reel en IG y FB). 2026-06-04. */
+const PLATFORM_LABEL: Record<string, string> = {
+  FACEBOOK: "Facebook",
+  INSTAGRAM: "Instagram",
+  TWITTER: "X",
+  TIKTOK: "TikTok",
+  YOUTUBE: "YouTube",
+};
+
+function PlatformBadge({ platform }: { platform: string | null }) {
+  if (!platform) return null;
+  const label = PLATFORM_LABEL[platform] ?? platform;
+  return (
+    <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+      {label}
+    </span>
+  );
+}
+
 function PostCard({
   item,
   kind,
@@ -75,6 +95,7 @@ function PostCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <PlatformBadge platform={item.platform} />
           <span className="tabular-nums">{fmtDate(item.published_at)}</span>
           {item.post_url && (
             <ExternalLink
@@ -212,6 +233,11 @@ export function TopPostsCards({ dirigenteId, days = 30, limit = 3, platform }: T
               <DialogHeader>
                 <DialogTitle className="text-base">
                   Post del {fmtDate(selected.item.published_at)}
+                  {selected.item.platform && (
+                    <span className="ml-2 inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground align-middle">
+                      {PLATFORM_LABEL[selected.item.platform] ?? selected.item.platform}
+                    </span>
+                  )}
                   <Badge
                     variant="outline"
                     className={`ml-2 ${
