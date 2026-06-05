@@ -16,6 +16,24 @@ Pasos (en orden):
 
 (emotions es post-level: social_comments NO tiene columna emotions.)
 
+# ── CAMBIO PENDIENTE · ADR-0008 (Proposed, 2026-06-04) — aplicar en la PRÓXIMA
+# actualización de dirigentes, NO re-correr sobre data actual ──────────────────
+# POR QUÉ cambiamos: los pasos vía scripts `_cc` (claude --print subprocess) queman
+# presupuesto del plan CC (prioridad #1 del CEO 2026-06-03). Cross-audit Gemini
+# 2026-06-04 + lectura de analyzer.py confirman el routing correcto:
+#   - Campos TEXTUALES (emotions paso 3, topics paso 4, sentiment, toxicity) → mover a
+#     analyzer.analyze_full() LOCAL (HF transformers, $0, no Ollama, no viola ADR-0001).
+#     Bug histórico: producción corrió analyze() básico, no analyze_full().
+#   - Campos POLÍTICOS (paso 2: tono/target/polaridad de comments + tono/target posts)
+#     SE QUEDAN en LLM pero BATCHEADO ~20 items/llamada (~95% menos consumo). El runner
+#     LLM es irreemplazable: el matriz_v3_mapper exige labels de intención política;
+#     sentiment local es ciego a la política (oposición criticando gobierno = NEG textual
+#     pero polaridad política POSITIVA para el dirigente).
+# ÁREA DE INVESTIGACIÓN FUTURA (CEO "no creo que sea así"): validar si la polaridad
+# política puede derivarse local/barata (NER político + reglas) sin LLM. NO cerrado.
+# Detalle completo: docs/adr/0008-nlp-routing-token-eficiente.md
+# ───────────────────────────────────────────────────────────────────────────────
+
 ER y author_hash NO van aquí: ya nacen limpios en el ingest (event listener +
 guard, 2026-05-26). Sentiment_score/label se computa vía analyze_sentiment
 (Celery) — pendiente confirmar cobertura post-ingest RADAR (ver NOTA).
