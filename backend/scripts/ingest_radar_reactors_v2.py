@@ -94,6 +94,12 @@ async def main(json_path: Path, commit: bool) -> int:
             continue
     print(f"[map numeric] {len(numeric_to_post)} posts indexados por numeric (decode base64 CRECE)")
 
+    # Índice directo (IG · 2026-06-05): CRECE guarda IG posts por shortcode (ej. "DZGOq")
+    # o media_pk pelón (ej. "3910877853439427867"). Los reactors v2 traen las llaves extra
+    # platform_post_id_mediapk + platform_post_code (Hugo). Indexamos el platform_post_id
+    # tal cual lo guarda CRECE para matchear por cualquiera de las dos.
+    pp_direct: dict[str, int] = {row["platform_post_id"]: row["post_id"] for row in all_posts}
+
     # Fallback: para reactors con post_url pero pp_id no encontrado, buscar via URL substring.
     urls_to_try = sorted({r.get("post_url", "") for r in reactors if r.get("post_url") and _pp_key(r) not in pp_to_post})
     url_to_post: dict[str, int] = {}
@@ -185,6 +191,12 @@ async def main(json_path: Path, commit: bool) -> int:
                 if num:
                     post_id = numeric_to_post.get(num)
             if not post_id:
+                # IG: match por mediapk pelón o shortcode (id tal cual en CRECE)
+                for k in (r.get("platform_post_id_mediapk"), r.get("platform_post_code")):
+                    if k and k in pp_direct:
+                        post_id = pp_direct[k]
+                        break
+            if not post_id:
                 counters["events_skipped_no_post"] += 1
                 continue
             ah = r["author_hash"]
@@ -253,6 +265,11 @@ async def main(json_path: Path, commit: bool) -> int:
                 num = str(r.get("platform_post_id_numeric") or "")
                 if num:
                     post_id = numeric_to_post.get(num)
+            if not post_id:
+                for k in (r.get("platform_post_id_mediapk"), r.get("platform_post_code")):
+                    if k and k in pp_direct:
+                        post_id = pp_direct[k]
+                        break
             if post_id:
                 counters["events_resolvable"] += 1
             else:
