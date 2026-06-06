@@ -2671,3 +2671,10 @@ MAPA-FUNCIONAL.md ahora cubre los 10 módulos del producto con citas verificable
 - Felipe: 188/188 NLP, 76 únicos FB, 4,400 watched_profiles, 6,831 reactor_events, 156 comments
 - Piña FB: 4,664 watched_like_events, reel 3982 cerrado a 279 únicos
 - 3 pendientes operativos: 0
+
+## 2026-06-05 noche — Ingest Saymi+Pepe+Felipe completo + deploy Carlos listo
+- Saymi/Pepe/Felipe: comments 4 redes + reactors + followers ingeridos y medidos por fecha.
+- Bug mío de hoy (fans author_hash numérico) cerrado: migración a hash canónico por nombre (a2212df) + dedup fans en frontend (cbc88ab, BD intacta, Gemini frenó re-hash destructivo). Misael #1 intacto.
+- Huecos cazados con la regla de cobertura: Pepe IG (2 targets pepemonroyma) + Pepe FB 01/06 (cutoff +10). Pepe FB 31/05 = cero real.
+- Release data-snapshot-2026-06-05 final (Saymi+Pepe+Felipe). Carlos puede deployar.
+- **PENDIENTE (decisión CEO, hacer después):** ingest de Gaby / Ballesteros / Piña — pedir handoff a Hugo.
