@@ -1,5 +1,10 @@
 # HANDOFF — Sprint 0 E2E pipeline RADAR→CRECE + experimento destilación NLP · 2026-06-12
 
+> **UPDATE cierre final (12:40):** tras 3 ciclos de corrección upstream (RADAR fix join reels
+> + esquema dual D-044, yo regla cero-real en gate): **5/5 COMPLETED · 0 gaps · BD 404,862
+> reactor-events** (jobs 12-16). El pipeline absorbió las 3 rondas sin intervención manual de
+> datos. Branch en 8 commits (incluye `fix cero-real`). Stack detenido (stop limpio).
+
 **Status:** cierre de ventana. Pipeline automatizado PROBADO E2E con data real. Stack detenido (stop limpio).
 **Sesión:** Linda · Claude Opus 4.8 · 2026-06-11/12 (ventana RAM abierta por CEO, autonomía total).
 **Branch:** `feat/auto-radar-ingest` (6 commits, SIN push — espera OK CEO).
