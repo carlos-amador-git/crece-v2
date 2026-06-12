@@ -20,11 +20,12 @@ _WATERMARK_POSTS_SQL = text(
 )
 
 # social_comments no tiene modelo SQLAlchemy (FK a nivel DB) → SQL crudo.
+# FK verificado contra el INSERT real de los adapters: parent_post_id (NO post_id).
 _WATERMARK_COMMENTS_SQL = text(
     """
     SELECT sp.platform, MAX(c.published_at) AS last_ts
     FROM social_comments c
-    JOIN social_posts p ON p.id = c.post_id
+    JOIN social_posts p ON p.id = c.parent_post_id
     JOIN social_profiles sp ON sp.id = p.profile_id
     WHERE sp.dirigente_id = :dirigente_id
     GROUP BY sp.platform

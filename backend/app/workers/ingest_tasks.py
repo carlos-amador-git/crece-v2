@@ -25,7 +25,7 @@ _DELTA_SQL = {
         "WHERE sp.dirigente_id=:d"
     ),
     "social_comments": (
-        "SELECT count(*) FROM social_comments c JOIN social_posts p ON p.id=c.post_id "
+        "SELECT count(*) FROM social_comments c JOIN social_posts p ON p.id=c.parent_post_id "
         "JOIN social_profiles sp ON sp.id=p.profile_id WHERE sp.dirigente_id=:d"
     ),
     "watched_like_events": (
