@@ -53,6 +53,11 @@ class RadarManifest(BaseModel):
     files: list[ManifestFile] = Field(min_length=1)
     minio_path: str = Field(min_length=1)
 
+    # Heads-up RADAR 2026-06-12: una red capturada con depth=posts_only NO trae
+    # comments/reactors en el export — el gate de cobertura NO debe leerlo como gap.
+    # Opcional: {"FACEBOOK": "full", "INSTAGRAM": "posts_only", ...}
+    capture_depth: dict[str, str] | None = None
+
     @field_validator("schema_version")
     @classmethod
     def version_supported(cls, v: str) -> str:

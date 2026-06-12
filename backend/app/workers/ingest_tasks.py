@@ -250,7 +250,14 @@ def process_radar_handoff(self, job_id: int) -> dict:  # type: ignore[no-untyped
             steps = _run_sop_chain(session, workdir, job.dirigente_id, set(file_names))
             after = _db_counts(session, job.dirigente_id)
 
-        gaps = coverage_gaps_sync(session, job.dirigente_id)
+        # Contrato D-041: red en depth=posts_only NO trae reactors a propósito —
+        # excluirla del gate de cobertura (no es hueco, es configuración RADAR).
+        depth = manifest.get("capture_depth") or {}
+        posts_only = {p for p, d in depth.items() if d == "posts_only"}
+        gaps = [
+            g for g in coverage_gaps_sync(session, job.dirigente_id)
+            if g["platform"] not in posts_only
+        ]
         nlp_queued = _enqueue_local_nlp(session, job.dirigente_id)
 
         job.counts = {
