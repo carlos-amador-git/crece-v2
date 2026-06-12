@@ -31,8 +31,12 @@
 ## Commits de la sesión (branch feat/auto-radar-ingest)
 `f1473e9` docs plan+runbook · `7a847a8` receptor+chain · `22b9ee2` fix FK · `<capture_depth+spec>` · `<fix PYTHONPATH+minio+migración>` · `<experimento NLP>` — ver `git log`.
 
-## PENDIENTE entrante (2026-06-12 tarde · RADAR avisó)
-- Deltas Saymi + **Pepe (id=57, primer reactors por este flujo)** + Felipe desde 06-03, en
-  `radar/exports/{slug}-reactors-v2-*.json` cuando su corrida cierre. Ingerir en próxima
-  ventana de RAM (docker abajo por instrucción CEO). Posible que incluya el re-export
-  quirúrgico de los 9 posts (pina/gaby/balles). Cadena: e2e_push_handoff.py por dirigente.
+## PENDIENTE entrante (2026-06-12 · paquete RADAR LISTO en radar/exports/)
+- **3 deltas listos para ingerir** (próxima ventana RAM · docker abajo por instrucción CEO):
+  `felipe-reactors-v2-20260612.json` 8,339 · `pepe-reactors-v2-20260612.json` 30,814
+  (**PRIMER reactors de Pepe, dirigente_id=57**) · `saymi-reactors-v2-20260612.json` 139,378.
+  Shape D-041, match FB 100%. Cadena: `e2e_push_handoff.py --slug X --dirigente-id N`.
+- IG-posts de Saymi desde 06-03 pendiente lado RADAR (throttle chatmx_oficial, completa
+  al enfriar). Los 9 posts pina/gaby/balles YA quedaron resueltos en el v3 del mediodía.
+- NOTA: el archivo de saymi/felipe SOBREESCRIBE el del mediodía (mismo nombre 20260612) —
+  ingerir con task_uuid nuevo; idempotente.
