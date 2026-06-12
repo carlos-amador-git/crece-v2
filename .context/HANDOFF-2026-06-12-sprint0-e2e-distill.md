@@ -30,3 +30,9 @@
 
 ## Commits de la sesión (branch feat/auto-radar-ingest)
 `f1473e9` docs plan+runbook · `7a847a8` receptor+chain · `22b9ee2` fix FK · `<capture_depth+spec>` · `<fix PYTHONPATH+minio+migración>` · `<experimento NLP>` — ver `git log`.
+
+## PENDIENTE entrante (2026-06-12 tarde · RADAR avisó)
+- Deltas Saymi + **Pepe (id=57, primer reactors por este flujo)** + Felipe desde 06-03, en
+  `radar/exports/{slug}-reactors-v2-*.json` cuando su corrida cierre. Ingerir en próxima
+  ventana de RAM (docker abajo por instrucción CEO). Posible que incluya el re-export
+  quirúrgico de los 9 posts (pina/gaby/balles). Cadena: e2e_push_handoff.py por dirigente.
