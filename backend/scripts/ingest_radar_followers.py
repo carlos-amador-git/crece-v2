@@ -24,6 +24,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
 import asyncio
 import json
 import sys
@@ -31,7 +32,7 @@ from pathlib import Path
 
 import asyncpg
 
-DSN = "postgresql://crece:crece_dev@localhost:5438/crece"
+DSN = os.environ.get("DATABASE_URL_RAW", "postgresql://crece:crece_dev@localhost:5438/crece")
 DATA_SOURCE = "manual_host_ingest"
 
 # Clave del export → valor del enum platform_enum en CRECE.

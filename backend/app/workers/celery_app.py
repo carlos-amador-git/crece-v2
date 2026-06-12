@@ -22,7 +22,11 @@ celery_app.conf.update(
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     result_expires=3600,
+    # autodiscover solo barre app.workers.tasks — módulos extra van explícitos
+    imports=("app.workers.ingest_tasks",),
     task_routes={
+        # Handoff RADAR→CRECE (PLAN-2026-06-11) → cola data (ingest, no NLP)
+        "app.workers.ingest_tasks.process_radar_handoff": {"queue": "data"},
         "app.workers.tasks.scrape_profile": {"queue": "scraping"},
         "app.workers.tasks.analyze_sentiment": {"queue": "nlp"},
         "app.workers.tasks.generate_plan": {"queue": "ai"},
