@@ -120,6 +120,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       AI_PROVIDER: ollama
       # 2026-04-25 · CEO decisión · Ollama remoto Coolify libera RAM Mac Mini.
       # Cold-start medido: load 34s + inferencia ~16s · plan completo ~3-7min.
@@ -159,6 +161,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       # 2026-04-25 · CEO decisión · Worker también usa Coolify para liberar Mac Mini RAM.
       # Trade-off: CPU Coolify es más lento que GPU Mac M4 pero no compromete memoria local.
       OLLAMA_BASE_URL: http://163.245.208.96:11434

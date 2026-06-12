@@ -75,7 +75,11 @@ def _run_adapter(args: list[str], extra_env: dict[str, str] | None = None) -> No
     from app.core.config import settings
 
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(_BACKEND_ROOT)
+    # ANEXAR al PYTHONPATH del container (no sobreescribir — la imagen worker
+    # resuelve site-packages vía PYTHONPATH=/app/.local/...; pisarlo = ModuleNotFoundError)
+    env["PYTHONPATH"] = str(_BACKEND_ROOT) + (
+        os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
+    )
     env["DATABASE_URL_RAW"] = settings.DATABASE_URL_SYNC
     if extra_env:
         env.update(extra_env)
