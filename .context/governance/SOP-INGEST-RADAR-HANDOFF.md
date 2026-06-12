@@ -1,7 +1,10 @@
 # SOP — Ingest de handoff RADAR → CRECE (cadena completa por dirigente)
 
-**Certificado:** 2026-06-03 · desde ejecución real del piloto **Saymi (dirigente_id=3)**.
-**Autor:** AGENTE claude-opus-4-8 (sesión piloto). **Aprobado por:** CEO (luz verde).
+**Estado:** 🟡 **NO certificado** · redactado desde ejecución real del piloto **Saymi
+(dirigente_id=3)**, pendiente de auditoría independiente (Gemini, MODELO-TRABAJO-AUDIT §5).
+**Autor:** AGENTE claude-opus-4-8 (sesión piloto) — el mismo que ejecutó, por lo que NO
+puede auto-certificar. **Defecto detectado 2026-06-04:** el header anterior decía
+"Certificado" contradiciendo el footer 🟡 — error del autor, corregido.
 **Propósito:** procedimiento reproducible para ingestar un handoff de RADAR y llevarlo
 end-to-end hasta planes IA. NO reconstruir el camino cada vez — seguir este SOP.
 
@@ -61,6 +64,35 @@ DIRIGENTE_ID=N PLATFORM=FACEBOOK  DATABASE_URL_RAW=$DB PYTHONPATH=. .venv/bin/py
 DIRIGENTE_ID=N PLATFORM=INSTAGRAM DATABASE_URL_RAW=$DB PYTHONPATH=. .venv/bin/python3 scripts/ingest_radar_reactors_v2.py --json <slug>/reactors.json --commit
 ```
 **Verificar cada uno con `COUNT(*)` antes/después.** Idempotentes (UPSERT/DO NOTHING).
+
+## 2.5 Gate de COBERTURA de reactors por fecha (OBLIGATORIO — añadido 2026-06-04)
+**Por qué existe:** un `COUNT(*)` que sube NO garantiza que los reactors cubran las fechas
+de los posts. Incidente 2026-06-04: Saymi tenía posts FB/IG todos los días 20/05–02/06 pero
+0 reactor-events en ese rango → la gráfica "Interacción diaria" (que arma las barras con
+`watched_like_events`, no con `social_posts.likes`) salía vacía. El count global había
+subido (7,691 nuevos de 03/06) y se dio por bueno. El gate de count NO lo cazó.
+
+Tras ingestar reactors, correr este check y reportar los huecos ANTES de cerrar:
+```sql
+WITH posts AS (
+  SELECT sp.platform plat, p.id pid, p.published_at::date dia
+  FROM social_posts p JOIN social_profiles sp ON sp.id=p.profile_id
+  WHERE sp.dirigente_id=N AND sp.platform IN ('FACEBOOK','INSTAGRAM')
+    AND p.published_at::date >= (NOW()::date - interval '45 days')
+)
+SELECT plat, count(*) dias_sin_react, sum(posts) posts_sin_react,
+       string_agg(to_char(dia,'MM-DD'),',' ORDER BY dia) dias
+FROM (
+  SELECT po.plat, po.dia, count(DISTINCT po.pid) posts,
+         count(DISTINCT po.pid) FILTER (WHERE wle.id IS NOT NULL) con_react
+  FROM posts po LEFT JOIN watched_like_events wle ON wle.post_id=po.pid
+  GROUP BY 1,2
+) c WHERE con_react=0 GROUP BY plat ORDER BY plat;
+```
+- Si hay días con posts y 0 reactors → **NO marcar la cadena "completa"**. Reportar el hueco
+  y pedir a RADAR el re-export de reactors FB/IG para esas fechas exactas (no "mándame todo").
+- Solo FB/IG (X/TT/YT no exponen reactors). Posts muy recientes (<3d) pueden seguir
+  acumulando → tolerar conteo bajo, NO hueco total.
 
 ## 3. NLP enrich (gateado, attended, UN solo job)
 ```bash
