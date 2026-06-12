@@ -108,6 +108,9 @@ _COVERAGE_GATE_SQL = text(
       WHERE sp.dirigente_id = :dirigente_id
         AND sp.platform IN ('FACEBOOK','INSTAGRAM')
         AND p.published_at::date >= (NOW()::date - interval '45 days')
+        -- Regla cero-real (RADAR 2026-06-12): post con likes=0 y sin reactors NO es
+        -- gap de captura — nadie reaccionó. Espejo de la regla anti-falsa-alarma de RADAR.
+        AND p.likes > 0
     )
     SELECT plat, count(*) dias_sin_react, sum(posts) posts_sin_react,
            string_agg(to_char(dia,'MM-DD'),',' ORDER BY dia) dias
