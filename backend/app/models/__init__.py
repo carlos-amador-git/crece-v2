@@ -26,6 +26,7 @@ from app.models.follower import FollowerEngagement, SocialFollower
 from app.models.gasto_electoral import AlertaCompliance, GastoElectoral
 from app.models.hitl_audit import HitlEditsLog
 from app.models.ia_content_registry import IaContentRegistry
+from app.models.ingest_job import IngestJob, IngestJobStatus
 from app.models.legacy import CiudadanoLegacy, PromotorLegacy
 from app.models.llm_health_log import LLMHealthLog
 from app.models.metrica_social import MetricaSocial
@@ -75,6 +76,8 @@ __all__ = [
     "GastoElectoral",
     "HitlEditsLog",
     "IaContentRegistry",
+    "IngestJob",
+    "IngestJobStatus",
     "IntencionVoto",
     "LLMHealthLog",
     "MetricaSocial",

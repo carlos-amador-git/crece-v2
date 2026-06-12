@@ -22,6 +22,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
 import asyncio
 import json
 import sys
@@ -33,7 +34,7 @@ import asyncpg
 from app.services.author_hash import ensure_author_hash
 from app.services.engagement import compute_engagement_rate
 
-DSN = "postgresql://crece:crece_dev@localhost:5438/crece"
+DSN = os.environ.get("DATABASE_URL_RAW", "postgresql://crece:crece_dev@localhost:5438/crece")
 DATA_SOURCE = "radar-ig-instagrapi-v1"
 
 
