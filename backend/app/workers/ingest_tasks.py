@@ -135,33 +135,35 @@ def _run_sop_chain(session, workdir: Path, dirigente_id: int, present: set[str])
     if "ig_posts.json" in present:
         ig_pid = _profile_id(session, dirigente_id, "INSTAGRAM")
         if ig_pid is None:
-            raise RuntimeError("bundle trae ig_posts.json pero el dirigente no tiene perfil IG")
-        args = [
-            "scripts/ingest_radar_ig.py",
-            "--dirigente-id", d,
-            "--profile-id", str(ig_pid),
-            "--posts", str(workdir / "ig_posts.json"),
-            "--commit",
-        ]
-        if "ig_comments.json" in present:
-            args[-1:-1] = ["--comments", str(workdir / "ig_comments.json")]
-        _run_adapter(args)
-        steps.append("ig")
+            logger.warning("skip ig_posts.json: dirigente %d no tiene perfil IG", dirigente_id)
+        else:
+            args = [
+                "scripts/ingest_radar_ig.py",
+                "--dirigente-id", d,
+                "--profile-id", str(ig_pid),
+                "--posts", str(workdir / "ig_posts.json"),
+                "--commit",
+            ]
+            if "ig_comments.json" in present:
+                args[-1:-1] = ["--comments", str(workdir / "ig_comments.json")]
+            _run_adapter(args)
+            steps.append("ig")
 
     if "fb_comments.json" in present:
         fb_pid = _profile_id(session, dirigente_id, "FACEBOOK")
         if fb_pid is None:
-            raise RuntimeError("bundle trae fb_comments.json pero el dirigente no tiene perfil FB")
-        _run_adapter(
-            [
-                "scripts/ingest_radar_comments_payload.py",
-                "--dirigente-id", d,
-                "--profile-id", str(fb_pid),
-                "--comments", str(workdir / "fb_comments.json"),
-                "--commit",
-            ]
-        )
-        steps.append("comments:FB")
+            logger.warning("skip fb_comments.json: dirigente %d no tiene perfil FB", dirigente_id)
+        else:
+            _run_adapter(
+                [
+                    "scripts/ingest_radar_comments_payload.py",
+                    "--dirigente-id", d,
+                    "--profile-id", str(fb_pid),
+                    "--comments", str(workdir / "fb_comments.json"),
+                    "--commit",
+                ]
+            )
+            steps.append("comments:FB")
 
     if "reactors.json" in present:
         for plat in ("FACEBOOK", "INSTAGRAM"):

@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ProfileHeader } from "@/components/dirigentes/profile-header";
+import { SyncRadarButton } from "@/components/dirigentes/sync-radar-button";
 import { CompetitorsSection } from "@/components/dirigentes/competitors-section";
 import { IpdRadarChart } from "@/components/charts/ipd-radar-chart";
 import { TonoDiscursoChart } from "@/components/charts/tono-discurso-chart";
@@ -88,13 +89,17 @@ export default function DirigenteDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Back link */}
-      <Link href="/dashboard/dirigentes">
-        <Button variant="ghost" size="sm" className="gap-1.5">
-          <ArrowLeft className="h-4 w-4" />
-          Volver a Dirigentes
-        </Button>
-      </Link>
+      {/* Back link and sync action */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/dashboard/dirigentes">
+          <Button variant="ghost" size="sm" className="gap-1.5">
+            <ArrowLeft className="h-4 w-4" />
+            Volver a Dirigentes
+          </Button>
+        </Link>
+
+        <SyncRadarButton dirigenteId={dirigente.id} />
+      </div>
 
       {/* Profile header */}
       <ProfileHeader dirigente={dirigente} />

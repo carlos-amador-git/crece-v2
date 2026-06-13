@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -23,6 +23,7 @@ from app.services.radar_ingest import get_watermark
 router = APIRouter()
 
 require_admin = RoleChecker([Role.ADMIN])
+require_admin_or_analyst = RoleChecker([Role.ADMIN, Role.ANALYST])
 
 # Backpressure (Gemini Q4): si hay más de N jobs encolados/corriendo → 503.
 _MAX_JOBS_IN_FLIGHT = 4
@@ -98,6 +99,88 @@ async def radar_handoff(
     from app.workers.ingest_tasks import process_radar_handoff
 
     process_radar_handoff.delay(job.id)
+    return job
+
+
+@router.post("/sync/{dirigente_id}", response_model=IngestJobResponse | dict)
+async def sync_trigger(
+    dirigente_id: int,
+    current_user: Annotated[Any, Depends(require_admin_or_analyst)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Any:
+    """Localiza el último bundle en MinIO y dispara ingesta si es nuevo o fallido."""
+    from app.services.radar_sync import (
+        discover_manifest,
+        find_latest_bundle_info,
+        get_dirigente_slug,
+    )
+
+    slug = await get_dirigente_slug(db, dirigente_id)
+    info = await find_latest_bundle_info(slug)
+
+    if not info:
+        return {"sin_novedades": True, "reason": "No se encontraron bundles en MinIO"}
+
+    task_uuid = info["task_uuid"]
+    existing = (
+        await db.execute(select(IngestJob).where(IngestJob.task_uuid == task_uuid))
+    ).scalar_one_or_none()
+
+    if existing and existing.status in (IngestJobStatus.COMPLETED, IngestJobStatus.PARTIAL):
+        return {"sin_novedades": True, "task_uuid": task_uuid}
+
+    if existing:
+        # Re-encolar si no está en curso
+        if existing.status in (
+            IngestJobStatus.FAILED,
+            IngestJobStatus.TAINTED,
+            IngestJobStatus.RECEIVED,
+        ):
+            from app.workers.ingest_tasks import process_radar_handoff
+
+            process_radar_handoff.delay(existing.id)
+            return existing
+        return existing
+
+    # Discovery: crear job para bundle encontrado sin manifest previo
+    manifest_dict = await discover_manifest(slug, task_uuid, dirigente_id)
+    job = IngestJob(
+        task_uuid=task_uuid,
+        schema_version=manifest_dict["schema_version"],
+        slug=slug,
+        dirigente_id=dirigente_id,
+        manifest=manifest_dict,
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+
+    from app.workers.ingest_tasks import process_radar_handoff
+
+    process_radar_handoff.delay(job.id)
+    return job
+
+
+@router.get("/sync/status/{dirigente_id}", response_model=IngestJobResponse)
+async def sync_status(
+    dirigente_id: int,
+    current_user: Annotated[Any, Depends(require_admin_or_analyst)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Any:
+    """Estado del proceso de sincronización más reciente para el dirigente."""
+    job = (
+        await db.execute(
+            select(IngestJob)
+            .where(IngestJob.dirigente_id == dirigente_id)
+            .order_by(desc(IngestJob.created_at))
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    if job is None:
+        raise HTTPException(
+            status_code=404, detail="No hay procesos de sincronización para este dirigente"
+        )
     return job
 
 

@@ -69,8 +69,9 @@ async def main(profile_id: int, posts_f: Path, comments_f: Path | None, commit: 
         "SELECT followers_count FROM social_profiles WHERE id = $1", profile_id
     )
     if foll_row is None:
-        print(f"profile_id {profile_id} no existe", file=sys.stderr)
-        return 1
+        print(f"[skip] profile_id {profile_id} no existe", file=sys.stderr)
+        await conn.close()
+        return 0
     followers = (foll_row["followers_count"] or 0)
 
     # ── POSTS ──────────────────────────────────────────────

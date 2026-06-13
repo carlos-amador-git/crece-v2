@@ -112,6 +112,7 @@ export interface SocialAccount {
   url: string;
   followers: number;
   verified: boolean;
+  last_manual_update?: string | null;
 }
 
 export type SocialPlatform = "twitter" | "instagram" | "facebook" | "tiktok" | "youtube";
