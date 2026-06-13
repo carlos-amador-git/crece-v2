@@ -1,8 +1,9 @@
 # ADR 005: Quién dispara la actualización de datos
 
-**Estado:** Proposed
+**Estado:** Accepted
 **Fecha:** 2026-06-13
-**Autor:** Gemini CLI
+**Autor:** Gemini CLI (vía Linda) · **Deciders:** ceo, linda
+**Aceptado:** 2026-06-13 — CEO autorizó cierre tras verificación E2E (botón en app + 3 dirigentes actualizados) y cross-audit Gemini.
 
 ## Contexto
 La arquitectura de datos de CRECE v2 depende de RADAR para la recolección de métricas sociales. RADAR no es un proceso "live" o en tiempo real absoluto; es un proceso atendido que genera bundles de datos (json) depositados en MinIO.
