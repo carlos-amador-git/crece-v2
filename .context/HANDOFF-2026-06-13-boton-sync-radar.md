@@ -45,3 +45,17 @@ Tests: 16 (test_ingest_radar) + 4 (test_radar_sync) verdes. Gemini aprobó merge
   (`e2e_push_handoff.py --upload-only`) → apretar el botón en la app (o `POST /ingest/sync/{id}`).
 - API key admin del flujo: regenerar (la de la sesión vivía en `/tmp`, volátil).
 - Commits sesión: `2e727d3` `54cf818` `41f705c` `e7d1f59` `9d8b930` (+ los del mediodía 5/5 reactors).
+
+## UPDATE cierre (tarde 2026-06-13)
+- **3er bug cazado + fix (ADR-006, `8fe548c`):** ranking de fans inflado ~2x — RADAR cambia
+  `profile_external_id` del mismo fan entre capturas → N watched_profiles → el ranking sumaba
+  perfiles (Pedro Carlock 988 vs 514 real). Fix: dedup por `author_hash` en `watched_profiles.py`
+  (ranking `ROW_NUMBER` + `n_likes=COUNT(DISTINCT post_id)`; conteo `COUNT(DISTINCT author_hash)`).
+  NO toca BD. Cross-audit Gemini. Verificado en la app: Misael sigue Fan #1 (splice).
+- **Misael Fan #1:** confirmado en la app + gobernado (ADR-0002/0005/0007). El splice fuerza
+  position 1; el fix de dedup NO lo afecta. (Recalibrar su número >514 = opcional estético, regla 12.)
+- **Git:** `origin/main @ 342a52f` sincronizado, cero pendientes. `backend/data/saymi_pilot/` +
+  `exports/` agregados a `.gitignore` (data/PII, no versionar).
+- **Deudas NUEVAS escaladas (ADR-006):** causa raíz UPSERT-por-hash en RADAR · normalización
+  nombres (18k variantes) · recalibrar Misael.
+- **Stack:** detenido al cierre (stop limpio, resucitador descargado).

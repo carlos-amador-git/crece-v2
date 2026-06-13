@@ -1,4 +1,8 @@
-ACTIVE: PLAN-2026-06-04-3-fixes-cards.md (3 fixes cards Saymi en autónomo: dedup misma-red + platform label · B01 peso por red · B04 competidoras asimétricas · layer-of-fix, NO DELETE BD)
+ACTIVE: ninguno — sesión 2026-06-13 cerrada. NEXT abajo.
+RECENT-CLOSED 2026-06-13: botón "Sincronizar con RADAR" (PLAN-2026-06-13-boton-sincronizar-radar.md · ADR-005) + dedup fans por author_hash (ADR-006) + 3 dirigentes al día (Saymi/Pepe/Felipe). Todo en origin/main @ 342a52f. Verificado E2E en la app (Playwright).
+PARTIAL 2026-06-11: PLAN-2026-06-11-auto-radar-crece.md (pipeline auto RADAR→CRECE) — endpoint /ingest/sync + watermark + Celery chain HECHOS y probados; workflow n8n desplegado INACTIVE (W3y311tQbS4TrstQ). FALTA activar: deploy Coolify + RADAR conecta push (su ADR D-050) + env MINIO_* + nodo Config.
+NEXT (orden): (1) activar pipeline auto [deploy Carlos + D-050 RADAR] · (2) causa raíz dedup fans: UPSERT por author_hash en ingesta RADAR (ADR-006, sino watched_profiles crece 23%→50%/mes) · (3) NLP fine-tune cascada híbrida (DIAGNOSTICO-2026-06-12, faltan 2 de 3 Excels evaluadores) · (4) normalización nombres fans (18k variantes) · (5) recalibrar Misael VIP >514 (regla 12, PR CEO).
+PREV-CLOSED 2026-06-04: PLAN-2026-06-04-3-fixes-cards.md (3 fixes cards Saymi · cerrado por sesiones intermedias)
 PREV-ACTIVE: PLAN-2026-05-27-nlp-reingest-enrich.md (re-ingest 3 MC desde radar_db :5453 + enrich RAM-safe · Sonnet+medium · attended · post crash RAM 2026-05-27)
 PREV-ACTIVE: PLAN-2026-05-26-cierre-pendientes-diagnostico.md (F0+F1 CERRADOS 2026-05-26 noche vía /sprint-implement · pendiente F2-opcional/F3.2/F4/F5/F6 · ver STATUS para detalle)
 RECENT-CLOSED 2026-05-25 tarde: PLAN-2026-05-25-sprint-cierre-audit.md (9/10 items audit-full) + PLAN-2026-05-25-sprint-multi.md (5 bugs UI + B07 beat + B08 rivales + TT mapper)
