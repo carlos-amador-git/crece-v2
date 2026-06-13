@@ -1253,3 +1253,37 @@ La separación es por RBAC server-side, no por endpoint distinto.
 3. **Al introducir nueva función:** crear su sección antes del primer commit que la implementa.
 4. **Convención de estado** (al inicio del doc) debe usarse en todos los items.
 5. **Cross-link** con `PIPELINE-RADAR-CRECE.md` para origen del dato, con `ORGANIZACION.md` para responsables, con `REGLAS.md` para constraints normativos.
+
+---
+
+## 11. Ingesta y Sincronización RADAR ✅
+
+**Concepto:** plumbing para la ingesta de datos externos provenientes de RADAR (bundles en MinIO) hacia la base de datos de CRECE. Incluye mecanismos de trigger manual para operadores y visualización de frescura para el cliente final.
+
+### 11.1 Vistas y Componentes FE
+
+#### `/dashboard/dirigentes/[id]/` (Detalle de Dirigente)
+- **Componente:** `SyncRadarButton`
+- **Función:** permite a ADMIN y ANALYST disparar la sincronización manual del último bundle detectado en MinIO. Muestra estado "Procesando bundle..." mientras Celery trabaja.
+- **Hook:** `useTriggerSync()`, `useSyncStatus()` en `use-radar-sync.ts`.
+
+#### `ProfileHeader` (Badge de Frescura)
+- **Función:** muestra la fecha del último corte de datos (followers/posts) por cada red social.
+- **Dato:** campo `last_manual_update` en los perfiles sociales.
+- **Estado:** ✅ Implementado (2026-06-13).
+
+### 11.2 Endpoints backend de Ingesta
+
+#### Ingest Radar (`backend/app/api/v1/endpoints/ingest_radar.py`)
+
+| Endpoint | Método | Auth | Función |
+|---|---|---|---|
+| `/ingest/radar-handoff` | `POST` | Admin | Recibe manifest completo (vía n8n/automático) y encola job. |
+| `/ingest/sync/{dirigente_id}` | `POST` | Admin/Analyst | Trigger manual: busca en MinIO, descubre manifest si no existe, y encola job. |
+| `/ingest/sync/status/{dirigente_id}` | `GET` | Admin/Analyst | Pollea el estado del job más reciente para ese dirigente. |
+| `/ingest/watermark/{dirigente_id}` | `GET` | Admin | Devuelve el último timestamp ingerido por red social (filtro para RADAR). |
+
+### 11.3 Reglas de Gobernanza (ADR 005)
+- **Trigger:** solo ADMIN/ANALYST. Es entrega de servicio, no self-service.
+- **Frescura:** visible para todos, incluyendo Dirigente (VIEWER).
+- **Consistencia:** si no hay bundle posterior a la última ingesta, el sistema reporta "Sin novedades" y evita duplicidad de trabajo.
