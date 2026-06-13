@@ -136,6 +136,9 @@ frontend/.env.production
 backend/data/raw/mc_original/
 # Deltas crudos de RADAR (posts+comments scraped, PII en comments) — NUNCA commitear.
 backend/data/*_delta/
+# Bundles/pilotos de RADAR + exports de análisis ad-hoc (contenido de redes / post IDs) — no versionar.
+backend/data/saymi_pilot/
+exports/
 backend/.config/
 backend/.pki/
 backend/.wdm/
