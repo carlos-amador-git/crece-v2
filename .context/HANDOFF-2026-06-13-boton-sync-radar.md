@@ -15,7 +15,7 @@
 ## Estado de los 3 dirigentes (medido contra BD)
 | Dirigente | Followers | Últ. post | Notas |
 |---|---|---|---|
-| Saymi (3) | 287,097 (FB 244k) | 06-13 | falta IG-posts nuevos (lado RADAR) |
+| Saymi (3) | 287,097 (FB 244k) | 06-13 | COMPLETO — 214 IG-posts (incl. 30 nuevos 06-13, capturados con @marxitoc) ya ingeridos vía botón |
 | Pepe (57) | 27,875 | 06-11 | completo (1er sync por flujo nuevo) |
 | Felipe (60) | 7,243 | 06-13 | completo |
 
@@ -26,8 +26,10 @@
 Tests: 16 (test_ingest_radar) + 4 (test_radar_sync) verdes. Gemini aprobó merge + fixes.
 
 ## PENDIENTES (todos escalados, ninguno abierto en mi cancha)
-1. **IG-posts Saymi** (30 nuevos) → **RADAR** (chatmx_oficial caída; necesita credenciales del CEO
-   para que RADAR la refresque). Coordinado por claude-peers.
+1. ~~IG-posts Saymi~~ **RESUELTO** — los 30 nuevos (capturados con @marxitoc, autorizado) ya están
+   en BD (214 IG-posts Saymi, más reciente 06-13), ingeridos vía el botón. Las credenciales de
+   `chatmx_oficial` son para FUTURAS corridas de RADAR (refrescar esa cuenta), NO pendiente de cierre.
+   *(Corrección: lo reporté como pendiente sin medir — RADAR me corrigió con evidencia.)*
 2. **Deploy Coolify (Carlos)** → **NO urgente**: Coolify sin data/bundles reales + necesita env
    `MINIO_ACCESS_KEY`/`SECRET_KEY` (SPEC-ENDPOINT-INGEST-RADAR.md). Tiene sentido cuando el
    pipeline RADAR→Coolify-MinIO esté conectado.
