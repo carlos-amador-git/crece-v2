@@ -1,0 +1,45 @@
+# HANDOFF — Botón "Sincronizar con RADAR" + 3 dirigentes al día · 2026-06-13
+
+**Status:** cierre. Feature en `origin/main` (`9d8b930`). 3 dirigentes actualizados (medido).
+**Sesión:** Linda · Claude Opus 4.8 · 2026-06-13 (larga, atendida; varias correcciones de fondo del CEO).
+
+## ⚠️ LEER PRIMERO
+- **Feature pusheado y verificado E2E en la app** (no en SQL). Botón "Sincronizar con RADAR" en
+  `/dashboard/dirigentes/[id]` (admin/analyst-only, ADR-005 Accepted) → endpoint
+  `POST /api/v1/ingest/sync/{id}` → descubre el último bundle en MinIO → ingiere (cadena SOP
+  idempotente) → badge frescura + "Procesando".
+- **Construido por `gemini --yolo`** que Linda lanzó (error de yolo reconocido: yolo da escritura;
+  para consultas ir SIN yolo). Linda verificó/consolidó (ejecutor≠auditor) y cazó 2 bugs.
+- **NO detener stack** (instrucción CEO al cierre). Stack arriba; frontend dev en :3007.
+
+## Estado de los 3 dirigentes (medido contra BD)
+| Dirigente | Followers | Últ. post | Notas |
+|---|---|---|---|
+| Saymi (3) | 287,097 (FB 244k) | 06-13 | falta IG-posts nuevos (lado RADAR) |
+| Pepe (57) | 27,875 | 06-11 | completo (1er sync por flujo nuevo) |
+| Felipe (60) | 7,243 | 06-13 | completo |
+
+## 2 bugs cazados verificando (no confiando en "COMPLETED")
+1. `discover_manifest` (radar_sync.py): leía tmp sin `flush()` → botón daba 500. Fix `41f705c`.
+2. `ingest_radar_followers.py`: no leía el wrapper RADAR `{slug,followers:{}}` → followers no se
+   actualizaban en silencio (128k FB de Saymi ocultos; job COMPLETED igual). Fix `e7d1f59`.
+Tests: 16 (test_ingest_radar) + 4 (test_radar_sync) verdes. Gemini aprobó merge + fixes.
+
+## PENDIENTES (todos escalados, ninguno abierto en mi cancha)
+1. **IG-posts Saymi** (30 nuevos) → **RADAR** (chatmx_oficial caída; necesita credenciales del CEO
+   para que RADAR la refresque). Coordinado por claude-peers.
+2. **Deploy Coolify (Carlos)** → **NO urgente**: Coolify sin data/bundles reales + necesita env
+   `MINIO_ACCESS_KEY`/`SECRET_KEY` (SPEC-ENDPOINT-INGEST-RADAR.md). Tiene sentido cuando el
+   pipeline RADAR→Coolify-MinIO esté conectado.
+3. **Pipeline auto RADAR→CRECE** (pendiente #1 grande): endpoint listo + workflow n8n
+   `CRECE — Ingest RADAR Handoff` desplegado **inactive** (id W3y311tQbS4TrstQ). Activar = deploy +
+   RADAR conecta push (su ADR D-050) + editar nodo Config (URL backend + API key).
+4. **NLP fine-tune** (cascada híbrida, DIAGNOSTICO-2026-06-12): faltan **2 de 3 Excels** de
+   evaluadores (gold polaridad) → del CEO/colaboradores. Excel generado en
+   `backend/evaluations/2026-06-12-gold-polaridad/` (evaluador_3 ya respondido, 100/100).
+
+## Cómo retomar
+- El botón ya opera local. Para actualizar un dirigente nuevo: subir bundle a MinIO
+  (`e2e_push_handoff.py --upload-only`) → apretar el botón en la app (o `POST /ingest/sync/{id}`).
+- API key admin del flujo: regenerar (la de la sesión vivía en `/tmp`, volátil).
+- Commits sesión: `2e727d3` `54cf818` `41f705c` `e7d1f59` `9d8b930` (+ los del mediodía 5/5 reactors).
