@@ -201,31 +201,48 @@ async def list_watched(
     if active_only:
         where.append("wp.is_active = true")
 
+    # Dedup por author_hash (identidad canónica nombre+plataforma): RADAR cambia
+    # profile_external_id del mismo fan entre capturas → N watched_profiles por fan
+    # (23% duplicados, infla el ranking ~2x). Agrupamos por author_hash y devolvemos 1
+    # perfil representativo. n_likes = COUNT(DISTINCT post_id) sobre TODOS los perfiles
+    # del hash (ajuste Gemini 2026-06-13: post_id, no tupla con reaction_type — un
+    # Like+Love del mismo fan/post por duplicación seguiría inflando). Diagnóstico:
+    # ADR-006-dedup-fans-author-hash.md. Causa raíz (UPSERT por hash en RADAR) escalada.
     sql = f"""
-        SELECT
-          wp.id, wp.dirigente_observador_id, wp.platform, wp.profile_external_id,
-          wp.profile_handle, wp.profile_url, wp.display_name, wp.avatar_url,
-          wp.source, wp.tags, wp.notes, wp.is_active,
-          wp.created_at, wp.updated_at,
-          COALESCE(c.n_comments, 0) AS n_comments,
-          COALESCE(l.n_likes, 0) AS n_likes,
-          GREATEST(c.last_comment, l.last_like) AS last_engagement
-        FROM watched_profiles wp
-        LEFT JOIN LATERAL (
-          SELECT COUNT(*) AS n_comments, MAX(sc.published_at) AS last_comment
-          FROM social_comments sc
-          JOIN social_posts sp ON sp.id = sc.parent_post_id
-          JOIN social_profiles spr ON spr.id = sp.profile_id
-          WHERE sc.author_hash = wp.author_hash
-            AND spr.dirigente_id = wp.dirigente_observador_id
-        ) c ON true
-        LEFT JOIN LATERAL (
-          SELECT COUNT(*) AS n_likes, MAX(wle.detected_at) AS last_like
-          FROM watched_like_events wle
-          WHERE wle.watched_profile_id = wp.id
-        ) l ON true
-        WHERE {" AND ".join(where)}
-        ORDER BY GREATEST(c.last_comment, l.last_like) DESC NULLS LAST, wp.id
+        WITH ranked AS (
+          SELECT
+            wp.id, wp.dirigente_observador_id, wp.platform, wp.profile_external_id,
+            wp.profile_handle, wp.profile_url, wp.display_name, wp.avatar_url,
+            wp.source, wp.tags, wp.notes, wp.is_active,
+            wp.created_at, wp.updated_at,
+            COALESCE(c.n_comments, 0) AS n_comments,
+            COALESCE(l.n_likes, 0) AS n_likes,
+            GREATEST(c.last_comment, l.last_like) AS last_engagement,
+            ROW_NUMBER() OVER (
+              PARTITION BY wp.author_hash
+              ORDER BY COALESCE(l.n_likes, 0) DESC, COALESCE(c.n_comments, 0) DESC, wp.id
+            ) AS rn
+          FROM watched_profiles wp
+          LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS n_comments, MAX(sc.published_at) AS last_comment
+            FROM social_comments sc
+            JOIN social_posts sp ON sp.id = sc.parent_post_id
+            JOIN social_profiles spr ON spr.id = sp.profile_id
+            WHERE sc.author_hash = wp.author_hash
+              AND spr.dirigente_id = wp.dirigente_observador_id
+          ) c ON true
+          LEFT JOIN LATERAL (
+            SELECT COUNT(DISTINCT wle.post_id) AS n_likes, MAX(wle.detected_at) AS last_like
+            FROM watched_like_events wle
+            JOIN watched_profiles wp2 ON wp2.id = wle.watched_profile_id
+            WHERE wp2.author_hash = wp.author_hash
+              AND wp2.dirigente_observador_id = wp.dirigente_observador_id
+          ) l ON true
+          WHERE {" AND ".join(where)}
+        )
+        SELECT * FROM ranked
+        WHERE rn = 1
+        ORDER BY last_engagement DESC NULLS LAST, id
         LIMIT :limit
     """
     rows = (await db.execute(text(sql), params)).mappings().all()
@@ -380,18 +397,21 @@ async def watched_summary(
 ):
     """Métricas agregadas para el header del tab UI."""
     await _assert_dirigente_access(db, user, dirigente_id)
+    # COUNT(DISTINCT author_hash) — no COUNT(*) de perfiles: RADAR duplica perfiles del
+    # mismo fan (distinto ext, mismo author_hash) → COUNT(*) inflaba el total (Saymi
+    # 95k perfiles vs 73k fans reales). author_hash = identidad canónica nombre+plataforma.
     base = await db.execute(text("""
         SELECT
-          COUNT(*) AS total,
-          COUNT(*) FILTER (WHERE source='cliente_seed') AS cs,
-          COUNT(*) FILTER (WHERE source='manual') AS man,
-          COUNT(*) FILTER (WHERE source='auto_suggested') AS asu,
-          COUNT(*) FILTER (WHERE source='competidor') AS cmp,
-          COUNT(*) FILTER (WHERE platform='FACEBOOK')  AS p_fb,
-          COUNT(*) FILTER (WHERE platform='INSTAGRAM') AS p_ig,
-          COUNT(*) FILTER (WHERE platform='TWITTER')   AS p_tw,
-          COUNT(*) FILTER (WHERE platform='TIKTOK')    AS p_tt,
-          COUNT(*) FILTER (WHERE platform='YOUTUBE')   AS p_yt
+          COUNT(DISTINCT author_hash) AS total,
+          COUNT(DISTINCT author_hash) FILTER (WHERE source='cliente_seed') AS cs,
+          COUNT(DISTINCT author_hash) FILTER (WHERE source='manual') AS man,
+          COUNT(DISTINCT author_hash) FILTER (WHERE source='auto_suggested') AS asu,
+          COUNT(DISTINCT author_hash) FILTER (WHERE source='competidor') AS cmp,
+          COUNT(DISTINCT author_hash) FILTER (WHERE platform='FACEBOOK')  AS p_fb,
+          COUNT(DISTINCT author_hash) FILTER (WHERE platform='INSTAGRAM') AS p_ig,
+          COUNT(DISTINCT author_hash) FILTER (WHERE platform='TWITTER')   AS p_tw,
+          COUNT(DISTINCT author_hash) FILTER (WHERE platform='TIKTOK')    AS p_tt,
+          COUNT(DISTINCT author_hash) FILTER (WHERE platform='YOUTUBE')   AS p_yt
         FROM watched_profiles
         WHERE dirigente_observador_id = :did AND is_active = true
     """), {"did": dirigente_id})
