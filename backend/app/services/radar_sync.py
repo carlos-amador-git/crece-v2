@@ -120,6 +120,7 @@ async def discover_manifest(slug: str, task_uuid: str, dirigente_id: int) -> dic
         # Es costoso pero es el fallback si no hay manifest POSTed.
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             s3.download_fileobj(bucket, key, tmp)
+            tmp.flush()  # FIX: sin flush, read_bytes() lee el archivo aún en buffer → JSONDecodeError char 0
             tmp_path = Path(tmp.name)
             try:
                 sha256 = hashlib.sha256(tmp_path.read_bytes()).hexdigest()

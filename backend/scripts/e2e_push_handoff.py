@@ -79,6 +79,9 @@ def main() -> int:
     ap.add_argument("--api-key", default=os.environ.get("CRECE_API_KEY", ""))
     ap.add_argument("--task-uuid", default=None, help="reusar uuid (test idempotencia)")
     ap.add_argument("--poll", type=int, default=900)
+    ap.add_argument("--upload-only", action="store_true",
+                    help="sube el bundle a MinIO + manifest.json y SALE (sin POST). "
+                         "Para que el botón 'Sincronizar' lo descubra e ingiera.")
     args = ap.parse_args()
 
     if not args.api_key:
@@ -125,6 +128,14 @@ def main() -> int:
         "files": manifest_files,
         "minio_path": prefix,
     }
+    # manifest.json al prefix (discover_manifest del endpoint sync lo usa/valida)
+    s3.put_object(Bucket=bucket, Key=f"{prefix}/manifest.json", Body=json.dumps(manifest).encode())
+
+    if args.upload_only:
+        print(f"[upload-only] bundle + manifest en s3://{bucket}/{prefix}/ — NO ingerido.")
+        print(f"  → el botón 'Sincronizar con RADAR' del dirigente {args.dirigente_id} lo descubrirá.")
+        return 0
+
     r = requests.post(
         f"{args.api}/api/v1/ingest/radar-handoff",
         json=manifest, headers={"X-API-Key": args.api_key}, timeout=30,
