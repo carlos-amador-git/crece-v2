@@ -177,6 +177,9 @@ const sections: Section[] = [
     adminOnly: true,
     items: [
       leaf("/dashboard/admin/overview", "Operacion de flota", LayoutDashboard, false),
+      // Acceso admin a fichas de dirigentes (botón "Sincronizar con RADAR", ADR-005).
+      // La sección "Principal" es clientOnly y se oculta al admin; este enlace cierra ese gap.
+      leaf("/dashboard/dirigentes", "Dirigentes", Users, false),
       leaf("/dashboard/admin/ranking", "Ranking competidores", BarChart3, false),
       leaf("/dashboard/admin/clasificacion", "Clasificacion", ClipboardList, false),
       leaf("/dashboard/admin/plan-ia-review", "Plan IA Review", Brain, false),
