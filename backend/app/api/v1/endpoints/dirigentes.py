@@ -252,6 +252,7 @@ async def get_dirigente(
             "handle": p.handle,
             "followers": p.followers_count,
             "url": p.url,
+            "last_manual_update": p.last_manual_update.isoformat() if p.last_manual_update else None,
         }
         for p in profiles
     ]

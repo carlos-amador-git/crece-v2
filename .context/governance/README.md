@@ -55,6 +55,7 @@ Esta estructura debe replicarse en el bootstrap de cada proyecto. Carpeta `.cont
 
 ## Vinculación con otros artefactos
 
+- `RUNBOOK-STOP-START-LOCAL-MAC.md` → cómo detener/relevantar el stack local en el Mac Mini sin pelear con el resucitador (`crece-auto-resume` LaunchAgent). `docker stop` solo NO es limpio. (2026-06-08)
 - `.context/HANDOFF-*.md` → handoffs operativos puntuales (no reemplazan los 5 docs; sirven para cierre entre sesiones).
 - `.context/templates/SESSION_HANDOFF.md` → plantilla formal para handoffs (fusiona disciplina SRE + toma-notas Anthropic + memoria 3 capas).
 - `docs/adr/` → ADRs canónicos vigentes en formato Nygard+MADR (5 migrados 2026-05-28; resto en `DECISIONS.md` formato histórico).

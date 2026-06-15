@@ -33,6 +33,7 @@ from app.api.v1.endpoints import (
     health,
     hitl_evaluation,
     indice_aceptacion,
+    ingest_radar,
     metricas_sociales,
     onboarding,
     ops,
@@ -66,6 +67,8 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(dirigentes.router, prefix="/dirigentes", tags=["dirigentes"])
 api_router.include_router(followers.router, prefix="/dirigentes", tags=["followers"])
 api_router.include_router(social.router, prefix="/social", tags=["social"])
+# Handoff automatizado RADAR→CRECE (PLAN-2026-06-11)
+api_router.include_router(ingest_radar.router, prefix="/ingest", tags=["ingest-radar"])
 api_router.include_router(posts.router, prefix="/posts", tags=["posts"])
 # F4 Content Hub (2026-05-19) · endpoint BFF consolidado
 api_router.include_router(posts_unified.router, prefix="/posts", tags=["posts-unified"])

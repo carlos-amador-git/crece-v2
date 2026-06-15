@@ -24,6 +24,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
 import asyncio
 import json
 import sys
@@ -34,7 +35,7 @@ import asyncpg
 
 from app.services.author_hash import ensure_author_hash
 
-DSN = "postgresql://crece:crece_dev@localhost:5438/crece"
+DSN = os.environ.get("DATABASE_URL_RAW", "postgresql://crece:crece_dev@localhost:5438/crece")
 DATA_SOURCE = "radar-payload-comments-v1"
 
 
@@ -56,6 +57,14 @@ async def main(profile_id: int, comments_f: Path, commit: bool) -> int:
     rows = await conn.fetch(
         "SELECT id, platform_post_id FROM social_posts WHERE profile_id = $1", profile_id
     )
+    if not rows:
+        # Check if profile even exists
+        prof = await conn.fetchrow("SELECT id FROM social_profiles WHERE id = $1", profile_id)
+        if not prof:
+            print(f"[skip] profile_id {profile_id} no existe", file=sys.stderr)
+            await conn.close()
+            return 0
+    
     post_map = {r["platform_post_id"]: r["id"] for r in rows}
 
     items = json.load(comments_f.open()).get("comments", [])

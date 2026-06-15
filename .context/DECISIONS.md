@@ -1,5 +1,25 @@
 # CRECE v2.0 — Decisiones Arquitecturales
 
+## 2026-06-13 — ADR-005 (botón Sincronizar RADAR) + ADR-006 (dedup fans author_hash)
+
+**ADR-005 · Quién dispara la actualización (Accepted):** botón "Sincronizar con RADAR" en
+`/dirigentes/[id]` — trigger ADMIN/ANALYST (entrega de servicio, no self-service); VIEWER ve badge
+de frescura. `POST /api/v1/ingest/sync/{id}` descubre el último bundle en MinIO e ingiere (Celery,
+idempotente). Construido por `gemini --yolo` lanzado por mí; verificado/consolidado por mí
+(ejecutor≠auditor). Verificado E2E en la app.
+
+**ADR-006 · Dedup de fans por author_hash (Accepted):** RADAR cambia `profile_external_id` del
+mismo fan entre capturas → N watched_profiles → ranking inflaba ~2x (Pedro Carlock 988=suma de 4
+perfiles vs 514 real). Fix presentación (NO toca BD): ranking agrupa por `author_hash`, `n_likes =
+COUNT(DISTINCT post_id)`; conteo `COUNT(DISTINCT author_hash)`. Cross-audit Gemini. NO afecta
+D's/IPD/bots. **Deudas escaladas:** causa raíz = UPSERT por author_hash en ingesta RADAR (sino
+crece 23%→50%/mes) · normalización nombres (18k variantes) · recalibrar Misael VIP >514 (regla 12).
+
+**Proceso (lección):** `gemini --yolo` da permiso de ESCRITURA → para consultas usar gemini SIN
+`--yolo`. Verificar dato real (no "COMPLETED"). Usar la app antes de teorizar.
+
+---
+
 ## 2026-05-26 noche — D-AUTHOR-HASH-PII · pseudonimización canónica + guard
 
 **Contexto:** 257 filas (242 social_comments + 15 watched_profiles) tenían el NOMBRE REAL en `author_hash` sin hashear (ruta RADAR FB Playwright). PII en texto plano (LFPDPPP) + rompía dedup + falsos "coordinación" en B12.

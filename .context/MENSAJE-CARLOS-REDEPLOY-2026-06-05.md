@@ -38,7 +38,7 @@ docker exec -i <pg-coolify> pg_restore -U <USER> -d crece_new --no-owner --no-pr
 ```sql
 SELECT count(*) FROM dirigentes;          -- esperado: 13 (7 clientes + competidoras/proxies)
 SELECT count(*) FROM social_posts;        -- esperado: 8,118
-SELECT count(*) FROM social_comments;     -- esperado: 11,208 (Saymi+Pepe+Felipe, 4 redes)
+SELECT count(*) FROM social_comments;     -- esperado: 11,218 (Saymi+Pepe+Felipe, 4 redes)
 SELECT count(*) FROM watched_like_events; -- esperado: 344,644 (FB+IG reactors + fans canónicos)
 ```
 Si los 4 cuadran → el restore quedó bien.

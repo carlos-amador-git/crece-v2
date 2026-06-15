@@ -76,7 +76,7 @@ services:
       celery -A app.workers.celery_app worker
         -l warning
         --concurrency=4
-        -Q default,scrapers,nlp
+        -Q default,scrapers,nlp,data
         --max-tasks-per-child=100
     restart: always
     volumes: []

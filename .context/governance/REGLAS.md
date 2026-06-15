@@ -91,6 +91,7 @@
 | 10 | **NO inventar problemas sobre tools validadas por CEO** | `~/.claude/skills/learned/writing-review-list.md` regla #7 |
 | 11 | **PSEUDONIMIZACIÓN OBLIGATORIA `author_hash` LFPDPPP**: todo `author_username` / `commenter_handle` de redes pasa por `app.services.author_hash.ensure_author_hash()` antes de INSERT. NO persistir usernames crudos. | LFPDPPP + `AGENTS.md` §11 + `REGLAS.md` §4.1 |
 | 12 | **NO editar `frontend/src/lib/api/utils/vip-overrides.ts` sin PR humano explícito CEO**. Mockup intencional ADR-0002. | `AGENTS.md` §5 límites duros + ADR-0002 |
+| 13 | **Artefactos de evaluación humana/gold VIVEN EN EL REPO** (`backend/evaluations/<fecha>-<slug>/`): muestras enviadas, respuestas de cada evaluador (sin PII de autores de redes), reporte de acuerdo. NO solo en correo/Drive/Downloads — ahí se pierden. Incidente 2026-06-12: los 3 Excel de evaluadores (`persona_1/2/3`) vivían dispersos en Downloads/Drive/disco externo, fuera del repo; la 4ª evaluación (CEO) sin localizar. | Instrucción CEO 2026-06-12 · este incidente |
 
 ### 5.2 Reglas que aplican con criterio
 - **Test cost ratio:** test contra API de pago debe ser ≤ 15-20% del costo de la extracción real (`memory/feedback_test_cost_ratio.md`).

@@ -24,6 +24,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
 import asyncio
 import json
 import sys
@@ -31,7 +32,7 @@ from pathlib import Path
 
 import asyncpg
 
-DSN = "postgresql://crece:crece_dev@localhost:5438/crece"
+DSN = os.environ.get("DATABASE_URL_RAW", "postgresql://crece:crece_dev@localhost:5438/crece")
 DATA_SOURCE = "manual_host_ingest"
 
 # Clave del export → valor del enum platform_enum en CRECE.
@@ -47,6 +48,10 @@ PLATFORM_MAP = {
 
 async def main(dirigente_id: int, followers_f: Path, commit: bool) -> int:
     data = json.load(followers_f.open())
+    # Soportar 2 shapes: plano {PLATFORM: count} y wrapper RADAR
+    # {slug, followers:{PLATFORM: count}, as_of_by_platform, generated_at}.
+    if isinstance(data, dict) and isinstance(data.get("followers"), dict):
+        data = data["followers"]
     conn = await asyncpg.connect(DSN)
     org_row = await conn.fetchrow(
         "SELECT org_id FROM dirigentes WHERE id = $1", dirigente_id

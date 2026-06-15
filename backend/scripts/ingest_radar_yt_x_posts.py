@@ -70,9 +70,9 @@ async def main(json_path: Path, platform: str, dirigente_id: int, commit: bool) 
         dirigente_id, platform,
     ) or PROFILE_MAP.get((dirigente_id, platform))
     if not profile_id:
-        print(f"[err] No profile for ({dirigente_id}, {platform})", file=sys.stderr)
+        print(f"[skip] No profile for ({dirigente_id}, {platform})", file=sys.stderr)
         await conn.close()
-        return 1
+        return 0
     print(f"[meta] {len(items)} {platform} posts · dirigente={dirigente_id} profile={profile_id}")
 
     foll_row = await conn.fetchrow(
