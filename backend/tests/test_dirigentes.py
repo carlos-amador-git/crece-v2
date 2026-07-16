@@ -8,6 +8,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.dirigente import Dirigente
+from app.models.organizacion import Organizacion, TipoOrganizacion
 from app.models.social import (
     Platform,
     PostType,
@@ -21,6 +22,22 @@ from tests.conftest import auth_headers
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+async def _create_org(db: AsyncSession, org_id: int | None = None) -> Organizacion:
+    """Crea una organización de prueba (FK requerida por dirigentes.org_id)."""
+    suffix = org_id if org_id is not None else "auto"
+    org = Organizacion(
+        nombre=f"Org Test {suffix}",
+        slug=f"org-test-{suffix}",
+        tipo=TipoOrganizacion.PARTIDO,
+    )
+    if org_id is not None:
+        org.id = org_id
+    db.add(org)
+    await db.flush()
+    await db.refresh(org)
+    return org
 
 
 async def _create_dirigente(db: AsyncSession, **overrides) -> Dirigente:
@@ -143,9 +160,11 @@ async def test_list_dirigentes_search(
 
 
 async def test_create_dirigente(
-    client: AsyncClient, admin_token: str, admin_user: User
+    client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
 ) -> None:
     """Admin can create a dirigente."""
+    await _create_org(db_session, org_id=3)  # default org (D16) para el FK
+    await db_session.commit()
     resp = await client.post(
         "/api/v1/dirigentes/",
         json={
@@ -160,6 +179,125 @@ async def test_create_dirigente(
     body = resp.json()
     assert body["full_name"] == "Maria Lopez"
     assert body["id"] is not None
+
+
+async def test_create_dirigente_org_id_explicit(
+    client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
+) -> None:
+    """BUG-CRECE-1: org_id explícito en el payload se persiste."""
+    org = await _create_org(db_session)
+    await db_session.commit()
+    resp = await client.post(
+        "/api/v1/dirigentes/",
+        json={
+            "full_name": "Hanna de Lamadrid",
+            "cargo": "Politico",
+            "partido": "MORENA",
+            "estado": "CDMX",
+            "org_id": org.id,
+        },
+        headers=auth_headers(admin_token),
+    )
+    assert resp.status_code == 201
+    d = await db_session.get(Dirigente, resp.json()["id"])
+    assert d is not None
+    assert d.org_id == org.id
+
+
+async def test_create_dirigente_org_id_never_null(
+    client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
+) -> None:
+    """BUG-CRECE-1: sin org_id en payload ni en el creador, cae al default 3 (D16)."""
+    await _create_org(db_session, org_id=3)
+    await db_session.commit()
+    resp = await client.post(
+        "/api/v1/dirigentes/",
+        json={
+            "full_name": "Sin Org",
+            "cargo": "Test",
+            "estado": "CDMX",
+        },
+        headers=auth_headers(admin_token),
+    )
+    assert resp.status_code == 201
+    d = await db_session.get(Dirigente, resp.json()["id"])
+    assert d is not None
+    assert d.org_id == 3
+
+
+async def test_update_dirigente_org_id_reassign(
+    client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
+) -> None:
+    """BUG-CRECE-1: PATCH puede reasignar org (reparar huérfanos org_id=NULL)."""
+    org = await _create_org(db_session)
+    d = await _create_dirigente(db_session, org_id=None)
+    await db_session.commit()
+
+    resp = await client.patch(
+        f"/api/v1/dirigentes/{d.id}",
+        json={"org_id": org.id},
+        headers=auth_headers(admin_token),
+    )
+    assert resp.status_code == 200
+    await db_session.refresh(d)
+    assert d.org_id == org.id
+
+
+async def test_create_dirigente_analyst_cross_org_forbidden(
+    client: AsyncClient, db_session: AsyncSession, analyst_token: str, analyst_user: User
+) -> None:
+    """BUG-CRECE-1 hardening: analyst NO puede crear en una org ajena (403)."""
+    org = await _create_org(db_session)
+    await db_session.commit()
+    resp = await client.post(
+        "/api/v1/dirigentes/",
+        json={
+            "full_name": "Cross Org Intento",
+            "cargo": "Test",
+            "estado": "CDMX",
+            "org_id": org.id,
+        },
+        headers=auth_headers(analyst_token),
+    )
+    assert resp.status_code == 403
+
+
+async def test_create_dirigente_analyst_defaults_org(
+    client: AsyncClient, db_session: AsyncSession, analyst_token: str, analyst_user: User
+) -> None:
+    """BUG-CRECE-1 hardening: analyst sin org_id en payload cae al default, no NULL."""
+    await _create_org(db_session, org_id=3)
+    await db_session.commit()
+    resp = await client.post(
+        "/api/v1/dirigentes/",
+        json={
+            "full_name": "Analyst Default Org",
+            "cargo": "Test",
+            "estado": "CDMX",
+        },
+        headers=auth_headers(analyst_token),
+    )
+    assert resp.status_code == 201
+    d = await db_session.get(Dirigente, resp.json()["id"])
+    assert d is not None
+    assert d.org_id == 3
+
+
+async def test_update_dirigente_org_id_analyst_forbidden(
+    client: AsyncClient, db_session: AsyncSession, analyst_token: str, analyst_user: User
+) -> None:
+    """BUG-CRECE-1 hardening: analyst NO puede reasignar org vía PATCH (403)."""
+    org = await _create_org(db_session)
+    d = await _create_dirigente(db_session, org_id=None)
+    await db_session.commit()
+    resp = await client.patch(
+        f"/api/v1/dirigentes/{d.id}",
+        json={"org_id": org.id},
+        headers=auth_headers(analyst_token),
+    )
+    assert resp.status_code == 403
+    await db_session.refresh(d)
+    assert d.org_id is None
 
 
 async def test_create_dirigente_viewer_forbidden(

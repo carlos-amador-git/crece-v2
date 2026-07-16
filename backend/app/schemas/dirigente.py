@@ -15,6 +15,10 @@ class DirigenteCreate(BaseModel):
     estado: str
     municipio: str | None = None
     seccion_electoral: str | None = None
+    # BUG-CRECE-1: sin org_id el registro nacía huérfano (org_id=NULL) e
+    # invisible para el listado org-scoped. Default se resuelve en el endpoint
+    # (org del creador, o 3 = MC CDMX root per D16, igual que /onboard).
+    org_id: int | None = None
 
 
 class DirigenteUpdate(BaseModel):
@@ -24,6 +28,8 @@ class DirigenteUpdate(BaseModel):
     estado: str | None = None
     municipio: str | None = None
     seccion_electoral: str | None = None
+    # BUG-CRECE-1: permite reasignar org (reparar huérfanos existentes).
+    org_id: int | None = None
 
 
 class DirigenteResponse(BaseModel):

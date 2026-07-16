@@ -308,9 +308,29 @@ async def get_dirigente(
 async def create_dirigente(
     payload: DirigenteCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> Dirigente:
-    """Create a new dirigente."""
-    dirigente = Dirigente(**payload.model_dump())
+    """Create a new dirigente.
+
+    BUG-CRECE-1: org_id se resuelve como en /onboard — payload explícito,
+    o la org del creador, o 3 (MC CDMX root per D16). Nunca NULL.
+    Solo admin (staff MD, cross-org por diseño) puede especificar una org
+    ajena; analyst queda limitado a su propia org.
+    """
+    data = payload.model_dump()
+    requested_org = data.get("org_id")
+    if (
+        current_user.role != "admin"
+        and requested_org is not None
+        and requested_org != current_user.org_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No puedes crear dirigentes en otra organizacion",
+        )
+    if requested_org is None:
+        data["org_id"] = current_user.org_id or 3
+    dirigente = Dirigente(**data)
     db.add(dirigente)
     await db.flush()
     await db.refresh(dirigente)
@@ -326,14 +346,24 @@ async def update_dirigente(
     dirigente_id: int,
     payload: DirigenteUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> Dirigente:
-    """Update an existing dirigente."""
+    """Update an existing dirigente.
+
+    BUG-CRECE-1: reasignar org_id (reparar huérfanos) es admin-only —
+    un analyst org-scoped no puede mover dirigentes entre organizaciones.
+    """
     result = await db.execute(select(Dirigente).where(Dirigente.id == dirigente_id))
     dirigente = result.scalar_one_or_none()
     if dirigente is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dirigente not found")
 
     update_data = payload.model_dump(exclude_unset=True)
+    if "org_id" in update_data and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo admin puede reasignar la organizacion de un dirigente",
+        )
     for field, value in update_data.items():
         setattr(dirigente, field, value)
 
