@@ -327,6 +327,8 @@ export interface OnboardingHandle {
   url?: string | null;
 }
 
+export type RolPolitico = "oficialismo" | "oposicion" | "independiente";
+
 export interface OnboardingRequest {
   full_name: string;
   cargo: string;
@@ -334,6 +336,10 @@ export interface OnboardingRequest {
   estado?: string;
   municipio?: string | null;
   seccion_electoral?: string | null;
+  org_id?: number | null;
+  // DISENO-actores-politicos-2026-07-16: obligatorio — el KPI D-23-H y el NLP
+  // dependen del rol; el backend rechaza el alta sin él (422).
+  rol_politico: RolPolitico;
   email: string;
   password: string;
   handles: OnboardingHandle[];

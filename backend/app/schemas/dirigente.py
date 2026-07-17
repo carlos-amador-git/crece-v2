@@ -7,6 +7,11 @@ from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.social import SocialProfileResponse
 
+# DISENO-actores-politicos-2026-07-16: rol_politico es el parámetro del motor
+# de scoring (D-23-H + prompts NLP). Asignación SIEMPRE humana y explícita en
+# el alta — nunca derivación silenciosa desde partido.
+RolPolitico = Literal["oficialismo", "oposicion", "independiente"]
+
 
 class DirigenteCreate(BaseModel):
     full_name: str
@@ -17,8 +22,9 @@ class DirigenteCreate(BaseModel):
     seccion_electoral: str | None = None
     # BUG-CRECE-1: sin org_id el registro nacía huérfano (org_id=NULL) e
     # invisible para el listado org-scoped. Default se resuelve en el endpoint
-    # (org del creador, o 3 = MC CDMX root per D16, igual que /onboard).
+    # (org del creador; sin org resoluble → 422, igual que /onboard).
     org_id: int | None = None
+    rol_politico: RolPolitico
 
 
 class DirigenteUpdate(BaseModel):
@@ -30,6 +36,7 @@ class DirigenteUpdate(BaseModel):
     seccion_electoral: str | None = None
     # BUG-CRECE-1: permite reasignar org (reparar huérfanos existentes).
     org_id: int | None = None
+    rol_politico: RolPolitico | None = None
 
 
 class DirigenteResponse(BaseModel):
@@ -113,6 +120,7 @@ class OnboardingRequest(BaseModel):
     municipio: str | None = Field(default=None, max_length=200)
     seccion_electoral: str | None = Field(default=None, max_length=10)
     org_id: int | None = None
+    rol_politico: RolPolitico
 
     # User auto-creado para login del dirigente
     email: EmailStr

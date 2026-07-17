@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import Role, create_access_token, hash_password
 from app.models.dirigente import Dirigente
 from app.models.organizacion import Organizacion, TipoOrganizacion
 from app.models.social import (
@@ -47,6 +48,7 @@ async def _create_dirigente(db: AsyncSession, **overrides) -> Dirigente:
         "partido": "MC",
         "estado": "CDMX",
         "municipio": "Benito Juarez",
+        "rol_politico": "oposicion",  # NOT NULL desde migración 5a6505d74dc7
     }
     defaults.update(overrides)
     d = Dirigente(**defaults)
@@ -163,7 +165,7 @@ async def test_create_dirigente(
     client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
 ) -> None:
     """Admin can create a dirigente."""
-    await _create_org(db_session, org_id=3)  # default org (D16) para el FK
+    org = await _create_org(db_session)
     await db_session.commit()
     resp = await client.post(
         "/api/v1/dirigentes/",
@@ -172,6 +174,8 @@ async def test_create_dirigente(
             "cargo": "Alcaldesa",
             "partido": "MC",
             "estado": "Nuevo Leon",
+            "org_id": org.id,
+            "rol_politico": "oposicion",
         },
         headers=auth_headers(admin_token),
     )
@@ -179,6 +183,25 @@ async def test_create_dirigente(
     body = resp.json()
     assert body["full_name"] == "Maria Lopez"
     assert body["id"] is not None
+
+
+async def test_create_dirigente_sin_rol_politico_422(
+    client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
+) -> None:
+    """DISENO-actores-politicos: alta sin rol_politico rebota 422 — decisión humana obligatoria."""
+    org = await _create_org(db_session)
+    await db_session.commit()
+    resp = await client.post(
+        "/api/v1/dirigentes/",
+        json={
+            "full_name": "Sin Rol",
+            "cargo": "Test",
+            "estado": "CDMX",
+            "org_id": org.id,
+        },
+        headers=auth_headers(admin_token),
+    )
+    assert resp.status_code == 422
 
 
 async def test_create_dirigente_org_id_explicit(
@@ -190,11 +213,12 @@ async def test_create_dirigente_org_id_explicit(
     resp = await client.post(
         "/api/v1/dirigentes/",
         json={
-            "full_name": "Hanna de Lamadrid",
+            "full_name": "Hannah de Lamadrid",
             "cargo": "Politico",
             "partido": "MORENA",
             "estado": "CDMX",
             "org_id": org.id,
+            "rol_politico": "oficialismo",
         },
         headers=auth_headers(admin_token),
     )
@@ -202,27 +226,24 @@ async def test_create_dirigente_org_id_explicit(
     d = await db_session.get(Dirigente, resp.json()["id"])
     assert d is not None
     assert d.org_id == org.id
+    assert d.rol_politico == "oficialismo"
 
 
-async def test_create_dirigente_org_id_never_null(
-    client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
+async def test_create_dirigente_sin_org_resoluble_422(
+    client: AsyncClient, admin_token: str, admin_user: User
 ) -> None:
-    """BUG-CRECE-1: sin org_id en payload ni en el creador, cae al default 3 (D16)."""
-    await _create_org(db_session, org_id=3)
-    await db_session.commit()
+    """Decisión CEO 2026-07-16: sin org en payload NI en el creador → 422, no default mágico."""
     resp = await client.post(
         "/api/v1/dirigentes/",
         json={
             "full_name": "Sin Org",
             "cargo": "Test",
             "estado": "CDMX",
+            "rol_politico": "independiente",
         },
         headers=auth_headers(admin_token),
     )
-    assert resp.status_code == 201
-    d = await db_session.get(Dirigente, resp.json()["id"])
-    assert d is not None
-    assert d.org_id == 3
+    assert resp.status_code == 422
 
 
 async def test_update_dirigente_org_id_reassign(
@@ -256,31 +277,44 @@ async def test_create_dirigente_analyst_cross_org_forbidden(
             "cargo": "Test",
             "estado": "CDMX",
             "org_id": org.id,
+            "rol_politico": "independiente",
         },
         headers=auth_headers(analyst_token),
     )
     assert resp.status_code == 403
 
 
-async def test_create_dirigente_analyst_defaults_org(
-    client: AsyncClient, db_session: AsyncSession, analyst_token: str, analyst_user: User
+async def test_create_dirigente_defaults_creator_org(
+    client: AsyncClient, db_session: AsyncSession
 ) -> None:
-    """BUG-CRECE-1 hardening: analyst sin org_id en payload cae al default, no NULL."""
-    await _create_org(db_session, org_id=3)
+    """Sin org_id en payload, cae a la org del creador (nunca NULL, sin defaults mágicos)."""
+    org = await _create_org(db_session)
+    user = User(
+        email="admin-org@crece.mx",
+        hashed_password=hash_password("admin1234"),
+        full_name="Admin Con Org",
+        role=Role.ADMIN,
+        org_id=org.id,
+    )
+    db_session.add(user)
     await db_session.commit()
+    await db_session.refresh(user)
+    token = create_access_token(data={"sub": str(user.id), "role": user.role.value})
+
     resp = await client.post(
         "/api/v1/dirigentes/",
         json={
-            "full_name": "Analyst Default Org",
+            "full_name": "Default Org Creador",
             "cargo": "Test",
             "estado": "CDMX",
+            "rol_politico": "oficialismo",
         },
-        headers=auth_headers(analyst_token),
+        headers=auth_headers(token),
     )
     assert resp.status_code == 201
     d = await db_session.get(Dirigente, resp.json()["id"])
     assert d is not None
-    assert d.org_id == 3
+    assert d.org_id == org.id
 
 
 async def test_update_dirigente_org_id_analyst_forbidden(
@@ -298,6 +332,22 @@ async def test_update_dirigente_org_id_analyst_forbidden(
     assert resp.status_code == 403
     await db_session.refresh(d)
     assert d.org_id is None
+
+
+async def test_update_dirigente_null_explicito_422(
+    client: AsyncClient, db_session: AsyncSession, admin_token: str, admin_user: User
+) -> None:
+    """PATCH con org_id/rol_politico null explícito → 422 claro, no 500 por NOT NULL."""
+    d = await _create_dirigente(db_session)
+    await db_session.commit()
+
+    for campo in ("org_id", "rol_politico"):
+        resp = await client.patch(
+            f"/api/v1/dirigentes/{d.id}",
+            json={campo: None},
+            headers=auth_headers(admin_token),
+        )
+        assert resp.status_code == 422, campo
 
 
 async def test_create_dirigente_viewer_forbidden(
@@ -405,6 +455,33 @@ async def test_delete_dirigente_viewer_forbidden(
         headers=auth_headers(viewer_token),
     )
     assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Actividad Alineada — fallo visible con rol NULL (guard defensivo para
+# ambientes pre-migración 5a6505d74dc7)
+# ---------------------------------------------------------------------------
+
+
+async def test_actividad_alineada_rol_null_falla_visible(
+    db_session: AsyncSession,
+) -> None:
+    """Rol NULL NO cae en silencio a 'independiente' — empty_state explícito, score None."""
+    from app.services.actividad_alineada import compute_actividad_alineada
+
+    d = Dirigente(
+        full_name="Legacy Sin Rol",
+        cargo="Test",
+        partido="MORENA",
+        estado="CDMX",
+    )
+    d.id = 999999  # NO persistido — el guard corre antes de cualquier query
+
+    result = await compute_actividad_alineada(db_session, d)
+    assert result["empty_state"] == "rol_sin_clasificar"
+    assert result["score"] is None
+    assert result["score_pct"] is None
+    assert result["rol_politico"] is None
 
 
 # ---------------------------------------------------------------------------

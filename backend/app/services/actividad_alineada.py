@@ -85,7 +85,24 @@ async def compute_actividad_alineada(
     )
     profile_ids = [pid for (pid,) in prof_r.all()]
 
-    rol = (dirigente.rol_politico or "independiente").lower()
+    # DISENO-actores-politicos-2026-07-16: rol NULL NO cae en silencio a
+    # "independiente" — la fórmula del KPI depende del rol (D-23-H) y un
+    # fallback silencioso produce números con apariencia válida pero fórmula
+    # equivocada. Fallo VISIBLE: empty_state explícito, score None.
+    if not dirigente.rol_politico:
+        return {
+            "score": None,
+            "score_pct": None,
+            "breakdown": {"oficialismo": 0, "oposicion": 0, "propio": 0, "personal": 0},
+            "total_classified": 0,
+            "total_posts_window": 0,
+            "rol_politico": None,
+            "days": days,
+            "modo": modo,
+            "pesos": dict(DEFAULT_PESOS),
+            "empty_state": "rol_sin_clasificar",
+        }
+    rol = dirigente.rol_politico.lower()
     breakdown = {"oficialismo": 0, "oposicion": 0, "propio": 0, "personal": 0}
     total_classified = 0
     total_posts_window = 0

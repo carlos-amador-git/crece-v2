@@ -73,8 +73,11 @@ class Dirigente(Base):
     #   politico_activo · funcionario_gobierno · figura_precampaña · empresario_transicion
     perfil_1_5: Mapped[str | None] = mapped_column(String(30), nullable=True)
     # D-23-G' · 2026-04-24 · Actividad Política Alineada (migración d23g1).
-    # rol_politico deriva del partido (federal context · piloto CDMX).
     # CHECK en BD: ('oficialismo','oposicion','independiente').
+    # DISENO-actores-politicos-2026-07-16: asignación humana explícita en el
+    # alta (API la exige, migración 5a6505d74dc7 pone NOT NULL en BD real).
+    # Python-side queda Optional por fixtures legacy (test DB via create_all);
+    # el guard de actividad_alineada falla VISIBLE si llega NULL.
     rol_politico: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # D-23-H · Phase B · Panel Editable de Evaluación (migración phb1).
     # pesos por categoría target_politico. Default neutro {1,1,1,1} = KPI sin ajuste.

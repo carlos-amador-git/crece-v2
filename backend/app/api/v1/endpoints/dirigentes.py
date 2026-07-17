@@ -312,8 +312,8 @@ async def create_dirigente(
 ) -> Dirigente:
     """Create a new dirigente.
 
-    BUG-CRECE-1: org_id se resuelve como en /onboard — payload explícito,
-    o la org del creador, o 3 (MC CDMX root per D16). Nunca NULL.
+    BUG-CRECE-1: org_id = payload explícito, o la org del creador; sin org
+    resoluble → 422 (decisión CEO 2026-07-16: cero defaults mágicos por id).
     Solo admin (staff MD, cross-org por diseño) puede especificar una org
     ajena; analyst queda limitado a su propia org.
     """
@@ -329,7 +329,12 @@ async def create_dirigente(
             detail="No puedes crear dirigentes en otra organizacion",
         )
     if requested_org is None:
-        data["org_id"] = current_user.org_id or 3
+        if current_user.org_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="org_id requerido: el usuario creador no tiene organizacion asignada",
+            )
+        data["org_id"] = current_user.org_id
     dirigente = Dirigente(**data)
     db.add(dirigente)
     await db.flush()
@@ -364,6 +369,14 @@ async def update_dirigente(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Solo admin puede reasignar la organizacion de un dirigente",
         )
+    # NULL explícito en org_id/rol_politico crearía huérfanos o reventaría el
+    # NOT NULL de BD con 500 — rechazar con 422 claro (hallazgo cross-audit).
+    for campo in ("org_id", "rol_politico"):
+        if campo in update_data and update_data[campo] is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"{campo} no puede ser null",
+            )
     for field, value in update_data.items():
         setattr(dirigente, field, value)
 
@@ -720,8 +733,14 @@ async def onboard_dirigente(
             detail=f"Usuario con email {payload.email} ya existe",
         )
 
-    # 2. Default org: admin's own org, or id=3 (MC CDMX root) per D16
-    org_id = payload.org_id or current_user.org_id or 3
+    # 2. Org: payload explícito o la del admin creador; sin org resoluble → 422
+    #    (decisión CEO 2026-07-16: cero defaults mágicos por id numérico).
+    org_id = payload.org_id if payload.org_id is not None else current_user.org_id
+    if org_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="org_id requerido: el usuario creador no tiene organizacion asignada",
+        )
 
     # 3. Create Dirigente (without sync_status default so we override it)
     dirigente = Dirigente(
@@ -732,6 +751,7 @@ async def onboard_dirigente(
         municipio=payload.municipio,
         seccion_electoral=payload.seccion_electoral,
         org_id=org_id,
+        rol_politico=payload.rol_politico,
         sync_status=DirigenteSyncStatus.PENDING,
         sync_updated_at=datetime.now(UTC),
     )
