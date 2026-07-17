@@ -86,7 +86,7 @@ export interface ActividadAlineada {
   days: number;
   modo?: "default" | "ajustado";
   pesos?: PesosTargetPolitico;
-  empty_state: "no_classified" | null;
+  empty_state: "no_classified" | "rol_sin_clasificar" | null;
 }
 
 // D-23-H · Phase B · pesos editables target_politico (Palanca 1)

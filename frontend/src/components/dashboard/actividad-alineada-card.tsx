@@ -45,6 +45,26 @@ function colorForScore(pct: number | null | undefined): string {
 }
 
 export function ActividadAlineadaCard({ data }: ActividadAlineadaCardProps) {
+  // DISENO-actores-politicos-2026-07-16: rol NULL = fallo visible, no número.
+  if (data?.empty_state === "rol_sin_clasificar") {
+    return (
+      <Card className="relative overflow-hidden">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">Actividad Política Alineada</p>
+          <div className="mt-1 flex items-baseline gap-2">
+            <p className="font-heading text-xl font-bold text-muted-foreground">—</p>
+            <span className="inline-flex items-center rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:text-rose-400">
+              Rol político sin clasificar
+            </span>
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted-foreground/80 leading-tight">
+            Un administrador debe asignar el rol (oficialismo · oposición ·
+            independiente) para calcular este KPI.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
   if (!data || data.empty_state === "no_classified") {
     return (
       <Card className="relative overflow-hidden">

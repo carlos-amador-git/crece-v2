@@ -17,6 +17,7 @@ import {
   useOnboardingProgress,
   type OnboardingHandle,
   type OnboardingPlatform,
+  type RolPolitico,
 } from "@/lib/api/hooks/use-onboarding";
 
 type Step = 1 | 2 | 3 | 4;
@@ -47,6 +48,10 @@ export function OnboardingWizard() {
   const [fullName, setFullName] = useState("");
   const [cargo, setCargo] = useState("");
   const [municipio, setMunicipio] = useState("Cuauhtémoc");
+  const [partido, setPartido] = useState("MC");
+  // DISENO-actores-politicos-2026-07-16: rol obligatorio — decisión humana
+  // explícita, sin default (el backend rechaza el alta sin él).
+  const [rolPolitico, setRolPolitico] = useState<RolPolitico | "">("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -61,6 +66,7 @@ export function OnboardingWizard() {
   const step1Valid =
     fullName.length >= 3 &&
     cargo.length >= 2 &&
+    rolPolitico !== "" &&
     email.includes("@") &&
     password.length >= 8;
   const step2Valid = handles.every((h) => h.handle.trim().length > 0);
@@ -78,10 +84,13 @@ export function OnboardingWizard() {
 
   const submit = async () => {
     try {
+      if (rolPolitico === "") return; // guard — step1Valid ya lo exige
       const res = await onboard.mutateAsync({
         full_name: fullName,
         cargo,
         municipio,
+        partido,
+        rol_politico: rolPolitico,
         email,
         password,
         handles: handles.map((h) => ({ ...h, handle: h.handle.trim() })),
@@ -152,6 +161,34 @@ export function OnboardingWizard() {
                     value={municipio}
                     onChange={(e) => setMunicipio(e.target.value)}
                   />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Partido</label>
+                  <Input
+                    value={partido}
+                    onChange={(e) => setPartido(e.target.value)}
+                    placeholder="Ej. MORENA"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">
+                    Rol político (define cómo se califica)
+                  </label>
+                  <Select
+                    value={rolPolitico}
+                    onValueChange={(v) => setRolPolitico(v as RolPolitico)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona el rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="oficialismo">Oficialismo</SelectItem>
+                      <SelectItem value="oposicion">Oposición</SelectItem>
+                      <SelectItem value="independiente">Independiente</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
