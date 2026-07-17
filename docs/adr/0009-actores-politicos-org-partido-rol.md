@@ -1,10 +1,11 @@
 ---
 adr: 0009
 title: Actores políticos — org ≠ partido ≠ rol_politico (tres ejes, función única)
-status: Proposed
+status: Accepted
 date: 2026-07-16
 author: AGENT linda (claude-fable-5)
 deciders: [ceo]
+accepted_by: HUMAN ceo (2026-07-17, condicionado a doble PASS agy+Codex — cumplido)
 supersedes: null
 superseded_by: null
 ---
