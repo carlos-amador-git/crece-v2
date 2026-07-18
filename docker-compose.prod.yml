@@ -36,6 +36,15 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+    # Handoff RADAR→CRECE (D-041): puerto FIJO en el LOOPBACK del host como
+    # target estable del túnel SSH de radar. Loopback-only = NO expone MinIO a
+    # internet; solo alcanzable por quien ya tiene SSH al VPS. Reemplaza el
+    # target por IP interna de docker (10.0.21.x) que rotaba en cada deploy.
+    # Carlos: PermitOpen 127.0.0.1:9900 en el SSH del user dev. Autorizado CEO
+    # 2026-07-18 (opción a-loopback-versionado). Nota: los ports de base
+    # (9006/9007, 0.0.0.0) se CONCATENAN — su cierre es decisión aparte.
+    ports:
+      - "127.0.0.1:9900:9000"
     deploy:
       resources:
         limits:
