@@ -172,7 +172,7 @@ services:
     command: >
       celery -A app.workers.celery_app worker
         -l warning
-        --concurrency=4
+        --concurrency=1
         -Q default,scrapers,nlp,data
         --max-tasks-per-child=100
 
