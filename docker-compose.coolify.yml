@@ -81,6 +81,16 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    # Handoff RADAR→CRECE (D-041): puerto FIJO en el LOOPBACK del host como
+    # target estable del túnel SSH de radar (reemplaza la IP interna de docker
+    # que rotaba en cada deploy). Loopback-only (127.0.0.1) = NO expone MinIO a
+    # internet; solo alcanzable por quien ya tiene SSH al VPS. Storage con PII
+    # de reactors (LFPDPPP). Este es el compose que Coolify DESPLIEGA (no
+    # prod.yml). Carlos: PermitOpen 127.0.0.1:9900 en el SSH del user dev;
+    # post-deploy `ss -ltnp` debe mostrar 127.0.0.1:9900, ningún 0.0.0.0/::.
+    # Autorizado CEO 2026-07-18 (opción a-loopback-versionado).
+    ports:
+      - "127.0.0.1:9900:9000"
     volumes:
       - minio_data:/data
     healthcheck:
