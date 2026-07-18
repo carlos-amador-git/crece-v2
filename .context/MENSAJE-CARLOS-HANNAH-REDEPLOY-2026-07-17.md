@@ -7,7 +7,8 @@ Hannah de Lamadrid y cambios nuevos en `origin/main` que afectan tu ambiente.
 
 1. **Cliente aparte — la org propia se queda, pero renómbrala comercial.** No debe llamarse
    "Morena" a secas: el partido no es el tenant (ya nos mordió — en la BD local el id 6 es
-   otra cosa). Sugerencia: `nombre = "Equipo Hannah de Lamadrid"`, `slug = "equipo-hannah-lamadrid"`.
+   otra cosa). Sugerencia: `nombre = "Equipo Hannah de Lamadrid"`, `slug = "equipo-hannah-de-lamadrid"`.
+   **[APLICADO 2026-07-17 en prod — slug canónico CON "de".]**
    A partir de ahora referencia orgs SIEMPRE por `slug`, nunca por id numérico.
 2. **Display name:** PATCH a **"Hannah de Lamadrid"** (con doble n, como sus handles).
 3. **Rol político:** asígnale `rol_politico = 'oficialismo'`. Es crítico: este campo define

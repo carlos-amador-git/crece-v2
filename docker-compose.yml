@@ -86,9 +86,15 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    # Bind a LOOPBACK (no 0.0.0.0): MinIO guarda bundles con PII (LFPDPPP) y
+    # Docker BYPASEA UFW al publicar puertos → un 0.0.0.0 sería alcanzable de
+    # internet pese al firewall. Como los `ports` de base+prod se CONCATENAN,
+    # dejarlos en 0.0.0.0 anularía el loopback del túnel radar (docker-compose
+    # .prod.yml). El acceso inter-contenedor es por red interna (minio:9000),
+    # no por estos host-ports; localhost:9006/9007 sigue sirviendo en dev.
     ports:
-      - "9006:9000"
-      - "9007:9001"
+      - "127.0.0.1:9006:9000"
+      - "127.0.0.1:9007:9001"
     volumes:
       - minio_data:/data
     healthcheck:

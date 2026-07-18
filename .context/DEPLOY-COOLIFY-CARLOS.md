@@ -115,6 +115,17 @@ Configurar **2 servicios públicos** con dominio propio:
 - `celery-worker` — Workers (solo red interna)
 - `celery-beat` — Scheduler (solo red interna)
 
+> ⚠️ **DRIFT de command del worker (incidente 2026-07-18).** El servicio
+> `celery-worker` DEBE arrancar con la MISMA lista de colas que
+> `docker-compose.prod.yml:79`: **`-Q default,scrapers,nlp,data`**. Si Coolify
+> tiene un command-override manual, verificar que incluya **`data`** — sin esa
+> cola, los jobs de ingesta RADAR→CRECE (`radar-handoff` enruta a `data`,
+> `celery_app.py:29`) quedan atorados en `RECEIVED` para siempre (ningún
+> consumer). Un command-override viejo se repisa en CADA redeploy → el fix es
+> corregirlo EN COOLIFY (o quitar el override y usar el del compose), no solo
+> reiniciar. Verificar tras deploy: dentro del worker
+> `celery -A app.workers.celery_app inspect active_queues` debe listar `data`.
+
 ---
 
 ## PASO 6: Configurar DNS

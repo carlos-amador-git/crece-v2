@@ -8,10 +8,11 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "sqlalchemy[asyncio]>=2.0.36",
     "asyncpg>=0.30.0",
-    # Driver SÍNCRONO para Celery (_get_sync_session usa create_engine sync con
-    # DATABASE_URL_SYNC=postgresql://). Sin él, process_radar_handoff y demás
-    # tasks de ingest revientan con ModuleNotFoundError: psycopg2. asyncpg es
-    # solo async (FastAPI); no sirve para el engine sync del worker.
+    # Driver SYNC para create_engine(DATABASE_URL_SYNC) en el worker Celery
+    # (tasks.py:18, ingest_tasks scrapers/ingest) y alembic. Sin él, un build
+    # limpio del worker rompe TODA task sync (incidente 2026-07-18: Carlos lo
+    # añadió a mano en Coolify tras el redeploy; se perdió en la migración
+    # requirements.txt→pyproject.toml y recurre en cada rebuild si no se declara).
     "psycopg2-binary>=2.9.0",
     "alembic>=1.14.0",
     "celery[redis]>=5.4.0",
