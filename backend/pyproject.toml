@@ -8,6 +8,11 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "sqlalchemy[asyncio]>=2.0.36",
     "asyncpg>=0.30.0",
+    # Driver SÍNCRONO para Celery (_get_sync_session usa create_engine sync con
+    # DATABASE_URL_SYNC=postgresql://). Sin él, process_radar_handoff y demás
+    # tasks de ingest revientan con ModuleNotFoundError: psycopg2. asyncpg es
+    # solo async (FastAPI); no sirve para el engine sync del worker.
+    "psycopg2-binary>=2.9.0",
     "alembic>=1.14.0",
     "celery[redis]>=5.4.0",
     "redis>=5.2.0",
