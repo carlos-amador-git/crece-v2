@@ -118,6 +118,10 @@ services:
       - coolify
     labels:
       - "traefik.docker.network=coolify"
+    # Límite de RAM: modelos sklearn (voter_scoring) se cargan por worker.
+    # 512M topaba y el kernel mataba workers (OOM crash-loop). 1.5G con 2 workers holgado.
+    mem_limit: 1536m
+    mem_reservation: 512m
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@crece-db:5432/${POSTGRES_DB:-crece_production}
       DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-crece}:${POSTGRES_PASSWORD}@crece-db:5432/${POSTGRES_DB:-crece_production}
