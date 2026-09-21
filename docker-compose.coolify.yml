@@ -178,6 +178,11 @@ services:
       MINIO_SECURE: "false"
       APP_ENV: production
       CORS_ORIGINS: '["https://crece.mdconsultoria-ti.org","http://localhost:3000"]'
+      TWSCRAPE_DB_PATH: /data/twscrape_accounts.db
+    volumes:
+      # Persiste el SQLite de cuentas de twscrape. Sin volumen habría que
+      # re-autenticar todo el pool de X en cada redeploy.
+      - twscrape_data:/data
     depends_on:
       crece-db:
         condition: service_healthy
@@ -245,6 +250,7 @@ services:
 
 volumes:
   postgres_data_v2:
+  twscrape_data:
   redis_data:
   minio_data:
 

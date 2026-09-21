@@ -76,6 +76,14 @@ RUN python -m spacy download es_core_news_md
 # Create non-root user
 RUN groupadd -r crece && useradd -r -g crece -d /app -s /sbin/nologin crece
 
+# Directorio de estado escribible. /app lo crea WORKDIR como root:root 755, y
+# el proceso corre como `crece`: puede leer el código pero no crear archivos
+# nuevos ahí. twscrape abre su SQLite de cuentas en el directorio actual, así
+# que fallaba con "unable to open database file" en cada scrape de Twitter.
+# Al existir en la imagen con este dueño, un volumen nombrado montado en /data
+# hereda la propiedad al inicializarse.
+RUN mkdir -p /data && chown crece:crece /data
+
 # Copy application code
 COPY --chown=crece:crece . .
 

@@ -213,7 +213,11 @@ class TwitterScraper(BaseScraper):
         try:
             from twscrape import API  # type: ignore[import-untyped]
 
-            self._twscrape_api = API()
+            from app.core.config import settings
+
+            # API() sin argumentos abre accounts.db en el directorio actual
+            # (/app, root-only) y revienta con "unable to open database file".
+            self._twscrape_api = API(settings.TWSCRAPE_DB_PATH)
             self._twscrape_available = True
             return self._twscrape_api
         except ImportError:

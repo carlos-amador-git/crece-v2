@@ -73,6 +73,10 @@ class Settings(BaseSettings):
 
     # ── Twitter/X ────────────────────────────────────────
     TWITTER_AUTH_TOKEN: str = ""  # auth_token cookie from x.com browser session (for Scweet)
+    # SQLite de cuentas de twscrape. Debe apuntar a un directorio escribible y
+    # persistente: guarda las cookies de sesión del pool, y regenerarlas en
+    # cada redeploy implicaría re-autenticar todas las cuentas.
+    TWSCRAPE_DB_PATH: str = "/data/twscrape_accounts.db"
 
     # ── TikTok ───────────────────────────────────────────
     TIKTOK_MS_TOKEN: str = ""
