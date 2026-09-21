@@ -4,12 +4,12 @@ Procesa feeds RSS de fuentes oficiales y medios nacionales, inserta items
 nuevos en `social_posts` con `platform='NEWS'` (reusando el schema
 existente en vez de crear una tabla news_posts separada, decisión del plan).
 
-Fuentes:
-    - Presidencia MX (gob.mx)
-    - Gaceta CDMX
-    - Congreso CDMX
-    - IECM
-    - El Universal, Milenio, Animal Político, Aristegui
+Fuentes (ver RSS_SOURCES — verificadas 2026-09-21):
+    - La Jornada (Capital, Política)
+    - Excélsior (Portada)
+    - Expansión Política
+
+    Sin fuente OFICIAL/GOBIERNO viva: BLOCKER B-RSS-001.
 
 NOTA sobre idempotencia: cada item RSS tiene un `guid` (o `link` como
 fallback). Se usa como `platform_post_id` con prefijo `news:` para evitar
@@ -39,22 +39,34 @@ class RssFeed:
     tipo: str  # "OFICIAL" | "GOBIERNO" | "MEDIO"
 
 
+# Verificado contra la red el 2026-09-21: cada URL devuelve 200 con <item>
+# reales. Las 8 fuentes originales (S4.7) estaban 100% muertas — ver
+# BLOCKER al pie de este módulo.
 RSS_SOURCES: list[RssFeed] = [
-    # Oficiales / gobierno
-    RssFeed("Presidencia MX", "https://www.gob.mx/presidencia/rss/prensa", "OFICIAL"),
-    RssFeed(
-        "Gaceta CDMX",
-        "https://data.consejeria.cdmx.gob.mx/portal_old/gaceta-oficial-rss.xml",
-        "GOBIERNO",
-    ),
-    RssFeed("Congreso CDMX", "https://www.congresocdmx.gob.mx/feed/", "GOBIERNO"),
-    RssFeed("IECM", "https://www.iecm.mx/feed/", "GOBIERNO"),
     # Medios nacionales con cobertura CDMX
-    RssFeed("El Universal CDMX", "https://www.eluniversal.com.mx/rss.xml", "MEDIO"),
-    RssFeed("Milenio CDMX", "https://www.milenio.com/rss", "MEDIO"),
-    RssFeed("Animal Político", "https://www.animalpolitico.com/feed/", "MEDIO"),
-    RssFeed("Aristegui Noticias", "https://aristeguinoticias.com/feed/", "MEDIO"),
+    RssFeed("La Jornada Capital", "https://www.jornada.com.mx/rss/capital.xml", "MEDIO"),
+    RssFeed("La Jornada Política", "https://www.jornada.com.mx/rss/politica.xml", "MEDIO"),
+    RssFeed("Excélsior Portada", "https://www.excelsior.com.mx/rss/nacional", "MEDIO"),
+    RssFeed("Expansión Política", "https://politica.expansion.mx/rss", "MEDIO"),
+    # BLOCKER B-RSS-001 (2026-09-21): no queda ninguna fuente OFICIAL/GOBIERNO
+    # servible. gob.mx/presidencia y Gaceta CDMX retiraron el feed (404 / DNS
+    # muerto), Congreso CDMX redirige 302 a su home, IECM quedó detrás de
+    # Radware bot-protection (devuelve una captcha page con 200). No se
+    # sustituyen por medios: la cobertura oficial requiere decisión de
+    # producto (scraping con Playwright, o API de pago). NO inventar fuentes.
 ]
+
+
+# httpx manda "python-httpx/x.y" por defecto y varios medios MX lo rechazan
+# con 403 en el WAF. Un UA de navegador no evade nada: solo evita el bloqueo
+# por heurística de cliente.
+_REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
+}
 
 
 @dataclass
@@ -81,14 +93,27 @@ def _parse_feed(xml_bytes: bytes, source: str) -> list[RssItem]:
     for item_match in re.finditer(r"<item[^>]*>(.*?)</item>", text_content, re.DOTALL):
         block = item_match.group(1)
 
+        def _unwrap_cdata(value: str) -> str:
+            value = value.strip()
+            m_cd = re.fullmatch(r"<!\[CDATA\[(.*?)\]\]>", value, re.DOTALL)
+            return m_cd.group(1).strip() if m_cd else value
+
         def _field(tag: str, _block: str = block) -> str:
-            # Handles both <tag>value</tag> and <tag><![CDATA[value]]></tag>
-            m = re.search(
-                rf"<{tag}(?:\s[^>]*)?>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</{tag}>",
-                _block,
-                re.DOTALL,
-            )
-            return unescape(m.group(1).strip()) if m else ""
+            # Handles both <tag>value</tag> and <tag><![CDATA[value]]></tag>.
+            #
+            # El wrapper CDATA se quita FUERA del patrón y DOS veces:
+            #   1. con `(?:<!\[CDATA\[)?` opcional y `.*?` perezoso el motor
+            #      prefería saltar el grupo y el marcador se filtraba al valor;
+            #   2. Excélsior sirve el feed con el marcador HTML-escapado
+            #      (`&lt;![CDATA[...]]&gt;`), así que reaparece como texto
+            #      literal recién después de unescape(). Sin el segundo pase,
+            #      83/182 títulos llegaban con "<![CDATA[" pegado y las
+            #      descripciones salían vacías (el strip de tags se comía el
+            #      marcador entero por no encontrar ">").
+            m = re.search(rf"<{tag}(?:\s[^>]*)?>(.*?)</{tag}>", _block, re.DOTALL)
+            if not m:
+                return ""
+            return _unwrap_cdata(unescape(_unwrap_cdata(m.group(1))))
 
         title = _field("title")
         link = _field("link")
@@ -129,7 +154,37 @@ async def fetch_feed(client: httpx.AsyncClient, feed: RssFeed) -> list[RssItem]:
     except Exception as exc:
         logger.warning("RSS fetch failed %s: %s", feed.name, exc)
         return []
-    return _parse_feed(resp.content, feed.name)
+
+    items = _parse_feed(resp.content, feed.name)
+    if items:
+        return items
+
+    # Un 200 con cero items es la falla MÁS peligrosa: durante meses
+    # Aristegui/IECM devolvieron HTML (rediseño, captcha de bot-protection)
+    # y el ingest lo contabilizaba como éxito silencioso. Se distingue la
+    # causa para que el log diga qué hacer.
+    body_head = resp.content[:2048].lstrip().lower()
+    if body_head.startswith(b"<!doctype html") or body_head.startswith(b"<html"):
+        logger.warning(
+            "RSS fetch degraded %s: HTTP 200 pero el cuerpo es HTML, no RSS "
+            "(feed retirado o bot-protection). URL=%s",
+            feed.name,
+            feed.url,
+        )
+    elif b"<entry" in body_head:
+        logger.warning(
+            "RSS fetch degraded %s: el feed es Atom (<entry>), el parser solo "
+            "soporta RSS 2.0 (<item>). URL=%s",
+            feed.name,
+            feed.url,
+        )
+    else:
+        logger.warning(
+            "RSS fetch degraded %s: HTTP 200 sin items parseables. URL=%s",
+            feed.name,
+            feed.url,
+        )
+    return []
 
 
 def _platform_post_id(item: RssItem) -> str:
@@ -144,7 +199,7 @@ async def fetch_all_feeds(feeds: list[RssFeed] = RSS_SOURCES) -> list[RssItem]:
     Returns a flat list of items across all feeds. Failed fetches are
     logged and skipped. The caller decides what to persist.
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(headers=_REQUEST_HEADERS) as client:
         out: list[RssItem] = []
         for feed in feeds:
             items = await fetch_feed(client, feed)
