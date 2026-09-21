@@ -47,7 +47,10 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
     when a profile has 2+ toxic posts within a 2-hour window.
     """
     try:
-        from app.services.sentiment_service import sentiment_service
+        from app.services.sentiment_service import (
+            SentimentAnalyzerUnavailable,
+            sentiment_service,
+        )
 
         logger.info("Analyzing sentiment for post %d", post_id)
 
@@ -60,8 +63,24 @@ def analyze_sentiment(self, post_id: int) -> dict:  # type: ignore[no-untyped-de
                 logger.warning("Post %d not found, skipping sentiment analysis", post_id)
                 return {"post_id": post_id, "status": "skipped", "reason": "post_not_found"}
 
-            # Run sentiment analysis
-            analysis_result = sentiment_service.analyze(post.content or "")
+            # Run sentiment analysis. Si no hay analizador cargado se sale sin
+            # escribir: la fila queda sin SentimentAnalysis y
+            # social_posts.sentiment_score se mantiene NULL. Antes se persistía
+            # sentiment_score=0.0 con model_used="pysentimiento" aunque el
+            # modelo no existiera — dato inventado y procedencia falsa.
+            try:
+                analysis_result = sentiment_service.analyze(post.content or "")
+            except SentimentAnalyzerUnavailable as exc:
+                logger.error(
+                    "BLOCKER B-NLP-001: post %d sin analizar, no se escribe nada. %s",
+                    post_id,
+                    exc,
+                )
+                return {
+                    "post_id": post_id,
+                    "status": "skipped",
+                    "reason": "sentiment_analyzer_unavailable",
+                }
 
             # Normalize lowercase pysentimiento label to DB enum (POSITIVE/NEGATIVE/NEUTRAL/MIXED)
             from app.models.social import SentimentLabel

@@ -90,6 +90,21 @@ class SentimentResult:
     propaganda_labels: list[str] = field(default_factory=list)
 
 
+class SentimentAnalyzerUnavailable(RuntimeError):
+    """No hay analizador de sentimiento cargado.
+
+    Se levanta en vez de devolver ceros. Antes, cuando pysentimiento no
+    estaba instalado, `analyze()` retornaba sentiment_score=0.0 y
+    label="neutral", y el worker los persistía con model_used="pysentimiento":
+    datos inventados, indistinguibles de una medición real de sentimiento
+    neutro, y con procedencia falsa. CLAUDE.md lo prohíbe explícitamente
+    ("funciones que retornan ceros como placeholder", "NUNCA inventar datos").
+
+    `social_posts.sentiment_score` es nullable: la ausencia de medición se
+    representa con NULL, no con 0.0.
+    """
+
+
 class SentimentService:
     """Interface for NLP analysis using pysentimiento and spaCy.
 
@@ -143,8 +158,23 @@ class SentimentService:
         self._initialized = True
 
     def analyze(self, text: str) -> SentimentResult:
-        """Run full NLP pipeline on a text string."""
+        """Run full NLP pipeline on a text string.
+
+        Raises:
+            SentimentAnalyzerUnavailable: si pysentimiento no está instalado.
+                El worker reusa `crece-backend:latest`, que se construye con
+                el extra `nlp-light` y por lo tanto NO trae pysentimiento.
+                Ver BLOCKER B-NLP-001.
+        """
         self._ensure_initialized()
+
+        if self._sentiment_analyzer is None:
+            raise SentimentAnalyzerUnavailable(
+                "pysentimiento no está instalado en este proceso. La imagen del "
+                "worker se construye con el extra `nlp-light`; el análisis de "
+                "sentimiento requiere `nlp-heavy` (ver backend/Dockerfile.worker). "
+                "BLOCKER B-NLP-001."
+            )
 
         if not text or not text.strip():
             return SentimentResult(
