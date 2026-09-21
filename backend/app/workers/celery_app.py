@@ -22,8 +22,18 @@ celery_app.conf.update(
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     result_expires=3600,
-    # autodiscover solo barre app.workers.tasks — módulos extra van explícitos
-    imports=("app.workers.ingest_tasks",),
+    # autodiscover solo barre app.workers.tasks — módulos extra van explícitos.
+    # retention_tasks faltaba: beat agendaba cleanup_old_comments a diario y el
+    # worker respondía NotRegistered, así que la retención LFPDPPP de 180d
+    # nunca corrió (fix 2026-09-21).
+    imports=("app.workers.ingest_tasks", "app.workers.retention_tasks"),
+    # Celery nombra "celery" a la cola por defecto; el worker de Coolify
+    # escucha "default". Sin esta línea, TODO task sin entrada en task_routes
+    # (scrape_all_profiles, dispatch_scheduled_campaigns, cleanup_old_comments,
+    # snapshot_all_profiles, scrape_competitors_monthly) se encolaba en
+    # "celery" y no lo consumía nadie. Se fija el nombre en el código en vez
+    # de agregar "celery" al -Q para no arrastrar el backlog histórico.
+    task_default_queue="default",
     task_routes={
         # Handoff RADAR→CRECE (PLAN-2026-06-11) → cola data (ingest, no NLP)
         "app.workers.ingest_tasks.process_radar_handoff": {"queue": "data"},

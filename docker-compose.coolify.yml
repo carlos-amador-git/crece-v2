@@ -187,7 +187,7 @@ services:
       celery -A app.workers.celery_app worker
         -l warning
         --concurrency=1
-        -Q default,scrapers,nlp,data
+        -Q default,scraping,nlp,ai,data,trends,trends_labeling
         --max-tasks-per-child=100
 
   # Celery Beat — scheduled scraping, metrics snapshots
