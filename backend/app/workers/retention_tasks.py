@@ -11,8 +11,8 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import text
 
-from app.core.database import sync_session_factory
 from app.workers.celery_app import celery_app
+from app.workers.tasks import _get_sync_session
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def cleanup_old_comments() -> dict:
     """
     cutoff = datetime.now(UTC) - timedelta(days=RETENTION_DAYS)
 
-    with sync_session_factory() as session:
+    with _get_sync_session() as session:
         result = session.execute(
             text("DELETE FROM social_comments WHERE created_at < :cutoff"),
             {"cutoff": cutoff},
