@@ -67,7 +67,21 @@ nlp = [
     "torch>=2.2.0",
 ]
 ml = [
-    "scikit-learn>=1.5.0",
+    # PIN EXACTO, no un rango. Los modelos de voter_scoring están serializados
+    # con pickle (`app/services/voter_scoring.py:205`), y pickle de sklearn no
+    # es compatible entre versiones: cargar un estimador de 1.8.0 en otra
+    # release emite InconsistentVersionWarning y los scores pueden ser
+    # inválidos SIN fallar — el peor modo de error para un modelo de scoring.
+    #
+    # Incidente: `>=1.5.0` resolvía a la última publicada (1.9.1 al
+    # 2026-09-21), mientras `data/models/voter_score_v20260406_*.pkl` traen
+    # `_sklearn_version = 1.8.0`. Prod venía avisándolo en cada arranque:
+    # "Trying to unpickle estimator RandomForestClassifier from version 1.8.0
+    # when using version 1.9.0".
+    #
+    # Para subir de versión: reentrenar los modelos PRIMERO, y recién después
+    # mover este pin. Nunca al revés.
+    "scikit-learn==1.8.0",
     "joblib>=1.4.0",
     "reportlab>=4.4.0",
 ]
