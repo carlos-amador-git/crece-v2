@@ -179,6 +179,9 @@ services:
       APP_ENV: production
       CORS_ORIGINS: '["https://crece.mdconsultoria-ti.org","http://localhost:3000"]'
       TWSCRAPE_DB_PATH: /data/twscrape_accounts.db
+      # Clave de API (tabla `api_keys`) que usa dispatch_scheduled_campaigns
+      # para llamar a /campanas/{id}/enviar. Sin esto la task se auto-bloquea.
+      N8N_CRECE_TOKEN: ${N8N_CRECE_TOKEN:-}
     volumes:
       # Persiste el SQLite de cuentas de twscrape. Sin volumen habría que
       # re-autenticar todo el pool de X en cada redeploy.

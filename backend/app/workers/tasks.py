@@ -945,13 +945,27 @@ def dispatch_scheduled_campaigns() -> dict:
         if not campaigns:
             return {"status": "ok", "dispatched": 0}
 
+        # El header X-API-Key se valida contra sha256(clave) en la tabla
+        # `api_keys` (core/security.py, path 2 de get_current_user). El
+        # fallback anterior mandaba settings.JWT_SECRET, que no existe como
+        # registro: nunca podía autenticar, y además hacía viajar la clave de
+        # firma de los JWT en una cabecera HTTP, que es como terminó
+        # apareciendo en texto plano en los logs del worker (2026-09-21).
+        if not settings.N8N_CRECE_TOKEN:
+            logger.error(
+                "BLOCKER B-CAMP-001: N8N_CRECE_TOKEN sin configurar. Las campañas "
+                "programadas no se despachan. Crear una clave en POST /api/v1/api-keys "
+                "con un usuario ADMIN o ANALYST y cargarla en esa variable."
+            )
+            return {"status": "blocked", "dispatched": 0, "reason": "n8n_crece_token_missing"}
+
         dispatched = []
         for campana in campaigns:
             # Trigger via internal API call (reuses /enviar logic)
             try:
                 resp = httpx.post(
                     f"http://localhost:8000/api/v1/campanas/{campana.id}/enviar",
-                    headers={"X-API-Key": settings.N8N_CRECE_TOKEN or settings.JWT_SECRET},
+                    headers={"X-API-Key": settings.N8N_CRECE_TOKEN},
                     timeout=30.0,
                 )
                 if resp.status_code < 300:
