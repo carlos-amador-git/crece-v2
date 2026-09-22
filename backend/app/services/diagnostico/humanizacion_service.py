@@ -50,7 +50,16 @@ from app.services.diagnostico._common import (
 )
 
 BLOQUE = "B10"
-VENTANA_DIAS = 90
+# Ampliada a 180 días el 2026-09-22, junto con los bloques Tier 2 (e9876d4).
+# El scraping estuvo caído de junio a septiembre (colas de Celery
+# desconectadas, ver b21543f): 11 de 14 dirigentes no tienen un solo post
+# dentro de 90 días y estos bloques devolvían `insufficient_data` para todos.
+# Los datos son reales; lo que cambia es el período que describen, y la
+# pantalla de Diagnóstico lo declara leyendo la ventana del payload.
+# Contrapartida asumida: para los dirigentes CON actividad reciente la métrica
+# pierde actualidad, porque mezcla lo nuevo con contenido de hasta medio año.
+# Revertir cuando el scraping lleve un trimestre estable.
+VENTANA_DIAS = 180
 
 PRIMERA_PERSONA_RX = re.compile(
     r"\b(yo|mi|m[ií]a|m[ií]o|conmigo|nosotr[oa]s|nuestr[oa]s?|nuestra|nuestros|nuestras)\b",

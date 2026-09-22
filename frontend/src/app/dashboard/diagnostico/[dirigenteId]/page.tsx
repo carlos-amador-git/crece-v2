@@ -38,6 +38,21 @@ export default function DiagnosticoPage({ params }: Props) {
   // ----- Header -----
   const nombre = dirigente?.full_name ?? `Dirigente #${dirigenteId}`;
   const resumen = data?.resumen;
+  // Ventana declarada por el backend. Los servicios Tier 1 comparten la misma
+  // constante VENTANA_DIAS y la exponen en su payload (unos como
+  // `ventana_dias`, er_service como `ventana_dias_analizada`). Se lee de ahí en
+  // vez de escribirla fija, para que la etiqueta no mienta si el número cambia.
+  const ventanaDias: number | undefined = (() => {
+    const bloques = data?.bloques as
+      | Record<string, { data?: { ventana_dias?: number; ventana_dias_analizada?: number } }>
+      | undefined;
+    if (!bloques) return undefined;
+    for (const b of Object.values(bloques)) {
+      const v = b?.data?.ventana_dias ?? b?.data?.ventana_dias_analizada;
+      if (typeof v === "number") return v;
+    }
+    return undefined;
+  })();
 
   return (
     <div className="space-y-6" data-testid="page-diagnostico-tier1">
@@ -60,6 +75,13 @@ export default function DiagnosticoPage({ params }: Props) {
           <p className="text-sm text-muted-foreground">
             Cómo se comporta tu contenido: alcance, interacciones y tono percibido por la audiencia.
           </p>
+          {ventanaDias != null && (
+            <p className="text-xs text-muted-foreground" data-testid="tier1-ventana">
+              Ventana de análisis: últimos{" "}
+              <span className="font-medium">{ventanaDias} días</span>
+              {" · publicaciones e interacciones de ese período"}
+            </p>
+          )}
         </div>
         {resumen && (
           <div className="flex flex-wrap items-center gap-2" data-testid="resumen-badges">
