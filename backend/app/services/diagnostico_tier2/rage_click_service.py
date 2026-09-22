@@ -43,7 +43,15 @@ from app.services.diagnostico_tier2._common import (
 )
 
 BLOQUE = "B15"
-VENTANA_DIAS = 90
+# Ampliada de 90 a 180 días el 2026-09-22. El scraping estuvo caído entre
+# junio y septiembre (colas de Celery desconectadas, ver b21543f), así que con
+# 90 días los bloques Tier 2 no alcanzaban ningún comentario y devolvían
+# `insufficient_data` para todos los dirigentes. Los datos son reales; lo que
+# cambia es el período que cubren.
+# La ventana viaja en el payload (`ventana_dias`) y la pantalla la declara
+# explícitamente: no puede quedar implícito que el análisis es "reciente".
+# Revertir a 90 cuando el scraping lleve un trimestre estable.
+VENTANA_DIAS = 180
 UMBRAL_HOSTIL_PCT = 0.25  # >=25% de comments con keyword hostil
 UMBRAL_SENTIMENT_NEG = -0.3
 ER_SPIKE_MULT = 3.0

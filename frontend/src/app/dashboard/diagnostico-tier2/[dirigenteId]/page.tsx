@@ -60,6 +60,17 @@ export default function DiagnosticoTier2Page({ params }: Props) {
 
   const nombre = dirigente?.full_name ?? `Dirigente #${dirigenteId}`;
   const resumen = data?.resumen;
+  // Primer bloque que declare su ventana. Todos los servicios Tier 2 usan la
+  // misma constante VENTANA_DIAS, así que basta con el primero disponible.
+  const ventanaDias: number | undefined = (() => {
+    const bloques = data?.bloques as Record<string, { data?: { ventana_dias?: number } }> | undefined;
+    if (!bloques) return undefined;
+    for (const b of Object.values(bloques)) {
+      const v = b?.data?.ventana_dias;
+      if (typeof v === "number") return v;
+    }
+    return undefined;
+  })();
 
   // ------- Cálculo del delta Tier 1 para demo del Filtro de Realidad -------
   const deltaTier1 = computeTier1Delta(tier1, data, filtroActivo);
@@ -108,6 +119,20 @@ export default function DiagnosticoTier2Page({ params }: Props) {
               8 bloques Tier 2 killer features (MASTER §3.2 #11-#18) — lo que ni
               Brandwatch ni Meltwater calculan
             </p>
+            {/* La ventana de análisis se lee del payload, no se escribe fija:
+                si VENTANA_DIAS cambia en el backend, la etiqueta acompaña.
+                Sin esto, las tarjetas con datos no declaraban qué período
+                cubren y podían leerse como "los últimos días". */}
+            {ventanaDias != null && (
+              <p
+                className="text-xs text-muted-foreground"
+                data-testid="tier2-ventana"
+              >
+                Ventana de análisis: últimos{" "}
+                <span className="font-medium">{ventanaDias} días</span>
+                {" · comentarios y posts publicados en ese período"}
+              </p>
+            )}
           </div>
 
           {resumen && (
