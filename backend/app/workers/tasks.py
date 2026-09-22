@@ -963,8 +963,13 @@ def dispatch_scheduled_campaigns() -> dict:
         for campana in campaigns:
             # Trigger via internal API call (reuses /enviar logic)
             try:
+                # `localhost` dentro del contenedor del worker es el worker
+                # mismo, no el backend: ahí no escucha nadie en el 8000 y la
+                # llamada moría con "[Errno 111] Connection refused" cada 5
+                # minutos. El backend es otro servicio del compose, así que se
+                # lo direcciona por su nombre en la red de Docker.
                 resp = httpx.post(
-                    f"http://localhost:8000/api/v1/campanas/{campana.id}/enviar",
+                    f"{settings.INTERNAL_API_URL}/api/v1/campanas/{campana.id}/enviar",
                     headers={"X-API-Key": settings.N8N_CRECE_TOKEN},
                     timeout=30.0,
                 )

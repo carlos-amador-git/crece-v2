@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     # persistente: guarda las cookies de sesión del pool, y regenerarlas en
     # cada redeploy implicaría re-autenticar todas las cuentas.
     TWSCRAPE_DB_PATH: str = "/data/twscrape_accounts.db"
+    # Base URL del backend vista DESDE otro contenedor (worker/beat). No puede
+    # ser localhost: cada contenedor tiene su propio loopback. Por defecto usa
+    # el nombre del servicio en la red del compose.
+    INTERNAL_API_URL: str = "http://backend:8000"
 
     # ── TikTok ───────────────────────────────────────────
     TIKTOK_MS_TOKEN: str = ""
