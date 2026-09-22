@@ -30,7 +30,15 @@ dependencies = [
     "sse-starlette>=2.1.0",
     "shapely>=2.0.0",
     "ensta>=5.2.0",
-    "moviepy<2",
+    # moviepy es dependencia transitiva de ensta — nuestro código no lo importa.
+    # El pin `<2` rompía el scraper de Instagram: ensta hace
+    # `from moviepy import VideoFileClip`, que solo existe en el nivel superior
+    # desde moviepy 2.x (en 1.x vive en moviepy.editor). Con 1.0.3 el import
+    # falla y ensta agota sus 3 reintentos en cada scrape; el fallback a
+    # instaloader tampoco entra porque exige INSTAGRAM_USERNAME/PASSWORD.
+    # Resultado: Instagram devolvía 0 posts sin reportar un solo error.
+    # Reproducido y verificado: 1.0.3 falla, 2.1.2 importa bien.
+    "moviepy>=2",
     "Scweet>=5.2",
     "scrapetube>=2.6.0",
     "yt-dlp>=2026.3.0",
