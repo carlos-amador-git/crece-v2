@@ -83,23 +83,41 @@ async def compute(
         .order_by(SocialProfileSnapshot.taken_at.asc())
     )
     snapshots = list(snaps_result.scalars().all())
-    if len(snapshots) < 2:
+
+    # El delta se calcula POR PLATAFORMA (abajo), así que el umbral tiene que
+    # estar en esa misma granularidad. Contar el total del dirigente dejaba
+    # pasar el caso "una sola corrida del cron sobre N perfiles": N snapshots
+    # en total, uno por plataforma, ninguna con par para restar. El bloque
+    # salía de `insufficient_data` y publicaba `followers_ganados_total = 0`
+    # como si fuera un crecimiento medido de cero — el mismo modo de falla que
+    # los `sentiment_score = 0.0` inventados (ver 1c3d798).
+    # Detectado el 2026-09-22: el cron `snapshot_all_profiles` vivía en la cola
+    # `celery`, que nadie consumía, así que este camino nunca se había
+    # ejercitado en producción.
+    platforms = {s.platform for s in snapshots}
+    snaps_por_plataforma = {
+        platform: [s for s in snapshots if s.platform == platform]
+        for platform in platforms
+    }
+    comparables = {
+        platform: snaps
+        for platform, snaps in snaps_por_plataforma.items()
+        if len(snaps) >= 2
+    }
+    if not comparables:
         return build_insufficient(
             BLOQUE,
             missing=[
-                f"<2 snapshots en últimos {VENTANA_DIAS}d",
-                "(cron diario de followers aún no acumula historial suficiente)",
+                f"ninguna plataforma con 2+ snapshots en últimos {VENTANA_DIAS}d",
+                f"({len(snapshots)} snapshots sobre {len(platforms)} plataformas: "
+                "falta una segunda toma para poder restar)",
             ],
         )
 
     # Delta followers agregado por plataforma (último - primero)
-    platforms = {s.platform for s in snapshots}
     followers_ganados_total = 0
     deltas_por_plataforma: dict[str, int] = {}
-    for platform in platforms:
-        snaps_p = [s for s in snapshots if s.platform == platform]
-        if len(snaps_p) < 2:
-            continue
+    for platform, snaps_p in comparables.items():
         delta = snaps_p[-1].followers_count - snaps_p[0].followers_count
         deltas_por_plataforma[platform.value] = delta
         followers_ganados_total += delta
